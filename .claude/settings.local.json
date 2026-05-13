@@ -5,7 +5,12 @@
       "Bash(npm install *)",
       "Bash(npx next *)",
       "Bash(Remove-Item *)",
-      "Bash(Get-ChildItem E:\\\\projects\\\\pulsify *)"
+      "Bash(Get-ChildItem E:\\\\projects\\\\pulsify *)",
+      "Bash(npx tsc *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(node -e \"const fs=require\\('fs'\\); const s=fs.statSync\\('public/logo.png'\\); console.log\\('size:', s.size, 'bytes'\\)\")",
+      "Bash(node -e ' *)"
     ]
   }
 }
