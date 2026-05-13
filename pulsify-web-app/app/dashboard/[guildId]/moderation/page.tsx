@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { fetchGuildBans, avatarUrl } from '@/lib/discord'
+import { PageHeader } from '@/components/ui/page-header'
+import { EmptyState } from '@/components/ui/empty-state'
 import { Shield, Ban } from 'lucide-react'
 import Image from 'next/image'
 
@@ -28,13 +30,11 @@ export default async function ModerationPage({
   ])
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Moderation</h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          Overview of moderation actions and bans for this server.
-        </p>
-      </div>
+    <div className="page-content">
+      <PageHeader
+        title="Moderation"
+        description="Overview of moderation actions and bans for this server."
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 mb-8">
         <div className="rounded-xl border p-5" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
@@ -94,11 +94,11 @@ export default async function ModerationPage({
           Ban List ({bans.length})
         </h2>
         {bans.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border py-16 text-center" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
-            <Shield size={36} className="mb-3 text-subtle" />
-            <p className="font-semibold text-foreground">No active bans</p>
-            <p className="mt-1 text-sm text-subtle">This server has no banned users.</p>
-          </div>
+          <EmptyState
+            icon={<Shield size={36} />}
+            title="No active bans"
+            description="This server has no banned users."
+          />
         ) : (
           <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--line-strong)' }}>
             <table className="w-full text-sm">

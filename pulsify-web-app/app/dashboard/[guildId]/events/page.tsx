@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { fetchGuildEvents, formatEventStatus, formatEntityType } from '@/lib/discord'
+import { PageHeader } from '@/components/ui/page-header'
+import { EmptyState } from '@/components/ui/empty-state'
 import { CalendarDays, MapPin, Mic2, Volume2, Users } from 'lucide-react'
 
 function formatDate(iso: string) {
@@ -34,34 +36,32 @@ export default async function EventsPage({
   const past = events.filter((e) => e.status === 3 || e.status === 4)
 
   return (
-    <div className="p-8">
-      <div className="mb-8 flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Events</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">Manage Discord scheduled events for this server.</p>
-        </div>
-        <a
-          href={`https://discord.com/channels/${guildId}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-all hover:opacity-90"
-          style={{
-            background: 'linear-gradient(180deg, var(--p-1) 0%, var(--p-2) 100%)',
-            boxShadow: '0 4px 14px -4px var(--p-glow)',
-          }}
-        >
-          Create on Discord
-        </a>
-      </div>
+    <div className="page-content">
+      <PageHeader
+        title="Events"
+        description="Manage Discord scheduled events for this server."
+        action={
+          <a
+            href={`https://discord.com/channels/${guildId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-all hover:opacity-90"
+            style={{
+              background: 'linear-gradient(180deg, var(--p-1) 0%, var(--p-2) 100%)',
+              boxShadow: '0 4px 14px -4px var(--p-glow)',
+            }}
+          >
+            Create on Discord
+          </a>
+        }
+      />
 
       {events.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-xl border py-20 text-center" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
-          <CalendarDays size={40} className="mb-4 text-subtle" />
-          <p className="font-semibold text-foreground">No events scheduled</p>
-          <p className="mt-2 text-sm text-subtle">
-            Create a scheduled event on Discord and it will appear here.
-          </p>
-        </div>
+        <EmptyState
+          icon={<CalendarDays size={40} />}
+          title="No events scheduled"
+          description="Create a scheduled event on Discord and it will appear here."
+        />
       )}
 
       {upcoming.length > 0 && (

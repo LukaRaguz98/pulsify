@@ -6,6 +6,7 @@ import {
   fetchGuildRoles,
 } from '@/lib/discord'
 import { StatsCard } from '@/components/dashboard/StatsCard'
+import { PageHeader } from '@/components/ui/page-header'
 import { Users, Hash, Crown, Wifi } from 'lucide-react'
 
 export default async function GuildAnalyticsPage({
@@ -39,13 +40,11 @@ export default async function GuildAnalyticsPage({
   const totalCount = guild.approximate_member_count ?? guild.member_count ?? 0
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Analytics Overview</h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          Real-time data for <span className="text-foreground font-medium">{guild.name}</span>
-        </p>
-      </div>
+    <div className="page-content">
+      <PageHeader
+        title="Analytics Overview"
+        description={<>Real-time data for <span className="text-foreground font-medium">{guild.name}</span></>}
+      />
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
