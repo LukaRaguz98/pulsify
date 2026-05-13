@@ -2,9 +2,9 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
-import { fetchUserGuilds, isBotInGuild, hasManageGuild, type DiscordGuild } from '@/lib/discord'
+import { fetchUserGuilds, fetchSelfUser, hasManageGuild, userBannerUrl, type DiscordGuild } from '@/lib/discord'
 import { ServerCard } from '@/components/dashboard/ServerCard'
-import { LogOut } from 'lucide-react'
+import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
 
 type GuildWithBot = DiscordGuild & { botInstalled: boolean }
 
@@ -20,23 +20,38 @@ export default async function DashboardPage() {
   let guilds: GuildWithBot[] = []
   let tokenMissing = false
 
+  const user = session.user
+  const claims = user.user_metadata?.custom_claims
+  const discordId = user.user_metadata?.provider_id ?? user.id
+
+  let selfUser = null
   if (!providerToken) {
     tokenMissing = true
   } else {
-    const all = await fetchUserGuilds(providerToken)
-    const managed = all.filter((g) => hasManageGuild(g.permissions))
-    guilds = await Promise.all(
-      managed.map(async (g) => ({ ...g, botInstalled: await isBotInGuild(g.id) }))
-    )
+    const [all, { data: syncedRows }, self] = await Promise.all([
+      fetchUserGuilds(providerToken),
+      supabase.from('synced_guilds').select('guild_id'),
+      fetchSelfUser(providerToken),
+    ])
+    selfUser = self
+    const syncedIds = new Set((syncedRows ?? []).map((r: { guild_id: string }) => r.guild_id))
+    guilds = all
+      .filter((g) => hasManageGuild(g.permissions))
+      .map((g) => ({ ...g, botInstalled: syncedIds.has(g.id) }))
   }
 
-  const user = session.user
   const displayName =
+    selfUser?.global_name ??
+    claims?.global_name ??
+    selfUser?.username ??
     user.user_metadata?.full_name ??
-    user.user_metadata?.custom_claims?.global_name ??
     user.email ??
     'User'
   const userAvatar = user.user_metadata?.avatar_url ?? ''
+  const username = selfUser?.username ?? claims?.username
+  const discriminator = selfUser?.discriminator ?? claims?.discriminator
+  const bannerUrl = selfUser?.banner ? userBannerUrl(selfUser.id, selfUser.banner) : ''
+  const bannerColor = selfUser?.banner_color ?? undefined
 
   const active = guilds.filter((g) => g.botInstalled)
   const notConnected = guilds.filter((g) => !g.botInstalled)
@@ -58,29 +73,18 @@ export default async function DashboardPage() {
             <span className="font-bold text-base tracking-tight" style={{ color: 'var(--p-1)' }}>Pulsify</span>
           </div>
 
-          <div className="flex items-center gap-3">
-            {userAvatar ? (
-              <Image src={userAvatar} alt={displayName} width={30} height={30} className="rounded-full" unoptimized />
-            ) : (
-              <div
-                className="flex h-[30px] w-[30px] items-center justify-center rounded-full text-sm font-bold text-white"
-                style={{ background: 'linear-gradient(135deg, var(--cyan), var(--p-1))' }}
-              >
-                {displayName.charAt(0)}
-              </div>
-            )}
-            <span className="text-sm text-muted-foreground hidden sm:block">{displayName}</span>
-            <form action="/auth/logout" method="POST">
-              <button
-                type="submit"
-                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-subtle hover:text-red-400 hover:bg-panel transition"
-                style={{ '--panel': 'var(--bg-2)' } as React.CSSProperties}
-              >
-                <LogOut size={14} />
-                <span className="hidden sm:inline">Log out</span>
-              </button>
-            </form>
-          </div>
+          <UserProfileButton
+            displayName={displayName}
+            username={username}
+            discriminator={discriminator}
+            discordId={discordId}
+            email={user.email}
+            avatarUrl={userAvatar}
+            bannerUrl={bannerUrl || undefined}
+            bannerColor={bannerColor}
+            avatarSize={30}
+            popupDirection="down"
+          />
         </div>
       </header>
 
