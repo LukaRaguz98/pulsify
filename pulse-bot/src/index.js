@@ -91,19 +91,30 @@ client.on(Events.GuildMemberAdd, async (member) => {
   const settings = await getGuildSettings(member.guild.id);
 
   if (settings?.welcome?.enabled && settings.welcome.channel_id) {
-    const channel = member.guild.channels.cache.get(settings.welcome.channel_id);
-    if (channel?.isTextBased()) {
-      const msg = (settings.welcome.message ?? 'Welcome to {server}, {user}!')
-        .replace('{user}', member.toString())
-        .replace('{server}', member.guild.name);
-      await channel.send(msg).catch(console.error);
+    try {
+      const channel = await member.guild.channels.fetch(settings.welcome.channel_id);
+      if (channel?.isTextBased()) {
+        const msg = (settings.welcome.message ?? 'Welcome to {server}, {user}!')
+          .replace('{user}', member.toString())
+          .replace('{server}', member.guild.name);
+        await channel.send(msg);
+      }
+    } catch (err) {
+      console.error(`[Pulse] Welcome message failed in guild ${member.guild.id}:`, err.message);
     }
   }
 
   if (settings?.auto_role?.enabled && settings.auto_role.role_id) {
-    const role = member.guild.roles.cache.get(settings.auto_role.role_id);
-    if (role) {
-      await member.roles.add(role).catch(console.error);
+    try {
+      const role = await member.guild.roles.fetch(settings.auto_role.role_id);
+      if (role) {
+        await member.roles.add(role);
+        console.log(`[Pulse] Auto-role "${role.name}" assigned to ${member.user.tag} in ${member.guild.name}`);
+      } else {
+        console.warn(`[Pulse] Auto-role not found: ${settings.auto_role.role_id} in guild ${member.guild.id}`);
+      }
+    } catch (err) {
+      console.error(`[Pulse] Auto-role failed for ${member.user.tag} in guild ${member.guild.id}:`, err.message);
     }
   }
 });
