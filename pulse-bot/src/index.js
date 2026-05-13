@@ -73,6 +73,11 @@ const commands = [
 client.once(Events.ClientReady, async (readyClient) => {
   console.log(`[Pulse] Logged in as ${readyClient.user.tag}`);
 
+  readyClient.user.setPresence({
+    activities: [{ name: 'Powered by Pulsify' }],
+    status: 'online',
+  });
+
   const rest = new REST().setToken(process.env.DISCORD_BOT_TOKEN);
   await rest.put(Routes.applicationCommands(readyClient.user.id), { body: commands });
   console.log('[Pulse] Slash commands registered.');
@@ -80,11 +85,28 @@ client.once(Events.ClientReady, async (readyClient) => {
   for (const guild of readyClient.guilds.cache.values()) {
     await syncGuild(guild);
   }
+
+  // Remove stale synced_guilds entries for servers the bot is no longer in
+  const currentIds = [...readyClient.guilds.cache.keys()];
+  const { data: stored } = await supabase.from('synced_guilds').select('guild_id');
+  const stale = (stored ?? []).filter((r) => !currentIds.includes(r.guild_id));
+  if (stale.length > 0) {
+    await supabase
+      .from('synced_guilds')
+      .delete()
+      .in('guild_id', stale.map((r) => r.guild_id));
+    console.log(`[Pulse] Removed ${stale.length} stale guild(s) from synced_guilds.`);
+  }
 });
 
 client.on(Events.GuildCreate, async (guild) => {
   console.log(`[Pulse] Joined guild: ${guild.name}`);
   await syncGuild(guild);
+});
+
+client.on(Events.GuildDelete, async (guild) => {
+  console.log(`[Pulse] Left/kicked from guild: ${guild.name} (${guild.id})`);
+  await supabase.from('synced_guilds').delete().eq('guild_id', guild.id);
 });
 
 client.on(Events.GuildMemberAdd, async (member) => {

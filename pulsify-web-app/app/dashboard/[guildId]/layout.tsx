@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
-import { fetchGuild } from '@/lib/discord'
+import { fetchGuild, fetchSelfUser, userBannerUrl } from '@/lib/discord'
 import { GuildSidebar } from '@/components/dashboard/GuildSidebar'
 
 export default async function GuildLayout({
@@ -18,12 +18,24 @@ export default async function GuildLayout({
 
   if (!session) redirect('/')
 
-  const guild = await fetchGuild(guildId)
+  const [guild, selfUser] = await Promise.all([
+    fetchGuild(guildId),
+    session.provider_token ? fetchSelfUser(session.provider_token) : null,
+  ])
   if (!guild) redirect('/dashboard')
+
+  const discordId = session.user.user_metadata?.provider_id ?? session.user.id
+  const bannerUrl = selfUser?.banner ? userBannerUrl(selfUser.id ?? discordId, selfUser.banner) : undefined
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
-      <GuildSidebar guild={guild} guildId={guildId} user={session.user} />
+      <GuildSidebar
+        guild={guild}
+        guildId={guildId}
+        user={session.user}
+        selfUser={selfUser ?? undefined}
+        bannerUrl={bannerUrl}
+      />
       <main className="flex-1 overflow-y-auto">{children}</main>
     </div>
   )
