@@ -155,7 +155,7 @@ Team accounts
 Advanced permissions
 Premium integrations
 
-VERSION 1 FOCUS - THIS SECTION IS FOR CLAUDE
+VERSION 1
 The initial MVP focuses on:
 Discord login
 Server connection
