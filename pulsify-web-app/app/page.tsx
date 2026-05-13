@@ -9,8 +9,8 @@ export default function Home() {
           <Image
             src="/logo.png"
             alt="Pulsify"
-            width={40}
-            height={40}
+            width={64}
+            height={64}
             className="shrink-0"
             style={{ filter: 'drop-shadow(0 8px 24px var(--p-glow))' }}
             priority

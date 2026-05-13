@@ -89,8 +89,8 @@ export function GuildSidebar({ guild, guildId, user }: Props) {
         <Image
           src="/logo.png"
           alt="Pulsify"
-          width={28}
-          height={28}
+          width={32}
+          height={32}
           className="shrink-0"
           style={{ filter: 'drop-shadow(0 4px 10px var(--p-glow))' }}
         />
