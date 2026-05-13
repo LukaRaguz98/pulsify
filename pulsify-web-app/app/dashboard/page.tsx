@@ -47,18 +47,14 @@ export default async function DashboardPage() {
       <header className="border-b sticky top-0 z-10" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)', backdropFilter: 'blur(12px)' }}>
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
           <div className="flex items-center gap-2.5">
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-              style={{
-                background: 'linear-gradient(135deg, var(--p-1) 0%, var(--p-2) 100%)',
-                boxShadow: '0 4px 14px -4px var(--p-glow)',
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 11v2a2 2 0 0 0 2 2h3l6 4V5L8 9H5a2 2 0 0 0-2 2Z"/>
-                <path d="M18 8a4 4 0 0 1 0 8"/>
-              </svg>
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Pulsify"
+              width={34}
+              height={34}
+              className="shrink-0"
+              style={{ filter: 'drop-shadow(0 4px 10px var(--p-glow))' }}
+            />
             <span className="font-bold text-base tracking-tight" style={{ color: 'var(--p-1)' }}>Pulsify</span>
           </div>
 

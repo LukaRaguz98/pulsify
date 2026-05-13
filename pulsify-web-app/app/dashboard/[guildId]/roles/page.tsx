@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { fetchGuildRoles, fetchGuildMembers, roleColor } from '@/lib/discord'
+import { PageHeader } from '@/components/ui/page-header'
+import { EmptyState } from '@/components/ui/empty-state'
 import { Crown } from 'lucide-react'
 
 export default async function RolesPage({
@@ -32,13 +34,11 @@ export default async function RolesPage({
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Roles</h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          View and manage the roles configured on your server.
-        </p>
-      </div>
+    <div className="page-content">
+      <PageHeader
+        title="Roles"
+        description="View and manage the roles configured on your server."
+      />
 
       <div className="mb-5 flex items-center gap-4 text-sm">
         <span className="text-muted-foreground">{sortedRoles.length} roles total</span>
@@ -49,11 +49,11 @@ export default async function RolesPage({
       </div>
 
       {sortedRoles.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border py-16 text-center" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
-          <Crown size={36} className="mb-3 text-subtle" />
-          <p className="font-semibold text-foreground">No custom roles</p>
-          <p className="mt-1 text-sm text-subtle">This server only has the @everyone role.</p>
-        </div>
+        <EmptyState
+          icon={<Crown size={36} />}
+          title="No custom roles"
+          description="This server only has the @everyone role."
+        />
       ) : (
         <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--line-strong)' }}>
           <table className="w-full text-sm">
