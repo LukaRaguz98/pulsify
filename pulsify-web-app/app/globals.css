@@ -45,7 +45,7 @@
   --radius:     10px;
 }
 
-/* ── Default: Violet ───────────────────────── */
+/* ── Default: Violet (dark) ────────────────── */
 :root {
   --bg:        #0a0b12;
   --bg-2:      #10111c;
@@ -71,6 +71,13 @@
   --pink:   #ec4899;
   --green:  #10b981;
   --red:    #ef4444;
+
+  /* Layout & density */
+  --page-padding:  2rem;
+  --card-padding:  1.25rem;
+  --section-gap:   2rem;
+  --row-gap:       0.75rem;
+  --glow-opacity:  1;
 }
 
 /* ── Blue / Midnight ───────────────────────── */
@@ -118,6 +125,70 @@
   --glow-b: #fb923c0d;
 }
 
+/* ── Amber / Gold ──────────────────────────── */
+[data-theme="amber"] {
+  --p-1:    #f59e0b;
+  --p-2:    #d97706;
+  --p-soft: rgba(245, 158, 11, 0.12);
+  --p-glow: rgba(245, 158, 11, 0.45);
+  --bg:        #100d03;
+  --bg-2:      #1a1508;
+  --panel:     #1f1a0a;
+  --panel-2:   #261f0d;
+  --line-strong: #3a2d10;
+  --glow-a: #f59e0b18;
+  --glow-b: #ef444410;
+}
+
+/* ── Indigo / Cosmic ───────────────────────── */
+[data-theme="indigo"] {
+  --p-1:    #6366f1;
+  --p-2:    #4f46e5;
+  --p-soft: rgba(99, 102, 241, 0.12);
+  --p-glow: rgba(99, 102, 241, 0.45);
+  --bg:        #09090f;
+  --bg-2:      #0e0e1a;
+  --panel:     #121220;
+  --panel-2:   #161628;
+  --line-strong: #23233a;
+  --glow-a: #6366f118;
+  --glow-b: #ec489910;
+}
+
+/* ── Light Scheme ──────────────────────────── */
+/* Placed AFTER dark theme selectors so it wins on bg/text vars.
+   Accent vars (--p-1, --p-2, etc.) come from the theme selector above. */
+[data-scheme="light"] {
+  --bg:        #f5f6fb;
+  --bg-2:      #ecedf8;
+  --panel:     #ffffff;
+  --panel-2:   #f8f9fe;
+  --line:      rgba(175, 177, 215, 0.5);
+  --line-strong: #cdd0e8;
+  --text:      #0a0b1a;
+  --text-2:    #383a58;
+  --text-3:    #888aaa;
+  --glow-opacity: 0.25;
+}
+
+/* ── Compact Density ───────────────────────── */
+[data-density="compact"] {
+  --page-padding: 1.25rem;
+  --card-padding: 0.875rem;
+  --section-gap:  1.25rem;
+  --row-gap:      0.5rem;
+}
+
+/* ── Reduced Motion ────────────────────────── */
+[data-animations="false"] *,
+[data-animations="false"] *::before,
+[data-animations="false"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
 /* ── Base ──────────────────────────────────── */
 @layer base {
   * {
@@ -144,12 +215,13 @@
       radial-gradient(700px 500px at 0% 100%, var(--glow-b), transparent 60%);
     pointer-events: none;
     z-index: 0;
+    opacity: var(--glow-opacity, 1);
+    transition: opacity 0.3s ease;
   }
   * {
     position: relative;
     z-index: 1;
   }
-  /* Fix: the body::before pseudo-element should be z-index 0 */
   body::before {
     z-index: 0;
   }
@@ -161,4 +233,9 @@
   ::-webkit-scrollbar-track  { background: transparent; }
   ::-webkit-scrollbar-thumb  { background: var(--line-strong); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+}
+
+/* ── Page layout helpers ───────────────────── */
+.page-content {
+  padding: var(--page-padding);
 }

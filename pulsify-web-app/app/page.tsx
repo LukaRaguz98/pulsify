@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { LoginButton } from '@/components/LoginButton'
 
 export default function Home() {
@@ -5,18 +6,15 @@ export default function Home() {
     <div className="flex flex-1 flex-col items-center justify-center bg-background text-foreground min-h-screen">
       <div className="flex flex-col items-center gap-8 text-center px-6">
         <div className="flex items-center gap-3 mb-2">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{
-              background: 'linear-gradient(135deg, var(--p-1) 0%, var(--p-2) 100%)',
-              boxShadow: '0 8px 24px -8px var(--p-glow)',
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 11v2a2 2 0 0 0 2 2h3l6 4V5L8 9H5a2 2 0 0 0-2 2Z"/>
-              <path d="M18 8a4 4 0 0 1 0 8"/>
-            </svg>
-          </div>
+          <Image
+            src="/logo.png"
+            alt="Pulsify"
+            width={64}
+            height={64}
+            className="shrink-0"
+            style={{ filter: 'drop-shadow(0 8px 24px var(--p-glow))' }}
+            priority
+          />
           <span className="text-2xl font-bold tracking-tight" style={{ color: 'var(--p-1)' }}>Pulsify</span>
         </div>
 
