@@ -10,7 +10,9 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(node -e \"const fs=require\\('fs'\\); const s=fs.statSync\\('public/logo.png'\\); console.log\\('size:', s.size, 'bytes'\\)\")",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "PowerShell(Get-ChildItem -Path \"E:\\\\projects\\\\pulsify\" -Force | Where-Object { $_.Name -ne 'node_modules' -and $_.Name -ne '.git' } | Select-Object Name, PSIsContainer)",
+      "PowerShell(Get-ChildItem -Path \"E:\\\\projects\\\\pulsify\" -Recurse -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^\\(bot|discord-bot\\)$' })"
     ]
   }
 }
