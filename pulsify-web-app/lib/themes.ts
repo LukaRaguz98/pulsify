@@ -1,4 +1,4 @@
-export type ThemeId = 'violet' | 'blue' | 'emerald' | 'rose'
+export type ThemeId = 'violet' | 'blue' | 'emerald' | 'rose' | 'amber' | 'indigo'
 
 export interface Theme {
   id: ThemeId
@@ -31,5 +31,17 @@ export const THEMES: Theme[] = [
     name: 'Rose',
     description: 'Bold rose red with warm dark tones',
     accent: '#f43f5e',
+  },
+  {
+    id: 'amber',
+    name: 'Amber',
+    description: 'Warm golden tones with a rich base',
+    accent: '#f59e0b',
+  },
+  {
+    id: 'indigo',
+    name: 'Indigo',
+    description: 'Deep indigo with a cosmic feel',
+    accent: '#6366f1',
   },
 ]

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { fetchGuildChannels, fetchGuildRoles } from '@/lib/discord'
+import { PageHeader } from '@/components/ui/page-header'
 import { AutomationsForm } from './AutomationsForm'
 
 export default async function AutomationsPage({
@@ -26,13 +27,11 @@ export default async function AutomationsPage({
   const currentSettings = (settings?.settings as Record<string, unknown>) ?? {}
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Automations</h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          Configure automated actions for your server. Changes take effect immediately via the Pulse bot.
-        </p>
-      </div>
+    <div className="page-content">
+      <PageHeader
+        title="Automations"
+        description="Configure automated actions for your server. Changes take effect immediately via the Pulse bot."
+      />
       <AutomationsForm
         guildId={guildId}
         channels={textChannels}

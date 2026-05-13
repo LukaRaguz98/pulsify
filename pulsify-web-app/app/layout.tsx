@@ -4,6 +4,8 @@ import { cookies } from 'next/headers'
 import './globals.css'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import type { ThemeId } from '@/lib/themes'
+import type { ColorScheme, LayoutDensity } from '@/lib/preferences'
+import { PREF_COOKIES, DEFAULT_PREFERENCES } from '@/lib/preferences'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -27,17 +29,31 @@ export default async function RootLayout({
   children: React.ReactNode
 }>) {
   const cookieStore = await cookies()
-  const theme = (cookieStore.get('pulsify-theme')?.value ?? 'violet') as ThemeId
+
+  const theme = (cookieStore.get(PREF_COOKIES.theme)?.value ?? DEFAULT_PREFERENCES.theme) as ThemeId
+  const scheme = (cookieStore.get(PREF_COOKIES.scheme)?.value ?? DEFAULT_PREFERENCES.scheme) as ColorScheme
+  const density = (cookieStore.get(PREF_COOKIES.density)?.value ?? DEFAULT_PREFERENCES.density) as LayoutDensity
+  const animations = (cookieStore.get(PREF_COOKIES.animations)?.value ?? 'true') !== 'false'
 
   return (
     <html
       lang="en"
       data-theme={theme}
+      data-scheme={scheme}
+      data-density={density}
+      data-animations={String(animations)}
       className={`${inter.variable} ${jetbrainsMono.variable} h-full`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <ThemeProvider initialTheme={theme}>{children}</ThemeProvider>
+        <ThemeProvider
+          initialTheme={theme}
+          initialScheme={scheme}
+          initialDensity={density}
+          initialAnimations={animations}
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   )
