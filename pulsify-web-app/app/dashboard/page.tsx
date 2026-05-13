@@ -50,8 +50,8 @@ export default async function DashboardPage() {
             <Image
               src="/logo.png"
               alt="Pulsify"
-              width={28}
-              height={28}
+              width={34}
+              height={34}
               className="shrink-0"
               style={{ filter: 'drop-shadow(0 4px 10px var(--p-glow))' }}
             />
