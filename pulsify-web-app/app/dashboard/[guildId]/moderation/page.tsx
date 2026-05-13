@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase-server'
 import { fetchGuildBans, avatarUrl } from '@/lib/discord'
 import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
+import { UnbanButton } from '@/components/dashboard/UnbanButton'
 import { Shield, Ban } from 'lucide-react'
 import Image from 'next/image'
 
@@ -74,7 +75,7 @@ export default async function ModerationPage({
               </thead>
               <tbody>
                 {warnings?.map((w) => (
-                  <tr key={w.id} className="border-b" style={{ borderColor: 'var(--line-strong)', background: 'rgba(20,21,31,0.5)' }}>
+                  <tr key={w.id} className="border-b" style={{ borderColor: 'var(--line-strong)', background: 'color-mix(in srgb, var(--panel) 50%, transparent)' }}>
                     <td className="px-4 py-3 text-foreground">{w.username ?? w.user_id}</td>
                     <td className="px-4 py-3 text-muted-foreground">{w.reason ?? '—'}</td>
                     <td className="px-4 py-3 text-subtle">{w.moderator_username ?? w.moderator_id}</td>
@@ -106,19 +107,20 @@ export default async function ModerationPage({
                 <tr className="border-b" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-subtle">User</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-subtle">Reason</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-subtle">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {bans.map((ban) => {
                   const av = avatarUrl(ban.user.id, ban.user.avatar, ban.user.discriminator)
                   return (
-                    <tr key={ban.user.id} className="border-b" style={{ borderColor: 'var(--line-strong)', background: 'rgba(20,21,31,0.5)' }}>
+                    <tr key={ban.user.id} className="border-b" style={{ borderColor: 'var(--line-strong)', background: 'color-mix(in srgb, var(--panel) 50%, transparent)' }}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           {av ? (
-                            <Image src={av} alt={ban.user.username} width={28} height={28} className="rounded-full" unoptimized />
+                            <Image src={av} alt={ban.user.username} width={28} height={28} className="rounded-full shrink-0" unoptimized />
                           ) : (
-                            <div className="h-7 w-7 rounded-full" style={{ background: 'var(--bg-2)' }} />
+                            <div className="h-7 w-7 rounded-full shrink-0" style={{ background: 'var(--bg-2)' }} />
                           )}
                           <div>
                             <p className="text-foreground">{ban.user.username}</p>
@@ -127,6 +129,13 @@ export default async function ModerationPage({
                         </div>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">{ban.reason ?? 'No reason provided'}</td>
+                      <td className="px-4 py-3 text-right">
+                        <UnbanButton
+                          guildId={guildId}
+                          userId={ban.user.id}
+                          username={ban.user.username}
+                        />
+                      </td>
                     </tr>
                   )
                 })}
