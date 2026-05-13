@@ -1,0 +1,1374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>Pulsify — Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0a0b12;
+    --bg-2: #10111c;
+    --panel: #14151f;
+    --panel-2: #181925;
+    --line: #23243480;
+    --line-strong: #2a2c3e;
+    --text: #e9eaf3;
+    --text-2: #a1a3b8;
+    --text-3: #6b6d82;
+
+    --p-1: #8b5cf6;       /* Pulsify primary violet */
+    --p-2: #6d4aff;       /* deeper */
+    --p-soft: #8b5cf61a;
+    --cyan: #22d3ee;
+    --lime: #84cc16;
+    --amber: #f59e0b;
+    --pink: #ec4899;
+    --green: #10b981;
+    --red: #ef4444;
+
+    --radius: 14px;
+    --radius-sm: 10px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  ::selection { background: var(--p-1); color: white; }
+  /* subtle ambient glow */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(800px 500px at 80% -10%, #8b5cf615, transparent 60%),
+      radial-gradient(700px 500px at 0% 100%, #22d3ee10, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 248px 1fr;
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar {
+    background: linear-gradient(180deg, #0c0d17 0%, #0a0b12 100%);
+    border-right: 1px solid var(--line-strong);
+    display: flex;
+    flex-direction: column;
+    padding: 18px 14px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  .sidebar::-webkit-scrollbar { width: 0; }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px 18px;
+  }
+  .brand-mark {
+    width: 30px; height: 30px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #a78bfa 0%, #6d4aff 100%);
+    display: grid; place-items: center;
+    box-shadow: 0 6px 20px -6px #6d4aff80, inset 0 0 0 1px #ffffff20;
+    position: relative;
+  }
+  .brand-mark::after {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border-radius: 50%;
+    border: 2px solid #ffffffd0;
+    border-top-color: transparent;
+    border-right-color: transparent;
+    transform: rotate(-30deg);
+  }
+  .brand-name {
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: -0.01em;
+  }
+  .brand-collapse {
+    margin-left: auto;
+    color: var(--text-3);
+    cursor: pointer;
+    width: 26px; height: 26px;
+    display: grid; place-items: center;
+    border-radius: 7px;
+  }
+  .brand-collapse:hover { color: var(--text); background: var(--panel); }
+
+  .server-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: var(--panel);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: border-color .15s;
+    margin-bottom: 18px;
+  }
+  .server-card:hover { border-color: #3a3c54; }
+  .server-avatar {
+    width: 32px; height: 32px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #8b5cf6, #6d4aff);
+    display: grid; place-items: center;
+    font-weight: 700; font-size: 14px;
+    color: white;
+    flex-shrink: 0;
+  }
+  .server-meta { line-height: 1.2; flex: 1; min-width: 0; }
+  .server-name { font-weight: 600; font-size: 13.5px; }
+  .server-sub { font-size: 11.5px; color: var(--text-3); margin-top: 2px; }
+  .server-card .chev {
+    color: var(--text-3);
+  }
+
+  .nav-group { margin-bottom: 16px; }
+  .nav-title {
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    color: var(--text-3);
+    text-transform: uppercase;
+    padding: 4px 10px 8px;
+    font-weight: 600;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 8px 10px;
+    border-radius: 9px;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: background .12s, color .12s;
+    font-size: 13.5px;
+    font-weight: 500;
+    position: relative;
+  }
+  .nav-item .ico { width: 18px; height: 18px; flex-shrink: 0; opacity: .9; }
+  .nav-item:hover { background: #1a1b27; color: var(--text); }
+  .nav-item.active {
+    background: linear-gradient(90deg, #8b5cf625, #8b5cf608);
+    color: var(--text);
+    box-shadow: inset 0 0 0 1px #8b5cf640;
+  }
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: -14px;
+    top: 8px; bottom: 8px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: var(--p-1);
+    box-shadow: 0 0 12px #8b5cf6;
+  }
+  .nav-item .pill {
+    margin-left: auto;
+    font-size: 10.5px;
+    padding: 2px 7px;
+    background: var(--p-soft);
+    color: #c4b5fd;
+    border-radius: 99px;
+    font-weight: 600;
+  }
+  .nav-item .dot-new {
+    margin-left: auto;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--p-1);
+    box-shadow: 0 0 8px var(--p-1);
+  }
+
+  .sidebar-bottom {
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px solid var(--line-strong);
+  }
+  .user-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .user-card:hover { background: var(--panel); }
+  .user-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #22d3ee, #8b5cf6);
+    display: grid; place-items: center;
+    font-weight: 700; font-size: 12px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .user-avatar::after {
+    content: '';
+    position: absolute;
+    right: -1px; bottom: -1px;
+    width: 10px; height: 10px;
+    background: #10b981;
+    border: 2px solid var(--bg);
+    border-radius: 50%;
+  }
+  .user-meta { line-height: 1.2; flex: 1; min-width: 0; }
+  .user-name { font-weight: 600; font-size: 13px; }
+  .user-role { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+  .user-more {
+    color: var(--text-3);
+    width: 26px; height: 26px;
+    border-radius: 7px;
+    display: grid; place-items: center;
+  }
+  .user-more:hover { color: var(--text); background: var(--panel-2); }
+
+  /* ---------- Main ---------- */
+  .main {
+    padding: 22px 28px 40px;
+    min-width: 0;
+  }
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .search {
+    flex: 1;
+    max-width: 460px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel);
+    border: 1px solid var(--line-strong);
+    border-radius: 11px;
+    padding: 9px 14px;
+    color: var(--text-2);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .search:focus-within {
+    border-color: #8b5cf650;
+    box-shadow: 0 0 0 4px #8b5cf615;
+  }
+  .search input {
+    background: transparent;
+    border: 0; outline: 0;
+    color: var(--text);
+    font-size: 13.5px;
+    flex: 1;
+    font-family: inherit;
+  }
+  .search .kbd {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-3);
+    border: 1px solid var(--line-strong);
+    padding: 1px 6px;
+    border-radius: 5px;
+    background: var(--bg-2);
+  }
+  .top-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .icon-btn {
+    width: 38px; height: 38px;
+    border-radius: 11px;
+    background: var(--panel);
+    border: 1px solid var(--line-strong);
+    color: var(--text-2);
+    display: grid; place-items: center;
+    cursor: pointer;
+    position: relative;
+    transition: color .15s, border-color .15s;
+  }
+  .icon-btn:hover { color: var(--text); border-color: #3a3c54; }
+  .icon-btn .badge {
+    position: absolute;
+    top: 7px; right: 7px;
+    width: 7px; height: 7px;
+    background: var(--p-1);
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px var(--bg), 0 0 8px var(--p-1);
+  }
+  .topbar-avatar {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #22d3ee, #8b5cf6);
+    display: grid; place-items: center;
+    font-weight: 700; font-size: 13px;
+    cursor: pointer;
+    border: 2px solid var(--line-strong);
+  }
+
+  /* Header */
+  .page-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 22px;
+    gap: 18px;
+  }
+  .page-title {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0 0 6px;
+  }
+  .page-sub {
+    color: var(--text-2);
+    font-size: 14px;
+    margin: 0;
+  }
+  .page-sub b { color: var(--p-1); font-weight: 600; }
+
+  .daterange {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel);
+    border: 1px solid var(--line-strong);
+    border-radius: 11px;
+    padding: 9px 14px;
+    cursor: pointer;
+    transition: border-color .15s;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .daterange:hover { border-color: #3a3c54; }
+  .daterange .calendar { color: var(--text-2); }
+  .daterange .chev { color: var(--text-3); }
+
+  /* Metric cards */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .metric {
+    background: var(--panel);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    padding: 16px 16px 0;
+    position: relative;
+    overflow: hidden;
+    transition: transform .15s, border-color .15s, box-shadow .15s;
+    cursor: pointer;
+  }
+  .metric:hover {
+    transform: translateY(-1px);
+    border-color: #3a3c54;
+    box-shadow: 0 8px 24px -10px #00000080;
+  }
+  .metric-head {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 12px;
+  }
+  .metric-ico {
+    width: 30px; height: 30px;
+    border-radius: 9px;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+  }
+  .metric-ico.v1 { background: #8b5cf61a; color: #a78bfa; }
+  .metric-ico.v2 { background: #10b9811a; color: #34d399; }
+  .metric-ico.v3 { background: #22d3ee1a; color: #67e8f9; }
+  .metric-ico.v4 { background: #f59e0b1a; color: #fbbf24; }
+  .metric-ico.v5 { background: #ec48991a; color: #f9a8d4; }
+  .metric-label {
+    color: var(--text-2);
+    font-size: 12.5px;
+    font-weight: 500;
+  }
+  .metric-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .metric-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    color: var(--green);
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .metric-delta.down { color: var(--red); }
+  .metric-delta .ago { color: var(--text-3); font-weight: 500; margin-left: 2px; }
+  .metric-spark { margin: 0 -16px; height: 56px; display: block; }
+
+  /* Mid row */
+  .mid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    padding: 18px;
+  }
+  .panel-head {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 14px;
+  }
+  .panel-title {
+    font-size: 15.5px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .panel-actions {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .btn-ghost, .btn-soft {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 6px 11px;
+    background: var(--bg-2);
+    border: 1px solid var(--line-strong);
+    border-radius: 9px;
+    color: var(--text);
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    font-family: inherit;
+  }
+  .btn-ghost:hover, .btn-soft:hover { border-color: #3a3c54; }
+  .btn-ghost svg, .btn-soft svg { color: var(--text-2); }
+
+  .seg {
+    display: inline-flex;
+    background: var(--bg-2);
+    border: 1px solid var(--line-strong);
+    border-radius: 9px;
+    padding: 3px;
+  }
+  .seg button {
+    background: transparent;
+    border: 0;
+    color: var(--text-2);
+    font-size: 12.5px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .seg button.on {
+    background: var(--p-1);
+    color: white;
+    box-shadow: 0 2px 8px -2px #8b5cf680;
+  }
+
+  .legend {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 8px;
+  }
+  .leg {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px;
+    color: var(--text-2);
+  }
+  .leg::before {
+    content: '';
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .leg.l1 { color: #a78bfa; }
+  .leg.l2 { color: #67e8f9; }
+  .leg.l3 { color: #fbbf24; }
+
+  .chart-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 7;
+  }
+  .chart-wrap svg { width: 100%; height: 100%; display: block; }
+  .tooltip {
+    position: absolute;
+    background: #0b0c14;
+    border: 1px solid #2a2c3e;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 12px;
+    pointer-events: none;
+    box-shadow: 0 12px 30px -10px #000;
+    transform: translate(-50%, -110%);
+    white-space: nowrap;
+    z-index: 5;
+  }
+  .tooltip .date {
+    color: var(--text-3);
+    font-size: 11px;
+    margin-bottom: 6px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .tooltip .tline {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 3px;
+  }
+  .tooltip .tline .sw {
+    width: 8px; height: 8px; border-radius: 2px;
+  }
+  .tooltip .tline .val {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* Live activity */
+  .live-dot {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: #34d399;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .live-dot::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 0 0 #10b98180;
+    animation: pulse 1.6s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 #10b98180; }
+    100% { box-shadow: 0 0 0 8px #10b98100; }
+  }
+  .activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-height: 332px;
+    overflow-y: auto;
+    margin: 0 -4px;
+    padding: 0 4px;
+  }
+  .activity-list::-webkit-scrollbar { width: 6px; }
+  .activity-list::-webkit-scrollbar-thumb { background: #2a2c3e; border-radius: 3px; }
+  .ai {
+    display: flex; gap: 11px; align-items: flex-start;
+  }
+  .ai-ico {
+    width: 32px; height: 32px;
+    border-radius: 9px;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+  }
+  .ai-ico.v1 { background: #8b5cf61a; color: #a78bfa; }
+  .ai-ico.v2 { background: #22d3ee1a; color: #67e8f9; }
+  .ai-ico.v3 { background: #f59e0b1a; color: #fbbf24; }
+  .ai-ico.v4 { background: #ec48991a; color: #f9a8d4; }
+  .ai-ico.v5 { background: #10b9811a; color: #34d399; }
+  .ai-body { flex: 1; min-width: 0; line-height: 1.35; }
+  .ai-title { font-size: 12.5px; color: var(--text-2); }
+  .ai-target { font-weight: 600; color: var(--text); font-size: 13.5px; margin-top: 2px; }
+  .ai-target .ch { color: #a78bfa; }
+  .ai-target .gold { color: #fbbf24; }
+  .ai-time { color: var(--text-3); font-size: 11.5px; margin-top: 3px; font-family: 'JetBrains Mono', monospace; }
+  .view-all {
+    margin-top: 14px;
+    width: 100%;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--bg-2);
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    color: var(--text);
+    font-weight: 500;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .view-all:hover { border-color: #3a3c54; }
+  .view-all svg { color: var(--text-2); }
+
+  /* Bottom row */
+  .bottom {
+    display: grid;
+    grid-template-columns: 1.05fr 1.05fr 1.05fr 1.05fr;
+    gap: 14px;
+  }
+
+  /* Events */
+  .event {
+    display: flex; gap: 12px; align-items: center;
+    padding: 11px;
+    border-radius: 11px;
+    border: 1px solid var(--line-strong);
+    background: var(--bg-2);
+    cursor: pointer;
+    transition: border-color .15s, transform .15s;
+  }
+  .event:hover { border-color: #3a3c54; }
+  .event + .event { margin-top: 10px; }
+  .ev-ico {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+  }
+  .ev-ico.t1 { background: linear-gradient(135deg, #fbbf2440, #f59e0b20); color: #fbbf24; }
+  .ev-ico.t2 { background: linear-gradient(135deg, #ec489940, #f472b620); color: #f9a8d4; }
+  .ev-ico.t3 { background: linear-gradient(135deg, #22d3ee40, #06b6d420); color: #67e8f9; }
+  .ev-body { flex: 1; min-width: 0; line-height: 1.3; }
+  .ev-name { font-weight: 600; font-size: 13.5px; }
+  .ev-when { font-size: 11.5px; color: var(--text-3); margin-top: 3px; font-family: 'JetBrains Mono', monospace; }
+  .ev-going {
+    flex-shrink: 0;
+    padding: 4px 9px;
+    background: #8b5cf61a;
+    color: #c4b5fd;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .btn-primary {
+    margin-top: 14px;
+    width: 100%;
+    padding: 11px 12px;
+    background: linear-gradient(180deg, #8b5cf6 0%, #6d4aff 100%);
+    border: 0;
+    border-radius: 10px;
+    color: white;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    box-shadow: 0 6px 16px -6px #6d4aff80, inset 0 1px 0 #ffffff30;
+    font-family: inherit;
+    transition: transform .12s;
+  }
+  .btn-primary:hover { transform: translateY(-1px); }
+
+  /* Top members */
+  .mem {
+    display: flex; align-items: center; gap: 11px;
+    padding: 8px 4px;
+  }
+  .mem-rank {
+    width: 24px; height: 24px;
+    border-radius: 7px;
+    background: var(--bg-2);
+    border: 1px solid var(--line-strong);
+    display: grid; place-items: center;
+    font-size: 11.5px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    color: var(--text-2);
+    flex-shrink: 0;
+  }
+  .mem-rank.r1 { background: #fbbf2420; color: #fbbf24; border-color: #fbbf2440; }
+  .mem-rank.r2 { background: #cbd5e120; color: #cbd5e1; border-color: #cbd5e140; }
+  .mem-rank.r3 { background: #f9731620; color: #fb923c; border-color: #f9731640; }
+  .mem-avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8b5cf6, #6d4aff);
+    display: grid; place-items: center;
+    font-weight: 700; font-size: 11.5px;
+    flex-shrink: 0;
+  }
+  .mem-avatar.a2 { background: linear-gradient(135deg, #22d3ee, #06b6d4); }
+  .mem-avatar.a3 { background: linear-gradient(135deg, #f59e0b, #ec4899); }
+  .mem-avatar.a4 { background: linear-gradient(135deg, #10b981, #22d3ee); }
+  .mem-avatar.a5 { background: linear-gradient(135deg, #ec4899, #8b5cf6); }
+  .mem-body { flex: 1; min-width: 0; line-height: 1.25; }
+  .mem-name { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 5px; }
+  .mem-name .star { color: #fbbf24; }
+  .mem-level { font-size: 11.5px; color: var(--text-3); margin-top: 2px; }
+  .mem-xp {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* Quick actions */
+  .qa-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .qa {
+    background: var(--bg-2);
+    border: 1px solid var(--line-strong);
+    border-radius: 11px;
+    padding: 14px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s, transform .15s;
+    color: var(--text);
+    font-family: inherit;
+  }
+  .qa:hover { border-color: #3a3c54; background: #1d1e2a; transform: translateY(-1px); }
+  .qa-ico {
+    width: 32px; height: 32px;
+    border-radius: 9px;
+    display: grid; place-items: center;
+  }
+  .qa-ico.q1 { background: #8b5cf61a; color: #a78bfa; }
+  .qa-ico.q2 { background: #22d3ee1a; color: #67e8f9; }
+  .qa-ico.q3 { background: #10b9811a; color: #34d399; }
+  .qa-ico.q4 { background: #ec48991a; color: #f9a8d4; }
+  .qa-label { font-size: 12.5px; font-weight: 500; }
+
+  /* Status */
+  .status-head {
+    display: flex; align-items: center; gap: 7px;
+    color: #34d399;
+    font-size: 12.5px;
+    font-weight: 500;
+    margin-bottom: 14px;
+  }
+  .status-head svg { color: #10b981; }
+  .srow {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px dashed var(--line-strong);
+  }
+  .srow:last-child { border-bottom: 0; }
+  .srow-name { flex: 1; font-size: 13px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .srow-name .gd {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #10b981; box-shadow: 0 0 8px #10b98180;
+  }
+  .srow-state {
+    font-size: 11.5px;
+    color: var(--text-2);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Misc */
+  .row { display: flex; align-items: center; gap: 10px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useMemo, useRef, useEffect } = React;
+
+/* ----- Icon set (inline strokes) ----- */
+const I = ({ d, size = 18, sw = 1.7, fill }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill || 'none'}
+       stroke="currentColor" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+    {d}
+  </svg>
+);
+const Ico = {
+  search:    <I d={<><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></>}/>,
+  bell:      <I d={<><path d="M6 8a6 6 0 1 1 12 0c0 6 2 7 2 7H4s2-1 2-7Z"/><path d="M10 19a2 2 0 0 0 4 0"/></>}/>,
+  help:      <I d={<><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 1-1 1.7"/><circle cx="12" cy="17" r=".5" fill="currentColor"/></>}/>,
+  cal:       <I d={<><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></>}/>,
+  chev:      <I d={<><path d="m6 9 6 6 6-6"/></>}/>,
+  chevR:     <I d={<><path d="m9 6 6 6-6 6"/></>}/>,
+  chevL:     <I d={<><path d="m15 6-6 6 6 6"/></>}/>,
+  collapse:  <I d={<><path d="M11 6 5 12l6 6"/><path d="M19 6l-6 6 6 6"/></>}/>,
+  more:      <I d={<><circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/></>}/>,
+  users:     <I d={<><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3.5"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>}/>,
+  user:      <I d={<><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></>}/>,
+  wifi:      <I d={<><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5 12.5a10 10 0 0 1 14 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><circle cx="12" cy="20" r=".7" fill="currentColor"/></>}/>,
+  hash:      <I d={<><path d="M5 9h14M5 15h14M10 4 8 20M16 4l-2 16"/></>}/>,
+  crown:     <I d={<><path d="m3 18 2-10 5 4 2-8 2 8 5-4 2 10z"/><path d="M3 22h18"/></>}/>,
+  growth:    <I d={<><path d="M3 17 9 11l4 4 8-8"/><path d="M14 7h7v7"/></>}/>,
+  bar:       <I d={<><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="4" width="3" height="14"/></>}/>,
+  dashboard: <I d={<><rect x="3" y="3" width="8" height="9" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></>}/>,
+  activity:  <I d={<><path d="M3 12h4l3-8 4 16 3-8h4"/></>}/>,
+  ch:        <I d={<><path d="M5 8h14M5 14h14M10 4 8 20M16 4l-2 16"/></>}/>,
+  roles:     <I d={<><path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5l-8-3Z"/></>}/>,
+  spark:     <I d={<><path d="m13 2-3 7h4l-3 13 3-9h-4l3-11Z"/></>}/>,
+  ev:        <I d={<><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/></>}/>,
+  app:       <I d={<><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></>}/>,
+  auto:      <I d={<><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></>}/>,
+  mod:       <I d={<><path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5l-8-3Z"/><path d="m9 11 2 2 4-4"/></>}/>,
+  announce:  <I d={<><path d="M3 11v2a2 2 0 0 0 2 2h3l6 4V5L8 9H5a2 2 0 0 0-2 2Z"/><path d="M18 8a4 4 0 0 1 0 8"/></>}/>,
+  level:     <I d={<><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></>}/>,
+  leader:    <I d={<><path d="M6 9V4h12v5a6 6 0 0 1-12 0Z"/><path d="M4 6h2M18 6h2M9 21h6M12 15v6"/></>}/>,
+  reward:    <I d={<><circle cx="12" cy="9" r="6"/><path d="m9 14-2 8 5-3 5 3-2-8"/></>}/>,
+  settings:  <I d={<><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></>}/>,
+  bot:       <I d={<><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4"/><circle cx="9" cy="14" r="1.2" fill="currentColor"/><circle cx="15" cy="14" r="1.2" fill="currentColor"/><path d="M9 18h6"/></>}/>,
+  plug:      <I d={<><path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0V8Z"/><path d="M12 18v4"/></>}/>,
+  billing:   <I d={<><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></>}/>,
+  trophy:    <I d={<><path d="M8 3h8v6a4 4 0 0 1-8 0V3Z"/><path d="M5 5H3v2a3 3 0 0 0 3 3M19 5h2v2a3 3 0 0 1-3 3M10 14h4v3h-4z"/><path d="M8 21h8"/></>}/>,
+  movie:     <I d={<><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18M7 6V4M11 6V4M15 6V4M19 6V4"/></>}/>,
+  mic:       <I d={<><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></>}/>,
+  plus:      <I d={<><path d="M12 5v14M5 12h14"/></>}/>,
+  shield:    <I d={<><path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5l-8-3Z"/></>}/>,
+  speaker:   <I d={<><path d="M3 11v2a2 2 0 0 0 2 2h3l6 4V5L8 9H5a2 2 0 0 0-2 2Z"/><path d="M18 8a4 4 0 0 1 0 8"/></>}/>,
+  report:    <I d={<><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></>}/>,
+  modPanel:  <I d={<><path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5l-8-3Z"/><path d="m9 11 2 2 4-4"/></>}/>,
+  check:     <I d={<><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></>}/>,
+  arrow:     <I d={<><path d="M5 12h14M13 6l6 6-6 6"/></>}/>,
+  export:    <I d={<><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/></>}/>,
+  upArrow:   <I d={<svg/>}/>, // unused
+  logout:    <I d={<><path d="M10 17l-5-5 5-5"/><path d="M5 12h12M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/></>}/>,
+};
+
+/* tiny utilities */
+function pathFromPoints(points, smooth = true) {
+  if (!points.length) return '';
+  if (!smooth) return 'M' + points.map(p => `${p.x},${p.y}`).join(' L');
+  let d = `M${points[0].x},${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i - 1] || points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] || p2;
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+  }
+  return d;
+}
+
+/* ----- Sparkline ----- */
+function Sparkline({ data, color, fillId }) {
+  const w = 240, h = 56, pad = 4;
+  const min = Math.min(...data), max = Math.max(...data);
+  const range = max - min || 1;
+  const pts = data.map((v, i) => ({
+    x: pad + (i / (data.length - 1)) * (w - pad * 2),
+    y: pad + (1 - (v - min) / range) * (h - pad * 2 - 8) + 4,
+  }));
+  const linePath = pathFromPoints(pts, true);
+  const areaPath = `${linePath} L${pts[pts.length-1].x},${h} L${pts[0].x},${h} Z`;
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="metric-spark">
+      <defs>
+        <linearGradient id={fillId} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.35"/>
+          <stop offset="100%" stopColor={color} stopOpacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d={areaPath} fill={`url(#${fillId})`}/>
+      <path d={linePath} stroke={color} strokeWidth="1.8" fill="none" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+/* ----- Main chart ----- */
+const CHART_DATA = {
+  Daily: {
+    labels: ['May 12','May 13','May 14','May 15','May 16','May 17','May 18'],
+    messages:[3200, 4600, 5400, 6800, 8200, 9100, 7600],
+    voice:   [1100, 2200, 1800, 3200, 4400, 5100, 4800],
+    joins:   [ 320,  480,  410,  720,  860, 1020,  890],
+    ymax: 10000,
+  },
+  Weekly: {
+    labels: ['Apr 06','Apr 13','Apr 20','Apr 27','May 04','May 11','May 18'],
+    messages:[18000, 22400, 26800, 31200, 38600, 44100, 52300],
+    voice:   [ 7400,  9800, 12200, 14600, 19200, 24800, 28400],
+    joins:   [ 1800,  2200,  2800,  3400,  4200,  5100,  6300],
+    ymax: 60000,
+  },
+  Monthly: {
+    labels: ['Dec','Jan','Feb','Mar','Apr','May','Jun'],
+    messages:[42000, 58000, 71000, 92000, 124000, 168000, 196000],
+    voice:   [16000, 23000, 31000, 44000,  62000,  86000, 102000],
+    joins:   [ 4200,  5800,  7400,  9200,  12400,  17600,  22300],
+    ymax: 220000,
+  },
+};
+
+function formatNum(n) {
+  if (n >= 1000000) return (n/1000000).toFixed(1).replace('.0','') + 'M';
+  if (n >= 1000) return (n/1000).toFixed(1).replace('.0','') + 'K';
+  return n.toString();
+}
+
+function MainChart() {
+  const [range, setRange] = useState('Daily');
+  const data = CHART_DATA[range];
+  const [hover, setHover] = useState(null);
+  const ref = useRef(null);
+
+  const W = 760, H = 320;
+  const P = { l: 44, r: 14, t: 18, b: 32 };
+  const innerW = W - P.l - P.r;
+  const innerH = H - P.t - P.b;
+  const n = data.labels.length;
+  const ymax = data.ymax;
+
+  const yTicks = 5;
+  const tickVals = Array.from({length: yTicks + 1}, (_, i) => Math.round(ymax * (yTicks - i) / yTicks));
+
+  const xFor = i => P.l + (i / (n - 1)) * innerW;
+  const yFor = v => P.t + (1 - v / ymax) * innerH;
+
+  const seriesDef = [
+    { key:'messages', color:'#a78bfa', name:'Messages' },
+    { key:'voice',    color:'#67e8f9', name:'Voice Activity' },
+    { key:'joins',    color:'#fbbf24', name:'Joins' },
+  ];
+  const series = seriesDef.map(s => ({
+    ...s,
+    pts: data[s.key].map((v, i) => ({ x: xFor(i), y: yFor(v), v })),
+  }));
+
+  function handleMove(e) {
+    const rect = ref.current.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width * W;
+    const idx = Math.max(0, Math.min(n-1, Math.round((px - P.l) / innerW * (n-1))));
+    setHover(idx);
+  }
+
+  return (
+    <div className="panel" style={{padding:'18px 18px 14px'}}>
+      <div className="panel-head">
+        <h3 className="panel-title">Activity Overview</h3>
+        <div className="panel-actions">
+          <div className="seg">
+            {['Daily','Weekly','Monthly'].map(k => (
+              <button key={k} className={range === k ? 'on' : ''} onClick={() => { setRange(k); setHover(null); }}>{k}</button>
+            ))}
+          </div>
+          <button className="btn-ghost">{Ico.export}<span>Export</span></button>
+        </div>
+      </div>
+      <div className="legend">
+        {seriesDef.map(s => (
+          <span key={s.key} className="leg" style={{color: s.color}}>{s.name}</span>
+        ))}
+      </div>
+      <div className="chart-wrap" ref={ref}
+        onMouseMove={handleMove}
+        onMouseLeave={() => setHover(null)}>
+        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+          <defs>
+            {series.map((s, i) => (
+              <linearGradient key={i} id={`g-${s.key}`} x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor={s.color} stopOpacity="0.32"/>
+                <stop offset="100%" stopColor={s.color} stopOpacity="0"/>
+              </linearGradient>
+            ))}
+          </defs>
+          {/* gridlines */}
+          {tickVals.map((v, i) => {
+            const y = P.t + (i / yTicks) * innerH;
+            return (
+              <g key={i}>
+                <line x1={P.l} x2={W-P.r} y1={y} y2={y} stroke="#23243a" strokeDasharray="3 4"/>
+                <text x={P.l - 8} y={y + 4} fill="#6b6d82" fontSize="11" textAnchor="end" fontFamily="JetBrains Mono">{formatNum(v)}</text>
+              </g>
+            );
+          })}
+          {/* x labels */}
+          {data.labels.map((l, i) => (
+            <text key={l+i} x={xFor(i)} y={H - 10} fill="#6b6d82" fontSize="11" textAnchor="middle" fontFamily="JetBrains Mono">{l}</text>
+          ))}
+          {/* area + line for each series */}
+          {series.map(s => {
+            const lp = pathFromPoints(s.pts, true);
+            const ap = `${lp} L${s.pts[s.pts.length-1].x},${H-P.b} L${s.pts[0].x},${H-P.b} Z`;
+            return (
+              <g key={s.key}>
+                <path d={ap} fill={`url(#g-${s.key})`}/>
+                <path d={lp} stroke={s.color} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+              </g>
+            );
+          })}
+          {/* dots */}
+          {series.map(s => s.pts.map((p, i) => (
+            <circle key={s.key+i} cx={p.x} cy={p.y} r={hover === i ? 4.5 : 3} fill="#0b0c14" stroke={s.color} strokeWidth="2"/>
+          )))}
+          {/* hover line */}
+          {hover !== null && (
+            <line x1={xFor(hover)} x2={xFor(hover)} y1={P.t} y2={H-P.b} stroke="#8b5cf6" strokeOpacity="0.5" strokeDasharray="4 4"/>
+          )}
+        </svg>
+        {hover !== null && (
+          <div className="tooltip" style={{
+            left: `${(xFor(hover) / W) * 100}%`,
+            top: `${(Math.min(...series.map(s => s.pts[hover].y)) / H) * 100}%`,
+          }}>
+            <div className="date">{data.labels[hover]}</div>
+            {series.map(s => (
+              <div key={s.key} className="tline">
+                <span className="sw" style={{background: s.color}}/>
+                <span style={{color:'var(--text-2)'}}>{s.name}</span>
+                <span className="val">{formatNum(s.pts[hover].v)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ----- Sidebar ----- */
+function Sidebar({ active, setActive }) {
+  const groups = [
+    { title: null, items: [
+      { id:'overview', icon: Ico.dashboard, label:'Overview' },
+    ]},
+    { title:'Analytics', items: [
+      { id:'dashboard', icon: Ico.bar, label:'Dashboard' },
+      { id:'members', icon: Ico.users, label:'Members' },
+      { id:'activity', icon: Ico.activity, label:'Activity', pill:'New' },
+      { id:'channels', icon: Ico.ch, label:'Channels' },
+      { id:'roles-a', icon: Ico.roles, label:'Roles' },
+      { id:'engage', icon: Ico.spark, label:'Engagement' },
+    ]},
+    { title:'Manage', items: [
+      { id:'events', icon: Ico.ev, label:'Events' },
+      { id:'apps', icon: Ico.app, label:'Applications', dot:true },
+      { id:'auto', icon: Ico.auto, label:'Automations' },
+      { id:'mod', icon: Ico.mod, label:'Moderation' },
+      { id:'announce', icon: Ico.announce, label:'Announcements' },
+    ]},
+    { title:'Community', items: [
+      { id:'level', icon: Ico.level, label:'Levels & XP' },
+      { id:'leader', icon: Ico.leader, label:'Leaderboard' },
+      { id:'reward', icon: Ico.reward, label:'Rewards' },
+    ]},
+    { title:'Settings', items: [
+      { id:'server', icon: Ico.settings, label:'Server Settings' },
+      { id:'bot', icon: Ico.bot, label:'Bot Settings' },
+      { id:'integ', icon: Ico.plug, label:'Integrations' },
+      { id:'bill', icon: Ico.billing, label:'Billing' },
+    ]},
+  ];
+  return (
+    <aside className="sidebar">
+      <div className="brand">
+        <div className="brand-mark"></div>
+        <div className="brand-name">Pulsify</div>
+        <div className="brand-collapse" title="Collapse">{Ico.collapse}</div>
+      </div>
+
+      <div className="server-card">
+        <div className="server-avatar">P</div>
+        <div className="server-meta">
+          <div className="server-name">Pulsify HQ</div>
+          <div className="server-sub">12,842 members</div>
+        </div>
+        <div className="chev">{Ico.chev}</div>
+      </div>
+
+      {groups.map((g, gi) => (
+        <div className="nav-group" key={gi}>
+          {g.title && <div className="nav-title">{g.title}</div>}
+          {g.items.map(it => (
+            <div
+              key={it.id}
+              className={'nav-item' + (active === it.id ? ' active' : '')}
+              onClick={() => setActive(it.id)}
+            >
+              <span className="ico">{it.icon}</span>
+              <span>{it.label}</span>
+              {it.pill && <span className="pill">{it.pill}</span>}
+              {it.dot && <span className="dot-new"></span>}
+            </div>
+          ))}
+        </div>
+      ))}
+
+      <div className="sidebar-bottom">
+        <div className="user-card">
+          <div className="user-avatar">MK</div>
+          <div className="user-meta">
+            <div className="user-name">Marko K.</div>
+            <div className="user-role">Server Owner</div>
+          </div>
+          <div className="user-more">{Ico.more}</div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+/* ----- Metric cards ----- */
+const METRICS = [
+  { key:'total', label:'Total Members', value:'12,842', delta:'+5.6%', icon:Ico.users, iv:'v1', color:'#a78bfa',
+    data:[10200,10450,10800,11100,11500,11900,12300,12842] },
+  { key:'active', label:'Active Members', value:'4,392', delta:'+8.7%', icon:Ico.user, iv:'v2', color:'#34d399',
+    data:[3100,3300,3600,3500,3900,4100,4250,4392] },
+  { key:'msgs', label:'Messages', value:'56,231', delta:'+12.4%', icon:Ico.ch, iv:'v3', color:'#67e8f9',
+    data:[34000,38000,41000,44000,48000,50000,53000,56231] },
+  { key:'voice', label:'Voice Activity', value:'1,842h', delta:'+7.1%', icon:Ico.wifi, iv:'v4', color:'#fbbf24',
+    data:[900,1100,1250,1320,1500,1620,1740,1842] },
+  { key:'growth', label:'Growth', value:'+842', delta:'+9.3%', icon:Ico.growth, iv:'v5', color:'#f9a8d4',
+    data:[210,320,400,460,540,640,740,842] },
+];
+
+function Metric({ m }) {
+  return (
+    <div className="metric">
+      <div className="metric-head">
+        <div className={'metric-ico ' + m.iv}>{m.icon}</div>
+        <div className="metric-label">{m.label}</div>
+      </div>
+      <div className="metric-value">{m.value}</div>
+      <div className="metric-delta">
+        <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+          <path d="M2 8l4-4 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        {m.delta}<span className="ago">from last week</span>
+      </div>
+      <Sparkline data={m.data} color={m.color} fillId={`sp-${m.key}`}/>
+    </div>
+  );
+}
+
+/* ----- Live activity ----- */
+const LIVE = [
+  { i: Ico.user, iv:'v1', title:'New member joined', target:'just_chill#0', time:'now' },
+  { i: Ico.ch, iv:'v2', title:'Message in', target:<span className="ch">#general</span>, time:'10s ago', sub:'by @shadow_wolf' },
+  { i: Ico.wifi, iv:'v3', title:'Voice channel activity', target:'Gaming Lounge', time:'1m ago' },
+  { i: Ico.app, iv:'v4', title:'New application submitted', target:'Moderator Application', time:'2m ago' },
+  { i: Ico.ev, iv:'v5', title:'Event reminder', target:<span className="gold">Tournament Finals</span>, time:'5m ago' },
+  { i: Ico.mod, iv:'v1', title:'Member warned', target:'rule_breaker_42', time:'8m ago' },
+  { i: Ico.reward, iv:'v3', title:'Reward claimed', target:'nova → Pro Badge', time:'12m ago' },
+];
+
+function LiveActivity() {
+  return (
+    <div className="panel">
+      <div className="panel-head">
+        <h3 className="panel-title">Live Activity</h3>
+        <span style={{marginLeft:'auto'}} className="live-dot">Live</span>
+      </div>
+      <div className="activity-list">
+        {LIVE.map((a, i) => (
+          <div className="ai" key={i}>
+            <div className={'ai-ico ' + a.iv}>{a.i}</div>
+            <div className="ai-body">
+              <div className="ai-title">{a.title}{a.sub ? <> {a.sub}</> : null}</div>
+              <div className="ai-target">{a.target}</div>
+              <div className="ai-time">{a.time}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <button className="view-all">
+        View All Activity {Ico.arrow}
+      </button>
+    </div>
+  );
+}
+
+/* ----- Bottom panels ----- */
+function Events() {
+  const evs = [
+    { ico: Ico.trophy, iv:'t1', name:'Tournament Finals', when:'May 20, 2024 · 7:00 PM', going: 37 },
+    { ico: Ico.movie, iv:'t2', name:'Community Movie Night', when:'May 24, 2024 · 8:00 PM', going: 54 },
+    { ico: Ico.mic,   iv:'t3', name:'Coaching Session',   when:'May 25, 2024 · 6:00 PM', going: 12 },
+  ];
+  return (
+    <div className="panel">
+      <div className="panel-head">
+        <h3 className="panel-title">Upcoming Events</h3>
+        <button className="btn-ghost panel-actions">View All</button>
+      </div>
+      {evs.map((e, i) => (
+        <div className="event" key={i}>
+          <div className={'ev-ico ' + e.iv}>{e.ico}</div>
+          <div className="ev-body">
+            <div className="ev-name">{e.name}</div>
+            <div className="ev-when">{e.when}</div>
+          </div>
+          <div className="ev-going">{e.going} Going</div>
+        </div>
+      ))}
+      <button className="btn-primary">Create Event</button>
+    </div>
+  );
+}
+
+function TopMembers() {
+  const ms = [
+    { rank:1, name:'Nova', star:true, level:42, xp:'8,421', a:'a1', init:'N' },
+    { rank:2, name:'shadow_wolf', level:38, xp:'6,982', a:'a2', init:'SW' },
+    { rank:3, name:'NotZane', level:36, xp:'5,421', a:'a3', init:'NZ' },
+    { rank:4, name:'Rosey', level:34, xp:'4,888', a:'a4', init:'R' },
+    { rank:5, name:'mystic_03', level:32, xp:'4,120', a:'a5', init:'M' },
+  ];
+  return (
+    <div className="panel">
+      <div className="panel-head">
+        <h3 className="panel-title">Top Active Members</h3>
+        <button className="btn-ghost panel-actions">View Leaderboard</button>
+      </div>
+      <div>
+        {ms.map(m => (
+          <div className="mem" key={m.rank}>
+            <div className={'mem-rank ' + (m.rank<=3 ? 'r'+m.rank : '')}>{m.rank}</div>
+            <div className={'mem-avatar ' + m.a}>{m.init}</div>
+            <div className="mem-body">
+              <div className="mem-name">{m.name} {m.star && <span className="star">★</span>}</div>
+              <div className="mem-level">Level {m.level}</div>
+            </div>
+            <div className="mem-xp">{m.xp} XP</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function QuickActions() {
+  const qas = [
+    { ico: Ico.ev,     iv:'q1', label:'Create Event' },
+    { ico: Ico.speaker, iv:'q2', label:'Send Announcement' },
+    { ico: Ico.auto,   iv:'q3', label:'Create Automation' },
+    { ico: Ico.shield, iv:'q4', label:'Add Role' },
+    { ico: Ico.report, iv:'q1', label:'View Reports' },
+    { ico: Ico.modPanel, iv:'q2', label:'Open Mod Panel' },
+  ];
+  return (
+    <div className="panel">
+      <div className="panel-head">
+        <h3 className="panel-title">Quick Actions</h3>
+      </div>
+      <div className="qa-grid">
+        {qas.map((q, i) => (
+          <button className="qa" key={i}>
+            <div className={'qa-ico ' + q.iv}>{q.ico}</div>
+            <div className="qa-label">{q.label}</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ServerStatus() {
+  const items = [
+    { name:'Bot Connection', state:'Online' },
+    { name:'API Sync', state:'Online' },
+    { name:'Database', state:'Online' },
+    { name:'Automations', state:'Online' },
+    { name:'Webhooks', state:'Online' },
+  ];
+  return (
+    <div className="panel">
+      <div className="panel-head">
+        <h3 className="panel-title">Server Status</h3>
+      </div>
+      <div className="status-head">
+        {Ico.check}
+        <span>All Systems Operational</span>
+      </div>
+      {items.map((s, i) => (
+        <div className="srow" key={i}>
+          <div className="srow-name"><span className="gd"/>{s.name}</div>
+          <div className="srow-state">{s.state}</div>
+        </div>
+      ))}
+      <button className="view-all" style={{marginTop:14}}>
+        View Status Page {Ico.arrow}
+      </button>
+    </div>
+  );
+}
+
+/* ----- App shell ----- */
+function App() {
+  const [active, setActive] = useState('overview');
+  return (
+    <div className="app" data-screen-label="01 Analytics Overview">
+      <Sidebar active={active} setActive={setActive}/>
+      <main className="main">
+        <div className="topbar">
+          <div className="search">
+            <span style={{color:'var(--text-3)'}}>{Ico.search}</span>
+            <input placeholder="Search anything..." />
+            <span className="kbd">⌘K</span>
+          </div>
+          <div className="top-actions">
+            <button className="icon-btn">{Ico.help}</button>
+            <button className="icon-btn">
+              {Ico.bell}
+              <span className="badge"></span>
+            </button>
+            <div className="topbar-avatar">MK</div>
+          </div>
+        </div>
+
+        <div className="page-head">
+          <div>
+            <h1 className="page-title">Overview</h1>
+            <p className="page-sub">Welcome back, Marko! Here's what's happening in <b>Pulsify HQ</b>.</p>
+          </div>
+          <button className="daterange">
+            <span className="calendar">{Ico.cal}</span>
+            <span>May 12 – May 18, 2024</span>
+            <span className="chev">{Ico.chev}</span>
+          </button>
+        </div>
+
+        <div className="metrics">
+          {METRICS.map(m => <Metric m={m} key={m.key}/>)}
+        </div>
+
+        <div className="mid">
+          <MainChart/>
+          <LiveActivity/>
+        </div>
+
+        <div className="bottom">
+          <Events/>
+          <TopMembers/>
+          <QuickActions/>
+          <ServerStatus/>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

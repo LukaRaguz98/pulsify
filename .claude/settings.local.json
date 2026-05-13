@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(New-Item *)",
+      "Bash(npm install *)",
+      "Bash(npx next *)",
+      "Bash(Remove-Item *)",
+      "Bash(Get-ChildItem E:\\\\projects\\\\pulsify *)"
+    ]
+  }
+}
