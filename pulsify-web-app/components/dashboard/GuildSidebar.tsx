@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { guildIconUrl, type DiscordGuildFull } from '@/lib/discord'
+import { guildIconUrl, type DiscordGuildFull, type DiscordSelfUser } from '@/lib/discord'
 import {
   BarChart2,
   CalendarDays,
@@ -13,9 +13,9 @@ import {
   Users,
   ChevronLeft,
   ChevronRight,
-  LogOut,
   Settings,
 } from 'lucide-react'
+import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
 
 type NavItem = {
   label: string
@@ -33,15 +33,23 @@ type Props = {
   guildId: string
   user: {
     id: string
+    email?: string
     user_metadata?: {
       full_name?: string
       avatar_url?: string
-      custom_claims?: { global_name?: string }
+      provider_id?: string
+      custom_claims?: {
+        global_name?: string
+        username?: string
+        discriminator?: string
+      }
     }
   }
+  selfUser?: DiscordSelfUser
+  bannerUrl?: string
 }
 
-export function GuildSidebar({ guild, guildId, user }: Props) {
+export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Props) {
   const [collapsed, setCollapsed] = useState(false)
   const pathname = usePathname()
   const base = `/dashboard/${guildId}`
@@ -71,11 +79,17 @@ export function GuildSidebar({ guild, guildId, user }: Props) {
   ]
 
   const icon = guildIconUrl(guild.id, guild.icon, 64)
+  const claims = user.user_metadata?.custom_claims
   const displayName =
+    selfUser?.global_name ??
+    claims?.global_name ??
+    selfUser?.username ??
     user.user_metadata?.full_name ??
-    user.user_metadata?.custom_claims?.global_name ??
     'User'
   const userAvatar = user.user_metadata?.avatar_url ?? ''
+  const username = selfUser?.username ?? claims?.username
+  const discriminator = selfUser?.discriminator ?? claims?.discriminator
+  const discordId = user.user_metadata?.provider_id ?? user.id
   const memberCount = guild.approximate_member_count ?? guild.member_count
 
   return (
@@ -255,35 +269,18 @@ export function GuildSidebar({ guild, guildId, user }: Props) {
           {!collapsed && 'All Servers'}
         </Link>
 
-        <div
-          className="flex items-center rounded-lg px-2.5 py-2"
-          style={{ justifyContent: collapsed ? 'center' : 'flex-start', gap: collapsed ? '0' : '0.625rem' }}
-        >
-          {userAvatar ? (
-            <Image src={userAvatar} alt={displayName} width={26} height={26} className="rounded-full shrink-0" unoptimized />
-          ) : (
-            <div
-              className="flex h-[26px] w-[26px] items-center justify-center rounded-full shrink-0 text-xs text-white font-bold"
-              style={{ background: 'linear-gradient(135deg, var(--cyan), var(--p-1))' }}
-            >
-              {displayName.charAt(0)}
-            </div>
-          )}
-          {!collapsed && (
-            <>
-              <span className="flex-1 truncate text-sm text-muted-foreground">{displayName}</span>
-              <form action="/auth/logout" method="POST" className="shrink-0">
-                <button
-                  type="submit"
-                  title="Log out"
-                  className="text-subtle hover:text-red-400 transition p-1 rounded"
-                >
-                  <LogOut size={14} />
-                </button>
-              </form>
-            </>
-          )}
-        </div>
+        <UserProfileButton
+          displayName={displayName}
+          username={username}
+          discriminator={discriminator}
+          discordId={discordId}
+          email={user.email}
+          avatarUrl={userAvatar}
+          bannerUrl={bannerUrl}
+          bannerColor={selfUser?.banner_color ?? undefined}
+          collapsed={collapsed}
+          popupDirection="up"
+        />
       </div>
     </aside>
   )

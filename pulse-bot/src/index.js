@@ -73,12 +73,29 @@ const commands = [
 client.once(Events.ClientReady, async (readyClient) => {
   console.log(`[Pulse] Logged in as ${readyClient.user.tag}`);
 
+  readyClient.user.setPresence({
+    activities: [{ name: 'Powered by Pulsify' }],
+    status: 'online',
+  });
+
   const rest = new REST().setToken(process.env.DISCORD_BOT_TOKEN);
   await rest.put(Routes.applicationCommands(readyClient.user.id), { body: commands });
   console.log('[Pulse] Slash commands registered.');
 
   for (const guild of readyClient.guilds.cache.values()) {
     await syncGuild(guild);
+  }
+
+  // Remove stale synced_guilds entries for servers the bot is no longer in
+  const currentIds = [...readyClient.guilds.cache.keys()];
+  const { data: stored } = await supabase.from('synced_guilds').select('guild_id');
+  const stale = (stored ?? []).filter((r) => !currentIds.includes(r.guild_id));
+  if (stale.length > 0) {
+    await supabase
+      .from('synced_guilds')
+      .delete()
+      .in('guild_id', stale.map((r) => r.guild_id));
+    console.log(`[Pulse] Removed ${stale.length} stale guild(s) from synced_guilds.`);
   }
 });
 
@@ -87,23 +104,39 @@ client.on(Events.GuildCreate, async (guild) => {
   await syncGuild(guild);
 });
 
+client.on(Events.GuildDelete, async (guild) => {
+  console.log(`[Pulse] Left/kicked from guild: ${guild.name} (${guild.id})`);
+  await supabase.from('synced_guilds').delete().eq('guild_id', guild.id);
+});
+
 client.on(Events.GuildMemberAdd, async (member) => {
   const settings = await getGuildSettings(member.guild.id);
 
   if (settings?.welcome?.enabled && settings.welcome.channel_id) {
-    const channel = member.guild.channels.cache.get(settings.welcome.channel_id);
-    if (channel?.isTextBased()) {
-      const msg = (settings.welcome.message ?? 'Welcome to {server}, {user}!')
-        .replace('{user}', member.toString())
-        .replace('{server}', member.guild.name);
-      await channel.send(msg).catch(console.error);
+    try {
+      const channel = await member.guild.channels.fetch(settings.welcome.channel_id);
+      if (channel?.isTextBased()) {
+        const msg = (settings.welcome.message ?? 'Welcome to {server}, {user}!')
+          .replace('{user}', member.toString())
+          .replace('{server}', member.guild.name);
+        await channel.send(msg);
+      }
+    } catch (err) {
+      console.error(`[Pulse] Welcome message failed in guild ${member.guild.id}:`, err.message);
     }
   }
 
   if (settings?.auto_role?.enabled && settings.auto_role.role_id) {
-    const role = member.guild.roles.cache.get(settings.auto_role.role_id);
-    if (role) {
-      await member.roles.add(role).catch(console.error);
+    try {
+      const role = await member.guild.roles.fetch(settings.auto_role.role_id);
+      if (role) {
+        await member.roles.add(role);
+        console.log(`[Pulse] Auto-role "${role.name}" assigned to ${member.user.tag} in ${member.guild.name}`);
+      } else {
+        console.warn(`[Pulse] Auto-role not found: ${settings.auto_role.role_id} in guild ${member.guild.id}`);
+      }
+    } catch (err) {
+      console.error(`[Pulse] Auto-role failed for ${member.user.tag} in guild ${member.guild.id}:`, err.message);
     }
   }
 });

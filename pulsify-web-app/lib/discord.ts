@@ -89,6 +89,12 @@ export function guildIconUrl(guildId: string, icon: string | null, size = 64): s
   return `https://cdn.discordapp.com/icons/${guildId}/${icon}.${ext}?size=${size}`
 }
 
+export function userBannerUrl(userId: string, banner: string | null, size = 480): string {
+  if (!banner) return ''
+  const ext = banner.startsWith('a_') ? 'gif' : 'webp'
+  return `https://cdn.discordapp.com/banners/${userId}/${banner}.${ext}?size=${size}`
+}
+
 export function avatarUrl(userId: string, avatar: string | null, discriminator = '0', size = 64): string {
   if (!avatar) {
     const index = Number(discriminator) % 5
@@ -112,6 +118,26 @@ export function botInviteUrl(guildId?: string): string {
   const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID ?? ''
   const base = `https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=8&scope=bot+applications.commands`
   return guildId ? `${base}&guild_id=${guildId}` : base
+}
+
+export type DiscordSelfUser = {
+  id: string
+  username: string
+  discriminator: string
+  global_name: string | null
+  avatar: string | null
+  banner: string | null
+  accent_color: number | null
+  banner_color: string | null
+}
+
+export async function fetchSelfUser(accessToken: string): Promise<DiscordSelfUser | null> {
+  const res = await fetch(`${DISCORD_API}/users/@me`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    next: { revalidate: 60 },
+  })
+  if (!res.ok) return null
+  return res.json()
 }
 
 export async function fetchUserGuilds(accessToken: string): Promise<DiscordGuild[]> {
@@ -159,7 +185,7 @@ export async function fetchGuildEvents(guildId: string): Promise<DiscordSchedule
     `${DISCORD_API}/guilds/${guildId}/scheduled-events?with_user_count=true`,
     {
       headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
-      next: { revalidate: 60 },
+      cache: 'no-store',
     }
   )
   if (!res.ok) return []
@@ -170,7 +196,7 @@ export async function fetchGuildBans(guildId: string): Promise<DiscordBan[]> {
   if (!process.env.DISCORD_BOT_TOKEN) return []
   const res = await fetch(`${DISCORD_API}/guilds/${guildId}/bans?limit=100`, {
     headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
-    next: { revalidate: 30 },
+    cache: 'no-store',
   })
   if (!res.ok) return []
   return res.json()
@@ -193,9 +219,72 @@ export async function isBotInGuild(guildId: string): Promise<boolean> {
   if (!process.env.DISCORD_BOT_TOKEN) return false
   const res = await fetch(`${DISCORD_API}/guilds/${guildId}`, {
     headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
-    next: { revalidate: 30 },
+    cache: 'no-store',
   })
   return res.ok
+}
+
+export type BotPermissions = {
+  inGuild: boolean
+  manageRoles: boolean
+  sendMessages: boolean
+  banMembers: boolean
+}
+
+export async function checkBotPermissions(guildId: string): Promise<BotPermissions> {
+  const none: BotPermissions = { inGuild: false, manageRoles: false, sendMessages: false, banMembers: false }
+  if (!process.env.DISCORD_BOT_TOKEN || !process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID) return none
+
+  const botId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID
+  const [memberRes, roles] = await Promise.all([
+    fetch(`${DISCORD_API}/guilds/${guildId}/members/${botId}`, {
+      headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+      cache: 'no-store',
+    }),
+    fetchGuildRoles(guildId),
+  ])
+
+  if (!memberRes.ok) return none
+  const member: { roles: string[] } = await memberRes.json()
+  const botRoleIds = new Set(member.roles)
+
+  let permissions = BigInt(0)
+  for (const role of roles) {
+    // include @everyone role (same id as guild) and bot's assigned roles
+    if (role.id === guildId || botRoleIds.has(role.id)) {
+      permissions |= BigInt(role.permissions)
+    }
+  }
+
+  const ADMINISTRATOR = BigInt(0x8)
+  if ((permissions & ADMINISTRATOR) !== BigInt(0)) {
+    return { inGuild: true, manageRoles: true, sendMessages: true, banMembers: true }
+  }
+
+  return {
+    inGuild: true,
+    manageRoles:   (permissions & BigInt(0x10000000)) !== BigInt(0),
+    sendMessages:  (permissions & BigInt(0x800))      !== BigInt(0),
+    banMembers:    (permissions & BigInt(0x4))         !== BigInt(0),
+  }
+}
+
+export async function unbanUser(
+  guildId: string,
+  userId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/bans/${userId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+  })
+
+  // 204 No Content = success
+  if (res.ok) return { ok: true }
+
+  const body = await res.json().catch(() => ({})) as { message?: string }
+  return { ok: false, error: body.message ?? `Discord API error ${res.status}` }
 }
 
 export function formatEventStatus(status: 1 | 2 | 3 | 4): string {
@@ -204,6 +293,26 @@ export function formatEventStatus(status: 1 | 2 | 3 | 4): string {
 
 export function formatEntityType(type: 1 | 2 | 3): string {
   return { 1: 'Stage', 2: 'Voice', 3: 'External' }[type]
+}
+
+export async function reorderGuildRoles(
+  guildId: string,
+  positions: { id: string; position: number }[],
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/roles`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(positions),
+  })
+
+  if (res.ok) return { ok: true }
+  const body = await res.json().catch(() => ({})) as { message?: string }
+  return { ok: false, error: body.message ?? `Discord API error ${res.status}` }
 }
 
 export function channelTypeName(type: number): string {
