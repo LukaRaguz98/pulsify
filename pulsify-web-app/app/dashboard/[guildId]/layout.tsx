@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { fetchGuild, fetchSelfUser, userBannerUrl } from '@/lib/discord'
 import { GuildSidebar } from '@/components/dashboard/GuildSidebar'
+import { CornerDecorations } from '@/components/dashboard/CornerDecorations'
 
 export default async function GuildLayout({
   children,
@@ -36,6 +37,7 @@ export default async function GuildLayout({
         selfUser={selfUser ?? undefined}
         bannerUrl={bannerUrl}
       />
+      <CornerDecorations />
       <main className="flex-1 overflow-y-auto">{children}</main>
     </div>
   )

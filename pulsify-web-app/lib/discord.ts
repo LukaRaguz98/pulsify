@@ -327,3 +327,68 @@ export function channelTypeName(type: number): string {
   }
   return types[type] ?? 'Unknown'
 }
+
+export async function postChannelMessage(
+  channelId: string,
+  content: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ content }),
+  })
+  if (res.ok) return { ok: true }
+  const body = await res.json().catch(() => ({})) as { message?: string }
+  return { ok: false, error: body.message ?? `Discord API error ${res.status}` }
+}
+
+export async function postChannelEmbed(
+  channelId: string,
+  embed: { color: number; title: string; description: string },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ embeds: [embed] }),
+  })
+  if (res.ok) return { ok: true }
+  const body = await res.json().catch(() => ({})) as { message?: string }
+  return { ok: false, error: body.message ?? `Discord API error ${res.status}` }
+}
+
+export async function createGuildChannel(
+  guildId: string,
+  params: { name: string; type: 0 | 4; parent_id?: string },
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+
+  const name = params.type === 4
+    ? params.name.slice(0, 100)
+    : params.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 100) || 'channel'
+
+  const body: Record<string, unknown> = { name, type: params.type }
+  if (params.parent_id) body.parent_id = params.parent_id
+
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/channels`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  })
+  if (res.ok) {
+    const data = await res.json() as { id: string }
+    return { ok: true, id: data.id }
+  }
+  const err = await res.json().catch(() => ({})) as { message?: string }
+  return { ok: false, error: err.message ?? `Discord API error ${res.status}` }
+}
