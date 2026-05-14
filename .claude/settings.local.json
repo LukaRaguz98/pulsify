@@ -12,7 +12,13 @@
       "Bash(node -e \"const fs=require\\('fs'\\); const s=fs.statSync\\('public/logo.png'\\); console.log\\('size:', s.size, 'bytes'\\)\")",
       "Bash(node -e ' *)",
       "PowerShell(Get-ChildItem -Path \"E:\\\\projects\\\\pulsify\" -Force | Where-Object { $_.Name -ne 'node_modules' -and $_.Name -ne '.git' } | Select-Object Name, PSIsContainer)",
-      "PowerShell(Get-ChildItem -Path \"E:\\\\projects\\\\pulsify\" -Recurse -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^\\(bot|discord-bot\\)$' })"
+      "PowerShell(Get-ChildItem -Path \"E:\\\\projects\\\\pulsify\" -Recurse -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^\\(bot|discord-bot\\)$' })",
+      "Bash(node -e \"console.log\\(require\\('recharts/package.json'\\).version\\)\")",
+      "Bash(npx eslint *)",
+      "Bash(node --check ../pulse-bot/src/index.js)",
+      "Bash(node --check ../pulse-bot/src/analytics.js)",
+      "Bash(grep -E \"^[A-Z]:\\\\\\\\\\\\\\\\\")",
+      "Bash(node --check \"E:/projects/pulsify/pulse-bot/src/analytics.js\")"
     ]
   }
 }

@@ -12,11 +12,14 @@ const {
 } = require('discord.js');
 
 const { createClient } = require('@supabase/supabase-js');
+const { createAnalytics } = require('./analytics');
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
+
+const analytics = createAnalytics(supabase);
 
 const client = new Client({
   intents: [
@@ -24,6 +27,7 @@ const client = new Client({
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildModeration,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildVoiceStates,
     GatewayIntentBits.MessageContent,
   ],
 });
@@ -84,6 +88,19 @@ client.once(Events.ClientReady, async (readyClient) => {
 
   for (const guild of readyClient.guilds.cache.values()) {
     await syncGuild(guild);
+
+    // Seed analytics with members already connected to voice channels.
+    for (const vs of guild.voiceStates.cache.values()) {
+      if (vs.channelId && !vs.member?.user?.bot) {
+        analytics.voiceJoin(
+          guild.id,
+          vs.id,
+          vs.member?.user?.username,
+          vs.channelId,
+          vs.channel?.name
+        );
+      }
+    }
   }
 
   // Remove stale synced_guilds entries for servers the bot is no longer in
@@ -110,6 +127,13 @@ client.on(Events.GuildDelete, async (guild) => {
 });
 
 client.on(Events.GuildMemberAdd, async (member) => {
+  analytics.track({
+    type: 'member_join',
+    guildId: member.guild.id,
+    userId: member.id,
+    userName: member.user.username,
+  });
+
   const settings = await getGuildSettings(member.guild.id);
 
   if (settings?.welcome?.enabled && settings.welcome.channel_id) {
@@ -180,6 +204,13 @@ client.on(Events.GuildMemberAdd, async (member) => {
 client.on(Events.GuildMemberRemove, async (member) => {
   console.log(`[Pulse] Member left: ${member.user.tag} from ${member.guild.name}`);
 
+  analytics.track({
+    type: 'member_leave',
+    guildId: member.guild.id,
+    userId: member.id,
+    userName: member.user.username,
+  });
+
   const settings = await getGuildSettings(member.guild.id);
 
   if (settings?.goodbye?.enabled && settings.goodbye.channel_id) {
@@ -233,6 +264,14 @@ client.on(Events.GuildMemberRemove, async (member) => {
 });
 
 client.on(Events.GuildBanAdd, async (ban) => {
+  analytics.track({
+    type: 'mod_action',
+    guildId: ban.guild.id,
+    userId: ban.user.id,
+    userName: ban.user.username,
+    metadata: { action: 'ban' },
+  });
+
   const settings = await getGuildSettings(ban.guild.id);
   if (settings?.moderation_alerts?.enabled && settings.moderation_alerts.channel_id) {
     const channel = ban.guild.channels.cache.get(settings.moderation_alerts.channel_id);
@@ -249,6 +288,14 @@ client.on(Events.GuildBanAdd, async (ban) => {
 });
 
 client.on(Events.GuildBanRemove, async (ban) => {
+  analytics.track({
+    type: 'mod_action',
+    guildId: ban.guild.id,
+    userId: ban.user.id,
+    userName: ban.user.username,
+    metadata: { action: 'unban' },
+  });
+
   const settings = await getGuildSettings(ban.guild.id);
   if (settings?.moderation_alerts?.enabled && settings.moderation_alerts.channel_id) {
     const channel = ban.guild.channels.cache.get(settings.moderation_alerts.channel_id);
@@ -263,10 +310,59 @@ client.on(Events.GuildBanRemove, async (ban) => {
   }
 });
 
+client.on(Events.MessageCreate, (message) => {
+  if (message.author.bot || !message.guild) return;
+  analytics.track({
+    type: 'message',
+    guildId: message.guild.id,
+    userId: message.author.id,
+    // Server display name (guild nickname → global name → username).
+    userName: message.member?.displayName ?? message.author.displayName,
+    channelId: message.channelId,
+    channelName: message.channel?.name,
+  });
+});
+
+client.on(Events.VoiceStateUpdate, (oldState, newState) => {
+  const guildId = newState.guild.id;
+  const userId = newState.id;
+  const member = newState.member ?? oldState.member;
+  if (member?.user?.bot) return;
+  const userName = member?.user?.username;
+
+  const left = oldState.channelId && !newState.channelId;
+  const joined = !oldState.channelId && newState.channelId;
+  const moved =
+    oldState.channelId &&
+    newState.channelId &&
+    oldState.channelId !== newState.channelId;
+
+  if (left) {
+    analytics.voiceLeave(guildId, userId);
+  } else if (joined) {
+    analytics.voiceJoin(guildId, userId, userName, newState.channelId, newState.channel?.name);
+  } else if (moved) {
+    analytics
+      .voiceLeave(guildId, userId)
+      .then(() =>
+        analytics.voiceJoin(guildId, userId, userName, newState.channelId, newState.channel?.name)
+      );
+  }
+});
+
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
   const { commandName } = interaction;
+
+  analytics.track({
+    type: 'command',
+    guildId: interaction.guildId,
+    userId: interaction.user.id,
+    userName: interaction.user.username,
+    channelId: interaction.channelId,
+    metadata: { command: commandName },
+  });
 
   if (commandName === 'ping') {
     const ws = client.ws.ping;
@@ -316,6 +412,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
       moderator_username: interaction.user.tag,
       reason,
       active: true,
+    });
+
+    analytics.track({
+      type: 'mod_action',
+      guildId: guild.id,
+      userId: target.id,
+      userName: target.username,
+      metadata: { action: 'warn', moderator_id: interaction.user.id },
     });
 
     const embed = new EmbedBuilder()
@@ -371,6 +475,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
       .eq('guild_id', guild.id)
       .eq('user_id', target.id);
 
+    analytics.track({
+      type: 'mod_action',
+      guildId: guild.id,
+      userId: target.id,
+      userName: target.username,
+      metadata: { action: 'clearwarnings', moderator_id: interaction.user.id },
+    });
+
     await interaction.reply({
       content: `All warnings for **${target.tag}** have been cleared.`,
       ephemeral: true,
@@ -416,5 +528,19 @@ async function getGuildSettings(guildId) {
     .maybeSingle();
   return data?.settings ?? null;
 }
+
+async function shutdown() {
+  console.log('[Pulse] Shutting down — flushing analytics...');
+  try {
+    await analytics.flushAllVoice();
+    await analytics.flush();
+  } catch (err) {
+    console.error('[Pulse] Error during analytics flush on shutdown:', err.message);
+  }
+  process.exit(0);
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
 
 client.login(process.env.DISCORD_BOT_TOKEN);
