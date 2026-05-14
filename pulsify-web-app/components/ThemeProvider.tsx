@@ -10,10 +10,12 @@ type PreferencesContextType = {
   scheme: ColorScheme
   density: LayoutDensity
   animations: boolean
+  cornerDeco: boolean
   setTheme: (theme: ThemeId) => void
   setScheme: (scheme: ColorScheme) => void
   setDensity: (density: LayoutDensity) => void
   setAnimations: (on: boolean) => void
+  setCornerDeco: (on: boolean) => void
 }
 
 const PreferencesContext = createContext<PreferencesContextType>({
@@ -21,10 +23,12 @@ const PreferencesContext = createContext<PreferencesContextType>({
   scheme: 'dark',
   density: 'comfortable',
   animations: true,
+  cornerDeco: true,
   setTheme: () => {},
   setScheme: () => {},
   setDensity: () => {},
   setAnimations: () => {},
+  setCornerDeco: () => {},
 })
 
 function saveCookie(key: string, value: string) {
@@ -37,17 +41,20 @@ export function ThemeProvider({
   initialScheme = 'dark',
   initialDensity = 'comfortable',
   initialAnimations = true,
+  initialCornerDeco = true,
 }: {
   children: React.ReactNode
   initialTheme: ThemeId
   initialScheme?: ColorScheme
   initialDensity?: LayoutDensity
   initialAnimations?: boolean
+  initialCornerDeco?: boolean
 }) {
   const [theme, setThemeState] = useState<ThemeId>(initialTheme)
   const [scheme, setSchemeState] = useState<ColorScheme>(initialScheme)
   const [density, setDensityState] = useState<LayoutDensity>(initialDensity)
   const [animations, setAnimationsState] = useState<boolean>(initialAnimations)
+  const [cornerDeco, setCornerDecoState] = useState<boolean>(initialCornerDeco)
 
   const setTheme = (next: ThemeId) => {
     setThemeState(next)
@@ -73,9 +80,15 @@ export function ThemeProvider({
     saveCookie(PREF_COOKIES.animations, String(on))
   }
 
+  const setCornerDeco = (on: boolean) => {
+    setCornerDecoState(on)
+    document.documentElement.setAttribute('data-corner-deco', String(on))
+    saveCookie(PREF_COOKIES.cornerDeco, String(on))
+  }
+
   return (
     <PreferencesContext.Provider
-      value={{ theme, scheme, density, animations, setTheme, setScheme, setDensity, setAnimations }}
+      value={{ theme, scheme, density, animations, cornerDeco, setTheme, setScheme, setDensity, setAnimations, setCornerDeco }}
     >
       {children}
     </PreferencesContext.Provider>

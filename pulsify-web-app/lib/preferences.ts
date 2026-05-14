@@ -9,6 +9,7 @@ export interface UserPreferences {
   scheme: ColorScheme
   density: LayoutDensity
   animations: boolean
+  cornerDeco: boolean
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -16,6 +17,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   scheme: 'dark',
   density: 'comfortable',
   animations: true,
+  cornerDeco: true,
 }
 
 export const PREF_COOKIES = {
@@ -23,4 +25,5 @@ export const PREF_COOKIES = {
   scheme: 'pulsify-scheme',
   density: 'pulsify-density',
   animations: 'pulsify-animations',
+  cornerDeco: 'pulsify-corner-deco',
 } as const

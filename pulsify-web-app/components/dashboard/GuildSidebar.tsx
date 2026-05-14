@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -21,6 +21,7 @@ type NavItem = {
   label: string
   href: string
   icon: React.ReactNode
+  badge?: string
 }
 
 type NavGroup = {
@@ -52,6 +53,10 @@ type Props = {
 export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Props) {
   const [collapsed, setCollapsed] = useState(false)
   const pathname = usePathname()
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--sidebar-w', collapsed ? '68px' : '230px')
+  }, [collapsed])
   const base = `/dashboard/${guildId}`
 
   const groups: NavGroup[] = [
@@ -246,7 +251,22 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
                       />
                     )}
                     <span style={isActive ? { color: 'var(--p-1)' } : {}}>{item.icon}</span>
-                    {!collapsed && item.label}
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1">{item.label}</span>
+                        {item.badge && (
+                          <span
+                            className="ml-auto rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide leading-none"
+                            style={{
+                              background: 'linear-gradient(135deg, var(--p-1), var(--p-2))',
+                              color: '#fff',
+                            }}
+                          >
+                            {item.badge}
+                          </span>
+                        )}
+                      </>
+                    )}
                   </Link>
                 )
               })}
