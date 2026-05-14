@@ -116,10 +116,46 @@ client.on(Events.GuildMemberAdd, async (member) => {
     try {
       const channel = await member.guild.channels.fetch(settings.welcome.channel_id);
       if (channel?.isTextBased()) {
-        const msg = (settings.welcome.message ?? 'Welcome to {server}, {user}!')
-          .replace('{user}', member.toString())
-          .replace('{server}', member.guild.name);
-        await channel.send(msg);
+        const resolve = (text) =>
+          text.replace(/\{user\}/g, member.toString()).replace(/\{server\}/g, member.guild.name);
+
+        if (settings.welcome.type === 'embed' && settings.welcome.embed) {
+          const cfg = settings.welcome.embed;
+          const colorInt = parseInt((cfg.color ?? '#6366f1').replace('#', ''), 16);
+          const embed = new EmbedBuilder()
+            .setColor(isNaN(colorInt) ? 0x6366f1 : colorInt)
+            .setTitle(resolve(cfg.title ?? 'Welcome!'))
+            .setDescription(resolve(cfg.description ?? ''));
+
+          if (Array.isArray(cfg.fields) && cfg.fields.length > 0) {
+            embed.addFields(cfg.fields.map((f) => ({
+              name: f.name,
+              value: f.value,
+              inline: f.inline ?? true,
+            })));
+          }
+
+          if (cfg.footer_text) {
+            embed.setFooter({ text: resolve(cfg.footer_text) });
+          }
+
+          if (cfg.banner_color) {
+            // Bot fetches banner from the web app and sends it as a Discord attachment.
+            // This works in both local dev (same machine) and production.
+            const appUrl = process.env.APP_URL ?? 'http://localhost:3000';
+            const bannerFetchUrl = `${appUrl}/api/banner?name=${encodeURIComponent(member.guild.name)}&color=${cfg.banner_color}`;
+            embed.setImage('attachment://banner.png');
+            await channel.send({
+              embeds: [embed],
+              files: [{ attachment: bannerFetchUrl, name: 'banner.png' }],
+            });
+          } else {
+            await channel.send({ embeds: [embed] });
+          }
+        } else {
+          const msg = resolve(settings.welcome.message ?? 'Welcome to {server}, {user}!');
+          await channel.send(msg);
+        }
       }
     } catch (err) {
       console.error(`[Pulse] Welcome message failed in guild ${member.guild.id}:`, err.message);
@@ -143,6 +179,57 @@ client.on(Events.GuildMemberAdd, async (member) => {
 
 client.on(Events.GuildMemberRemove, async (member) => {
   console.log(`[Pulse] Member left: ${member.user.tag} from ${member.guild.name}`);
+
+  const settings = await getGuildSettings(member.guild.id);
+
+  if (settings?.goodbye?.enabled && settings.goodbye.channel_id) {
+    try {
+      const channel = await member.guild.channels.fetch(settings.goodbye.channel_id);
+      if (channel?.isTextBased()) {
+        // The member already left, so {user} resolves to their name (a mention would be dead).
+        const resolve = (text) =>
+          text.replace(/\{user\}/g, member.user.username).replace(/\{server\}/g, member.guild.name);
+
+        if (settings.goodbye.type === 'embed' && settings.goodbye.embed) {
+          const cfg = settings.goodbye.embed;
+          const colorInt = parseInt((cfg.color ?? '#6366f1').replace('#', ''), 16);
+          const embed = new EmbedBuilder()
+            .setColor(isNaN(colorInt) ? 0x6366f1 : colorInt)
+            .setTitle(resolve(cfg.title ?? 'Goodbye!'))
+            .setDescription(resolve(cfg.description ?? ''));
+
+          if (Array.isArray(cfg.fields) && cfg.fields.length > 0) {
+            embed.addFields(cfg.fields.map((f) => ({
+              name: f.name,
+              value: f.value,
+              inline: f.inline ?? true,
+            })));
+          }
+
+          if (cfg.footer_text) {
+            embed.setFooter({ text: resolve(cfg.footer_text) });
+          }
+
+          if (cfg.banner_color) {
+            const appUrl = process.env.APP_URL ?? 'http://localhost:3000';
+            const bannerFetchUrl = `${appUrl}/api/banner?name=${encodeURIComponent(member.guild.name)}&color=${cfg.banner_color}`;
+            embed.setImage('attachment://banner.png');
+            await channel.send({
+              embeds: [embed],
+              files: [{ attachment: bannerFetchUrl, name: 'banner.png' }],
+            });
+          } else {
+            await channel.send({ embeds: [embed] });
+          }
+        } else {
+          const msg = resolve(settings.goodbye.message ?? '{user} has left {server}.');
+          await channel.send(msg);
+        }
+      }
+    } catch (err) {
+      console.error(`[Pulse] Goodbye message failed in guild ${member.guild.id}:`, err.message);
+    }
+  }
 });
 
 client.on(Events.GuildBanAdd, async (ban) => {

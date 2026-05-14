@@ -179,6 +179,11 @@
   --row-gap:      0.5rem;
 }
 
+/* ── Corner Decorations ─────────────────────── */
+[data-corner-deco="false"] [data-cd] {
+  display: none !important;
+}
+
 /* ── Reduced Motion ────────────────────────── */
 [data-animations="false"] *,
 [data-animations="false"] *::before,
@@ -238,4 +243,7 @@
 /* ── Page layout helpers ───────────────────── */
 .page-content {
   padding: var(--page-padding);
+  max-width: 80rem;
+  margin-inline: auto;
 }
+
