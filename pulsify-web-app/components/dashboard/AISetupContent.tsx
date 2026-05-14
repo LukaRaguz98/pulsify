@@ -646,7 +646,7 @@ export function AISetupContent({ guildId, guildName }: Props) {
               ? <><Loader2 size={15} className="animate-spin" /> Generating…</>
               : result
               ? <><RefreshCw size={15} /> Generate</>
-              : <><Sparkles size={15} /> Generate with Echo</>
+              : <><Sparkles size={15} /> Generate</>
             }
           </button>
 

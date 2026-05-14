@@ -5,8 +5,10 @@ import { useParams } from 'next/navigation'
 import { usePreferences } from '@/components/ThemeProvider'
 import { THEMES } from '@/lib/themes'
 import { SectionCard } from '@/components/ui/section-card'
+import { CategorySection } from '@/components/ui/category-section'
 import {
   Check, Moon, Sun, Maximize2, Minimize2, Zap, ZapOff, Palette, Sparkles, Crosshair,
+  Server, Type,
 } from 'lucide-react'
 
 // ─── Echo preferences ─────────────────────────────────────────────────────────
@@ -171,7 +173,13 @@ export default function SettingsPage() {
 
       {/* ─── App Design tab ─────────────────────────────────────────────────── */}
       {activeTab === 'appearance' && (
-        <div className="space-y-5">
+        <div className="space-y-8">
+          {/* ── Appearance ───────────────────────────────────────────────── */}
+          <CategorySection
+            icon={<Palette size={14} />}
+            title="Appearance"
+            description="Colour scheme, accent colour and layout density."
+          >
           {/* Color Scheme */}
           <SectionCard title="Color Scheme" description="Switch between dark and light mode.">
             <div className="grid grid-cols-2 gap-3">
@@ -286,7 +294,14 @@ export default function SettingsPage() {
               })}
             </div>
           </SectionCard>
+          </CategorySection>
 
+          {/* ── Behaviour ────────────────────────────────────────────────── */}
+          <CategorySection
+            icon={<Zap size={14} />}
+            title="Behaviour"
+            description="Motion effects and activity notifications."
+          >
           {/* Animations & Effects */}
           <SectionCard title="Animations & Effects" description="Control motion and decorative visual elements.">
             <div>
@@ -373,6 +388,7 @@ export default function SettingsPage() {
               ))}
             </div>
           </SectionCard>
+          </CategorySection>
 
           {/* Save */}
           <div
@@ -398,7 +414,13 @@ export default function SettingsPage() {
 
       {/* ─── Echo Assistant tab ─────────────────────────────────────────────── */}
       {activeTab === 'echo' && (
-        <div className="space-y-5">
+        <div className="space-y-8">
+          {/* ── Server Context ───────────────────────────────────────────── */}
+          <CategorySection
+            icon={<Server size={14} />}
+            title="Server Context"
+            description="What Echo knows about your server when generating content."
+          >
           {/* Server Profile */}
           <SectionCard
             title="Server Profile"
@@ -415,7 +437,14 @@ export default function SettingsPage() {
               onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--line-strong)' }}
             />
           </SectionCard>
+          </CategorySection>
 
+          {/* ── Writing Style ────────────────────────────────────────────── */}
+          <CategorySection
+            icon={<Type size={14} />}
+            title="Writing Style"
+            description="Tone, language and how much detail Echo produces."
+          >
           {/* Voice & Language */}
           <SectionCard
             title="Voice & Language"
@@ -593,7 +622,14 @@ export default function SettingsPage() {
               </button>
             </div>
           </SectionCard>
+          </CategorySection>
 
+          {/* ── Discord Output ───────────────────────────────────────────── */}
+          <CategorySection
+            icon={<Palette size={14} />}
+            title="Discord Output"
+            description="How Echo's embeds appear when posted to Discord."
+          >
           {/* Embed Appearance */}
           <SectionCard
             title="Embed Appearance"
@@ -637,6 +673,7 @@ export default function SettingsPage() {
               </label>
             </div>
           </SectionCard>
+          </CategorySection>
 
           {/* Save */}
           <div
