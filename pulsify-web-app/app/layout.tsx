@@ -34,6 +34,7 @@ export default async function RootLayout({
   const scheme = (cookieStore.get(PREF_COOKIES.scheme)?.value ?? DEFAULT_PREFERENCES.scheme) as ColorScheme
   const density = (cookieStore.get(PREF_COOKIES.density)?.value ?? DEFAULT_PREFERENCES.density) as LayoutDensity
   const animations = (cookieStore.get(PREF_COOKIES.animations)?.value ?? 'true') !== 'false'
+  const cornerDeco = (cookieStore.get(PREF_COOKIES.cornerDeco)?.value ?? 'true') !== 'false'
 
   return (
     <html
@@ -42,6 +43,7 @@ export default async function RootLayout({
       data-scheme={scheme}
       data-density={density}
       data-animations={String(animations)}
+      data-corner-deco={String(cornerDeco)}
       className={`${inter.variable} ${jetbrainsMono.variable} h-full`}
       suppressHydrationWarning
     >
@@ -51,6 +53,7 @@ export default async function RootLayout({
           initialScheme={scheme}
           initialDensity={density}
           initialAnimations={animations}
+          initialCornerDeco={cornerDeco}
         >
           {children}
         </ThemeProvider>

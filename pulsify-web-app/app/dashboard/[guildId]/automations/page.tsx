@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
-import { fetchGuildChannels, fetchGuildRoles } from '@/lib/discord'
+import { fetchGuild, fetchGuildChannels, fetchGuildRoles } from '@/lib/discord'
 import { PageHeader } from '@/components/ui/page-header'
 import { AutomationsForm } from './AutomationsForm'
 
@@ -16,7 +16,8 @@ export default async function AutomationsPage({
   } = await supabase.auth.getUser()
   if (!user) redirect('/')
 
-  const [channels, roles, { data: settings }] = await Promise.all([
+  const [guild, channels, roles, { data: settings }] = await Promise.all([
+    fetchGuild(guildId),
     fetchGuildChannels(guildId),
     fetchGuildRoles(guildId),
     supabase.from('guild_settings').select('settings').eq('guild_id', guildId).maybeSingle(),
@@ -34,6 +35,7 @@ export default async function AutomationsPage({
       />
       <AutomationsForm
         guildId={guildId}
+        guildName={guild?.name ?? ''}
         channels={textChannels}
         roles={visibleRoles}
         initialSettings={currentSettings}

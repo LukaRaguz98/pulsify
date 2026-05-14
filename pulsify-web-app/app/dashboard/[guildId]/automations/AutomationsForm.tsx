@@ -1,20 +1,59 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { saveAutomations, type AutomationSettings } from './actions'
+import { useState, useTransition, type ReactNode } from 'react'
+import { saveAutomations, removeEchoContent, type AutomationSettings } from './actions'
+import { applyRules, applyOnboarding, applyChannelsReference } from '@/app/dashboard/[guildId]/ai-setup/actions'
 import type { DiscordChannel, DiscordRole } from '@/lib/discord'
-import { Zap, MessageSquare, Star, Bell, CheckCircle, AlertCircle } from 'lucide-react'
+import { AppEmbedPreview } from '@/components/dashboard/AppEmbedPreview'
+import { DiscordEmbedPreview, type EmbedData } from '@/components/dashboard/DiscordEmbedPreview'
+import { usePreferences } from '@/components/ThemeProvider'
+import { THEMES } from '@/lib/themes'
+import {
+  Zap, MessageSquare, Star, Bell,
+  CheckCircle, AlertCircle, Sparkles, RotateCcw,
+  ShieldCheck, BookOpen, LayoutGrid, Loader2, Check, Trash2, RefreshCw,
+  UserPlus, Shield, FolderTree, LogOut, Send, Plus, X,
+} from 'lucide-react'
 
 type Props = {
   guildId: string
+  guildName: string
   channels: DiscordChannel[]
   roles: DiscordRole[]
   initialSettings: Record<string, unknown>
 }
 
-type WelcomeConfig         = AutomationSettings['welcome']
-type AutoRoleConfig        = AutomationSettings['auto_role']
+type WelcomeConfig          = AutomationSettings['welcome']
+type GoodbyeConfig          = AutomationSettings['goodbye']
+type AutoRoleConfig         = AutomationSettings['auto_role']
 type ModerationAlertsConfig = AutomationSettings['moderation_alerts']
+// Welcome and Goodbye share the exact same shape — both can be a plain message or an embed.
+type MemberEventConfig      = WelcomeConfig
+
+type EchoRulesConfig      = { enabled: boolean; channel_id: string; title?: string; content: string }
+type EchoOnboardingConfig = { enabled: boolean; channel_id: string; title?: string; content: string }
+type EchoChannelsConfig   = { enabled: boolean; structure: { category: string; channels: string[] }[] }
+
+type GenerationResult = {
+  welcome_message: string
+  rules: string[]
+  onboarding: string
+  channels: { category: string; channels: string[] }[]
+}
+
+type EmbedConfig = NonNullable<MemberEventConfig['embed']>
+
+type CardDef = {
+  icon: ReactNode
+  iconBg: string
+  iconColor: string
+  title: string
+  description: string
+  echoBadge: boolean
+  enabled: boolean
+  onToggle: (v: boolean) => void
+  extra: ReactNode
+}
 
 function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -43,34 +82,57 @@ const selectClass = `
 
 function validate(
   welcome: WelcomeConfig,
+  goodbye: GoodbyeConfig,
   autoRole: AutoRoleConfig,
   modAlerts: ModerationAlertsConfig,
 ): string | null {
-  if (welcome.enabled && !welcome.channel_id)  return 'Welcome Message: please select a channel.'
-  if (welcome.enabled && !welcome.message.trim()) return 'Welcome Message: message text cannot be empty.'
-  if (autoRole.enabled && !autoRole.role_id)   return 'Auto-Role: please select a role.'
+  if (welcome.enabled && !welcome.channel_id) return 'Welcome Message: please select a channel.'
+  if (welcome.enabled && welcome.type !== 'embed' && !welcome.message.trim())
+    return 'Welcome Message: message text cannot be empty.'
+  if (goodbye.enabled && !goodbye.channel_id) return 'Goodbye Message: please select a channel.'
+  if (goodbye.enabled && goodbye.type !== 'embed' && !goodbye.message.trim())
+    return 'Goodbye Message: message text cannot be empty.'
+  if (autoRole.enabled && !autoRole.role_id) return 'Auto-Role: please select a role.'
   if (modAlerts.enabled && !modAlerts.channel_id) return 'Moderation Alerts: please select a channel.'
   return null
 }
 
-export function AutomationsForm({ guildId, channels, roles, initialSettings }: Props) {
+export function AutomationsForm({ guildId, guildName, channels, roles, initialSettings }: Props) {
   const [isPending, startTransition] = useTransition()
   const [saved,  setSaved]  = useState(false)
   const [error,  setError]  = useState<string | null>(null)
 
-  const rawWelcome   = initialSettings.welcome            as Partial<WelcomeConfig>         | undefined
+  const { theme } = usePreferences()
+  const accentHex = THEMES.find((t) => t.id === theme)?.accent ?? '#8b5cf6'
+
+  const rawWelcome   = initialSettings.welcome            as Partial<WelcomeConfig>          | undefined
+  const rawGoodbye   = initialSettings.goodbye            as Partial<GoodbyeConfig>          | undefined
   const rawAutoRole  = initialSettings.auto_role          as Partial<AutoRoleConfig>         | undefined
   const rawModAlerts = initialSettings.moderation_alerts  as Partial<ModerationAlertsConfig> | undefined
+
+  const rawRules   = initialSettings.rules             as EchoRulesConfig      | undefined
+  const rawOnboard = initialSettings.onboarding        as EchoOnboardingConfig | undefined
+  const rawChRef   = initialSettings.channels_reference as EchoChannelsConfig  | undefined
 
   const [welcome, setWelcome] = useState<WelcomeConfig>({
     enabled:    rawWelcome?.enabled    ?? false,
     channel_id: rawWelcome?.channel_id ?? '',
     message:    rawWelcome?.message    ?? 'Welcome to {server}, {user}! 🎉',
+    type:       rawWelcome?.type       ?? 'message',
+    embed:      rawWelcome?.embed,
+  })
+
+  const [goodbye, setGoodbye] = useState<GoodbyeConfig>({
+    enabled:    rawGoodbye?.enabled    ?? false,
+    channel_id: rawGoodbye?.channel_id ?? '',
+    message:    rawGoodbye?.message    ?? "We'll miss you, {user}. Thanks for being part of {server}! 👋",
+    type:       rawGoodbye?.type       ?? 'message',
+    embed:      rawGoodbye?.embed,
   })
 
   const [autoRole, setAutoRole] = useState<AutoRoleConfig>({
-    enabled: rawAutoRole?.enabled  ?? false,
-    role_id: rawAutoRole?.role_id  ?? '',
+    enabled: rawAutoRole?.enabled ?? false,
+    role_id: rawAutoRole?.role_id ?? '',
   })
 
   const [modAlerts, setModAlerts] = useState<ModerationAlertsConfig>({
@@ -78,24 +140,85 @@ export function AutomationsForm({ guildId, channels, roles, initialSettings }: P
     channel_id: rawModAlerts?.channel_id ?? '',
   })
 
-  function clearFeedback() {
-    setSaved(false)
-    setError(null)
+  // Echo content sections
+  const [rulesVisible,    setRulesVisible]    = useState(rawRules?.enabled    ?? false)
+  const [rulesChannel,    setRulesChannel]    = useState(rawRules?.channel_id ?? (channels[0]?.id ?? ''))
+  const [rulesTitle,      setRulesTitle]      = useState(rawRules?.title      ?? '📜 Server Rules')
+  const [rulesContent,    setRulesContent]    = useState(rawRules?.content    ?? '')
+  const [applyingRules,   setApplyingRules]   = useState(false)
+  const [rulesResult,     setRulesResult]     = useState<'success' | 'error' | null>(null)
+  const [rulesError,      setRulesError]      = useState('')
+
+  const [onboardVisible,  setOnboardVisible]  = useState(rawOnboard?.enabled  ?? false)
+  const [onboardChannel,  setOnboardChannel]  = useState(rawOnboard?.channel_id ?? (channels[0]?.id ?? ''))
+  const [onboardTitle,    setOnboardTitle]    = useState(rawOnboard?.title     ?? '📖 Onboarding Guide')
+  const [onboardContent,  setOnboardContent]  = useState(rawOnboard?.content  ?? '')
+  const [applyingOnboard, setApplyingOnboard] = useState(false)
+  const [onboardResult,   setOnboardResult]   = useState<'success' | 'error' | null>(null)
+  const [onboardError,    setOnboardError]    = useState('')
+
+  const [chRefVisible,  setChRefVisible]  = useState(rawChRef?.enabled ?? false)
+  const [chStructure,   setChStructure]   = useState<{ category: string; channels: string[] }[] | null>(rawChRef?.structure ?? null)
+  const [creatingCh,    setCreatingCh]    = useState(false)
+  const [createChResult, setCreateChResult] = useState<'success' | 'error' | null>(null)
+  const [createChError,  setCreateChError]  = useState('')
+
+  // Echo generation
+  const [generatingSection,    setGeneratingSection]    = useState<string | null>(null)
+  const [echoGenError,         setEchoGenError]         = useState<string | null>(null)
+  const [echoGenErrorSection,  setEchoGenErrorSection]  = useState<string | null>(null)
+
+  function clearFeedback() { setSaved(false); setError(null) }
+
+  // Editing the suggested structure marks it as not-yet-created on Discord.
+  function updateStructure(next: { category: string; channels: string[] }[]) {
+    setChStructure(next)
+    setChRefVisible(false)
+    clearFeedback()
+  }
+  function renameCategory(ci: number, name: string) {
+    if (!chStructure) return
+    updateStructure(chStructure.map((c, i) => (i === ci ? { ...c, category: name } : c)))
+  }
+  function deleteCategory(ci: number) {
+    if (!chStructure) return
+    updateStructure(chStructure.filter((_, i) => i !== ci))
+  }
+  function addCategory() {
+    updateStructure([...(chStructure ?? []), { category: 'new-category', channels: ['new-channel'] }])
+  }
+  function renameChannel(ci: number, chi: number, name: string) {
+    if (!chStructure) return
+    updateStructure(chStructure.map((c, i) =>
+      i === ci ? { ...c, channels: c.channels.map((ch, j) => (j === chi ? name : ch)) } : c,
+    ))
+  }
+  function deleteChannel(ci: number, chi: number) {
+    if (!chStructure) return
+    updateStructure(chStructure.map((c, i) =>
+      i === ci ? { ...c, channels: c.channels.filter((_, j) => j !== chi) } : c,
+    ))
+  }
+  function addChannel(ci: number) {
+    if (!chStructure) return
+    updateStructure(chStructure.map((c, i) =>
+      i === ci ? { ...c, channels: [...c.channels, 'new-channel'] } : c,
+    ))
   }
 
   function handleSave() {
-    const validationError = validate(welcome, autoRole, modAlerts)
-    if (validationError) {
-      setError(validationError)
-      setSaved(false)
-      return
-    }
+    const validationError = validate(welcome, goodbye, autoRole, modAlerts)
+    if (validationError) { setError(validationError); setSaved(false); return }
 
     startTransition(async () => {
       const result = await saveAutomations(guildId, {
         welcome,
+        goodbye,
         auto_role: autoRole,
         moderation_alerts: modAlerts,
+        rules: { enabled: rulesVisible, channel_id: rulesChannel, title: rulesTitle, content: rulesContent },
+        onboarding: { enabled: onboardVisible, channel_id: onboardChannel, title: onboardTitle, content: onboardContent },
+        channels_reference: chStructure ? { enabled: chRefVisible, structure: chStructure } : undefined,
       })
       if (result.ok) {
         setSaved(true)
@@ -108,158 +231,900 @@ export function AutomationsForm({ guildId, channels, roles, initialSettings }: P
     })
   }
 
-  const cards = [
-    {
-      icon:       <MessageSquare size={16} />,
-      iconBg:     'rgba(59,130,246,0.12)',
-      iconColor:  '#3b82f6',
-      title:      'Welcome Message',
-      description: 'Send a message when a new member joins.',
-      enabled:    welcome.enabled,
-      onToggle:   (v: boolean) => { setWelcome({ ...welcome, enabled: v }); clearFeedback() },
-      extra: welcome.enabled && (
-        <div className="mt-4 space-y-3 border-t pt-4" style={{ borderColor: 'var(--line-strong)' }}>
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Welcome Channel</label>
-            <select
-              value={welcome.channel_id}
-              onChange={(e) => { setWelcome({ ...welcome, channel_id: e.target.value }); clearFeedback() }}
-              className={selectClass}
-            >
-              <option value="">Select a channel</option>
-              {channels.map((c) => (
-                <option key={c.id} value={c.id}>#{c.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-              Message{' '}
-              <span className="text-subtle">
-                ({'{user}'} = mention, {'{server}'} = server name)
-              </span>
-            </label>
-            <textarea
-              value={welcome.message}
-              onChange={(e) => { setWelcome({ ...welcome, message: e.target.value }); clearFeedback() }}
-              rows={3}
-              className={selectClass + ' resize-none'}
-            />
-          </div>
-        </div>
-      ),
-    },
-    {
-      icon:       <Star size={16} />,
-      iconBg:     'rgba(16,185,129,0.12)',
-      iconColor:  '#10b981',
-      title:      'Auto-Role',
-      description: 'Automatically assign a role to new members.',
-      enabled:    autoRole.enabled,
-      onToggle:   (v: boolean) => { setAutoRole({ ...autoRole, enabled: v }); clearFeedback() },
-      extra: autoRole.enabled && (
-        <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--line-strong)' }}>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Role to assign</label>
-          <select
-            value={autoRole.role_id}
-            onChange={(e) => { setAutoRole({ ...autoRole, role_id: e.target.value }); clearFeedback() }}
-            className={selectClass}
-          >
-            <option value="">Select a role</option>
-            {roles.map((r) => (
-              <option key={r.id} value={r.id}>{r.name}</option>
-            ))}
-          </select>
-        </div>
-      ),
-    },
-    {
-      icon:       <Bell size={16} />,
-      iconBg:     'rgba(245,158,11,0.12)',
-      iconColor:  '#f59e0b',
-      title:      'Moderation Alerts',
-      description: 'Get notified when moderation actions occur.',
-      enabled:    modAlerts.enabled,
-      onToggle:   (v: boolean) => { setModAlerts({ ...modAlerts, enabled: v }); clearFeedback() },
-      extra: modAlerts.enabled && (
-        <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--line-strong)' }}>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Alert Channel</label>
-          <select
-            value={modAlerts.channel_id}
-            onChange={(e) => { setModAlerts({ ...modAlerts, channel_id: e.target.value }); clearFeedback() }}
-            className={selectClass}
-          >
-            <option value="">Select a channel</option>
-            {channels.map((c) => (
-              <option key={c.id} value={c.id}>#{c.name}</option>
-            ))}
-          </select>
-        </div>
-      ),
-    },
-  ]
+  async function handleRepostRules() {
+    setApplyingRules(true)
+    setRulesResult(null)
+    const res = await applyRules(guildId, rulesChannel, rulesTitle, rulesContent, accentHex)
+    setRulesResult(res.ok ? 'success' : 'error')
+    if (!res.ok) setRulesError(res.error)
+    setApplyingRules(false)
+  }
+
+  async function handleRepostOnboard() {
+    setApplyingOnboard(true)
+    setOnboardResult(null)
+    const res = await applyOnboarding(guildId, onboardChannel, onboardTitle, onboardContent, accentHex)
+    setOnboardResult(res.ok ? 'success' : 'error')
+    if (!res.ok) setOnboardError(res.error)
+    setApplyingOnboard(false)
+  }
+
+  async function handleRemoveChRef() {
+    const res = await removeEchoContent(guildId, 'channels_reference')
+    if (res.ok) { setChRefVisible(false); setChStructure(null) }
+  }
+
+  function getEchoPrefs() {
+    try {
+      const saved = localStorage.getItem(`pulsify:echo-prefs:${guildId}`)
+      if (!saved) return null
+      return JSON.parse(saved) as {
+        description: string; tone: string; customTone: string; language: string; customLanguage: string;
+        embedColor: string; serverSize: string; contentDepth: string; includeEmojis: boolean
+      }
+    } catch { return null }
+  }
+
+  async function generateWithEcho(section: string) {
+    const prefs = getEchoPrefs()
+    if (!prefs?.description?.trim()) {
+      setEchoGenError('Add a server description in Settings → Echo to get started.')
+      setEchoGenErrorSection(section)
+      return
+    }
+    setGeneratingSection(section)
+    setEchoGenError(null)
+    setEchoGenErrorSection(null)
+
+    try {
+      if (section === 'welcome' || section === 'goodbye') {
+        const res = await fetch('/api/ai/generate-embed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            variant: section,
+            guildId, guildName,
+            description: prefs.description,
+            tone: prefs.tone,
+            customTone: prefs.tone === 'other' ? prefs.customTone : undefined,
+            language: prefs.language === 'custom' ? (prefs.customLanguage || 'english') : prefs.language,
+            embedColor: prefs.embedColor,
+            serverSize: prefs.serverSize,
+            contentDepth: prefs.contentDepth,
+            includeEmojis: prefs.includeEmojis,
+          }),
+        })
+        const data = await res.json() as { result?: EmbedConfig; error?: string }
+        if (!res.ok) { setEchoGenError(data.error ?? 'Generation failed.'); setEchoGenErrorSection(section); return }
+        if (section === 'welcome') setWelcome(prev => ({ ...prev, type: 'embed', embed: data.result }))
+        else setGoodbye(prev => ({ ...prev, type: 'embed', embed: data.result }))
+        clearFeedback()
+      } else {
+        const res = await fetch('/api/ai/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            guildId, guildName,
+            description: prefs.description,
+            tone: prefs.tone,
+            customTone: prefs.tone === 'other' ? prefs.customTone : undefined,
+            language: prefs.language === 'custom' ? (prefs.customLanguage || 'english') : prefs.language,
+            serverSize: prefs.serverSize,
+            contentDepth: prefs.contentDepth,
+            includeEmojis: prefs.includeEmojis,
+          }),
+        })
+        const data = await res.json() as { result?: GenerationResult; error?: string }
+        if (!res.ok) { setEchoGenError(data.error ?? 'Generation failed.'); setEchoGenErrorSection(section); return }
+        const result = data.result!
+        if (section === 'rules') {
+          setRulesContent(result.rules.map((r, i) => `${i + 1}. ${r}`).join('\n'))
+          setRulesVisible(true)
+        } else if (section === 'onboarding') {
+          setOnboardContent(result.onboarding)
+          setOnboardVisible(true)
+        } else if (section === 'channels') {
+          setChStructure(result.channels)
+          setChRefVisible(false)
+        }
+      }
+    } catch {
+      setEchoGenError('Network error. Please try again.')
+      setEchoGenErrorSection(section)
+    } finally {
+      setGeneratingSection(null)
+    }
+  }
+
+  async function handleCreateChannels() {
+    if (!chStructure) return
+    setCreatingCh(true)
+    setCreateChResult(null)
+    const res = await applyChannelsReference(guildId, chStructure)
+    if (res.ok) { setCreateChResult('success'); setChRefVisible(true) }
+    else { setCreateChResult('error'); setCreateChError(res.error) }
+    setCreatingCh(false)
+  }
+
+  const isEmbed = welcome.type === 'embed'
+  const isGoodbyeEmbed = goodbye.type === 'embed'
+
+  const welcomeCard: CardDef = {
+    icon:        <MessageSquare size={16} />,
+    iconBg:      'rgba(59,130,246,0.12)',
+    iconColor:   '#3b82f6',
+    title:       'Welcome Message',
+    description: isEmbed
+      ? 'Sends an Echo generated embed card when a new member joins.'
+      : 'Send a message when a new member joins.',
+    echoBadge:  isEmbed,
+    enabled:  welcome.enabled,
+    onToggle: (v: boolean) => { setWelcome({ ...welcome, enabled: v }); clearFeedback() },
+    extra: welcome.enabled && (
+      <MemberEventExtra
+        variant="welcome"
+        config={welcome}
+        onChange={(next) => { setWelcome(next); clearFeedback() }}
+        guildName={guildName}
+        channels={channels}
+        generatingSection={generatingSection}
+        onGenerate={() => generateWithEcho('welcome')}
+        echoGenError={echoGenError}
+        echoGenErrorSection={echoGenErrorSection}
+      />
+    ),
+  }
+
+  const goodbyeCard: CardDef = {
+    icon:        <LogOut size={16} />,
+    iconBg:      'rgba(251,113,133,0.12)',
+    iconColor:   '#fb7185',
+    title:       'Goodbye Message',
+    description: isGoodbyeEmbed
+      ? 'Sends an Echo generated embed card when a member leaves.'
+      : 'Send a message when a member leaves the server.',
+    echoBadge:  isGoodbyeEmbed,
+    enabled:  goodbye.enabled,
+    onToggle: (v: boolean) => { setGoodbye({ ...goodbye, enabled: v }); clearFeedback() },
+    extra: goodbye.enabled && (
+      <MemberEventExtra
+        variant="goodbye"
+        config={goodbye}
+        onChange={(next) => { setGoodbye(next); clearFeedback() }}
+        guildName={guildName}
+        channels={channels}
+        generatingSection={generatingSection}
+        onGenerate={() => generateWithEcho('goodbye')}
+        echoGenError={echoGenError}
+        echoGenErrorSection={echoGenErrorSection}
+      />
+    ),
+  }
+
+  const rulesCard: CardDef = {
+    icon:        <ShieldCheck size={16} />,
+    iconBg:      'rgba(245,158,11,0.12)',
+    iconColor:   '#f59e0b',
+    title:       'Server Rules',
+    description: 'Post an Echo generated rules embed to a channel.',
+    echoBadge:  true,
+    enabled:  rulesVisible,
+    onToggle: (v: boolean) => { setRulesVisible(v); clearFeedback() },
+    extra: rulesVisible && (
+      <EchoContentExtra
+        section="rules"
+        genLabel="rules"
+        mono
+        channels={channels}
+        channelId={rulesChannel}
+        onChannelChange={setRulesChannel}
+        title={rulesTitle}
+        onTitleChange={setRulesTitle}
+        content={rulesContent}
+        onContentChange={setRulesContent}
+        accentHex={accentHex}
+        generatingSection={generatingSection}
+        onGenerate={() => generateWithEcho('rules')}
+        echoGenError={echoGenError}
+        echoGenErrorSection={echoGenErrorSection}
+        applying={applyingRules}
+        applyResult={rulesResult}
+        applyError={rulesError}
+        onRepost={handleRepostRules}
+      />
+    ),
+  }
+
+  const onboardingCard: CardDef = {
+    icon:        <BookOpen size={16} />,
+    iconBg:      'rgba(16,185,129,0.12)',
+    iconColor:   '#10b981',
+    title:       'Onboarding Guide',
+    description: 'Post an Echo generated onboarding guide to a channel.',
+    echoBadge:  true,
+    enabled:  onboardVisible,
+    onToggle: (v: boolean) => { setOnboardVisible(v); clearFeedback() },
+    extra: onboardVisible && (
+      <EchoContentExtra
+        section="onboarding"
+        genLabel="onboarding guide"
+        mono={false}
+        channels={channels}
+        channelId={onboardChannel}
+        onChannelChange={setOnboardChannel}
+        title={onboardTitle}
+        onTitleChange={setOnboardTitle}
+        content={onboardContent}
+        onContentChange={setOnboardContent}
+        accentHex={accentHex}
+        generatingSection={generatingSection}
+        onGenerate={() => generateWithEcho('onboarding')}
+        echoGenError={echoGenError}
+        echoGenErrorSection={echoGenErrorSection}
+        applying={applyingOnboard}
+        applyResult={onboardResult}
+        applyError={onboardError}
+        onRepost={handleRepostOnboard}
+      />
+    ),
+  }
+
+  const autoRoleCard: CardDef = {
+    icon:        <Star size={16} />,
+    iconBg:      'rgba(16,185,129,0.12)',
+    iconColor:   '#10b981',
+    title:       'Auto-Role',
+    description: 'Automatically assign a role to new members.',
+    echoBadge:  false,
+    enabled:  autoRole.enabled,
+    onToggle: (v: boolean) => { setAutoRole({ ...autoRole, enabled: v }); clearFeedback() },
+    extra: autoRole.enabled && (
+      <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--line-strong)' }}>
+        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Role to assign</label>
+        <select
+          value={autoRole.role_id}
+          onChange={(e) => { setAutoRole({ ...autoRole, role_id: e.target.value }); clearFeedback() }}
+          className={selectClass}
+        >
+          <option value="">Select a role</option>
+          {roles.map((r) => (
+            <option key={r.id} value={r.id}>{r.name}</option>
+          ))}
+        </select>
+      </div>
+    ),
+  }
+
+  const modAlertsCard: CardDef = {
+    icon:        <Bell size={16} />,
+    iconBg:      'rgba(245,158,11,0.12)',
+    iconColor:   '#f59e0b',
+    title:       'Moderation Alerts',
+    description: 'Get notified when moderation actions occur.',
+    echoBadge:  false,
+    enabled:  modAlerts.enabled,
+    onToggle: (v: boolean) => { setModAlerts({ ...modAlerts, enabled: v }); clearFeedback() },
+    extra: modAlerts.enabled && (
+      <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--line-strong)' }}>
+        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Alert Channel</label>
+        <select
+          value={modAlerts.channel_id}
+          onChange={(e) => { setModAlerts({ ...modAlerts, channel_id: e.target.value }); clearFeedback() }}
+          className={selectClass}
+        >
+          <option value="">Select a channel</option>
+          {channels.map((c) => (
+            <option key={c.id} value={c.id}>#{c.name}</option>
+          ))}
+        </select>
+      </div>
+    ),
+  }
 
   return (
-    <div className="space-y-4">
-      {cards.map((card) => (
-        <div
-          key={card.title}
-          className="rounded-xl border p-5 transition-colors"
-          style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-                style={{ background: card.iconBg, color: card.iconColor }}
-              >
-                {card.icon}
+    <div className="space-y-8">
+      {/* ── Joining & Onboarding ────────────────────────────────────────── */}
+      <CategorySection
+        icon={<UserPlus size={14} />}
+        title="Joining & Onboarding"
+        description="Greet new members and give them what they need to get started."
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          <CardItem card={welcomeCard} />
+          <CardItem card={goodbyeCard} />
+          <CardItem card={rulesCard} />
+          <CardItem card={onboardingCard} />
+        </div>
+      </CategorySection>
+
+      {/* ── Moderation ──────────────────────────────────────────────────── */}
+      <CategorySection
+        icon={<Shield size={14} />}
+        title="Moderation"
+        description="Automatic roles and alerts to keep your server in order."
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+          <CardItem card={modAlertsCard} />
+          <CardItem card={autoRoleCard} />
+        </div>
+      </CategorySection>
+
+      {/* ── Server Structure ────────────────────────────────────────────── */}
+      <CategorySection
+        icon={<FolderTree size={14} />}
+        title="Server Structure"
+        description="An Echo suggested category and channel layout for your server."
+      >
+        {chStructure ? (
+          <div className="rounded-xl border p-5" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: 'rgba(59,130,246,0.12)', color: '#3b82f6' }}>
+                  <LayoutGrid size={16} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-semibold text-foreground">Suggested Channels</h2>
+                    <span className="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide leading-none" style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))', color: '#fff' }}>Echo</span>
+                  </div>
+                  <p className="text-sm text-subtle">
+                    {chRefVisible ? 'Channels created on your server via Echo.' : 'Rename, add or remove channels, then create them on Discord.'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="font-semibold text-foreground">{card.title}</h2>
-                <p className="text-sm text-subtle">{card.description}</p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => generateWithEcho('channels')}
+                  disabled={generatingSection !== null}
+                  className="flex items-center gap-1.5 text-xs transition-colors disabled:opacity-50"
+                  style={{ color: 'var(--text-3)' }}
+                  onMouseEnter={(e) => { if (!generatingSection) e.currentTarget.style.color = 'var(--text)' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-3)' }}
+                >
+                  {generatingSection === 'channels' ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
+                  Re-generate
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRemoveChRef}
+                  className="flex items-center gap-1.5 text-xs transition-colors"
+                  style={{ color: 'var(--text-3)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-3)' }}
+                >
+                  <Trash2 size={12} /> Remove
+                </button>
               </div>
             </div>
-            <Toggle enabled={card.enabled} onChange={card.onToggle} />
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              {chStructure.map((cat, ci) => (
+                <div key={ci} className="rounded-lg p-3" style={{ background: 'var(--bg-2)' }}>
+                  <div className="mb-2 flex items-center gap-1.5">
+                    <input
+                      value={cat.category}
+                      onChange={(e) => renameCategory(ci, e.target.value)}
+                      placeholder="category-name"
+                      className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1.5 py-1 text-[10px] font-bold uppercase tracking-widest outline-none transition-colors hover:border-[var(--line-strong)] focus:border-[var(--p-1)]"
+                      style={{ color: 'var(--text-2)' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => deleteCategory(ci)}
+                      title="Delete category"
+                      className="shrink-0 transition-colors"
+                      style={{ color: 'var(--text-3)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171' }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-3)' }}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                  <div className="space-y-1">
+                    {cat.channels.map((ch, chi) => (
+                      <div key={chi} className="flex items-center gap-1">
+                        <span className="text-xs text-subtle">#</span>
+                        <input
+                          value={ch}
+                          onChange={(e) => renameChannel(ci, chi, e.target.value)}
+                          placeholder="channel-name"
+                          className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1.5 py-0.5 text-xs outline-none transition-colors hover:border-[var(--line-strong)] focus:border-[var(--p-1)]"
+                          style={{ color: 'var(--text-2)' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => deleteChannel(ci, chi)}
+                          title="Delete channel"
+                          className="shrink-0 transition-colors"
+                          style={{ color: 'var(--text-3)' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171' }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-3)' }}
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => addChannel(ci)}
+                      className="mt-1 flex items-center gap-1 text-[11px] transition-colors"
+                      style={{ color: 'var(--text-3)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)' }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-3)' }}
+                    >
+                      <Plus size={11} /> Add channel
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={addCategory}
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed py-2 text-xs transition-colors"
+              style={{ borderColor: 'var(--line-strong)', color: 'var(--text-3)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--p-1)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.borderColor = 'var(--line-strong)' }}
+            >
+              <Plus size={12} /> Add category
+            </button>
+
+            {!chRefVisible && (
+              <div className="mt-4 pt-4 border-t space-y-2" style={{ borderColor: 'var(--line-strong)' }}>
+                {createChResult === 'success' && (
+                  <div className="flex items-center gap-2 text-xs" style={{ color: '#22c55e' }}>
+                    <Check size={12} /> Channels created on Discord.
+                  </div>
+                )}
+                {createChResult === 'error' && (
+                  <div className="flex items-center gap-2 text-xs" style={{ color: '#f87171' }}>
+                    <AlertCircle size={12} /> {createChError}
+                  </div>
+                )}
+                <p className="text-xs text-subtle">Categories and text channels will be created as listed above. Existing channels are not affected.</p>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleCreateChannels}
+                    disabled={creatingCh}
+                    className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold text-white transition-all disabled:opacity-50"
+                    style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))' }}
+                  >
+                    {creatingCh ? <><Loader2 size={11} className="animate-spin" /> Creating…</> : <><Zap size={11} /> Create Channels on Discord</>}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {echoGenError && echoGenErrorSection === 'channels' && (
+              <div className="mt-3 flex items-center gap-2 text-xs" style={{ color: '#f87171' }}>
+                <AlertCircle size={12} /> {echoGenError}
+              </div>
+            )}
           </div>
-          {card.extra}
-        </div>
-      ))}
+        ) : (
+          <EchoEmptyState
+            icon={<LayoutGrid size={16} />}
+            iconBg="rgba(59,130,246,0.12)"
+            iconColor="#3b82f6"
+            title="Suggested Channels"
+            description="Generate a suggested channel structure with Echo."
+            section="channels"
+            generatingSection={generatingSection}
+            echoGenError={echoGenError}
+            echoGenErrorSection={echoGenErrorSection}
+            onGenerate={() => generateWithEcho('channels')}
+          />
+        )}
+      </CategorySection>
 
       {/* Save row */}
-      <div className="flex flex-wrap items-center gap-4 pt-2">
-        <button
-          onClick={handleSave}
-          disabled={isPending}
-          className="flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50"
-          style={{
-            background: 'linear-gradient(180deg, var(--p-1) 0%, var(--p-2) 100%)',
-            boxShadow: '0 4px 14px -4px var(--p-glow)',
-          }}
-        >
-          <Zap size={15} />
-          {isPending ? 'Saving…' : 'Save Automations'}
-        </button>
+      <div className="space-y-4 border-t pt-6" style={{ borderColor: 'var(--line-strong)' }}>
+        <div className="flex flex-wrap items-center justify-end gap-4">
+          {saved && (
+            <span className="flex items-center gap-1.5 text-sm" style={{ color: '#10b981' }}>
+              <CheckCircle size={15} /> Saved successfully!
+            </span>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={isPending}
+            className="flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50"
+            style={{ background: 'linear-gradient(180deg, var(--p-1) 0%, var(--p-2) 100%)', boxShadow: '0 4px 14px -4px var(--p-glow)' }}
+          >
+            <Zap size={15} />
+            {isPending ? 'Saving…' : 'Save Automations'}
+          </button>
+        </div>
 
-        {saved && (
-          <span className="flex items-center gap-1.5 text-sm" style={{ color: '#10b981' }}>
-            <CheckCircle size={15} />
-            Saved successfully!
-          </span>
+        {error && (
+          <div className="flex items-start gap-2.5 rounded-xl border p-4 text-sm" style={{ background: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.25)', color: '#f87171' }}>
+            <AlertCircle size={15} className="mt-px shrink-0" />
+            {error}
+          </div>
         )}
       </div>
+    </div>
+  )
+}
 
-      {error && (
-        <div
-          className="flex items-start gap-2.5 rounded-xl border p-4 text-sm"
-          style={{
-            background: 'rgba(239,68,68,0.07)',
-            borderColor: 'rgba(239,68,68,0.25)',
-            color: '#f87171',
-          }}
+// ─── CardItem ────────────────────────────────────────────────────────────────
+
+function CardItem({ card }: { card: CardDef }) {
+  return (
+    <div
+      className="rounded-xl border p-5 transition-colors h-full"
+      style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: card.iconBg, color: card.iconColor }}>
+            {card.icon}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="font-semibold text-foreground">{card.title}</h2>
+              {card.echoBadge && (
+                <span
+                  className="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide leading-none"
+                  style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))', color: '#fff' }}
+                >
+                  Echo
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-subtle">{card.description}</p>
+          </div>
+        </div>
+        <Toggle enabled={card.enabled} onChange={card.onToggle} />
+      </div>
+      {card.extra}
+    </div>
+  )
+}
+
+// ─── MemberEventExtra ────────────────────────────────────────────────────────
+// Shared body for the Welcome and Goodbye cards — both are a plain message or an embed.
+
+function MemberEventExtra({
+  variant, config, onChange, guildName, channels,
+  generatingSection, onGenerate, echoGenError, echoGenErrorSection,
+}: {
+  variant: 'welcome' | 'goodbye'
+  config: MemberEventConfig
+  onChange: (next: MemberEventConfig) => void
+  guildName: string
+  channels: DiscordChannel[]
+  generatingSection: string | null
+  onGenerate: () => void
+  echoGenError: string | null
+  echoGenErrorSection: string | null
+}) {
+  const isEmbed = config.type === 'embed'
+  const embed = config.embed
+
+  const bannerUrl = embed?.banner_color
+    ? `/api/banner?name=${encodeURIComponent(guildName)}&color=${embed.banner_color}`
+    : ''
+  const previewEmbed: EmbedData | null = embed
+    ? {
+        color: embed.color,
+        title: embed.title,
+        description: embed.description,
+        fields: embed.fields ?? [],
+        footer_text: embed.footer_text ?? '',
+        banner_url: bannerUrl,
+      }
+    : null
+
+  const channelLabel = variant === 'welcome' ? 'Welcome Channel' : 'Goodbye Channel'
+  const genLabel     = variant === 'welcome' ? 'Generate welcome embed with Echo' : 'Generate goodbye embed with Echo'
+  const userHint     = variant === 'welcome' ? '{user} = mention' : '{user} = name'
+
+  return (
+    <div className="mt-4 space-y-3 border-t pt-4" style={{ borderColor: 'var(--line-strong)' }}>
+      <div>
+        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">{channelLabel}</label>
+        <select
+          value={config.channel_id}
+          onChange={(e) => onChange({ ...config, channel_id: e.target.value })}
+          className={selectClass}
         >
-          <AlertCircle size={15} className="mt-px shrink-0" />
-          {error}
+          <option value="">Select a channel</option>
+          {channels.map((c) => (
+            <option key={c.id} value={c.id}>#{c.name}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Echo generate */}
+      <div
+        className="rounded-lg border p-3 flex items-center justify-between gap-3"
+        style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)' }}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <Sparkles size={12} style={{ color: 'var(--p-1)' }} />
+          <p className="text-xs font-medium text-foreground truncate">{genLabel}</p>
+        </div>
+        <button
+          type="button"
+          onClick={onGenerate}
+          disabled={generatingSection !== null}
+          className="shrink-0 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-all disabled:opacity-50"
+          style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))' }}
+        >
+          {generatingSection === variant
+            ? <><Loader2 size={11} className="animate-spin" /> Generating…</>
+            : <><Sparkles size={11} /> Generate</>
+          }
+        </button>
+      </div>
+      {echoGenError && echoGenErrorSection === variant && (
+        <p className="text-xs" style={{ color: '#f87171' }}>{echoGenError}</p>
+      )}
+
+      {isEmbed && previewEmbed && embed ? (
+        <div className="space-y-3">
+          <DiscordEmbedPreview embed={previewEmbed} serverName={guildName} />
+          <div className="space-y-2">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Embed Title</label>
+              <input
+                type="text"
+                value={embed.title}
+                onChange={(e) => onChange({ ...config, embed: { ...embed, title: e.target.value } })}
+                className={selectClass}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                Embed Description{' '}
+                <span className="text-subtle">({userHint}, {'{server}'} = server name)</span>
+              </label>
+              <textarea
+                value={embed.description}
+                onChange={(e) => onChange({ ...config, embed: { ...embed, description: e.target.value } })}
+                rows={3}
+                className={selectClass + ' resize-none'}
+              />
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onChange({ ...config, type: 'message', embed: undefined })}
+            className="flex items-center gap-1.5 text-xs transition-colors"
+            style={{ color: 'var(--text-3)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-3)' }}
+          >
+            <RotateCcw size={11} />
+            Switch to plain text message
+          </button>
+        </div>
+      ) : (
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+            Message{' '}
+            <span className="text-subtle">({userHint}, {'{server}'} = server name)</span>
+          </label>
+          <textarea
+            value={config.message}
+            onChange={(e) => onChange({ ...config, message: e.target.value })}
+            rows={3}
+            className={selectClass + ' resize-none'}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── EchoContentExtra ────────────────────────────────────────────────────────
+// Shared body for the Rules and Onboarding cards — Echo generated content posted
+// to a channel as an embed. Mirrors the Welcome/Goodbye card layout.
+
+function EchoContentExtra({
+  section, genLabel, mono,
+  channels, channelId, onChannelChange,
+  title, onTitleChange, content, onContentChange,
+  accentHex, generatingSection, onGenerate,
+  echoGenError, echoGenErrorSection,
+  applying, applyResult, applyError, onRepost,
+}: {
+  section: string
+  genLabel: string
+  mono: boolean
+  channels: DiscordChannel[]
+  channelId: string
+  onChannelChange: (v: string) => void
+  title: string
+  onTitleChange: (v: string) => void
+  content: string
+  onContentChange: (v: string) => void
+  accentHex: string
+  generatingSection: string | null
+  onGenerate: () => void
+  echoGenError: string | null
+  echoGenErrorSection: string | null
+  applying: boolean
+  applyResult: 'success' | 'error' | null
+  applyError: string
+  onRepost: () => void
+}) {
+  return (
+    <div className="mt-4 space-y-3 border-t pt-4" style={{ borderColor: 'var(--line-strong)' }}>
+      <div>
+        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Channel</label>
+        <select
+          value={channelId}
+          onChange={(e) => onChannelChange(e.target.value)}
+          className={selectClass}
+        >
+          <option value="">Select a channel</option>
+          {channels.map((c) => (
+            <option key={c.id} value={c.id}>#{c.name}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Echo generate */}
+      <div
+        className="rounded-lg border p-3 flex items-center justify-between gap-3"
+        style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)' }}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <Sparkles size={12} style={{ color: 'var(--p-1)' }} />
+          <p className="text-xs font-medium text-foreground truncate">Generate {genLabel} with Echo</p>
+        </div>
+        <button
+          type="button"
+          onClick={onGenerate}
+          disabled={generatingSection !== null}
+          className="shrink-0 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-all disabled:opacity-50"
+          style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))' }}
+        >
+          {generatingSection === section
+            ? <><Loader2 size={11} className="animate-spin" /> Generating…</>
+            : <><Sparkles size={11} /> Generate</>
+          }
+        </button>
+      </div>
+      {echoGenError && echoGenErrorSection === section && (
+        <p className="text-xs" style={{ color: '#f87171' }}>{echoGenError}</p>
+      )}
+
+      <AppEmbedPreview title={title} content={content} color={accentHex} />
+
+      <div className="space-y-2">
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Embed Title</label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => onTitleChange(e.target.value)}
+            className={selectClass}
+          />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Edit content</label>
+          <textarea
+            value={content}
+            onChange={(e) => onContentChange(e.target.value)}
+            rows={5}
+            className={selectClass + ' resize-none' + (mono ? ' font-mono' : '')}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {applyResult === 'success' && (
+          <div className="flex items-center gap-2 text-xs" style={{ color: '#22c55e' }}>
+            <Check size={12} /> Posted to Discord successfully.
+          </div>
+        )}
+        {applyResult === 'error' && (
+          <div className="flex items-center gap-2 text-xs" style={{ color: '#f87171' }}>
+            <AlertCircle size={12} /> {applyError}
+          </div>
+        )}
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={onRepost}
+            disabled={applying || !channelId}
+            className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold text-white transition-all disabled:opacity-50"
+            style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))' }}
+          >
+            {applying
+              ? <><Loader2 size={11} className="animate-spin" /> Posting…</>
+              : <><Send size={11} /> Post to Discord</>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── CategorySection ─────────────────────────────────────────────────────────
+
+function CategorySection({
+  icon, title, description, children,
+}: {
+  icon: ReactNode
+  title: string
+  description: string
+  children: ReactNode
+}) {
+  return (
+    <section>
+      <div className="mb-3 flex items-center gap-2.5">
+        <span
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+          style={{ background: 'var(--bg-2)', color: 'var(--text-3)', border: '1px solid var(--line-strong)' }}
+        >
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-2)' }}>{title}</h2>
+          <p className="text-xs text-subtle">{description}</p>
+        </div>
+        <div className="ml-1 h-px flex-1" style={{ background: 'var(--line-strong)' }} />
+      </div>
+      <div className="space-y-4">{children}</div>
+    </section>
+  )
+}
+
+// ─── EchoEmptyState ──────────────────────────────────────────────────────────
+
+function EchoEmptyState({
+  icon, iconBg, iconColor, title, description, section,
+  generatingSection, echoGenError, echoGenErrorSection, onGenerate,
+}: {
+  icon: ReactNode; iconBg: string; iconColor: string
+  title: string; description: string; section: string
+  generatingSection: string | null
+  echoGenError: string | null
+  echoGenErrorSection: string | null
+  onGenerate: () => void
+}) {
+  const isGenerating = generatingSection === section
+  const hasError = echoGenError !== null && echoGenErrorSection === section
+
+  return (
+    <div className="rounded-xl border p-5" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: iconBg, color: iconColor }}>
+            {icon}
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="font-semibold text-foreground">{title}</h2>
+              <span className="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide leading-none" style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))', color: '#fff' }}>Echo</span>
+            </div>
+            <p className="text-sm text-subtle">{description}</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onGenerate}
+          disabled={generatingSection !== null}
+          className="shrink-0 flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-all disabled:opacity-50"
+          style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))', boxShadow: '0 4px 14px -4px var(--p-glow)' }}
+        >
+          {isGenerating
+            ? <><Loader2 size={13} className="animate-spin" /> Generating…</>
+            : <><Sparkles size={13} /> Generate with Echo</>
+          }
+        </button>
+      </div>
+      {hasError && (
+        <div className="mt-3 flex items-center gap-2 text-xs" style={{ color: '#f87171' }}>
+          <AlertCircle size={12} /> {echoGenError}
         </div>
       )}
     </div>
