@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation'
 import { guildIconUrl, type DiscordGuildFull, type DiscordSelfUser } from '@/lib/discord'
 import {
   BarChart2,
+  Activity,
   CalendarDays,
   Zap,
   Shield,
@@ -64,6 +65,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
       title: 'Analytics',
       items: [
         { label: 'Overview', href: base, icon: <BarChart2 size={16} /> },
+        { label: 'Statistics', href: `${base}/statistics`, icon: <Activity size={16} /> },
       ],
     },
     {
