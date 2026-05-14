@@ -185,9 +185,12 @@
 }
 
 /* ── Reduced Motion ────────────────────────── */
-[data-animations="false"] *,
-[data-animations="false"] *::before,
-[data-animations="false"] *::after {
+/* Controls hover effects and UI transitions only. Corner decorations
+   ([data-cd]) are intentionally excluded — they have their own toggle
+   (data-corner-deco) and should keep animating regardless of this setting. */
+[data-animations="false"] *:not([data-cd], [data-cd] *),
+[data-animations="false"] *:not([data-cd], [data-cd] *)::before,
+[data-animations="false"] *:not([data-cd], [data-cd] *)::after {
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;

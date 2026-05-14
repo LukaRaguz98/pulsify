@@ -2,9 +2,8 @@
 
 import { usePreferences } from '@/components/ThemeProvider'
 
-// Keyframes: all animated elements start and end at opacity:0 so that
-// [data-animations="false"] (which forces duration:0.01ms, iteration:1)
-// leaves them invisible via animationFillMode:'forwards'.
+// Keyframes for the animated corner brackets. Each cycles through opacity:0
+// at its start/end so the brackets fade in and out as the loop repeats.
 const KEYFRAMES = `
 @keyframes _co{0%,100%{opacity:0}40%,60%{opacity:.28}}
 @keyframes _co2{0%,100%{opacity:0}35%,65%{opacity:.2}}
