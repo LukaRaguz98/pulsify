@@ -601,7 +601,7 @@ export function MembersTab({ guildId, members, roles, onActionComplete }: Props)
                 <th className="text-left">
                   <SortableHeader label="Status" columnKey="status" activeKey={sort.key} direction={sort.dir} onSort={handleSort} />
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-subtle">Actions</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-subtle">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -682,7 +682,7 @@ export function MembersTab({ guildId, members, roles, onActionComplete }: Props)
                         <span className="text-xs text-subtle">Active</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-center">
                       <button
                         onClick={(e) => {
                           if (openMenu?.userId === m.user.id) {

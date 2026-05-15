@@ -168,7 +168,7 @@ export function BansTab({ guildId, bans, onActionComplete }: Props) {
               <th className="text-left">
                 <SortableHeader label="When" columnKey="banned_at" activeKey={sort.key} direction={sort.dir} onSort={handleSort} />
               </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-subtle">Action</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-subtle">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -236,8 +236,8 @@ export function BansTab({ guildId, bans, onActionComplete }: Props) {
                   <td className="px-4 py-3 text-subtle text-xs font-mono">
                     {ban.banned_at ? new Date(ban.banned_at).toLocaleString() : '—'}
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                  <td className="px-4 py-3 text-center">
+                    <div className="flex items-center justify-center gap-2">
                       {err && (
                         <span className="flex items-center gap-1 text-xs" style={{ color: '#f87171' }}>
                           <AlertCircle size={10} />

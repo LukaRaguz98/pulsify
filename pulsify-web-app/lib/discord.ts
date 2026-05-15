@@ -149,12 +149,32 @@ export async function fetchSelfUser(accessToken: string): Promise<DiscordSelfUse
   return res.json()
 }
 
+export class DiscordFetchError extends Error {
+  status: number
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'DiscordFetchError'
+    this.status = status
+  }
+}
+
 export async function fetchUserGuilds(accessToken: string): Promise<DiscordGuild[]> {
+  // `cache: 'no-store'` skips the Next.js data cache deliberately. Previously
+  // we used `next: { revalidate: 30 }`, which cached transient 429/5xx
+  // responses from Discord for the revalidate window — surfacing as bogus
+  // "you are not a member" errors that only cleared after the cache expired.
+  // The user-guilds payload is small and per-user, so the extra fetch cost is
+  // marginal compared to the UX hit of sticky failures.
   const res = await fetch(`${DISCORD_API}/users/@me/guilds?with_counts=true`, {
     headers: { Authorization: `Bearer ${accessToken}` },
-    next: { revalidate: 30 },
+    cache: 'no-store',
   })
-  if (!res.ok) return []
+  if (!res.ok) {
+    throw new DiscordFetchError(
+      `Discord user-guilds fetch failed (${res.status})`,
+      res.status,
+    )
+  }
   return res.json()
 }
 
@@ -762,6 +782,93 @@ export async function reorderGuildRoles(
   if (res.ok) return { ok: true }
   const body = await res.json().catch(() => ({})) as { message?: string }
   return { ok: false, error: body.message ?? `Discord API error ${res.status}` }
+}
+
+export type RoleMutation = {
+  name?: string
+  /** Decimal RGB int. 0 strips the color (Discord renders default). */
+  color?: number
+  permissions?: string
+  hoist?: boolean
+  mentionable?: boolean
+}
+
+export async function createGuildRole(
+  guildId: string,
+  body: RoleMutation,
+  reason?: string,
+): Promise<{ ok: true; role: DiscordRole } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/roles`, {
+    method: 'POST',
+    headers: jsonHeaders(reason),
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) return { ok: false, error: await discordError(res) }
+  return { ok: true, role: (await res.json()) as DiscordRole }
+}
+
+export async function modifyGuildRole(
+  guildId: string,
+  roleId: string,
+  body: RoleMutation,
+  reason?: string,
+): Promise<{ ok: true; role: DiscordRole } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/roles/${roleId}`, {
+    method: 'PATCH',
+    headers: jsonHeaders(reason),
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) return { ok: false, error: await discordError(res) }
+  return { ok: true, role: (await res.json()) as DiscordRole }
+}
+
+export async function deleteGuildRole(
+  guildId: string,
+  roleId: string,
+  reason?: string,
+): Promise<DiscordResult> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/roles/${roleId}`, {
+    method: 'DELETE',
+    headers: authHeaders(reason),
+  })
+  if (res.ok) return { ok: true }
+  return { ok: false, error: await discordError(res) }
+}
+
+/**
+ * Returns the bot's highest role position in the guild, or null if it can't
+ * be determined. Used by the role-management gates to refuse edits to roles
+ * at or above the bot's hierarchy line — Discord will reject those anyway.
+ */
+export async function getBotHighestRolePosition(guildId: string): Promise<number | null> {
+  if (!process.env.DISCORD_BOT_TOKEN) return null
+  const botId = await getBotId()
+  if (!botId) return null
+  const [botMember, roles] = await Promise.all([
+    fetchGuildMember(guildId, botId),
+    fetchGuildRoles(guildId),
+  ])
+  if (!botMember || roles.length === 0) return null
+  let max = 0
+  for (const role of roles) {
+    if (botMember.roles.includes(role.id) && role.position > max) max = role.position
+  }
+  return max
+}
+
+const DISCORD_EPOCH_MS = BigInt('1420070400000')
+
+/** Convert a Discord snowflake ID to its creation Date, or null if invalid. */
+export function snowflakeToDate(id: string): Date | null {
+  try {
+    const ms = (BigInt(id) >> BigInt(22)) + DISCORD_EPOCH_MS
+    return new Date(Number(ms))
+  } catch {
+    return null
+  }
 }
 
 export function channelTypeName(type: number): string {
