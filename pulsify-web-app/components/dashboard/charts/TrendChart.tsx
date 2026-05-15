@@ -31,6 +31,7 @@ type Props = {
   xTickFormatter?: (value: string) => string
   yTickFormatter?: (value: number) => string
   tooltipValueFormatter?: (value: number, name: string) => string
+  tooltipLabelFormatter?: (value: string) => string
   stacked?: boolean
   showLegend?: boolean
 }
@@ -46,6 +47,7 @@ export function TrendChart({
   xTickFormatter,
   yTickFormatter,
   tooltipValueFormatter,
+  tooltipLabelFormatter,
   stacked = false,
   showLegend = false,
 }: Props) {
@@ -54,6 +56,9 @@ export function TrendChart({
   const tickInterval = Math.max(0, Math.ceil(data.length / 8) - 1)
 
   const tooltipProps: ComponentProps<typeof Tooltip> = {
+    // wrapperStyle lifts the tooltip's positioned wrapper above the chart's
+    // SVG so bars don't cover the popup.
+    wrapperStyle: { zIndex: 50, outline: 'none' },
     contentStyle: {
       background: 'var(--panel-2)',
       border: '1px solid var(--line-strong)',
@@ -65,6 +70,9 @@ export function TrendChart({
     itemStyle: { padding: '1px 0' },
     formatter: tooltipValueFormatter
       ? (value, name) => [tooltipValueFormatter(Number(value), String(name)), name]
+      : undefined,
+    labelFormatter: tooltipLabelFormatter
+      ? (label) => tooltipLabelFormatter(String(label))
       : undefined,
   }
 

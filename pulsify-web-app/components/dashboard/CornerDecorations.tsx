@@ -2,24 +2,17 @@
 
 import { usePreferences } from '@/components/ThemeProvider'
 
-// Keyframes for the animated corner brackets. Each cycles through opacity:0
-// at its start/end so the brackets fade in and out as the loop repeats.
+// Keyframes for the animated corner brackets. _cd draws and erases the whole
+// 480-unit L (60+180 doubled) so the line "travels" through the corner in one
+// continuous pass.
 const KEYFRAMES = `
-@keyframes _co{0%,100%{opacity:0}40%,60%{opacity:.28}}
 @keyframes _co2{0%,100%{opacity:0}35%,65%{opacity:.2}}
 @keyframes _cd{
-  0%{stroke-dashoffset:240;opacity:0}
+  0%{stroke-dashoffset:480;opacity:0}
   20%{opacity:1}
   50%{stroke-dashoffset:0;opacity:1}
-  80%{stroke-dashoffset:-240;opacity:1}
-  100%{stroke-dashoffset:-240;opacity:0}
-}
-@keyframes _cdg{
-  0%{stroke-dashoffset:240;opacity:0}
-  20%{opacity:.5}
-  50%{stroke-dashoffset:0;opacity:.5}
-  80%{stroke-dashoffset:-240;opacity:.5}
-  100%{stroke-dashoffset:-240;opacity:0}
+  80%{stroke-dashoffset:-480;opacity:1}
+  100%{stroke-dashoffset:-480;opacity:0}
 }
 @keyframes _cdp{0%,100%{opacity:0}40%,65%{opacity:.85}}
 `
@@ -27,7 +20,7 @@ const KEYFRAMES = `
 // ── Layout (all coordinates in a 320×320 SVG viewport) ─────────────────
 //
 // TR — viewport corner at SVG(320, 0)
-//   main bracket : M228 28 H288 V208   (H-arm=60, V-arm=180, total=240)
+//   main bracket : M168 28 H288 V388   (H-arm=120, V-arm=360, total=480)
 //   outer bracket: M216 16 H302 V222   (larger, dashed)
 //   corner dot   : (288, 28)
 //   chamfer      : (279,28)→(288,37)
@@ -35,10 +28,10 @@ const KEYFRAMES = `
 //   ticks H      : x=258, y 22–34
 //   ticks V 1/3  : y= 88, x 282–294
 //   ticks V 2/3  : y=148, x 283–293
-//   ticks V end  : y=208, x 283–293  (terminus cap)
+//   ticks V end  : y=208, x 283–293
 //
 // BL — viewport corner at SVG(0, 320)
-//   main bracket : M92 292 H32 V112    (H-arm=60, V-arm=180, total=240)
+//   main bracket : M152 292 H32 V-68   (H-arm=120, V-arm=360, total=480)
 //   outer bracket: M104 304 H18 V98    (larger, dashed)
 //   corner dot   : (32, 292)
 //   chamfer      : (41,283)→(32,292)
@@ -46,7 +39,7 @@ const KEYFRAMES = `
 //   ticks H      : x= 62, y 286–298
 //   ticks V 1/3  : y=232, x  26– 38
 //   ticks V 2/3  : y=172, x  27– 37
-//   ticks V end  : y=112, x  26– 38  (terminus cap)
+//   ticks V end  : y=112, x  26– 38
 
 function CornerDeco({ pos }: { pos: 'tr' | 'bl' }) {
   const isTR = pos === 'tr'
@@ -64,27 +57,9 @@ function CornerDeco({ pos }: { pos: 'tr' | 'bl' }) {
         height: 320,
         pointerEvents: 'none',
         zIndex: 10,
-        overflow: 'hidden',
+        overflow: 'visible',
       }}
     >
-      <defs>
-        <filter id={`cd-g-${pos}`} x="-100%" y="-100%" width="300%" height="300%">
-          <feGaussianBlur stdDeviation="30" />
-        </filter>
-      </defs>
-
-      {/* ── Glow orb ── */}
-      <ellipse
-        cx={isTR ? 320 : 0}
-        cy={isTR ? 0 : 320}
-        rx={90} ry={90}
-        filter={`url(#cd-g-${pos})`}
-        style={{
-          fill: 'var(--p-1)',
-          animation: `_co 6s ease-in-out ${isTR ? '0s' : '-3s'} infinite forwards`,
-        }}
-      />
-
       {/* ── Outer dashed bracket + diamond ── */}
       <path
         d={isTR ? 'M216 16 H302 V222' : 'M104 304 H18 V98'}
@@ -106,26 +81,13 @@ function CornerDeco({ pos }: { pos: 'tr' | 'bl' }) {
         }}
       />
 
-      {/* ── Glow trace — slightly ahead, soft leading/trailing edge ── */}
+      {/* ── Main L-bracket (H=120, V=360, total=480 — doubled arms) ── */}
       <path
-        d={isTR ? 'M228 28 H288 V208' : 'M92 292 H32 V112'}
-        fill="none" strokeWidth={8} strokeLinecap="round"
-        strokeDasharray={240} strokeDashoffset={240}
-        style={{
-          stroke: 'var(--p-1)',
-          filter: 'blur(5px)',
-          animation: `_cdg 5s ease-in-out ${isTR ? '-0.2s' : '-2.7s'} infinite forwards`,
-        }}
-      />
-
-      {/* ── Main L-bracket (H=60, V=180, total=240) ── */}
-      <path
-        d={isTR ? 'M228 28 H288 V208' : 'M92 292 H32 V112'}
+        d={isTR ? 'M168 28 H288 V388' : 'M152 292 H32 V-68'}
         fill="none" strokeWidth={1.5} strokeLinecap="round"
-        strokeDasharray={240} strokeDashoffset={240}
+        strokeDasharray={480} strokeDashoffset={480}
         style={{
           stroke: 'var(--p-1)',
-          filter: 'drop-shadow(0 0 5px var(--p-glow))',
           animation: `_cd 5s ease-in-out ${isTR ? '0s' : '-2.5s'} infinite forwards`,
         }}
       />
@@ -137,7 +99,6 @@ function CornerDeco({ pos }: { pos: 'tr' | 'bl' }) {
         r={2.5}
         style={{
           fill: 'var(--p-1)',
-          filter: 'drop-shadow(0 0 6px var(--p-glow))',
           animation: `_cdp 5s ease-in-out ${isTR ? '0s' : '-2.5s'} infinite forwards`,
         }}
       />
@@ -178,7 +139,7 @@ function CornerDeco({ pos }: { pos: 'tr' | 'bl' }) {
         strokeWidth={0.5}
         style={{ stroke: 'var(--p-1)', opacity: 0.25 }}
       />
-      {/* ── Terminus cap at V arm end ── */}
+      {/* ── Terminus cap at original V arm end ── */}
       <line
         x1={isTR ? 283 : 26} y1={isTR ? 208 : 112}
         x2={isTR ? 293 : 38} y2={isTR ? 208 : 112}

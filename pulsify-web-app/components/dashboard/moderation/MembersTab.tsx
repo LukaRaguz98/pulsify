@@ -670,7 +670,7 @@ export function MembersTab({ guildId, members, roles, onActionComplete }: Props)
                       </div>
                     </td>
                     <td className="px-4 py-3 text-subtle text-xs font-mono">
-                      {new Date(m.joined_at).toLocaleDateString()}
+                      {new Date(m.joined_at).toLocaleString('en-US')}
                     </td>
                     <td className="px-4 py-3">
                       {inTimeout ? (
