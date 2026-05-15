@@ -17,6 +17,7 @@ type Props = {
   xTickFormatter?: (value: string) => string
   yTickFormatter?: (value: number) => string
   tooltipValueFormatter?: (value: number, name: string) => string
+  tooltipLabelFormatter?: (value: string) => string
   showLegend?: boolean
 }
 
