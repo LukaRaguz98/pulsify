@@ -11,11 +11,14 @@ type PreferencesContextType = {
   density: LayoutDensity
   animations: boolean
   cornerDeco: boolean
+  themeCustomColor: string | null
   setTheme: (theme: ThemeId) => void
   setScheme: (scheme: ColorScheme) => void
   setDensity: (density: LayoutDensity) => void
   setAnimations: (on: boolean) => void
   setCornerDeco: (on: boolean) => void
+  /** Pass `null` to clear the custom accent and fall back to the preset theme. */
+  setThemeCustomColor: (color: string | null) => void
 }
 
 const PreferencesContext = createContext<PreferencesContextType>({
@@ -24,15 +27,38 @@ const PreferencesContext = createContext<PreferencesContextType>({
   density: 'comfortable',
   animations: true,
   cornerDeco: true,
+  themeCustomColor: null,
   setTheme: () => {},
   setScheme: () => {},
   setDensity: () => {},
   setAnimations: () => {},
   setCornerDeco: () => {},
+  setThemeCustomColor: () => {},
 })
 
 function saveCookie(key: string, value: string) {
   document.cookie = `${key}=${value}; path=/; max-age=31536000; SameSite=Lax`
+}
+
+function clearCookie(key: string) {
+  document.cookie = `${key}=; path=/; max-age=0; SameSite=Lax`
+}
+
+// The four accent CSS vars derived from a single hex color. Keeping these in
+// one place so SSR (app/layout.tsx) and CSR (this provider) stay in sync.
+const ACCENT_VARS = ['--p-1', '--p-2', '--p-soft', '--p-glow', '--glow-a'] as const
+
+function applyCustomAccent(color: string | null) {
+  const root = document.documentElement
+  if (!color) {
+    for (const v of ACCENT_VARS) root.style.removeProperty(v)
+    return
+  }
+  root.style.setProperty('--p-1', color)
+  root.style.setProperty('--p-2', `color-mix(in srgb, ${color} 80%, black)`)
+  root.style.setProperty('--p-soft', `color-mix(in srgb, ${color} 12%, transparent)`)
+  root.style.setProperty('--p-glow', `color-mix(in srgb, ${color} 45%, transparent)`)
+  root.style.setProperty('--glow-a', `color-mix(in srgb, ${color} 9%, transparent)`)
 }
 
 export function ThemeProvider({
@@ -42,6 +68,7 @@ export function ThemeProvider({
   initialDensity = 'comfortable',
   initialAnimations = true,
   initialCornerDeco = true,
+  initialCustomColor = null,
 }: {
   children: React.ReactNode
   initialTheme: ThemeId
@@ -49,17 +76,25 @@ export function ThemeProvider({
   initialDensity?: LayoutDensity
   initialAnimations?: boolean
   initialCornerDeco?: boolean
+  initialCustomColor?: string | null
 }) {
   const [theme, setThemeState] = useState<ThemeId>(initialTheme)
   const [scheme, setSchemeState] = useState<ColorScheme>(initialScheme)
   const [density, setDensityState] = useState<LayoutDensity>(initialDensity)
   const [animations, setAnimationsState] = useState<boolean>(initialAnimations)
   const [cornerDeco, setCornerDecoState] = useState<boolean>(initialCornerDeco)
+  const [themeCustomColor, setThemeCustomColorState] = useState<string | null>(initialCustomColor)
 
   const setTheme = (next: ThemeId) => {
     setThemeState(next)
     document.documentElement.setAttribute('data-theme', next)
     saveCookie(PREF_COOKIES.theme, next)
+    // Selecting a preset clears any custom override so the preset's accent wins.
+    if (themeCustomColor !== null) {
+      setThemeCustomColorState(null)
+      applyCustomAccent(null)
+      clearCookie(PREF_COOKIES.themeCustomColor)
+    }
   }
 
   const setScheme = (next: ColorScheme) => {
@@ -86,9 +121,19 @@ export function ThemeProvider({
     saveCookie(PREF_COOKIES.cornerDeco, String(on))
   }
 
+  const setThemeCustomColor = (next: string | null) => {
+    setThemeCustomColorState(next)
+    applyCustomAccent(next)
+    if (next) saveCookie(PREF_COOKIES.themeCustomColor, next)
+    else clearCookie(PREF_COOKIES.themeCustomColor)
+  }
+
   return (
     <PreferencesContext.Provider
-      value={{ theme, scheme, density, animations, cornerDeco, setTheme, setScheme, setDensity, setAnimations, setCornerDeco }}
+      value={{
+        theme, scheme, density, animations, cornerDeco, themeCustomColor,
+        setTheme, setScheme, setDensity, setAnimations, setCornerDeco, setThemeCustomColor,
+      }}
     >
       {children}
     </PreferencesContext.Provider>

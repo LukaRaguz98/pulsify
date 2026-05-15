@@ -1,5 +1,11 @@
 import { createClient as createServerSupabase } from '@/lib/supabase-server'
-import { fetchUserGuilds, hasManageGuild, fetchSelfUser } from '@/lib/discord'
+import {
+  fetchUserGuilds,
+  hasManageGuild,
+  fetchSelfUser,
+  DiscordFetchError,
+  type DiscordGuild,
+} from '@/lib/discord'
 
 export type ModeratorContext = {
   userId: string
@@ -23,7 +29,21 @@ export async function authorizeGuildModerator(guildId: string): Promise<AuthResu
   const token = session.provider_token
   if (!token) return { ok: false, error: 'Your Discord session expired — please sign in again.' }
 
-  const guilds = await fetchUserGuilds(token)
+  let guilds: DiscordGuild[]
+  try {
+    guilds = await fetchUserGuilds(token)
+  } catch (e) {
+    // Transient Discord failure (rate limit, 5xx, network blip). Surface a
+    // retry-friendly message instead of the misleading "not a member" error.
+    const status = e instanceof DiscordFetchError ? e.status : 0
+    return {
+      ok: false,
+      error:
+        status === 401
+          ? 'Your Discord session expired — please sign in again.'
+          : "Couldn't verify your Discord access right now. Try again in a moment.",
+    }
+  }
   const guild = guilds.find((g) => g.id === guildId)
   if (!guild) return { ok: false, error: 'You are not a member of this server.' }
   if (!hasManageGuild(guild.permissions)) {

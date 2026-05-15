@@ -35,6 +35,22 @@ export default async function RootLayout({
   const density = (cookieStore.get(PREF_COOKIES.density)?.value ?? DEFAULT_PREFERENCES.density) as LayoutDensity
   const animations = (cookieStore.get(PREF_COOKIES.animations)?.value ?? 'true') !== 'false'
   const cornerDeco = (cookieStore.get(PREF_COOKIES.cornerDeco)?.value ?? 'true') !== 'false'
+  const rawCustom = cookieStore.get(PREF_COOKIES.themeCustomColor)?.value
+  const themeCustomColor = rawCustom && /^#?[0-9a-fA-F]{6}$/.test(rawCustom)
+    ? (rawCustom.startsWith('#') ? rawCustom : `#${rawCustom}`)
+    : null
+
+  // Inline-style the accent CSS vars when a custom color is set, so SSR ships
+  // the right colors on first paint (no theme flash).
+  const accentStyle = themeCustomColor
+    ? ({
+        '--p-1': themeCustomColor,
+        '--p-2': `color-mix(in srgb, ${themeCustomColor} 80%, black)`,
+        '--p-soft': `color-mix(in srgb, ${themeCustomColor} 12%, transparent)`,
+        '--p-glow': `color-mix(in srgb, ${themeCustomColor} 45%, transparent)`,
+        '--glow-a': `color-mix(in srgb, ${themeCustomColor} 9%, transparent)`,
+      } as React.CSSProperties)
+    : undefined
 
   return (
     <html
@@ -45,6 +61,7 @@ export default async function RootLayout({
       data-animations={String(animations)}
       data-corner-deco={String(cornerDeco)}
       className={`${inter.variable} ${jetbrainsMono.variable} h-full`}
+      style={accentStyle}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
@@ -54,6 +71,7 @@ export default async function RootLayout({
           initialDensity={density}
           initialAnimations={animations}
           initialCornerDeco={cornerDeco}
+          initialCustomColor={themeCustomColor}
         >
           {children}
         </ThemeProvider>
