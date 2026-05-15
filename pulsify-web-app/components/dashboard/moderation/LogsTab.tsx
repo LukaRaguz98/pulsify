@@ -202,7 +202,11 @@ export function LogsTab({ guildId, refreshKey, members }: Props) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
-                <th className="text-left">
+                {/* Action lives on the left — it's a non-interactive label
+                    pill, not a button like the action columns in the other
+                    moderation tabs. Width kept tight so the column doesn't
+                    eat horizontal space from Target / Reason. */}
+                <th className="text-left" style={{ width: 140 }}>
                   <SortableHeader label="Action" columnKey="action" activeKey={sort.key} direction={sort.dir} onSort={handleSort} />
                 </th>
                 <th className="text-left">
@@ -234,7 +238,7 @@ export function LogsTab({ guildId, refreshKey, members }: Props) {
                   >
                     <td className="px-4 py-3">
                       <span
-                        className="inline-flex rounded px-1.5 py-0.5 text-xs font-medium"
+                        className="inline-flex whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-medium"
                         style={{ background: `${color}1f`, color }}
                       >
                         {label}

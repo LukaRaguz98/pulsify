@@ -184,6 +184,12 @@
   display: none !important;
 }
 
+/* Hide the top-right corner deco while a right-side slide-over is open —
+   otherwise the extended bracket bleeds across the dialog. */
+body.slide-over-open [data-cd-pos="tr"] {
+  display: none !important;
+}
+
 /* ── Reduced Motion ────────────────────────── */
 /* Controls hover effects and UI transitions only. Corner decorations
    ([data-cd]) are intentionally excluded — they have their own toggle

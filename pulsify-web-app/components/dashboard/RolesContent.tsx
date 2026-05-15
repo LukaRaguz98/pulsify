@@ -1,99 +1,232 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { ChevronUp, ChevronDown, Loader2, Crown, AlertCircle } from 'lucide-react'
-import { roleColor } from '@/lib/discord'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import {
+  Loader2,
+  Crown,
+  AlertCircle,
+  Plus,
+  GripVertical,
+  CheckCircle2,
+  AlertTriangle,
+} from 'lucide-react'
+import { roleColor, snowflakeToDate, type DiscordRole } from '@/lib/discord'
+import { permissionKeysFromBits, dangerousKeysIn } from '@/lib/discord-permissions'
 import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
-import { OpenInDiscordButton } from '@/components/ui/open-in-discord'
-
-type Role = {
-  id: string
-  name: string
-  color: number
-  position: number
-  permissions: string
-  managed: boolean
-  mentionable: boolean
-  hoist: boolean
-}
+import { RoleEditPanel } from './roles/RoleEditPanel'
+import type { PermissionPreset } from '@/app/api/guilds/[guildId]/permission-presets/route'
 
 type Member = {
   user: { id: string }
   roles: string[]
 }
 
+type Toast = { kind: 'ok' | 'err'; text: string }
+
+// Grid template shared between the header and each row so columns stay aligned.
+// Role is capped (was 1fr — felt empty); Properties expands to fill remaining
+// space; Created shows the date derived from the role snowflake.
+const ROLE_GRID = '24px minmax(220px, 340px) 90px 210px minmax(220px, 1fr) 60px'
+
+// Substring of the moderation-auth transient-failure message. When the API
+// returns this, the dashboard keeps the loading spinner up and silently
+// retries instead of surfacing a scary banner the user can't act on.
+const TRANSIENT_ERROR_HINT = "Couldn't verify your Discord access"
+// Roughly 30s of retrying before giving up and showing the error.
+const MAX_TRANSIENT_RETRIES = 15
+
 type Props = { guildId: string }
 
 export function RolesContent({ guildId }: Props) {
-  const [roles, setRoles] = useState<Role[]>([])
+  const [roles, setRoles] = useState<DiscordRole[]>([])
   const [memberCountByRole, setMemberCountByRole] = useState<Map<string, number>>(new Map())
+  const [presets, setPresets] = useState<PermissionPreset[]>([])
   const [loading, setLoading] = useState(true)
-  const [movingId, setMovingId] = useState<string | null>(null)
+  const [reordering, setReordering] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [toast, setToast] = useState<Toast | null>(null)
 
-  const fetchData = useCallback(async () => {
-    const [rolesRes, membersRes] = await Promise.all([
+  const [editingRole, setEditingRole] = useState<DiscordRole | null>(null)
+  const [creating, setCreating] = useState(false)
+
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+
+  const fetchAll = useCallback(async (attempt = 0): Promise<void> => {
+    const [rolesRes, membersRes, presetsRes] = await Promise.all([
       fetch(`/api/discord/guild/${guildId}/roles`, { cache: 'no-store' }),
       fetch(`/api/discord/guild/${guildId}/members?limit=1000`, { cache: 'no-store' }),
+      fetch(`/api/guilds/${guildId}/permission-presets`, { cache: 'no-store' }),
     ])
-    if (rolesRes.ok) {
-      const data: Role[] = await rolesRes.json()
-      setRoles(data)
+
+    if (!rolesRes.ok) {
+      const data = (await rolesRes.json().catch(() => ({}))) as { error?: string }
+      // Transient Discord blip — keep the spinner up and retry silently. All
+      // three endpoints share the same auth path, so checking roles is enough.
+      if (data.error?.includes(TRANSIENT_ERROR_HINT) && attempt < MAX_TRANSIENT_RETRIES) {
+        // Linear backoff: 600ms → 2000ms cap. Stays responsive without
+        // hammering Discord while it's already throttling us.
+        const delay = Math.min(2000, 600 + attempt * 200)
+        retryTimerRef.current = setTimeout(() => fetchAll(attempt + 1), delay)
+        return
+      }
+      setError(data.error ?? 'Could not load roles.')
+      setLoading(false)
+      return
     }
+
+    const data = (await rolesRes.json()) as DiscordRole[]
+    setRoles(data)
+
     if (membersRes.ok) {
-      const members: Member[] = await membersRes.json()
+      const members = (await membersRes.json()) as Member[]
       const counts = new Map<string, number>()
       for (const m of members) {
         for (const rid of m.roles) counts.set(rid, (counts.get(rid) ?? 0) + 1)
       }
       setMemberCountByRole(counts)
     }
+
+    if (presetsRes.ok) {
+      setPresets((await presetsRes.json()) as PermissionPreset[])
+    }
+
+    setError(null)
     setLoading(false)
   }, [guildId])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    fetchAll()
+    return () => {
+      // Cancel any pending retry on unmount so we don't setState after teardown.
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current)
+    }
+  }, [fetchAll])
 
-  const sorted = roles
-    .filter((r) => r.name !== '@everyone')
-    .sort((a, b) => b.position - a.position)
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 4000)
+    return () => clearTimeout(t)
+  }, [toast])
 
-  async function move(index: number, direction: 'up' | 'down') {
-    const swapIndex = direction === 'up' ? index - 1 : index + 1
-    if (swapIndex < 0 || swapIndex >= sorted.length) return
+  // Roles excluding @everyone, sorted top-down by position. The list state is
+  // the source of truth for DnD order; we PATCH Discord with the new
+  // positions on drop.
+  const sortedRoles = useMemo(
+    () => roles.filter((r) => r.name !== '@everyone').sort((a, b) => b.position - a.position),
+    [roles],
+  )
 
-    const roleA = sorted[index]
-    const roleB = sorted[swapIndex]
+  async function handleDragEnd(e: DragEndEvent) {
+    const { active, over } = e
+    if (!over || active.id === over.id) return
 
-    // optimistic update: swap position values in state
-    const newPositions = new Map(roles.map((r) => [r.id, r.position]))
-    newPositions.set(roleA.id, roleB.position)
-    newPositions.set(roleB.id, roleA.position)
-    setRoles((prev) => prev.map((r) => ({ ...r, position: newPositions.get(r.id) ?? r.position })))
+    const fromIndex = sortedRoles.findIndex((r) => r.id === active.id)
+    const toIndex = sortedRoles.findIndex((r) => r.id === over.id)
+    if (fromIndex === -1 || toIndex === -1) return
 
-    setMovingId(roleA.id)
+    const movedRole = sortedRoles[fromIndex]
+    if (movedRole.managed) {
+      setToast({ kind: 'err', text: 'Managed roles cannot be moved.' })
+      return
+    }
+
+    // Reorder locally then rebuild authoritative positions: the role at array
+    // index 0 (top of the list) gets the highest position; index n-1 gets the
+    // lowest. We send every affected role's new position to Discord.
+    const reordered = arrayMove(sortedRoles, fromIndex, toIndex)
+    const originalPositions = sortedRoles
+      .map((r) => r.position)
+      .sort((a, b) => b - a)
+    const updates: { id: string; position: number }[] = []
+    reordered.forEach((r, i) => {
+      const newPos = originalPositions[i]
+      if (r.position !== newPos) updates.push({ id: r.id, position: newPos })
+    })
+
+    if (updates.length === 0) return
+
+    // Optimistic update
+    setRoles((prev) => {
+      const m = new Map(updates.map((u) => [u.id, u.position]))
+      return prev.map((r) => (m.has(r.id) ? { ...r, position: m.get(r.id)! } : r))
+    })
+
+    setReordering(true)
     setError(null)
-
     const res = await fetch(`/api/discord/guild/${guildId}/roles`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        positions: [
-          { id: roleA.id, position: roleB.position },
-          { id: roleB.id, position: roleA.position },
-        ],
-      }),
+      body: JSON.stringify({ positions: updates }),
     })
-
+    setReordering(false)
     if (!res.ok) {
-      const body = await res.json().catch(() => ({})) as { error?: string }
-      setError(body.error ?? 'Failed to update role position.')
-      // rollback: re-fetch real state
-      fetchData()
-      setTimeout(() => setError(null), 5000)
+      const data = (await res.json().catch(() => ({}))) as { error?: string }
+      setError(data.error ?? 'Failed to reorder roles.')
+      fetchAll()
+      return
     }
+    setToast({ kind: 'ok', text: 'Role order saved.' })
+  }
 
-    setMovingId(null)
+  function openEditor(role: DiscordRole) {
+    setCreating(false)
+    setEditingRole(role)
+  }
+
+  function openCreate() {
+    setEditingRole(null)
+    setCreating(true)
+  }
+
+  function closeEditor() {
+    setEditingRole(null)
+    setCreating(false)
+  }
+
+  function handleSaved(saved: DiscordRole, isNew: boolean) {
+    setRoles((prev) => {
+      if (isNew) return [...prev, saved]
+      return prev.map((r) => (r.id === saved.id ? saved : r))
+    })
+    setToast({ kind: 'ok', text: isNew ? 'Role created.' : 'Role updated.' })
+    closeEditor()
+  }
+
+  function handleDeleted(roleId: string) {
+    setRoles((prev) => prev.filter((r) => r.id !== roleId))
+    setToast({ kind: 'ok', text: 'Role deleted.' })
+    closeEditor()
+  }
+
+  function handleDuplicated(role: DiscordRole) {
+    setRoles((prev) => [...prev, role])
+    setToast({ kind: 'ok', text: `Duplicated as @${role.name}.` })
+    // Keep the editor open on the new role so the user can rename it.
+    setEditingRole(role)
+    setCreating(false)
   }
 
   if (loading) {
@@ -112,151 +245,216 @@ export function RolesContent({ guildId }: Props) {
       <PageHeader
         title="Roles"
         description="View and manage the roles configured on your server."
+        action={
+          <button
+            type="button"
+            onClick={openCreate}
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition"
+            style={{ background: 'var(--p-1)', color: '#fff' }}
+          >
+            <Plus size={14} />
+            Create role
+          </button>
+        }
       />
 
-      <div className="mb-5 flex items-center gap-4 text-sm">
-        <span className="text-muted-foreground">{sorted.length} roles total</span>
+      <div className="mb-5 flex flex-wrap items-center gap-4 text-sm">
+        <span className="text-muted-foreground">{sortedRoles.length} roles total</span>
         <span className="text-subtle">·</span>
-        <span className="text-muted-foreground">{sorted.filter((r) => r.hoist).length} hoisted</span>
+        <span className="text-muted-foreground">{sortedRoles.filter((r) => r.hoist).length} hoisted</span>
         <span className="text-subtle">·</span>
-        <span className="text-muted-foreground">{sorted.filter((r) => r.managed).length} managed</span>
+        <span className="text-muted-foreground">{sortedRoles.filter((r) => r.managed).length} managed</span>
+        {reordering && (
+          <span className="ml-2 inline-flex items-center gap-1.5 text-xs text-subtle">
+            <Loader2 size={11} className="animate-spin" /> Saving order…
+          </span>
+        )}
       </div>
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm" style={{ borderColor: 'rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.08)', color: '#f87171' }}>
+        <div
+          className="mb-4 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm"
+          style={{ borderColor: 'rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.08)', color: '#f87171' }}
+        >
           <AlertCircle size={14} className="shrink-0" />
           {error}
         </div>
       )}
 
-      {sorted.length === 0 ? (
-        <EmptyState
-          icon={<Crown size={36} />}
-          title="No custom roles"
-          description="This server only has the @everyone role."
-        />
-      ) : (
-        <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--line-strong)' }}>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-subtle">Role</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-subtle">Members</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-subtle">Properties</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-subtle">Position</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-subtle">Order</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((role, i) => {
-                const color = roleColor(role.color)
-                const memberCount = memberCountByRole.get(role.id) ?? 0
-                const isMoving = movingId === role.id
-                const canMove = !role.managed
-                const isFirst = i === 0
-                const isLast = i === sorted.length - 1
-
-                return (
-                  <tr
-                    key={role.id}
-                    className="group border-b transition-colors"
-                    style={{
-                      borderColor: 'var(--line-strong)',
-                      background: 'color-mix(in srgb, var(--panel) 50%, transparent)',
-                    }}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <span
-                          className="h-3.5 w-3.5 rounded-full border shrink-0"
-                          style={{ backgroundColor: color, borderColor: 'var(--line-strong)' }}
-                        />
-                        <span
-                          className="font-medium"
-                          style={{ color: role.color !== 0 ? color : 'var(--text)' }}
-                        >
-                          @{role.name}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground font-mono">
-                      {memberCount.toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {role.hoist && (
-                          <span className="rounded px-1.5 py-0.5 text-xs text-muted-foreground" style={{ background: 'var(--bg-2)' }}>
-                            Hoisted
-                          </span>
-                        )}
-                        {role.mentionable && (
-                          <span className="rounded px-1.5 py-0.5 text-xs text-muted-foreground" style={{ background: 'var(--bg-2)' }}>
-                            Mentionable
-                          </span>
-                        )}
-                        {role.managed && (
-                          <span className="rounded px-1.5 py-0.5 text-xs" style={{ background: 'var(--p-soft)', color: 'var(--p-1)' }}>
-                            Managed
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-center text-subtle font-mono text-xs">
-                      #{role.position}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        {isMoving ? (
-                          <Loader2 size={14} className="animate-spin text-muted-foreground" />
-                        ) : canMove ? (
-                          <>
-                            <button
-                              onClick={() => move(i, 'up')}
-                              disabled={isFirst || !!movingId}
-                              title="Move up"
-                              className="flex h-6 w-6 items-center justify-center rounded transition-all opacity-0 group-hover:opacity-100 disabled:opacity-0"
-                              style={{ color: 'var(--text-3)' }}
-                              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-2)'; e.currentTarget.style.color = 'var(--text)' }}
-                              onMouseLeave={(e) => { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'var(--text-3)' }}
-                            >
-                              <ChevronUp size={14} />
-                            </button>
-                            <button
-                              onClick={() => move(i, 'down')}
-                              disabled={isLast || !!movingId}
-                              title="Move down"
-                              className="flex h-6 w-6 items-center justify-center rounded transition-all opacity-0 group-hover:opacity-100 disabled:opacity-0"
-                              style={{ color: 'var(--text-3)' }}
-                              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-2)'; e.currentTarget.style.color = 'var(--text)' }}
-                              onMouseLeave={(e) => { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'var(--text-3)' }}
-                            >
-                              <ChevronDown size={14} />
-                            </button>
-                          </>
-                        ) : (
-                          <span className="text-xs text-subtle opacity-0 group-hover:opacity-100">managed</span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+      {toast && (
+        <div
+          className="mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+          style={{
+            borderColor: toast.kind === 'ok' ? 'rgba(74,222,128,0.35)' : 'rgba(239,68,68,0.35)',
+            background: toast.kind === 'ok' ? 'rgba(74,222,128,0.08)' : 'rgba(239,68,68,0.08)',
+            color: toast.kind === 'ok' ? '#4ade80' : '#f87171',
+          }}
+        >
+          {toast.kind === 'ok' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+          {toast.text}
         </div>
       )}
 
-      <div className="mt-8 rounded-xl border p-5" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
-        <h2 className="mb-2 font-semibold text-foreground">Role Sync</h2>
-        <p className="text-sm text-subtle mb-4">
-          Configure how roles are synchronized between your Discord server and Pulsify.
-          Role sync allows the bot to automatically manage roles based on member activity and events.
-        </p>
-        <OpenInDiscordButton
-          webUrl={`https://discord.com/channels/${guildId}`}
-          label="Manage roles on Discord"
+      {sortedRoles.length === 0 ? (
+        <EmptyState
+          icon={<Crown size={36} />}
+          title="No custom roles"
+          description="This server only has the @everyone role. Use Create role to add one."
         />
+      ) : (
+        <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--line-strong)' }}>
+          <div
+            className="grid border-b px-4 py-2 text-xs font-semibold uppercase tracking-wider text-subtle"
+            style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)', gridTemplateColumns: ROLE_GRID }}
+          >
+            <span />
+            <span>Role</span>
+            <span className="text-center">Members</span>
+            <span>Created</span>
+            <span>Properties</span>
+            <span className="text-center">Position</span>
+          </div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={sortedRoles.map((r) => r.id)} strategy={verticalListSortingStrategy}>
+              <div>
+                {sortedRoles.map((role) => (
+                  <SortableRoleRow
+                    key={role.id}
+                    role={role}
+                    memberCount={memberCountByRole.get(role.id) ?? 0}
+                    onClick={() => openEditor(role)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        </div>
+      )}
+
+      {(editingRole || creating) && (
+        <RoleEditPanel
+          guildId={guildId}
+          role={editingRole}
+          isCreating={creating}
+          presets={presets}
+          onClose={closeEditor}
+          onSaved={handleSaved}
+          onDeleted={handleDeleted}
+          onDuplicated={handleDuplicated}
+          onPresetsChanged={() => {
+            // Re-fetch presets when the user creates a new one from the panel.
+            fetch(`/api/guilds/${guildId}/permission-presets`, { cache: 'no-store' })
+              .then((r) => (r.ok ? r.json() : []))
+              .then((d: PermissionPreset[]) => setPresets(d))
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function SortableRoleRow({
+  role,
+  memberCount,
+  onClick,
+}: {
+  role: DiscordRole
+  memberCount: number
+  onClick: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: role.id,
+    disabled: role.managed,
+  })
+
+  const color = roleColor(role.color)
+  const dangerCount = useMemo(() => {
+    const keys = permissionKeysFromBits(role.permissions)
+    return dangerousKeysIn(keys).length
+  }, [role.permissions])
+  const createdLabel = useMemo(() => {
+    const d = snowflakeToDate(role.id)
+    return d ? d.toLocaleString('en-US') : null
+  }, [role.id])
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        gridTemplateColumns: ROLE_GRID,
+        background: isDragging
+          ? 'var(--bg-2)'
+          : 'color-mix(in srgb, var(--panel) 50%, transparent)',
+        borderColor: 'var(--line-strong)',
+      }}
+      className="group grid border-b items-center px-4 py-2 text-sm cursor-pointer transition-colors hover:bg-[var(--bg-2)]"
+      onClick={onClick}
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        onClick={(e) => e.stopPropagation()}
+        disabled={role.managed}
+        title={role.managed ? 'Managed roles cannot be moved' : 'Drag to reorder'}
+        className="flex h-5 w-5 cursor-grab items-center justify-center text-muted-foreground transition active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-30"
+        aria-label={`Drag handle for ${role.name}`}
+      >
+        <GripVertical size={14} />
+      </button>
+
+      <div className="flex min-w-0 items-center gap-3">
+        <span
+          className="h-3.5 w-3.5 rounded-full border shrink-0"
+          style={{ backgroundColor: color, borderColor: 'var(--line-strong)' }}
+        />
+        <span
+          className="font-medium truncate"
+          style={{ color: role.color !== 0 ? color : 'var(--text)' }}
+        >
+          @{role.name}
+        </span>
+        {dangerCount > 0 && (
+          <span
+            className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase"
+            style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b' }}
+            title={`${dangerCount} sensitive permission${dangerCount === 1 ? '' : 's'} enabled`}
+          >
+            <AlertTriangle size={9} />
+            {dangerCount}
+          </span>
+        )}
       </div>
+
+      <span className="text-center text-muted-foreground font-mono text-xs">
+        {memberCount.toLocaleString()}
+      </span>
+
+      <span className="text-subtle font-mono text-xs truncate" title={createdLabel ?? undefined}>
+        {createdLabel ?? '—'}
+      </span>
+
+      <div className="flex flex-wrap gap-1">
+        {role.hoist && (
+          <span className="rounded px-1.5 py-0.5 text-xs text-muted-foreground" style={{ background: 'var(--bg-2)' }}>
+            Hoisted
+          </span>
+        )}
+        {role.mentionable && (
+          <span className="rounded px-1.5 py-0.5 text-xs text-muted-foreground" style={{ background: 'var(--bg-2)' }}>
+            Mentionable
+          </span>
+        )}
+        {role.managed && (
+          <span className="rounded px-1.5 py-0.5 text-xs" style={{ background: 'var(--p-soft)', color: 'var(--p-1)' }}>
+            Managed
+          </span>
+        )}
+      </div>
+
+      <span className="text-center text-subtle font-mono text-xs">#{role.position}</span>
     </div>
   )
 }

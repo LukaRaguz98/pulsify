@@ -227,7 +227,7 @@ export function TimeoutsTab({ guildId, members, meta, referenceTime, onActionCom
                 <th className="text-left">
                   <SortableHeader label="Ends" columnKey="until" activeKey={sort.key} direction={sort.dir} onSort={handleSort} />
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-subtle">Action</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-subtle">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -296,8 +296,8 @@ export function TimeoutsTab({ guildId, members, meta, referenceTime, onActionCom
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center gap-2">
                         {err && (
                           <span className="flex items-center gap-1 text-xs" style={{ color: '#f87171' }}>
                             <AlertCircle size={10} />

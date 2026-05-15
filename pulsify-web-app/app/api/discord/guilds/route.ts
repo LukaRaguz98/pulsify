@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
-import { fetchUserGuilds, isBotInGuild, hasManageGuild } from '@/lib/discord'
+import { fetchUserGuilds, isBotInGuild, hasManageGuild, DiscordFetchError } from '@/lib/discord'
 
 export async function GET() {
   const supabase = await createClient()
@@ -17,7 +17,16 @@ export async function GET() {
     return NextResponse.json({ error: 'No Discord token' }, { status: 401 })
   }
 
-  const guilds = await fetchUserGuilds(providerToken)
+  let guilds: Awaited<ReturnType<typeof fetchUserGuilds>>
+  try {
+    guilds = await fetchUserGuilds(providerToken)
+  } catch (e) {
+    const status = e instanceof DiscordFetchError ? e.status : 502
+    return NextResponse.json(
+      { error: "Couldn't reach Discord. Try again in a moment." },
+      { status: status === 401 ? 401 : 502 },
+    )
+  }
   const managed = guilds.filter((g) => hasManageGuild(g.permissions))
 
   const guildsWithBotStatus = await Promise.all(
