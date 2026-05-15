@@ -1,0 +1,52 @@
+import { createClient as createServerSupabase } from '@/lib/supabase-server'
+import { fetchUserGuilds, hasManageGuild, fetchSelfUser } from '@/lib/discord'
+
+export type ModeratorContext = {
+  userId: string
+  username: string | null
+}
+
+export type AuthResult =
+  | { ok: true; moderator: ModeratorContext }
+  | { ok: false; error: string }
+
+/**
+ * Verify the current Supabase user is signed in AND has Manage Server / Administrator
+ * on the Discord guild they're trying to moderate. Returns the moderator's Discord
+ * identity for logging.
+ */
+export async function authorizeGuildModerator(guildId: string): Promise<AuthResult> {
+  const supabase = await createServerSupabase()
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) return { ok: false, error: 'You must be signed in.' }
+
+  const token = session.provider_token
+  if (!token) return { ok: false, error: 'Your Discord session expired — please sign in again.' }
+
+  const guilds = await fetchUserGuilds(token)
+  const guild = guilds.find((g) => g.id === guildId)
+  if (!guild) return { ok: false, error: 'You are not a member of this server.' }
+  if (!hasManageGuild(guild.permissions)) {
+    return { ok: false, error: 'You need Manage Server or Administrator on this server.' }
+  }
+
+  const claims = session.user.user_metadata?.custom_claims as
+    | { username?: string; global_name?: string }
+    | undefined
+  let moderatorId =
+    (session.user.user_metadata?.provider_id as string | undefined) ?? session.user.id
+  let moderatorUsername =
+    claims?.global_name ?? claims?.username ?? session.user.user_metadata?.full_name ?? null
+
+  // Fetch the live Discord identity so logs always have a username, even if
+  // the metadata claims are missing.
+  if (!moderatorUsername) {
+    const self = await fetchSelfUser(token)
+    if (self) {
+      moderatorId = self.id
+      moderatorUsername = self.global_name ?? self.username
+    }
+  }
+
+  return { ok: true, moderator: { userId: moderatorId, username: moderatorUsername } }
+}

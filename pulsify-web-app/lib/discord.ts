@@ -66,9 +66,16 @@ export type DiscordBan = {
   user: {
     id: string
     username: string
+    global_name: string | null
     avatar: string | null
     discriminator: string
   }
+}
+
+export type EnrichedBan = DiscordBan & {
+  moderator: { id: string; username: string } | null
+  banned_at: string | null
+  source: 'pulsify' | 'audit_log' | null
 }
 
 export type DiscordMember = {
@@ -77,10 +84,12 @@ export type DiscordMember = {
     username: string
     avatar: string | null
     global_name: string | null
+    bot?: boolean
   }
   nick: string | null
   roles: string[]
   joined_at: string
+  communication_disabled_until?: string | null
 }
 
 export function guildIconUrl(guildId: string, icon: string | null, size = 64): string {
@@ -202,6 +211,57 @@ export async function fetchGuildBans(guildId: string): Promise<DiscordBan[]> {
   return res.json()
 }
 
+// Discord audit log action types — only the ones we care about.
+export const AUDIT_LOG_ACTION = {
+  MEMBER_BAN_ADD: 22,
+  MEMBER_BAN_REMOVE: 23,
+  MEMBER_UPDATE: 24,
+} as const
+
+export type AuditLogChange = {
+  key: string
+  new_value?: unknown
+  old_value?: unknown
+}
+
+export type AuditLogEntry = {
+  id: string
+  user_id: string | null
+  target_id: string | null
+  action_type: number
+  reason: string | null
+  changes?: AuditLogChange[]
+}
+
+export type AuditLogUser = {
+  id: string
+  username: string
+  global_name: string | null
+  avatar: string | null
+}
+
+export type AuditLogResponse = {
+  audit_log_entries: AuditLogEntry[]
+  users: AuditLogUser[]
+}
+
+export async function fetchGuildAuditLog(
+  guildId: string,
+  actionType: number,
+  limit = 100,
+): Promise<AuditLogResponse | null> {
+  if (!process.env.DISCORD_BOT_TOKEN) return null
+  const res = await fetch(
+    `${DISCORD_API}/guilds/${guildId}/audit-logs?action_type=${actionType}&limit=${Math.min(100, limit)}`,
+    {
+      headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+      cache: 'no-store',
+    },
+  )
+  if (!res.ok) return null
+  return res.json()
+}
+
 export async function fetchGuildMembers(guildId: string, limit = 100): Promise<DiscordMember[]> {
   if (!process.env.DISCORD_BOT_TOKEN) return []
   const res = await fetch(
@@ -226,16 +286,84 @@ export async function isBotInGuild(guildId: string): Promise<boolean> {
 
 export type BotPermissions = {
   inGuild: boolean
-  manageRoles: boolean
-  sendMessages: boolean
+  administrator: boolean
   banMembers: boolean
+  kickMembers: boolean
+  moderateMembers: boolean
+  manageNicknames: boolean
+  manageRoles: boolean
+  manageMessages: boolean
+  sendMessages: boolean
+  viewAuditLog: boolean
 }
 
-export async function checkBotPermissions(guildId: string): Promise<BotPermissions> {
-  const none: BotPermissions = { inGuild: false, manageRoles: false, sendMessages: false, banMembers: false }
-  if (!process.env.DISCORD_BOT_TOKEN || !process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID) return none
+const EMPTY_PERMS: BotPermissions = {
+  inGuild: false,
+  administrator: false,
+  banMembers: false,
+  kickMembers: false,
+  moderateMembers: false,
+  manageNicknames: false,
+  manageRoles: false,
+  manageMessages: false,
+  sendMessages: false,
+  viewAuditLog: false,
+}
 
-  const botId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID
+const PERM_BITS = {
+  ADMINISTRATOR:    BigInt(0x8),
+  KICK_MEMBERS:     BigInt(0x2),
+  BAN_MEMBERS:      BigInt(0x4),
+  VIEW_AUDIT_LOG:   BigInt(0x80),
+  SEND_MESSAGES:    BigInt(0x800),
+  MANAGE_MESSAGES:  BigInt(0x2000),
+  MANAGE_NICKNAMES: BigInt(0x8000000),
+  MANAGE_ROLES:     BigInt(0x10000000),
+  // 1 << 40 = 0x10000000000 — Moderate Members (timeout)
+  MODERATE_MEMBERS: BigInt('0x10000000000'),
+}
+
+let cachedBotId: string | null = null
+
+async function getBotId(): Promise<string | null> {
+  if (cachedBotId) return cachedBotId
+  if (!process.env.DISCORD_BOT_TOKEN) return null
+
+  // The bot token's /users/@me is authoritative — prefer it over the env var,
+  // which can be stale or refer to a different application.
+  try {
+    const res = await fetch(`${DISCORD_API}/users/@me`, {
+      headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+      cache: 'no-store',
+    })
+    if (res.ok) {
+      const me: { id: string } = await res.json()
+      cachedBotId = me.id
+      return cachedBotId
+    }
+  } catch {
+    // fall through to env var
+  }
+
+  if (process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID) {
+    cachedBotId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID
+    return cachedBotId
+  }
+  return null
+}
+
+/**
+ * Returns the bot's effective permissions in a guild.
+ *
+ * Returns `null` when we can't verify (no bot token, can't determine bot ID,
+ * or the member lookup fails). Callers should treat `null` as "unknown" — do
+ * not block actions; let Discord enforce instead.
+ */
+export async function checkBotPermissions(guildId: string): Promise<BotPermissions | null> {
+  if (!process.env.DISCORD_BOT_TOKEN) return null
+  const botId = await getBotId()
+  if (!botId) return null
+
   const [memberRes, roles] = await Promise.all([
     fetch(`${DISCORD_API}/guilds/${guildId}/members/${botId}`, {
       headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
@@ -244,7 +372,11 @@ export async function checkBotPermissions(guildId: string): Promise<BotPermissio
     fetchGuildRoles(guildId),
   ])
 
-  if (!memberRes.ok) return none
+  if (!memberRes.ok) {
+    // 404 = unknown member (bot not in guild); other = transient. Either way,
+    // we can't determine perms. Caller treats as "unknown".
+    return memberRes.status === 404 ? EMPTY_PERMS : null
+  }
   const member: { roles: string[] } = await memberRes.json()
   const botRoleIds = new Set(member.roles)
 
@@ -256,35 +388,353 @@ export async function checkBotPermissions(guildId: string): Promise<BotPermissio
     }
   }
 
-  const ADMINISTRATOR = BigInt(0x8)
-  if ((permissions & ADMINISTRATOR) !== BigInt(0)) {
-    return { inGuild: true, manageRoles: true, sendMessages: true, banMembers: true }
+  const isAdmin = (permissions & PERM_BITS.ADMINISTRATOR) !== BigInt(0)
+  if (isAdmin) {
+    return {
+      inGuild: true,
+      administrator: true,
+      banMembers: true,
+      kickMembers: true,
+      moderateMembers: true,
+      manageNicknames: true,
+      manageRoles: true,
+      manageMessages: true,
+      sendMessages: true,
+      viewAuditLog: true,
+    }
+  }
+
+  function has(bit: bigint): boolean {
+    return (permissions & bit) !== BigInt(0)
   }
 
   return {
     inGuild: true,
-    manageRoles:   (permissions & BigInt(0x10000000)) !== BigInt(0),
-    sendMessages:  (permissions & BigInt(0x800))      !== BigInt(0),
-    banMembers:    (permissions & BigInt(0x4))         !== BigInt(0),
+    administrator: false,
+    banMembers:      has(PERM_BITS.BAN_MEMBERS),
+    kickMembers:     has(PERM_BITS.KICK_MEMBERS),
+    moderateMembers: has(PERM_BITS.MODERATE_MEMBERS),
+    manageNicknames: has(PERM_BITS.MANAGE_NICKNAMES),
+    manageRoles:     has(PERM_BITS.MANAGE_ROLES),
+    manageMessages:  has(PERM_BITS.MANAGE_MESSAGES),
+    sendMessages:    has(PERM_BITS.SEND_MESSAGES),
+    viewAuditLog:    has(PERM_BITS.VIEW_AUDIT_LOG),
   }
+}
+
+export type DiscordResult = { ok: true } | { ok: false; error: string }
+
+// Bare auth — use for DELETE / PUT requests that send no body. Setting
+// Content-Type: application/json on a body-less request makes Discord try to
+// parse an empty body as JSON and reject with 50109.
+function authHeaders(reason?: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+  }
+  if (reason) {
+    // Discord audit log reason header has a 512-char limit and must be ASCII-safe.
+    headers['X-Audit-Log-Reason'] = encodeURIComponent(reason.slice(0, 500))
+  }
+  return headers
+}
+
+// Use when sending a JSON body.
+function jsonHeaders(reason?: string): Record<string, string> {
+  return { ...authHeaders(reason), 'Content-Type': 'application/json' }
+}
+
+async function discordError(res: Response): Promise<string> {
+  const body = await res.json().catch(() => ({})) as { message?: string; code?: number }
+  if (!body.message) return `Discord API error ${res.status}`
+
+  if (body.code === 50013) {
+    return (
+      `${body.message} (50013) — this is almost always a role hierarchy issue. ` +
+      `Move the bot's role above the target member's highest role in Server Settings → Roles. ` +
+      `Discord also blocks bots from moderating the server owner.`
+    )
+  }
+  if (body.code === 50001) {
+    return `${body.message} (50001) — the bot can't see the channel or member. Check channel/category permissions.`
+  }
+  return body.code ? `${body.message} (${body.code})` : body.message
 }
 
 export async function unbanUser(
   guildId: string,
   userId: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+  reason?: string,
+): Promise<DiscordResult> {
   if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
 
   const res = await fetch(`${DISCORD_API}/guilds/${guildId}/bans/${userId}`, {
     method: 'DELETE',
-    headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+    headers: authHeaders(reason),
   })
 
-  // 204 No Content = success
   if (res.ok) return { ok: true }
+  return { ok: false, error: await discordError(res) }
+}
 
-  const body = await res.json().catch(() => ({})) as { message?: string }
-  return { ok: false, error: body.message ?? `Discord API error ${res.status}` }
+export async function banGuildMember(
+  guildId: string,
+  userId: string,
+  opts: { reason?: string; deleteMessageSeconds?: number } = {},
+): Promise<DiscordResult> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const body: Record<string, unknown> = {}
+  if (typeof opts.deleteMessageSeconds === 'number') {
+    // Discord accepts 0 — 604800 (7 days).
+    body.delete_message_seconds = Math.max(0, Math.min(604800, opts.deleteMessageSeconds))
+  }
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/bans/${userId}`, {
+    method: 'PUT',
+    headers: jsonHeaders(opts.reason),
+    body: JSON.stringify(body),
+  })
+  if (res.ok) return { ok: true }
+  return { ok: false, error: await discordError(res) }
+}
+
+export async function kickGuildMember(
+  guildId: string,
+  userId: string,
+  reason?: string,
+): Promise<DiscordResult> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}`, {
+    method: 'DELETE',
+    headers: authHeaders(reason),
+  })
+  if (res.ok) return { ok: true }
+  return { ok: false, error: await discordError(res) }
+}
+
+async function patchGuildMember(
+  guildId: string,
+  userId: string,
+  body: Record<string, unknown>,
+  reason?: string,
+): Promise<DiscordResult> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}`, {
+    method: 'PATCH',
+    headers: jsonHeaders(reason),
+    body: JSON.stringify(body),
+  })
+  if (res.ok) return { ok: true }
+  return { ok: false, error: await discordError(res) }
+}
+
+export function timeoutMemberDiscord(
+  guildId: string,
+  userId: string,
+  untilIso: string,
+  reason?: string,
+): Promise<DiscordResult> {
+  return patchGuildMember(guildId, userId, { communication_disabled_until: untilIso }, reason)
+}
+
+export function clearMemberTimeoutDiscord(
+  guildId: string,
+  userId: string,
+  reason?: string,
+): Promise<DiscordResult> {
+  return patchGuildMember(guildId, userId, { communication_disabled_until: null }, reason)
+}
+
+export function setMemberNicknameDiscord(
+  guildId: string,
+  userId: string,
+  nick: string | null,
+  reason?: string,
+): Promise<DiscordResult> {
+  return patchGuildMember(guildId, userId, { nick }, reason)
+}
+
+export async function addMemberRoleDiscord(
+  guildId: string,
+  userId: string,
+  roleId: string,
+  reason?: string,
+): Promise<DiscordResult> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(
+    `${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`,
+    { method: 'PUT', headers: authHeaders(reason) },
+  )
+  if (res.ok) return { ok: true }
+  return { ok: false, error: await discordError(res) }
+}
+
+export async function removeMemberRoleDiscord(
+  guildId: string,
+  userId: string,
+  roleId: string,
+  reason?: string,
+): Promise<DiscordResult> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(
+    `${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`,
+    { method: 'DELETE', headers: authHeaders(reason) },
+  )
+  if (res.ok) return { ok: true }
+  return { ok: false, error: await discordError(res) }
+}
+
+export async function deleteChannelMessage(
+  channelId: string,
+  messageId: string,
+  reason?: string,
+): Promise<DiscordResult> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(
+    `${DISCORD_API}/channels/${channelId}/messages/${messageId}`,
+    { method: 'DELETE', headers: authHeaders(reason) },
+  )
+  if (res.ok) return { ok: true }
+  return { ok: false, error: await discordError(res) }
+}
+
+export async function bulkDeleteChannelMessages(
+  channelId: string,
+  messageIds: string[],
+  reason?: string,
+): Promise<DiscordResult> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  if (messageIds.length === 0) return { ok: true }
+  if (messageIds.length === 1) {
+    return deleteChannelMessage(channelId, messageIds[0], reason)
+  }
+  // Discord bulk-delete accepts 2 — 100 messages younger than 2 weeks.
+  const ids = messageIds.slice(0, 100)
+  const res = await fetch(
+    `${DISCORD_API}/channels/${channelId}/messages/bulk-delete`,
+    {
+      method: 'POST',
+      headers: jsonHeaders(reason),
+      body: JSON.stringify({ messages: ids }),
+    },
+  )
+  if (res.ok) return { ok: true }
+  return { ok: false, error: await discordError(res) }
+}
+
+export type DiscordMessage = {
+  id: string
+  channel_id: string
+  content: string
+  timestamp: string
+  edited_timestamp: string | null
+  author: {
+    id: string
+    username: string
+    avatar: string | null
+    global_name: string | null
+    bot?: boolean
+  }
+  attachments: { id: string; filename: string; url: string }[]
+}
+
+export async function fetchChannelMessages(
+  channelId: string,
+  limit = 50,
+): Promise<DiscordMessage[]> {
+  if (!process.env.DISCORD_BOT_TOKEN) return []
+  const res = await fetch(
+    `${DISCORD_API}/channels/${channelId}/messages?limit=${Math.min(100, limit)}`,
+    {
+      headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+      cache: 'no-store',
+    },
+  )
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function fetchGuildMember(
+  guildId: string,
+  userId: string,
+): Promise<DiscordMember | null> {
+  if (!process.env.DISCORD_BOT_TOKEN) return null
+  const res = await fetch(
+    `${DISCORD_API}/guilds/${guildId}/members/${userId}`,
+    {
+      headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+      cache: 'no-store',
+    },
+  )
+  if (!res.ok) return null
+  return res.json()
+}
+
+export type HierarchyCheck = { ok: true } | { ok: false; reason: string }
+
+/**
+ * Pre-flight: refuses moderation actions Discord will reject anyway.
+ *
+ *  - Bot can never moderate itself.
+ *  - Bot can never moderate the server owner — even with Administrator.
+ *  - Bot can only moderate members whose highest role is *below* the bot's
+ *    highest role. Equal positions count as too high.
+ *
+ * Fails open (returns ok: true) when any lookup fails, so transient errors
+ * don't block legitimate actions — Discord still enforces.
+ */
+export async function checkBotCanAct(
+  guildId: string,
+  targetUserId: string,
+): Promise<HierarchyCheck> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: true }
+  const botId = await getBotId()
+  if (!botId) return { ok: true }
+
+  if (targetUserId === botId) {
+    return { ok: false, reason: 'The bot cannot moderate itself.' }
+  }
+
+  const [guildRes, botMember, targetMember, roles] = await Promise.all([
+    fetch(`${DISCORD_API}/guilds/${guildId}`, {
+      headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+      cache: 'no-store',
+    }),
+    fetchGuildMember(guildId, botId),
+    fetchGuildMember(guildId, targetUserId),
+    fetchGuildRoles(guildId),
+  ])
+
+  if (!guildRes.ok || !botMember || !targetMember || roles.length === 0) {
+    return { ok: true } // can't determine — let Discord enforce
+  }
+
+  const guild = (await guildRes.json()) as { owner_id: string }
+  if (targetUserId === guild.owner_id) {
+    return {
+      ok: false,
+      reason: 'Discord does not allow bots to moderate the server owner.',
+    }
+  }
+
+  const positionFor = (memberRoles: string[]): number => {
+    let max = 0
+    for (const role of roles) {
+      if (memberRoles.includes(role.id) && role.position > max) max = role.position
+    }
+    return max
+  }
+  const botPos = positionFor(botMember.roles)
+  const targetPos = positionFor(targetMember.roles)
+
+  if (botPos <= targetPos) {
+    return {
+      ok: false,
+      reason:
+        `The bot's highest role is at or below this member's highest role, so Discord blocks the action. ` +
+        `Open Server Settings → Roles and drag the bot's role above the target member's roles.`,
+    }
+  }
+
+  return { ok: true }
 }
 
 export function formatEventStatus(status: 1 | 2 | 3 | 4): string {

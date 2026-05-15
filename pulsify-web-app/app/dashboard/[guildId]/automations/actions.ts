@@ -74,12 +74,17 @@ export async function saveAutomations(
 
   if (needsRoles || needsSend) {
     const perms = await checkBotPermissions(guildId)
-    if (!perms.inGuild)
-      return { ok: false, error: 'Could not verify bot permissions. Is the bot still in the server?' }
-    if (needsRoles && !perms.manageRoles)
-      return { ok: false, error: 'Auto-Role requires the bot to have the Manage Roles permission.' }
-    if (needsSend && !perms.sendMessages)
-      return { ok: false, error: 'Welcome Message / Moderation Alerts require the bot to have the Send Messages permission.' }
+    // Treat null (couldn't verify) as a soft-pass — Discord will reject at runtime if the perm is missing.
+    if (perms !== null) {
+      if (!perms.inGuild)
+        return { ok: false, error: 'Could not verify bot permissions. Is the bot still in the server?' }
+      if (!perms.administrator) {
+        if (needsRoles && !perms.manageRoles)
+          return { ok: false, error: 'Auto-Role requires the bot to have the Manage Roles permission.' }
+        if (needsSend && !perms.sendMessages)
+          return { ok: false, error: 'Welcome Message / Moderation Alerts require the bot to have the Send Messages permission.' }
+      }
+    }
   }
 
   const { data: existing } = await supabase
