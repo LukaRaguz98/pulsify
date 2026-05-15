@@ -217,6 +217,122 @@ export async function fetchGuildEvents(guildId: string): Promise<DiscordSchedule
       cache: 'no-store',
     }
   )
+  if (!res.ok) {
+    // Throwing instead of swallowing — previously returned [] looked
+    // indistinguishable from "no events" to the client, so transient 429s
+    // would briefly blank the events list on rapid refreshes.
+    throw new DiscordFetchError(
+      `Discord guild-events fetch failed (${res.status})`,
+      res.status,
+    )
+  }
+  return res.json()
+}
+
+export type EventMutation = {
+  name?: string
+  description?: string | null
+  channel_id?: string | null
+  /** External-only location string (max 100). */
+  location?: string | null
+  /** ISO timestamp. */
+  scheduled_start_time?: string
+  /** ISO timestamp. Required for external events. */
+  scheduled_end_time?: string | null
+  /** 1=Stage, 2=Voice, 3=External. */
+  entity_type?: 1 | 2 | 3
+  /** 1=Scheduled, 2=Active, 3=Completed, 4=Canceled. PATCH-only field. */
+  status?: 1 | 2 | 3 | 4
+  /** Base64 data URI ("data:image/png;base64,…"). null clears the cover. */
+  image?: string | null
+}
+
+// Translates our flat mutation shape into Discord's wire format.
+// Drops fields that weren't explicitly provided so PATCH calls only send the
+// keys the user intended to change.
+function eventMutationToBody(m: EventMutation): Record<string, unknown> {
+  const body: Record<string, unknown> = {}
+  if (m.name !== undefined) body.name = m.name.slice(0, 100)
+  if (m.description !== undefined) body.description = m.description?.slice(0, 1000) ?? null
+  if (m.channel_id !== undefined) body.channel_id = m.channel_id
+  if (m.scheduled_start_time !== undefined) body.scheduled_start_time = m.scheduled_start_time
+  if (m.scheduled_end_time !== undefined) body.scheduled_end_time = m.scheduled_end_time
+  if (m.entity_type !== undefined) body.entity_type = m.entity_type
+  if (m.location !== undefined) {
+    body.entity_metadata = m.location ? { location: m.location.slice(0, 100) } : null
+  }
+  if (m.status !== undefined) body.status = m.status
+  if (m.image !== undefined) body.image = m.image
+  // Discord requires privacy_level=2 (GUILD_ONLY) for all guild events.
+  if (m.entity_type !== undefined) body.privacy_level = 2
+  return body
+}
+
+export async function createGuildEvent(
+  guildId: string,
+  mutation: EventMutation,
+  reason?: string,
+): Promise<{ ok: true; event: DiscordScheduledEvent } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/scheduled-events`, {
+    method: 'POST',
+    headers: jsonHeaders(reason),
+    body: JSON.stringify(eventMutationToBody(mutation)),
+  })
+  if (!res.ok) return { ok: false, error: await discordError(res) }
+  return { ok: true, event: (await res.json()) as DiscordScheduledEvent }
+}
+
+export async function modifyGuildEvent(
+  guildId: string,
+  eventId: string,
+  mutation: EventMutation,
+  reason?: string,
+): Promise<{ ok: true; event: DiscordScheduledEvent } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/scheduled-events/${eventId}`, {
+    method: 'PATCH',
+    headers: jsonHeaders(reason),
+    body: JSON.stringify(eventMutationToBody(mutation)),
+  })
+  if (!res.ok) return { ok: false, error: await discordError(res) }
+  return { ok: true, event: (await res.json()) as DiscordScheduledEvent }
+}
+
+export async function deleteGuildEvent(
+  guildId: string,
+  eventId: string,
+  reason?: string,
+): Promise<DiscordResult> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/scheduled-events/${eventId}`, {
+    method: 'DELETE',
+    headers: authHeaders(reason),
+  })
+  if (res.ok) return { ok: true }
+  return { ok: false, error: await discordError(res) }
+}
+
+export type EventUser = {
+  guild_scheduled_event_id: string
+  user: {
+    id: string
+    username: string
+    global_name: string | null
+    avatar: string | null
+  }
+}
+
+export async function fetchEventUsers(
+  guildId: string,
+  eventId: string,
+  limit = 100,
+): Promise<EventUser[]> {
+  if (!process.env.DISCORD_BOT_TOKEN) return []
+  const res = await fetch(
+    `${DISCORD_API}/guilds/${guildId}/scheduled-events/${eventId}/users?limit=${Math.min(100, limit)}`,
+    { headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` }, cache: 'no-store' },
+  )
   if (!res.ok) return []
   return res.json()
 }

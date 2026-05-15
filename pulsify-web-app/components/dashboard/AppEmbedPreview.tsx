@@ -1,6 +1,6 @@
 'use client'
 
-import type { JSX } from 'react'
+import { useEffect, useState, type JSX } from 'react'
 import Image from 'next/image'
 
 type Props = {
@@ -39,7 +39,14 @@ function renderContent(text: string) {
 }
 
 export function AppEmbedPreview({ title, content, color }: Props) {
-  const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  // Render an empty placeholder on the server, then fill in the actual
+  // current time on the client. Avoids hydration mismatch when the SSR's
+  // "Today at HH:MM" differs from the client's clock by a minute (and from
+  // the user's locale-formatted output).
+  const [timeStr, setTimeStr] = useState('')
+  useEffect(() => {
+    setTimeStr(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+  }, [])
 
   return (
     <div
