@@ -1,6 +1,6 @@
 'use client'
 
-import type { JSX } from 'react'
+import { useEffect, useState, type JSX } from 'react'
 import Image from 'next/image'
 
 type EmbedField = { name: string; value: string; inline: boolean }
@@ -52,7 +52,11 @@ export function DiscordEmbedPreview({ embed, serverName }: Props) {
   const resolve = (text: string) =>
     text.replace(/\{server\}/g, serverName).replace(/\{user\}/g, '@NewMember')
 
-  const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  // Defer time computation to client mount to avoid SSR/CSR hydration drift.
+  const [timeStr, setTimeStr] = useState('')
+  useEffect(() => {
+    setTimeStr(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+  }, [])
 
   return (
     <div

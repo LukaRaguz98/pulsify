@@ -14,7 +14,21 @@ const KEYFRAMES = `
   80%{stroke-dashoffset:-480;opacity:1}
   100%{stroke-dashoffset:-480;opacity:0}
 }
+@keyframes _cdg{
+  0%{stroke-dashoffset:480;opacity:0}
+  20%{opacity:.55}
+  50%{stroke-dashoffset:0;opacity:.55}
+  80%{stroke-dashoffset:-480;opacity:.55}
+  100%{stroke-dashoffset:-480;opacity:0}
+}
 @keyframes _cdp{0%,100%{opacity:0}40%,65%{opacity:.85}}
+@keyframes _cd2{
+  0%{stroke-dashoffset:400;opacity:0}
+  20%{opacity:.45}
+  50%{stroke-dashoffset:0;opacity:.45}
+  80%{stroke-dashoffset:-400;opacity:.45}
+  100%{stroke-dashoffset:-400;opacity:0}
+}
 `
 
 // ── Layout (all coordinates in a 320×320 SVG viewport) ─────────────────
@@ -82,6 +96,20 @@ function CornerDeco({ pos }: { pos: 'tr' | 'bl' }) {
         }}
       />
 
+      {/* ── Glow trace — soft halo travelling with the main bracket. Same
+          path & timing as `_cd`, lower opacity ceiling, light blur, slightly
+          thicker stroke. Rendered first so the sharp main line draws over it. ── */}
+      <path
+        d={isTR ? 'M168 28 H288 V388' : 'M152 292 H32 V-68'}
+        fill="none" strokeWidth={6} strokeLinecap="round"
+        strokeDasharray={480} strokeDashoffset={480}
+        style={{
+          stroke: 'var(--p-1)',
+          filter: 'blur(3.5px)',
+          animation: `_cdg 5s ease-in-out ${isTR ? '0s' : '-2.5s'} infinite forwards`,
+        }}
+      />
+
       {/* ── Main L-bracket (H=120, V=360, total=480 — doubled arms) ── */}
       <path
         d={isTR ? 'M168 28 H288 V388' : 'M152 292 H32 V-68'}
@@ -92,6 +120,45 @@ function CornerDeco({ pos }: { pos: 'tr' | 'bl' }) {
           animation: `_cd 5s ease-in-out ${isTR ? '0s' : '-2.5s'} infinite forwards`,
         }}
       />
+
+      {/* ── Parallel inner line — slightly shorter arms (H=100, V=300,
+          total=400) shifted 10px toward the screen's center, thinner stroke,
+          lower opacity ceiling. Shares the draw/erase rhythm via its own
+          _cd2 keyframe scaled to its 400-unit length. ── */}
+      <path
+        d={isTR ? 'M188 28 H288 V328' : 'M132 292 H32 V-8'}
+        transform={isTR ? 'translate(-10 10)' : 'translate(10 -10)'}
+        fill="none" strokeWidth={0.75} strokeLinecap="round"
+        strokeDasharray={400} strokeDashoffset={400}
+        style={{
+          stroke: 'var(--p-1)',
+          animation: `_cd2 5s ease-in-out ${isTR ? '0s' : '-2.5s'} infinite forwards`,
+        }}
+      />
+
+      {/* ── Scanner pulse — bright dot riding the head of the line during the
+          draw phase (0% → 50% of the cycle), then idle until the next loop.
+          keyPoints "0;1;1" pins it at the path end while the bracket erases
+          from the other side, mirroring the visual head of the stroke. ── */}
+      <circle r={2.5} fill="var(--p-1)" style={{ filter: 'drop-shadow(0 0 4px var(--p-1))' }}>
+        <animateMotion
+          dur="5s"
+          repeatCount="indefinite"
+          keyTimes="0;0.5;1"
+          keyPoints="0;1;1"
+          calcMode="linear"
+          path={isTR ? 'M168 28 H288 V388' : 'M152 292 H32 V-68'}
+          begin={isTR ? '0s' : '-2.5s'}
+        />
+        <animate
+          attributeName="opacity"
+          values="0;1;1;0;0"
+          keyTimes="0;0.05;0.5;0.55;1"
+          dur="5s"
+          repeatCount="indefinite"
+          begin={isTR ? '0s' : '-2.5s'}
+        />
+      </circle>
 
       {/* ── Corner dot ── */}
       <circle
