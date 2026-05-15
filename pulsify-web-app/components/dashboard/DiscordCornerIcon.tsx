@@ -13,6 +13,7 @@ export function DiscordCornerIcon({ guildId }: Props) {
       rel="noopener noreferrer"
       title="Open this server in Discord"
       aria-label="Open this server in Discord"
+      data-discord-corner="true"
       className="fixed top-2 right-3 z-30 mt-[40px] mr-[40px] flex h-9 w-9 items-center justify-center rounded-md border transition-colors hover:bg-[var(--bg-2)]"
       style={{
         background: 'var(--panel)',
