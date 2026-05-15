@@ -448,14 +448,10 @@ async function discordError(res: Response): Promise<string> {
   if (!body.message) return `Discord API error ${res.status}`
 
   if (body.code === 50013) {
-    return (
-      `${body.message} (50013) — this is almost always a role hierarchy issue. ` +
-      `Move the bot's role above the target member's highest role in Server Settings → Roles. ` +
-      `Discord also blocks bots from moderating the server owner.`
-    )
+    return (`You can't manage members with "Administrator" role.`)
   }
   if (body.code === 50001) {
-    return `${body.message} (50001) — the bot can't see the channel or member. Check channel/category permissions.`
+    return `The bot can't see the channel or member.`
   }
   return body.code ? `${body.message} (${body.code})` : body.message
 }
@@ -715,22 +711,25 @@ export async function checkBotCanAct(
     }
   }
 
-  const positionFor = (memberRoles: string[]): number => {
-    let max = 0
+  const highestRoleFor = (memberRoles: string[]): { position: number; role: DiscordRole | null } => {
+    let best: { position: number; role: DiscordRole | null } = { position: 0, role: null }
     for (const role of roles) {
-      if (memberRoles.includes(role.id) && role.position > max) max = role.position
+      if (memberRoles.includes(role.id) && role.position > best.position) {
+        best = { position: role.position, role }
+      }
     }
-    return max
+    return best
   }
-  const botPos = positionFor(botMember.roles)
-  const targetPos = positionFor(targetMember.roles)
+  const botHighest = highestRoleFor(botMember.roles)
+  const targetHighest = highestRoleFor(targetMember.roles)
 
-  if (botPos <= targetPos) {
+  if (botHighest.position <= targetHighest.position) {
+    const targetName = targetHighest.role ? `"${targetHighest.role.name}"` : "the target member's highest role"
+    const botName = botHighest.role ? `"${botHighest.role.name}"` : "the bot's role"
     return {
       ok: false,
       reason:
-        `The bot's highest role is at or below this member's highest role, so Discord blocks the action. ` +
-        `Open Server Settings → Roles and drag the bot's role above the target member's roles.`,
+        `${botName} role must be above ${targetName} to perform this action.`
     }
   }
 
