@@ -185,8 +185,10 @@
 }
 
 /* Hide the top-right corner deco while a right-side slide-over is open —
-   otherwise the extended bracket bleeds across the dialog. */
-body.slide-over-open [data-cd-pos="tr"] {
+   otherwise the extended bracket bleeds across the dialog. Same treatment
+   for the Discord corner icon so it sits below (visually behind) the panel. */
+body.slide-over-open [data-cd-pos="tr"],
+body.slide-over-open [data-discord-corner="true"] {
   display: none !important;
 }
 
