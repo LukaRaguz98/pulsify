@@ -48,7 +48,9 @@ function createAnalytics(supabase) {
       channel_name: event.channelName ?? null,
       metadata: event.metadata ?? {},
     });
-    if (buffer.length >= MAX_BUFFER) flush();
+    // Member events drive the live dashboard view — flush immediately so
+    // Realtime subscribers see them without waiting for the next batch.
+    if (buffer.length >= MAX_BUFFER || event.immediate) flush();
   }
 
   function voiceJoin(guildId, userId, userName, channelId, channelName) {
