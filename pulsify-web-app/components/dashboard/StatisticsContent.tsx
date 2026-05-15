@@ -103,6 +103,8 @@ export function StatisticsContent({ guildId, guildName }: Props) {
   const { summary } = data
   const series = fillTimeseries(data.timeseries, timeframe)
   const xFmt = (v: string) => formatBucketLabel(v, timeframe)
+  // Tooltip header for bucket timestamps — e.g. "5/15/2026, 8:28:34 PM".
+  const tooltipDateFmt = (v: string) => new Date(v).toLocaleString('en-US')
   const netGrowth = summary.member_joins - summary.member_leaves
   const empty = summaryIsEmpty(summary)
 
@@ -231,6 +233,7 @@ export function StatisticsContent({ guildId, guildName }: Props) {
                     { key: 'mod_actions', name: 'Mod actions', color: 'var(--pink)' },
                   ]}
                   xTickFormatter={xFmt}
+                  tooltipLabelFormatter={tooltipDateFmt}
                   showLegend
                 />
                 <ToggleableChart
@@ -256,6 +259,7 @@ export function StatisticsContent({ guildId, guildName }: Props) {
                 xTickFormatter={xFmt}
                 yTickFormatter={(v) => formatDuration(v)}
                 tooltipValueFormatter={(v) => formatDuration(v)}
+                tooltipLabelFormatter={tooltipDateFmt}
               />
             </CategorySection>
 
@@ -277,6 +281,7 @@ export function StatisticsContent({ guildId, guildName }: Props) {
                   { key: 'leaves', name: 'Leaves', color: 'var(--red)' },
                 ]}
                 xTickFormatter={xFmt}
+                tooltipLabelFormatter={tooltipDateFmt}
                 showLegend
               />
             </CategorySection>
@@ -297,6 +302,7 @@ export function StatisticsContent({ guildId, guildName }: Props) {
                   xKey="bucket"
                   series={[{ key: 'commands', name: 'Commands', color: 'var(--amber)' }]}
                   xTickFormatter={xFmt}
+                  tooltipLabelFormatter={tooltipDateFmt}
                 />
                 <ToggleableChart
                   title="Moderation Activity"
@@ -307,6 +313,7 @@ export function StatisticsContent({ guildId, guildName }: Props) {
                   xKey="bucket"
                   series={[{ key: 'mod_actions', name: 'Mod actions', color: 'var(--pink)' }]}
                   xTickFormatter={xFmt}
+                  tooltipLabelFormatter={tooltipDateFmt}
                 />
               </div>
             </CategorySection>
