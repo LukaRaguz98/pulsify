@@ -1,64 +1,67 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import Image from 'next/image'
-import { Shield, Ban, RefreshCw, ShieldOff, Loader2, AlertCircle } from 'lucide-react'
-import { avatarUrl } from '@/lib/discord'
-import { createClient } from '@/lib/supabase'
-import { unbanMember } from '@/app/dashboard/[guildId]/moderation/actions'
-import { EmptyState } from '@/components/ui/empty-state'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import {
+  Shield,
+  Ban,
+  RefreshCw,
+  Users,
+  ScrollText,
+  Loader2,
+  AlertTriangle,
+  LayoutGrid,
+  Clock,
+} from 'lucide-react'
+import { CategorySection } from '@/components/ui/category-section'
+import type { EnrichedBan, DiscordMember, DiscordRole, BotPermissions } from '@/lib/discord'
+import type { TimeoutMeta } from '@/app/api/discord/guild/[guildId]/moderation/timeout-meta/route'
+import { botInviteUrl } from '@/lib/discord'
+import { createClient as createSupabase } from '@/lib/supabase'
 import { PageHeader } from '@/components/ui/page-header'
+import { MembersTab } from '@/components/dashboard/moderation/MembersTab'
+import { BansTab } from '@/components/dashboard/moderation/BansTab'
+import { TimeoutsTab } from '@/components/dashboard/moderation/TimeoutsTab'
+import { LogsTab } from '@/components/dashboard/moderation/LogsTab'
 
-type Ban = {
-  reason: string | null
-  user: { id: string; username: string; avatar: string | null; discriminator: string }
-}
-
-type Warning = {
-  id: string
-  user_id: string
-  username: string | null
-  reason: string | null
-  moderator_username: string | null
-  moderator_id: string | null
-  created_at: string
-}
+type Tab = 'members' | 'timeouts' | 'bans' | 'logs'
 
 type Props = { guildId: string }
 
-const POLL_INTERVAL = 15_000
+const POLL_INTERVAL = 30_000
 
 export function ModerationContent({ guildId }: Props) {
-  const [bans, setBans] = useState<Ban[]>([])
-  const [warnings, setWarnings] = useState<Warning[]>([])
+  const [tab, setTab] = useState<Tab>('members')
+  const [members, setMembers] = useState<DiscordMember[]>([])
+  const [roles, setRoles] = useState<DiscordRole[]>([])
+  const [bans, setBans] = useState<EnrichedBan[]>([])
+  const [timeoutMeta, setTimeoutMeta] = useState<TimeoutMeta[]>([])
+  const [botPerms, setBotPerms] = useState<BotPermissions | null>(null)
+  const [botPermsResolved, setBotPermsResolved] = useState(false)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [secondsAgo, setSecondsAgo] = useState(0)
-  const [unbanPending, setUnbanPending] = useState<Set<string>>(new Set())
-  const [unbanErrors, setUnbanErrors] = useState<Record<string, string>>({})
+  const [logsRefreshKey, setLogsRefreshKey] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const fetchData = useCallback(async (silent = false) => {
     if (!silent) setRefreshing(true)
     try {
-      const supabase = createClient()
-      const [bansRes, { data: warningsData }] = await Promise.all([
+      const [membersRes, rolesRes, bansRes, permsRes, timeoutMetaRes] = await Promise.all([
+        fetch(`/api/discord/guild/${guildId}/members?limit=1000`, { cache: 'no-store' }),
+        fetch(`/api/discord/guild/${guildId}/roles`, { cache: 'no-store' }),
         fetch(`/api/discord/guild/${guildId}/bans`, { cache: 'no-store' }),
-        supabase
-          .from('guild_warnings')
-          .select('*')
-          .eq('guild_id', guildId)
-          .eq('active', true)
-          .order('created_at', { ascending: false })
-          .limit(50),
+        fetch(`/api/discord/guild/${guildId}/bot-permissions`, { cache: 'no-store' }),
+        fetch(`/api/discord/guild/${guildId}/moderation/timeout-meta`, { cache: 'no-store' }),
       ])
-
-      if (bansRes.ok) {
-        const bansData: Ban[] = await bansRes.json()
-        setBans(bansData)
+      if (membersRes.ok) setMembers(await membersRes.json())
+      if (rolesRes.ok) setRoles(await rolesRes.json())
+      if (bansRes.ok) setBans(await bansRes.json())
+      if (permsRes.ok) {
+        setBotPerms(await permsRes.json())
+        setBotPermsResolved(true)
       }
-      if (warningsData) setWarnings(warningsData)
+      if (timeoutMetaRes.ok) setTimeoutMeta(await timeoutMetaRes.json())
       setLastUpdated(new Date())
       setSecondsAgo(0)
     } finally {
@@ -67,17 +70,41 @@ export function ModerationContent({ guildId }: Props) {
     }
   }, [guildId])
 
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
+  useEffect(() => { fetchData() }, [fetchData])
 
-  // polling
   useEffect(() => {
     timerRef.current = setInterval(() => fetchData(true), POLL_INTERVAL)
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [fetchData])
 
-  // "X seconds ago" counter
+  // Live updates: subscribe to member_join / member_leave events the bot
+  // writes to analytics_events for this guild and refresh immediately.
+  useEffect(() => {
+    const supabase = createSupabase()
+    const channel = supabase
+      .channel(`moderation:${guildId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'analytics_events',
+          filter: `guild_id=eq.${guildId}`,
+        },
+        (payload) => {
+          const evt = payload.new as { event_type?: string }
+          if (evt.event_type === 'member_join' || evt.event_type === 'member_leave') {
+            fetchData(true)
+          }
+        },
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [guildId, fetchData])
+
   useEffect(() => {
     const id = setInterval(() => {
       if (lastUpdated) {
@@ -87,23 +114,21 @@ export function ModerationContent({ guildId }: Props) {
     return () => clearInterval(id)
   }, [lastUpdated])
 
-  async function handleUnban(userId: string, username: string) {
-    if (!confirm(`Unban ${username}? They will be able to rejoin the server.`)) return
-    setUnbanPending((prev) => new Set(prev).add(userId))
-    setUnbanErrors((prev) => { const n = { ...prev }; delete n[userId]; return n })
-
-    // optimistic removal
-    setBans((prev) => prev.filter((b) => b.user.id !== userId))
-
-    const result = await unbanMember(guildId, userId)
-    if (!result.ok) {
-      // rollback optimistic removal by re-fetching
-      setUnbanErrors((prev) => ({ ...prev, [userId]: result.error }))
-      fetchData(true)
-      setTimeout(() => setUnbanErrors((prev) => { const n = { ...prev }; delete n[userId]; return n }), 5000)
-    }
-    setUnbanPending((prev) => { const n = new Set(prev); n.delete(userId); return n })
+  function bumpAfterAction() {
+    fetchData(true)
+    setLogsRefreshKey((k) => k + 1)
   }
+
+  const referenceTime = lastUpdated?.getTime() ?? 0
+  const activeTimeouts = useMemo(
+    () =>
+      members.filter(
+        (m) =>
+          m.communication_disabled_until &&
+          new Date(m.communication_disabled_until).getTime() > referenceTime,
+      ).length,
+    [members, referenceTime],
+  )
 
   const updatedLabel = lastUpdated
     ? secondsAgo < 5 ? 'Just now' : `${secondsAgo}s ago`
@@ -112,7 +137,7 @@ export function ModerationContent({ guildId }: Props) {
   if (loading) {
     return (
       <div className="page-content">
-        <PageHeader title="Moderation" description="Overview of moderation actions and bans for this server." />
+        <PageHeader title="Moderation" description="Manage members, bans, and moderator activity for this server." />
         <div className="flex items-center justify-center py-24">
           <Loader2 size={24} className="animate-spin text-muted-foreground" />
         </div>
@@ -124,7 +149,7 @@ export function ModerationContent({ guildId }: Props) {
     <div className="page-content">
       <PageHeader
         title="Moderation"
-        description="Overview of moderation actions and bans for this server."
+        description="Manage members, bans, and moderator activity for this server."
         action={
           <div className="flex items-center gap-3">
             {updatedLabel && (
@@ -143,140 +168,244 @@ export function ModerationContent({ guildId }: Props) {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 mb-8">
-        <div className="rounded-xl border p-5" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
-          <div className="flex items-center gap-3 mb-3">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444' }}>
-              <Ban size={16} />
-            </span>
-            <span className="text-sm text-muted-foreground">Active Bans</span>
+      <BotPermsBanner perms={botPerms} resolved={botPermsResolved} guildId={guildId} />
+
+      <div className="space-y-8">
+        <CategorySection
+          icon={<LayoutGrid size={14} />}
+          title="Overview"
+          description="Headline counts for moderation activity in this server."
+        >
+          <div className="grid gap-4 sm:grid-cols-3">
+            <StatCard
+              icon={<Users size={16} />}
+              label="Members"
+              value={members.length}
+              color="#60a5fa"
+            />
+            <StatCard
+              icon={<Shield size={16} />}
+              label="In timeout"
+              value={activeTimeouts}
+              color="#f59e0b"
+            />
+            <StatCard
+              icon={<Ban size={16} />}
+              label="Active bans"
+              value={bans.length}
+              color="#ef4444"
+            />
           </div>
-          <p className="text-3xl font-bold text-foreground font-mono">{bans.length}</p>
-        </div>
-        <div className="rounded-xl border p-5" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
-          <div className="flex items-center gap-3 mb-3">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}>
-              <Shield size={16} />
-            </span>
-            <span className="text-sm text-muted-foreground">Active Warnings</span>
+        </CategorySection>
+
+        <CategorySection
+          icon={<Shield size={14} />}
+          title="Manage"
+          description="Members, active timeouts, the ban list, and full moderation log."
+        >
+          <div
+            className="inline-flex rounded-lg border p-1"
+            style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}
+          >
+            <TabButton active={tab === 'members'} onClick={() => setTab('members')} icon={<Users size={14} />}>
+              Members
+            </TabButton>
+            <TabButton active={tab === 'timeouts'} onClick={() => setTab('timeouts')} icon={<Clock size={14} />}>
+              Timeouts ({activeTimeouts})
+            </TabButton>
+            <TabButton active={tab === 'bans'} onClick={() => setTab('bans')} icon={<Ban size={14} />}>
+              Bans ({bans.length})
+            </TabButton>
+            <TabButton active={tab === 'logs'} onClick={() => setTab('logs')} icon={<ScrollText size={14} />}>
+              Logs
+            </TabButton>
           </div>
-          <p className="text-3xl font-bold text-foreground font-mono">{warnings.length}</p>
-        </div>
+
+          {tab === 'members' && (
+            <MembersTab
+              guildId={guildId}
+              members={members}
+              roles={roles}
+              onActionComplete={bumpAfterAction}
+            />
+          )}
+          {tab === 'timeouts' && (
+            <TimeoutsTab
+              guildId={guildId}
+              members={members}
+              meta={timeoutMeta}
+              referenceTime={referenceTime}
+              onActionComplete={bumpAfterAction}
+            />
+          )}
+          {tab === 'bans' && (
+            <BansTab
+              guildId={guildId}
+              bans={bans}
+              onActionComplete={bumpAfterAction}
+            />
+          )}
+          {tab === 'logs' && (
+            <LogsTab guildId={guildId} refreshKey={logsRefreshKey} members={members} />
+          )}
+        </CategorySection>
       </div>
+    </div>
+  )
+}
 
-      {warnings.length > 0 && (
-        <section className="mb-8">
-          <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-subtle">
-            Recent Warnings
-          </h2>
-          <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--line-strong)' }}>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-subtle">User</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-subtle">Reason</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-subtle">Moderator</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-subtle">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {warnings.map((w) => (
-                  <tr key={w.id} className="border-b" style={{ borderColor: 'var(--line-strong)', background: 'color-mix(in srgb, var(--panel) 50%, transparent)' }}>
-                    <td className="px-4 py-3 text-foreground">{w.username ?? w.user_id}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{w.reason ?? '—'}</td>
-                    <td className="px-4 py-3 text-subtle">{w.moderator_username ?? w.moderator_id}</td>
-                    <td className="px-4 py-3 text-subtle text-xs font-mono">
-                      {new Date(w.created_at).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
+function StatCard({
+  icon,
+  label,
+  value,
+  color,
+}: {
+  icon: React.ReactNode
+  label: string
+  value: number
+  color: string
+}) {
+  return (
+    <div
+      className="rounded-xl border p-5"
+      style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
+    >
+      <div className="flex items-center gap-3 mb-3">
+        <span
+          className="flex h-8 w-8 items-center justify-center rounded-lg"
+          style={{ background: `${color}1f`, color }}
+        >
+          {icon}
+        </span>
+        <span className="text-sm text-muted-foreground">{label}</span>
+      </div>
+      <p className="text-3xl font-bold text-foreground font-mono">{value.toLocaleString()}</p>
+    </div>
+  )
+}
 
-      <section>
-        <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-subtle">
-          Ban List ({bans.length})
-        </h2>
-        {bans.length === 0 ? (
-          <EmptyState
-            icon={<Shield size={36} />}
-            title="No active bans"
-            description="This server has no banned users."
-          />
-        ) : (
-          <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--line-strong)' }}>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-subtle">User</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-subtle">Reason</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-subtle">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bans.map((ban) => {
-                  const av = avatarUrl(ban.user.id, ban.user.avatar, ban.user.discriminator)
-                  const isPending = unbanPending.has(ban.user.id)
-                  const err = unbanErrors[ban.user.id]
-                  return (
-                    <tr key={ban.user.id} className="border-b" style={{ borderColor: 'var(--line-strong)', background: 'color-mix(in srgb, var(--panel) 50%, transparent)' }}>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          {av ? (
-                            <Image src={av} alt={ban.user.username} width={28} height={28} className="rounded-full shrink-0" unoptimized />
-                          ) : (
-                            <div className="h-7 w-7 rounded-full shrink-0" style={{ background: 'var(--bg-2)' }} />
-                          )}
-                          <div>
-                            <p className="text-foreground">{ban.user.username}</p>
-                            <p className="text-xs text-subtle font-mono">{ban.user.id}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">{ban.reason ?? 'No reason provided'}</td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {err && (
-                            <span className="flex items-center gap-1 text-xs" style={{ color: '#f87171' }}>
-                              <AlertCircle size={10} />
-                              {err}
-                            </span>
-                          )}
-                          <button
-                            onClick={() => handleUnban(ban.user.id, ban.user.username)}
-                            disabled={isPending}
-                            title={`Unban ${ban.user.username}`}
-                            className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all disabled:opacity-50"
-                            style={{ borderColor: 'var(--line-strong)', color: 'var(--text-3)' }}
-                            onMouseEnter={(e) => {
-                              if (!isPending) {
-                                e.currentTarget.style.background = 'rgba(239,68,68,0.08)'
-                                e.currentTarget.style.borderColor = 'rgba(239,68,68,0.35)'
-                                e.currentTarget.style.color = '#f87171'
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = ''
-                              e.currentTarget.style.borderColor = 'var(--line-strong)'
-                              e.currentTarget.style.color = 'var(--text-3)'
-                            }}
-                          >
-                            {isPending ? <Loader2 size={12} className="animate-spin" /> : <ShieldOff size={12} />}
-                            {isPending ? 'Unbanning…' : 'Unban'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+function TabButton({
+  active,
+  onClick,
+  icon,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  icon: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition"
+      style={{
+        background: active ? 'var(--p-soft)' : 'transparent',
+        color: active ? 'var(--p-1)' : 'var(--text-3)',
+      }}
+    >
+      {icon}
+      {children}
+    </button>
+  )
+}
+
+function BotPermsBanner({
+  perms,
+  resolved,
+  guildId,
+}: {
+  perms: BotPermissions | null
+  resolved: boolean
+  guildId: string
+}) {
+  if (!resolved) return null
+  const inviteHref = botInviteUrl(guildId)
+
+  if (perms === null) {
+    return (
+      <div
+        className="mb-6 flex flex-col gap-2 rounded-lg border px-4 py-3 text-sm sm:flex-row sm:items-start sm:justify-between"
+        style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)', color: 'var(--text-2)' }}
+      >
+        <div className="flex items-start gap-2">
+          <AlertTriangle size={14} className="mt-0.5 shrink-0" style={{ color: 'var(--text-3)' }} />
+          <span>
+            Couldn&apos;t verify the bot&apos;s permissions in this server. Actions will still be attempted —
+            Discord will reject any that the bot can&apos;t perform.
+          </span>
+        </div>
+        <a
+          href={inviteHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-md border px-2.5 py-1 text-xs font-medium transition"
+          style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
+        >
+          Re-invite bot
+        </a>
+      </div>
+    )
+  }
+
+  if (!perms.inGuild) {
+    return (
+      <div
+        className="mb-6 flex flex-col gap-2 rounded-lg border px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+        style={{ borderColor: 'rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.08)', color: '#f87171' }}
+      >
+        <span className="flex items-center gap-2">
+          <AlertTriangle size={14} />
+          Pulsify bot is not in this server. Moderation actions will fail until it&apos;s invited.
+        </span>
+        <a
+          href={inviteHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition"
+          style={{ borderColor: 'rgba(239,68,68,0.4)', color: '#f87171' }}
+        >
+          Invite bot
+        </a>
+      </div>
+    )
+  }
+
+  const required: { key: keyof BotPermissions; label: string }[] = [
+    { key: 'banMembers', label: 'Ban Members' },
+    { key: 'kickMembers', label: 'Kick Members' },
+    { key: 'moderateMembers', label: 'Moderate Members (timeout)' },
+    { key: 'manageNicknames', label: 'Manage Nicknames' },
+    { key: 'manageRoles', label: 'Manage Roles' },
+    { key: 'manageMessages', label: 'Manage Messages' },
+    { key: 'viewAuditLog', label: 'View Audit Log' },
+  ]
+  const missing = required.filter((r) => !perms[r.key]).map((r) => r.label)
+
+  // Healthy state — no banner; full permissions are the expected baseline.
+  if (missing.length === 0) return null
+
+  return (
+    <div
+      className="mb-6 flex flex-col gap-2 rounded-lg border px-4 py-3 text-sm sm:flex-row sm:items-start sm:justify-between"
+      style={{ borderColor: 'rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.08)', color: '#f59e0b' }}
+    >
+      <div className="flex items-start gap-2">
+        <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+        <span>
+          Bot is missing: <span className="font-semibold">{missing.join(', ')}</span>. Re-invite the bot or grant these in
+          <span className="font-semibold"> Server Settings → Roles</span>.
+        </span>
+      </div>
+      <a
+        href={inviteHref}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-md border px-2.5 py-1 text-xs font-medium transition"
+        style={{ borderColor: 'rgba(245,158,11,0.4)', color: '#f59e0b' }}
+      >
+        Re-invite bot
+      </a>
     </div>
   )
 }

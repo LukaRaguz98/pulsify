@@ -132,6 +132,7 @@ client.on(Events.GuildMemberAdd, async (member) => {
     guildId: member.guild.id,
     userId: member.id,
     userName: member.user.username,
+    immediate: true,
   });
 
   const settings = await getGuildSettings(member.guild.id);
@@ -209,6 +210,7 @@ client.on(Events.GuildMemberRemove, async (member) => {
     guildId: member.guild.id,
     userId: member.id,
     userName: member.user.username,
+    immediate: true,
   });
 
   const settings = await getGuildSettings(member.guild.id);
