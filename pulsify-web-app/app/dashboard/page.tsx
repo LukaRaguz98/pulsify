@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase-server'
 import { fetchUserGuilds, fetchSelfUser, hasManageGuild, userBannerUrl, type DiscordGuild } from '@/lib/discord'
 import { ServerCard } from '@/components/dashboard/ServerCard'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
+import { Footer } from '@/components/Footer'
 
 type GuildWithBot = DiscordGuild & { botInstalled: boolean }
 
@@ -174,6 +175,7 @@ export default async function DashboardPage() {
           </div>
         )}
       </main>
+      <Footer />
     </div>
   )
 }
