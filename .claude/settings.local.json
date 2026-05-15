@@ -18,7 +18,21 @@
       "Bash(node --check ../pulse-bot/src/index.js)",
       "Bash(node --check ../pulse-bot/src/analytics.js)",
       "Bash(grep -E \"^[A-Z]:\\\\\\\\\\\\\\\\\")",
-      "Bash(node --check \"E:/projects/pulsify/pulse-bot/src/analytics.js\")"
+      "Bash(node --check \"E:/projects/pulsify/pulse-bot/src/analytics.js\")",
+      "PowerShell(npx tsc --noEmit -p E:/projects/pulsify/pulsify-web-app/tsconfig.json 2>&1 | Select-Object -First 80)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(./node_modules/.bin/next lint *)",
+      "Bash(./node_modules/.bin/eslint . --ext .ts,.tsx)",
+      "Bash(echo \"TSC EXIT: $?\")",
+      "Bash(./node_modules/.bin/eslint components/dashboard/ModerationContent.tsx components/dashboard/moderation components/ui/confirm-dialog.tsx app/dashboard/\\\\[guildId\\\\]/moderation lib/discord.ts lib/moderation-auth.ts)",
+      "Bash(./node_modules/.bin/eslint components/dashboard/ModerationContent.tsx)",
+      "Bash(echo \"ESLINT EXIT: $?\")",
+      "Read(//tmp/**)",
+      "Bash(./node_modules/.bin/next build *)",
+      "Bash(echo \"BUILD EXIT: $?\")",
+      "Bash(./node_modules/.bin/eslint components/dashboard/ModerationContent.tsx components/dashboard/moderation components/ui/confirm-dialog.tsx components/ui/pagination.tsx)",
+      "Bash(./node_modules/.bin/eslint components/dashboard/moderation components/ui/pagination.tsx components/ui/confirm-dialog.tsx)"
     ]
   }
 }
