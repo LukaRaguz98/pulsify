@@ -68,10 +68,6 @@ const ECHO_SERVER_SIZES = [
   { id: 'large'  as const, label: 'Thriving', sub: '1k+',    icon: '🌳' },
 ]
 
-const ECHO_EMBED_COLORS = [
-  '#8b5cf6', '#6366f1', '#a855f7', '#ec4899',
-  '#f59e0b', '#10b981', '#3b82f6', '#ef4444',
-]
 
 // ─── Subtabs ──────────────────────────────────────────────────────────────────
 
@@ -96,8 +92,8 @@ const TABS: { id: TabId; label: string; description: string; icon: typeof Palett
 
 export default function SettingsPage() {
   const {
-    theme, scheme, density, animations, cornerDeco,
-    setTheme, setScheme, setDensity, setAnimations, setCornerDeco,
+    theme, scheme, density, animations, cornerDeco, themeCustomColor,
+    setTheme, setScheme, setDensity, setAnimations, setCornerDeco, setThemeCustomColor,
   } = usePreferences()
 
   const params = useParams()
@@ -217,9 +213,23 @@ export default function SettingsPage() {
 
           {/* Accent Colour */}
           <SectionCard title="Accent Colour" description="Choose an accent colour for the interface. Saved locally.">
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+            {/* Label + hex badge mirrors the Echo Assistant › Embed Color row.
+                Hex reflects whichever accent is currently applied: the custom
+                override if set, otherwise the active preset theme. */}
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-semibold text-foreground">Accent Color</p>
+              <span
+                className="font-mono text-xs rounded px-1.5 py-0.5"
+                style={{ background: 'var(--bg-2)', color: 'var(--text-3)', border: '1px solid var(--line-strong)' }}
+              >
+                {themeCustomColor ?? THEMES.find((t) => t.id === theme)?.accent ?? '#8b5cf6'}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-7">
               {THEMES.map((t) => {
-                const active = theme === t.id
+                // Preset is only "active" when no custom override is in play —
+                // otherwise the custom card owns the active state.
+                const active = !themeCustomColor && theme === t.id
                 return (
                   <button
                     key={t.id}
@@ -233,7 +243,7 @@ export default function SettingsPage() {
                     }}
                   >
                     <div
-                      className="h-8 w-8 rounded-lg"
+                      className="h-8 w-8 rounded-full"
                       style={{
                         background: `linear-gradient(135deg, ${t.accent}cc, ${t.accent})`,
                         boxShadow: active ? `0 4px 12px -4px ${t.accent}80` : `0 2px 6px -4px ${t.accent}60`,
@@ -248,6 +258,50 @@ export default function SettingsPage() {
                   </button>
                 )
               })}
+
+              {/* Custom color — native picker hidden behind a full-card label.
+                  Active when themeCustomColor is set; shows a rainbow swatch
+                  otherwise. Picks always clear the preset active state. */}
+              {(() => {
+                const customActive = themeCustomColor !== null
+                const display = themeCustomColor ?? '#8b5cf6'
+                return (
+                  <label
+                    title="Custom color"
+                    aria-label="Pick a custom accent color"
+                    className="group relative flex cursor-pointer flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all duration-150"
+                    style={{
+                      background: customActive ? `${display}14` : 'var(--bg-2)',
+                      borderColor: customActive ? display : 'var(--line-strong)',
+                      boxShadow: customActive ? `0 0 0 1px ${display}40` : 'none',
+                    }}
+                  >
+                    <div
+                      className="h-8 w-8 rounded-full"
+                      style={{
+                        background: customActive
+                          ? `linear-gradient(135deg, ${display}cc, ${display})`
+                          : 'conic-gradient(from 0deg, #f43f5e, #f59e0b, #84cc16, #06b6d4, #6366f1, #ec4899, #f43f5e)',
+                        boxShadow: customActive
+                          ? `0 4px 12px -4px ${display}80`
+                          : '0 2px 6px -4px rgba(255,255,255,0.15)',
+                      }}
+                    />
+                    {customActive && (
+                      <span className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full" style={{ background: display }}>
+                        <Check size={9} strokeWidth={3} color="white" />
+                      </span>
+                    )}
+                    <p className="text-xs font-medium text-foreground leading-none">Custom</p>
+                    <input
+                      type="color"
+                      value={display}
+                      onChange={(e) => setThemeCustomColor(e.target.value)}
+                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    />
+                  </label>
+                )
+              })()}
             </div>
             <div className="mt-5 rounded-lg border p-3 flex items-center gap-3" style={{ background: 'var(--bg)', borderColor: 'var(--line-strong)' }}>
               <div className="h-6 w-6 rounded-md shrink-0" style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }} />
@@ -641,36 +695,85 @@ export default function SettingsPage() {
                 {echoPrefs.embedColor}
               </span>
             </div>
-            <div className="flex flex-wrap items-center gap-2.5">
-              {ECHO_EMBED_COLORS.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => updatePref('embedColor', c)}
-                  title={c}
-                  className="h-7 w-7 rounded-full transition-all hover:scale-110 shrink-0"
-                  style={{
-                    background: c,
-                    outline: echoPrefs.embedColor === c ? `2px solid ${c}` : '2px solid transparent',
-                    outlineOffset: '2px',
-                  }}
-                />
-              ))}
-              <label
-                title="Custom color"
-                className="relative h-7 w-7 rounded-full cursor-pointer shrink-0"
-                style={{
-                  background: 'conic-gradient(from 0deg, #f43f5e, #f59e0b, #84cc16, #06b6d4, #6366f1, #ec4899, #f43f5e)',
-                  outline: !ECHO_EMBED_COLORS.includes(echoPrefs.embedColor) ? `2px solid ${echoPrefs.embedColor}` : '2px solid transparent',
-                  outlineOffset: '2px',
-                }}
-              >
-                <input
-                  type="color"
-                  value={echoPrefs.embedColor}
-                  onChange={(e) => updatePref('embedColor', e.target.value)}
-                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                />
-              </label>
+            {/* Identical layout to App Design › Accent Colour so the two pickers
+                feel like one component. THEMES is the shared palette source. */}
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-7">
+              {THEMES.map((t) => {
+                const active = echoPrefs.embedColor.toLowerCase() === t.accent.toLowerCase()
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => updatePref('embedColor', t.accent)}
+                    title={t.name}
+                    className="group relative flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all duration-150"
+                    style={{
+                      background: active ? `${t.accent}14` : 'var(--bg-2)',
+                      borderColor: active ? t.accent : 'var(--line-strong)',
+                      boxShadow: active ? `0 0 0 1px ${t.accent}40` : 'none',
+                    }}
+                  >
+                    <div
+                      className="h-8 w-8 rounded-full"
+                      style={{
+                        background: `linear-gradient(135deg, ${t.accent}cc, ${t.accent})`,
+                        boxShadow: active ? `0 4px 12px -4px ${t.accent}80` : `0 2px 6px -4px ${t.accent}60`,
+                      }}
+                    />
+                    {active && (
+                      <span className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full" style={{ background: t.accent }}>
+                        <Check size={9} strokeWidth={3} color="white" />
+                      </span>
+                    )}
+                    <p className="text-xs font-medium text-foreground leading-none">{t.name}</p>
+                  </button>
+                )
+              })}
+
+              {/* Custom — active when the current embed color is outside the
+                  THEMES palette. Mirrors the App Design custom card. */}
+              {(() => {
+                const presetHits = THEMES.some(
+                  (t) => t.accent.toLowerCase() === echoPrefs.embedColor.toLowerCase(),
+                )
+                const customActive = !presetHits
+                const display = echoPrefs.embedColor
+                return (
+                  <label
+                    title="Custom color"
+                    aria-label="Pick a custom embed color"
+                    className="group relative flex cursor-pointer flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all duration-150"
+                    style={{
+                      background: customActive ? `${display}14` : 'var(--bg-2)',
+                      borderColor: customActive ? display : 'var(--line-strong)',
+                      boxShadow: customActive ? `0 0 0 1px ${display}40` : 'none',
+                    }}
+                  >
+                    <div
+                      className="h-8 w-8 rounded-full"
+                      style={{
+                        background: customActive
+                          ? `linear-gradient(135deg, ${display}cc, ${display})`
+                          : 'conic-gradient(from 0deg, #f43f5e, #f59e0b, #84cc16, #06b6d4, #6366f1, #ec4899, #f43f5e)',
+                        boxShadow: customActive
+                          ? `0 4px 12px -4px ${display}80`
+                          : '0 2px 6px -4px rgba(255,255,255,0.15)',
+                      }}
+                    />
+                    {customActive && (
+                      <span className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full" style={{ background: display }}>
+                        <Check size={9} strokeWidth={3} color="white" />
+                      </span>
+                    )}
+                    <p className="text-xs font-medium text-foreground leading-none">Custom</p>
+                    <input
+                      type="color"
+                      value={display}
+                      onChange={(e) => updatePref('embedColor', e.target.value)}
+                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    />
+                  </label>
+                )
+              })()}
             </div>
           </SectionCard>
           </CategorySection>

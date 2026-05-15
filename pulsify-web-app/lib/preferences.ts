@@ -10,6 +10,9 @@ export interface UserPreferences {
   density: LayoutDensity
   animations: boolean
   cornerDeco: boolean
+  /** Hex accent color (e.g. "#8b5cf6") that overrides the preset theme's
+   *  `--p-1` and derived vars. `null` means "use the preset theme as-is". */
+  themeCustomColor: string | null
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -18,6 +21,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   density: 'comfortable',
   animations: true,
   cornerDeco: true,
+  themeCustomColor: null,
 }
 
 export const PREF_COOKIES = {
@@ -26,4 +30,5 @@ export const PREF_COOKIES = {
   density: 'pulsify-density',
   animations: 'pulsify-animations',
   cornerDeco: 'pulsify-corner-deco',
+  themeCustomColor: 'pulsify-theme-custom-color',
 } as const

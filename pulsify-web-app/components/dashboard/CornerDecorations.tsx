@@ -48,6 +48,7 @@ function CornerDeco({ pos }: { pos: 'tr' | 'bl' }) {
     <svg
       aria-hidden="true"
       data-cd="true"
+      data-cd-pos={pos}
       style={{
         position: 'fixed',
         ...(isTR

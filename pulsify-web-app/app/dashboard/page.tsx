@@ -19,6 +19,7 @@ export default async function DashboardPage() {
   const providerToken = session.provider_token
   let guilds: GuildWithBot[] = []
   let tokenMissing = false
+  let discordError = false
 
   const user = session.user
   const claims = user.user_metadata?.custom_claims
@@ -28,16 +29,25 @@ export default async function DashboardPage() {
   if (!providerToken) {
     tokenMissing = true
   } else {
-    const [all, { data: syncedRows }, self] = await Promise.all([
+    const [allResult, { data: syncedRows }, self] = await Promise.allSettled([
       fetchUserGuilds(providerToken),
       supabase.from('synced_guilds').select('guild_id'),
       fetchSelfUser(providerToken),
-    ])
+    ]).then(([guildsR, syncedR, selfR]) => [
+      guildsR,
+      syncedR.status === 'fulfilled' ? syncedR.value : { data: [] },
+      selfR.status === 'fulfilled' ? selfR.value : null,
+    ] as const)
     selfUser = self
-    const syncedIds = new Set((syncedRows ?? []).map((r: { guild_id: string }) => r.guild_id))
-    guilds = all
-      .filter((g) => hasManageGuild(g.permissions))
-      .map((g) => ({ ...g, botInstalled: syncedIds.has(g.id) }))
+    if (allResult.status === 'fulfilled') {
+      const all = allResult.value
+      const syncedIds = new Set((syncedRows ?? []).map((r: { guild_id: string }) => r.guild_id))
+      guilds = all
+        .filter((g) => hasManageGuild(g.permissions))
+        .map((g) => ({ ...g, botInstalled: syncedIds.has(g.id) }))
+    } else {
+      discordError = true
+    }
   }
 
   const displayName =
@@ -110,6 +120,18 @@ export default async function DashboardPage() {
                 log in again
               </Link>{' '}
               to continue.
+            </p>
+          </div>
+        )}
+
+        {discordError && (
+          <div
+            className="mb-8 rounded-xl p-5 border"
+            style={{ background: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.25)' }}
+          >
+            <p className="font-medium text-red-400">Couldn&apos;t reach Discord</p>
+            <p className="mt-1 text-sm" style={{ color: 'rgba(239,68,68,0.7)' }}>
+              We couldn&apos;t load your servers from Discord just now. Refresh the page to retry.
             </p>
           </div>
         )}
