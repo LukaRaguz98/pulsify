@@ -179,6 +179,20 @@
   --row-gap:      0.5rem;
 }
 
+/* ── Font Size ─────────────────────────────── */
+/* Root font-size drives every rem-based size in Tailwind utilities, so this
+   scales the entire UI proportionally instead of overriding per element. */
+[data-font-size="small"]  { font-size: 14px; }
+[data-font-size="medium"] { font-size: 16px; }
+[data-font-size="large"]  { font-size: 18px; }
+
+/* ── Ambient background glow toggle ────────── */
+/* Defers to the per-theme --glow-opacity (light scheme dims it to 0.25) so
+   turning the glow back on respects the active theme's intensity. */
+[data-ambient-glow="false"] body::before {
+  opacity: 0 !important;
+}
+
 /* ── Corner Decorations ─────────────────────── */
 [data-corner-deco="false"] [data-cd] {
   display: none !important;
@@ -186,9 +200,16 @@
 
 /* Hide the top-right corner deco while a right-side slide-over is open —
    otherwise the extended bracket bleeds across the dialog. Same treatment
-   for the Discord corner icon so it sits below (visually behind) the panel. */
+   for the Discord corner icon so it sits below (visually behind) the panel.
+   The app footer ([data-app-footer]) is also hidden: the universal `* {
+   position: relative; z-index: 1 }` rule below gives every element its own
+   stacking context, so the footer (sibling of the panel's container inside
+   <main>) painted on top of the dialog's z-50, making the panel buttons
+   un-clickable in the bottom strip. The data-attribute scopes this to the
+   app footer only — slide-overs use <footer> for their action bars too. */
 body.slide-over-open [data-cd-pos="tr"],
-body.slide-over-open [data-discord-corner="true"] {
+body.slide-over-open [data-discord-corner="true"],
+body.slide-over-open [data-app-footer="true"] {
   display: none !important;
 }
 
