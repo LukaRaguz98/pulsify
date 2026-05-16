@@ -4,7 +4,7 @@ import { cookies } from 'next/headers'
 import './globals.css'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import type { ThemeId } from '@/lib/themes'
-import type { ColorScheme, LayoutDensity } from '@/lib/preferences'
+import type { ColorScheme, LayoutDensity, FontSize } from '@/lib/preferences'
 import { PREF_COOKIES, DEFAULT_PREFERENCES } from '@/lib/preferences'
 
 const inter = Inter({
@@ -39,6 +39,11 @@ export default async function RootLayout({
   const themeCustomColor = rawCustom && /^#?[0-9a-fA-F]{6}$/.test(rawCustom)
     ? (rawCustom.startsWith('#') ? rawCustom : `#${rawCustom}`)
     : null
+  const rawFontSize = cookieStore.get(PREF_COOKIES.fontSize)?.value
+  const fontSize: FontSize = (rawFontSize === 'small' || rawFontSize === 'large')
+    ? rawFontSize
+    : DEFAULT_PREFERENCES.fontSize
+  const ambientGlow = (cookieStore.get(PREF_COOKIES.ambientGlow)?.value ?? 'true') !== 'false'
 
   // Inline-style the accent CSS vars when a custom color is set, so SSR ships
   // the right colors on first paint (no theme flash).
@@ -60,6 +65,8 @@ export default async function RootLayout({
       data-density={density}
       data-animations={String(animations)}
       data-corner-deco={String(cornerDeco)}
+      data-font-size={fontSize}
+      data-ambient-glow={String(ambientGlow)}
       className={`${inter.variable} ${jetbrainsMono.variable} h-full`}
       style={accentStyle}
       suppressHydrationWarning
@@ -72,6 +79,8 @@ export default async function RootLayout({
           initialAnimations={animations}
           initialCornerDeco={cornerDeco}
           initialCustomColor={themeCustomColor}
+          initialFontSize={fontSize}
+          initialAmbientGlow={ambientGlow}
         >
           {children}
         </ThemeProvider>

@@ -6,6 +6,7 @@ export function Footer() {
   const year = new Date().getFullYear()
   return (
     <footer
+      data-app-footer="true"
       className="mt-12 px-6 py-5 text-xs"
       style={{ color: 'var(--text-3)' }}
     >
