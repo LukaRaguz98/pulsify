@@ -12,9 +12,15 @@ import {
   Zap,
   Shield,
   Users,
+  Hash,
   ChevronLeft,
   ChevronRight,
   Settings,
+  LineChart,
+  Server,
+  Sparkles,
+  ShieldCheck,
+  Cog,
 } from 'lucide-react'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
 
@@ -26,7 +32,9 @@ type NavItem = {
 }
 
 type NavGroup = {
-  title: string | null
+  title: string
+  /** Icon shown next to the category header (and in collapsed-sidebar mode). */
+  icon: React.ReactNode
   items: NavItem[]
 }
 
@@ -60,30 +68,99 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
   }, [collapsed])
   const base = `/dashboard/${guildId}`
 
+  // Overview lives at the bare `base` path, so it matches only on equality;
+  // other items use prefix matching so nested routes still highlight.
+  const isItemActive = (href: string) =>
+    href === base ? pathname === base : pathname.startsWith(href)
+
+  // Nav is grouped by what the admin is *trying to do*, top-down:
+  //   1. Analytics  — observe what's happening (passive views)
+  //   2. Server     — structural config: what exists in the server
+  //   3. Engagement — proactive features that drive member activity
+  //   4. Safety     — reactive tools for moderation & incident response
+  //   5. Settings   — personalisation of the dashboard itself
+  //
+  // Adding a new view: drop it into the group that matches its intent.
+  //   • Welcome / Reaction roles / Leveling / Polls → Engagement
+  //   • Audit log / AutoMod / Logs                  → Safety
+  //   • Integrations / Billing / Account            → Settings
+  //   • New server entity (Members deep-dive, etc.) → Server
+  //   • New chart / report                          → Analytics
   const groups: NavGroup[] = [
     {
       title: 'Analytics',
+      icon: <LineChart size={16} />,
       items: [
         { label: 'Overview', href: base, icon: <BarChart2 size={16} /> },
         { label: 'Statistics', href: `${base}/statistics`, icon: <Activity size={16} /> },
       ],
     },
     {
-      title: 'Manage',
+      title: 'Server',
+      icon: <Server size={16} />,
       items: [
-        { label: 'Events', href: `${base}/events`, icon: <CalendarDays size={16} /> },
-        { label: 'Automations', href: `${base}/automations`, icon: <Zap size={16} /> },
-        { label: 'Moderation', href: `${base}/moderation`, icon: <Shield size={16} /> },
+        { label: 'Channels', href: `${base}/channels`, icon: <Hash size={16} /> },
         { label: 'Roles', href: `${base}/roles`, icon: <Users size={16} /> },
+        { label: 'Events', href: `${base}/events`, icon: <CalendarDays size={16} /> },
+      ],
+    },
+    {
+      title: 'Engagement',
+      icon: <Sparkles size={16} />,
+      items: [
+        { label: 'Automations', href: `${base}/automations`, icon: <Zap size={16} /> },
+      ],
+    },
+    {
+      title: 'Safety',
+      icon: <ShieldCheck size={16} />,
+      items: [
+        { label: 'Moderation', href: `${base}/moderation`, icon: <Shield size={16} /> },
       ],
     },
     {
       title: 'Settings',
+      icon: <Cog size={16} />,
       items: [
         { label: 'Preferences', href: `${base}/settings`, icon: <Settings size={16} /> },
       ],
     },
   ]
+
+  // Default: expand any group containing the currently-active route, so the
+  // user always lands with their current section open. Manual toggles
+  // afterwards survive until a navigation reveals a different group.
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
+    const set = new Set<string>()
+    for (const g of groups) {
+      if (g.items.some((item) => isItemActive(item.href))) set.add(g.title)
+    }
+    return set
+  })
+
+  // On route change, additively expand the group containing the new active
+  // item. We only *add* — never auto-collapse — so the user's manual
+  // expansions on other groups stick around.
+  useEffect(() => {
+    const activeGroup = groups.find((g) =>
+      g.items.some((item) => isItemActive(item.href)),
+    )
+    if (!activeGroup) return
+    setExpandedGroups((prev) =>
+      prev.has(activeGroup.title) ? prev : new Set([...prev, activeGroup.title]),
+    )
+    // groups/isItemActive are recreated each render but logically depend on pathname
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname])
+
+  function toggleGroup(title: string) {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(title)) next.delete(title)
+      else next.add(title)
+      return next
+    })
+  }
 
   const icon = guildIconUrl(guild.id, guild.icon, 64)
   const claims = user.user_metadata?.custom_claims
@@ -198,63 +275,130 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
         )}
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-2 pb-2 space-y-4">
-        {groups.map((group) => (
-          <div key={group.title}>
-            {!collapsed && group.title && (
-              <p className="px-2 pb-1 pt-2 text-[10.5px] font-semibold uppercase tracking-widest text-subtle">
-                {group.title}
-              </p>
-            )}
-            {collapsed && <div className="pt-2" />}
-            <div className="space-y-0.5">
-              {group.items.map((item) => {
-                const isActive = item.href === base
-                  ? pathname === base
-                  : pathname.startsWith(item.href)
+      {/* Nav — categories are the primary level. Click a category header to
+          toggle its sub-items. In collapsed-sidebar mode each category is a
+          single icon; clicking expands the sidebar *and* opens that category. */}
+      <nav className="flex-1 overflow-y-auto px-2 pb-2 space-y-1">
+        {groups.map((group) => {
+          const isExpanded = expandedGroups.has(group.title)
+          const hasActiveChild = group.items.some((item) => isItemActive(item.href))
+          const showChildren = !collapsed && isExpanded
 
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    title={collapsed ? item.label : undefined}
-                    className="flex items-center rounded-lg py-2 text-sm font-medium transition-all relative"
-                    style={{
-                      justifyContent: collapsed ? 'center' : 'flex-start',
-                      gap: collapsed ? '0' : '0.625rem',
-                      paddingLeft: collapsed ? '0.5rem' : '0.625rem',
-                      paddingRight: collapsed ? '0.5rem' : '0.625rem',
-                      ...(isActive
-                        ? {
-                            background: 'linear-gradient(90deg, var(--p-soft), transparent)',
-                            color: 'var(--text)',
-                            boxShadow: 'inset 0 0 0 1px var(--p-soft)',
+          return (
+            <div key={group.title}>
+              {/* Category header */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (collapsed) {
+                    // Expand sidebar AND open this category in one click —
+                    // otherwise the user has to expand the sidebar, then
+                    // click the chevron, which is two steps for one intent.
+                    setCollapsed(false)
+                    setExpandedGroups((prev) =>
+                      prev.has(group.title) ? prev : new Set([...prev, group.title]),
+                    )
+                  } else {
+                    toggleGroup(group.title)
+                  }
+                }}
+                title={collapsed ? group.title : undefined}
+                className="flex w-full items-center rounded-lg py-2 text-sm font-semibold transition-colors"
+                style={{
+                  justifyContent: collapsed ? 'center' : 'flex-start',
+                  gap: collapsed ? '0' : '0.625rem',
+                  paddingLeft: collapsed ? '0.5rem' : '0.625rem',
+                  paddingRight: collapsed ? '0.5rem' : '0.625rem',
+                  color: hasActiveChild ? 'var(--text)' : 'var(--text-2)',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--panel)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = '' }}
+              >
+                <span style={{ color: hasActiveChild ? 'var(--p-1)' : 'var(--text-3)' }}>
+                  {group.icon}
+                </span>
+                {!collapsed && (
+                  <>
+                    <span className="flex-1 text-left">{group.title}</span>
+                    {/* Single chevron rotated via transform so the open/close
+                        gesture animates instead of jump-cutting between icons. */}
+                    <span
+                      style={{
+                        color: 'var(--text-3)',
+                        display: 'inline-flex',
+                        transition: 'transform 0.2s ease',
+                        transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                      }}
+                    >
+                      <ChevronRight size={13} />
+                    </span>
+                  </>
+                )}
+                {/* Collapsed-mode active-section dot — sits in the corner so
+                    the user can spot their current section in the icon strip. */}
+                {collapsed && hasActiveChild && (
+                  <span
+                    className="absolute mt-[-18px] ml-[18px] h-1.5 w-1.5 rounded-full"
+                    style={{ background: 'var(--p-1)', boxShadow: '0 0 6px var(--p-glow)' }}
+                  />
+                )}
+              </button>
+
+              {/* Sub-items — always mounted so the close direction animates
+                  too. The grid-template-rows 0fr↔1fr trick animates between
+                  collapsed and natural height (max-height can't go to `auto`).
+                  inert + aria-hidden keep collapsed items out of tab order. */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateRows: showChildren ? '1fr' : '0fr',
+                  opacity: showChildren ? 1 : 0,
+                  transition: 'grid-template-rows 0.22s ease, opacity 0.18s ease',
+                }}
+                aria-hidden={!showChildren}
+                inert={!showChildren}
+              >
+                <div style={{ overflow: 'hidden', minHeight: 0 }}>
+                  <div className="mt-0.5 space-y-0.5 pl-1">
+                  {group.items.map((item) => {
+                    const isActive = isItemActive(item.href)
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className="relative flex items-center rounded-lg py-1.5 text-sm font-medium transition-all"
+                        style={{
+                          gap: '0.625rem',
+                          paddingLeft: '1.875rem',
+                          paddingRight: '0.625rem',
+                          ...(isActive
+                            ? {
+                                background: 'linear-gradient(90deg, var(--p-soft), transparent)',
+                                color: 'var(--text)',
+                                boxShadow: 'inset 0 0 0 1px var(--p-soft)',
+                              }
+                            : { color: 'var(--text-2)' }),
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isActive) {
+                            e.currentTarget.style.background = 'var(--panel)'
+                            e.currentTarget.style.color = 'var(--text)'
                           }
-                        : { color: 'var(--text-2)' }),
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.background = 'var(--panel)'
-                        e.currentTarget.style.color = 'var(--text)'
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.background = ''
-                        e.currentTarget.style.color = 'var(--text-2)'
-                      }
-                    }}
-                  >
-                    {isActive && !collapsed && (
-                      <span
-                        className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r"
-                        style={{ background: 'var(--p-1)', boxShadow: '0 0 10px var(--p-glow)' }}
-                      />
-                    )}
-                    <span style={isActive ? { color: 'var(--p-1)' } : {}}>{item.icon}</span>
-                    {!collapsed && (
-                      <>
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isActive) {
+                            e.currentTarget.style.background = ''
+                            e.currentTarget.style.color = 'var(--text-2)'
+                          }
+                        }}
+                      >
+                        {isActive && (
+                          <span
+                            className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r"
+                            style={{ background: 'var(--p-1)', boxShadow: '0 0 10px var(--p-glow)' }}
+                          />
+                        )}
+                        <span style={isActive ? { color: 'var(--p-1)' } : {}}>{item.icon}</span>
                         <span className="flex-1">{item.label}</span>
                         {item.badge && (
                           <span
@@ -267,14 +411,15 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
                             {item.badge}
                           </span>
                         )}
-                      </>
-                    )}
-                  </Link>
-                )
-              })}
+                      </Link>
+                    )
+                  })}
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </nav>
 
       {/* Bottom */}

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState } from 'react'
 import type { ThemeId } from '@/lib/themes'
-import type { ColorScheme, LayoutDensity } from '@/lib/preferences'
+import type { ColorScheme, LayoutDensity, FontSize } from '@/lib/preferences'
 import { PREF_COOKIES } from '@/lib/preferences'
 
 type PreferencesContextType = {
@@ -12,6 +12,8 @@ type PreferencesContextType = {
   animations: boolean
   cornerDeco: boolean
   themeCustomColor: string | null
+  fontSize: FontSize
+  ambientGlow: boolean
   setTheme: (theme: ThemeId) => void
   setScheme: (scheme: ColorScheme) => void
   setDensity: (density: LayoutDensity) => void
@@ -19,6 +21,8 @@ type PreferencesContextType = {
   setCornerDeco: (on: boolean) => void
   /** Pass `null` to clear the custom accent and fall back to the preset theme. */
   setThemeCustomColor: (color: string | null) => void
+  setFontSize: (size: FontSize) => void
+  setAmbientGlow: (on: boolean) => void
 }
 
 const PreferencesContext = createContext<PreferencesContextType>({
@@ -28,12 +32,16 @@ const PreferencesContext = createContext<PreferencesContextType>({
   animations: true,
   cornerDeco: true,
   themeCustomColor: null,
+  fontSize: 'medium',
+  ambientGlow: true,
   setTheme: () => {},
   setScheme: () => {},
   setDensity: () => {},
   setAnimations: () => {},
   setCornerDeco: () => {},
   setThemeCustomColor: () => {},
+  setFontSize: () => {},
+  setAmbientGlow: () => {},
 })
 
 function saveCookie(key: string, value: string) {
@@ -69,6 +77,8 @@ export function ThemeProvider({
   initialAnimations = true,
   initialCornerDeco = true,
   initialCustomColor = null,
+  initialFontSize = 'medium',
+  initialAmbientGlow = true,
 }: {
   children: React.ReactNode
   initialTheme: ThemeId
@@ -77,6 +87,8 @@ export function ThemeProvider({
   initialAnimations?: boolean
   initialCornerDeco?: boolean
   initialCustomColor?: string | null
+  initialFontSize?: FontSize
+  initialAmbientGlow?: boolean
 }) {
   const [theme, setThemeState] = useState<ThemeId>(initialTheme)
   const [scheme, setSchemeState] = useState<ColorScheme>(initialScheme)
@@ -84,6 +96,8 @@ export function ThemeProvider({
   const [animations, setAnimationsState] = useState<boolean>(initialAnimations)
   const [cornerDeco, setCornerDecoState] = useState<boolean>(initialCornerDeco)
   const [themeCustomColor, setThemeCustomColorState] = useState<string | null>(initialCustomColor)
+  const [fontSize, setFontSizeState] = useState<FontSize>(initialFontSize)
+  const [ambientGlow, setAmbientGlowState] = useState<boolean>(initialAmbientGlow)
 
   const setTheme = (next: ThemeId) => {
     setThemeState(next)
@@ -128,11 +142,24 @@ export function ThemeProvider({
     else clearCookie(PREF_COOKIES.themeCustomColor)
   }
 
+  const setFontSize = (next: FontSize) => {
+    setFontSizeState(next)
+    document.documentElement.setAttribute('data-font-size', next)
+    saveCookie(PREF_COOKIES.fontSize, next)
+  }
+
+  const setAmbientGlow = (on: boolean) => {
+    setAmbientGlowState(on)
+    document.documentElement.setAttribute('data-ambient-glow', String(on))
+    saveCookie(PREF_COOKIES.ambientGlow, String(on))
+  }
+
   return (
     <PreferencesContext.Provider
       value={{
-        theme, scheme, density, animations, cornerDeco, themeCustomColor,
+        theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow,
         setTheme, setScheme, setDensity, setAnimations, setCornerDeco, setThemeCustomColor,
+        setFontSize, setAmbientGlow,
       }}
     >
       {children}

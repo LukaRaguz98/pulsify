@@ -184,7 +184,7 @@ export async function applyChannelsReference(
     const catResult = await createGuildChannel(guildId, { name: cat.category, type: 4 })
     if (!catResult.ok) return catResult
     for (const ch of cat.channels) {
-      const chResult = await createGuildChannel(guildId, { name: ch, type: 0, parent_id: catResult.id })
+      const chResult = await createGuildChannel(guildId, { name: ch, type: 0, parent_id: catResult.channel.id })
       if (!chResult.ok) return chResult
     }
   }

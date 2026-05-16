@@ -26,11 +26,17 @@ import {
   GripVertical,
   CheckCircle2,
   AlertTriangle,
+  TrendingUp,
+  Users,
+  ArrowUpToLine,
+  Bot,
+  ShieldAlert,
 } from 'lucide-react'
 import { roleColor, snowflakeToDate, type DiscordRole } from '@/lib/discord'
 import { permissionKeysFromBits, dangerousKeysIn } from '@/lib/discord-permissions'
 import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
+import { CategorySection } from '@/components/ui/category-section'
 import { RoleEditPanel } from './roles/RoleEditPanel'
 import type { PermissionPreset } from '@/app/api/guilds/[guildId]/permission-presets/route'
 
@@ -258,19 +264,6 @@ export function RolesContent({ guildId }: Props) {
         }
       />
 
-      <div className="mb-5 flex flex-wrap items-center gap-4 text-sm">
-        <span className="text-muted-foreground">{sortedRoles.length} roles total</span>
-        <span className="text-subtle">·</span>
-        <span className="text-muted-foreground">{sortedRoles.filter((r) => r.hoist).length} hoisted</span>
-        <span className="text-subtle">·</span>
-        <span className="text-muted-foreground">{sortedRoles.filter((r) => r.managed).length} managed</span>
-        {reordering && (
-          <span className="ml-2 inline-flex items-center gap-1.5 text-xs text-subtle">
-            <Loader2 size={11} className="animate-spin" /> Saving order…
-          </span>
-        )}
-      </div>
-
       {error && (
         <div
           className="mb-4 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm"
@@ -295,41 +288,73 @@ export function RolesContent({ guildId }: Props) {
         </div>
       )}
 
-      {sortedRoles.length === 0 ? (
-        <EmptyState
-          icon={<Crown size={36} />}
-          title="No custom roles"
-          description="This server only has the @everyone role. Use Create role to add one."
-        />
-      ) : (
-        <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--line-strong)' }}>
-          <div
-            className="grid border-b px-4 py-2 text-xs font-semibold uppercase tracking-wider text-subtle"
-            style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)', gridTemplateColumns: ROLE_GRID }}
-          >
-            <span />
-            <span>Role</span>
-            <span className="text-center">Members</span>
-            <span>Created</span>
-            <span>Properties</span>
-            <span className="text-center">Position</span>
+      <div className="space-y-8">
+        <CategorySection
+          icon={<TrendingUp size={14} />}
+          title="At a glance"
+          description="Snapshot of role usage and configuration on this server."
+        >
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Stat icon={<Users size={16} />} label="Total roles" value={sortedRoles.length} accent="var(--p-1)" />
+            <Stat icon={<ArrowUpToLine size={16} />} label="Hoisted" value={sortedRoles.filter((r) => r.hoist).length} accent="#3b82f6" />
+            <Stat icon={<Bot size={16} />} label="Managed" value={sortedRoles.filter((r) => r.managed).length} accent="#a855f7" />
+            <Stat
+              icon={<ShieldAlert size={16} />}
+              label="With sensitive perms"
+              value={sortedRoles.filter((r) => dangerousKeysIn(permissionKeysFromBits(r.permissions)).length > 0).length}
+              accent="#f59e0b"
+            />
           </div>
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={sortedRoles.map((r) => r.id)} strategy={verticalListSortingStrategy}>
-              <div>
-                {sortedRoles.map((role) => (
-                  <SortableRoleRow
-                    key={role.id}
-                    role={role}
-                    memberCount={memberCountByRole.get(role.id) ?? 0}
-                    onClick={() => openEditor(role)}
-                  />
-                ))}
+        </CategorySection>
+
+        <CategorySection
+          icon={<Crown size={14} />}
+          title="Hierarchy"
+          description="Drag rows to reorder roles top-down. Click any row to edit name, color, and permissions."
+        >
+          {reordering && (
+            <div className="inline-flex items-center gap-1.5 text-xs text-subtle">
+              <Loader2 size={11} className="animate-spin" /> Saving order…
+            </div>
+          )}
+
+          {sortedRoles.length === 0 ? (
+            <EmptyState
+              icon={<Crown size={36} />}
+              title="No custom roles"
+              description="This server only has the @everyone role. Use Create role to add one."
+            />
+          ) : (
+            <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--line-strong)' }}>
+              <div
+                className="grid border-b px-4 py-2 text-xs font-semibold uppercase tracking-wider text-subtle"
+                style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)', gridTemplateColumns: ROLE_GRID }}
+              >
+                <span />
+                <span>Role</span>
+                <span className="text-center">Members</span>
+                <span>Created</span>
+                <span>Properties</span>
+                <span className="text-center">Position</span>
               </div>
-            </SortableContext>
-          </DndContext>
-        </div>
-      )}
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={sortedRoles.map((r) => r.id)} strategy={verticalListSortingStrategy}>
+                  <div>
+                    {sortedRoles.map((role) => (
+                      <SortableRoleRow
+                        key={role.id}
+                        role={role}
+                        memberCount={memberCountByRole.get(role.id) ?? 0}
+                        onClick={() => openEditor(role)}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </div>
+          )}
+        </CategorySection>
+      </div>
 
       {(editingRole || creating) && (
         <RoleEditPanel
@@ -349,6 +374,26 @@ export function RolesContent({ guildId }: Props) {
           }}
         />
       )}
+    </div>
+  )
+}
+
+function Stat({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: number; accent: string }) {
+  return (
+    <div
+      className="flex items-center gap-3 rounded-xl border p-4"
+      style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
+    >
+      <span
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+        style={{ background: `color-mix(in srgb, ${accent} 12%, transparent)`, color: accent }}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <p className="text-2xl font-semibold leading-none text-foreground">{value.toLocaleString()}</p>
+        <p className="mt-1 text-xs text-subtle">{label}</p>
+      </div>
     </div>
   )
 }
