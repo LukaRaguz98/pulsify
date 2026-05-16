@@ -9,8 +9,8 @@ import {
   ScrollText,
   Loader2,
   AlertTriangle,
-  LayoutGrid,
   Clock,
+  TrendingUp,
 } from 'lucide-react'
 import { CategorySection } from '@/components/ui/category-section'
 import type { EnrichedBan, DiscordMember, DiscordRole, BotPermissions } from '@/lib/discord'
@@ -172,8 +172,8 @@ export function ModerationContent({ guildId }: Props) {
 
       <div className="space-y-8">
         <CategorySection
-          icon={<LayoutGrid size={14} />}
-          title="Overview"
+          icon={<TrendingUp size={14} />}
+          title="At a glance"
           description="Headline counts for moderation activity in this server."
         >
           <div className="grid gap-4 sm:grid-cols-3">

@@ -22,6 +22,17 @@ export type DiscordGuildFull = {
   approximate_presence_count: number
 }
 
+export type DiscordPermissionOverwrite = {
+  /** Role or member ID. */
+  id: string
+  /** 0 = role, 1 = member. */
+  type: 0 | 1
+  /** Bitfield string. */
+  allow: string
+  /** Bitfield string. */
+  deny: string
+}
+
 export type DiscordChannel = {
   id: string
   name: string
@@ -29,7 +40,34 @@ export type DiscordChannel = {
   position: number
   parent_id: string | null
   topic: string | null
+  nsfw?: boolean
+  /** Slowmode, in seconds (text channels). */
+  rate_limit_per_user?: number
+  /** Voice bitrate, in bps. */
+  bitrate?: number
+  /** Voice user cap (0 = unlimited). */
+  user_limit?: number
+  /** Voice region override; null = automatic. */
+  rtc_region?: string | null
+  /** Last message id — used to estimate activity by snowflake age. */
+  last_message_id?: string | null
+  permission_overwrites?: DiscordPermissionOverwrite[]
+  /** Auto-archive duration for threads, in minutes. */
+  default_auto_archive_duration?: number
 }
+
+/** Discord channel-type IDs we render in the dashboard. */
+export const CHANNEL_TYPES = {
+  TEXT: 0,
+  VOICE: 2,
+  CATEGORY: 4,
+  ANNOUNCEMENT: 5,
+  STAGE: 13,
+  FORUM: 15,
+  MEDIA: 16,
+} as const
+
+export type CreatableChannelType = 0 | 2 | 4 | 5 | 13 | 15 | 16
 
 export type DiscordRole = {
   id: string
@@ -429,6 +467,7 @@ export type BotPermissions = {
   manageNicknames: boolean
   manageRoles: boolean
   manageMessages: boolean
+  manageChannels: boolean
   sendMessages: boolean
   viewAuditLog: boolean
 }
@@ -442,6 +481,7 @@ const EMPTY_PERMS: BotPermissions = {
   manageNicknames: false,
   manageRoles: false,
   manageMessages: false,
+  manageChannels: false,
   sendMessages: false,
   viewAuditLog: false,
 }
@@ -450,6 +490,7 @@ const PERM_BITS = {
   ADMINISTRATOR:    BigInt(0x8),
   KICK_MEMBERS:     BigInt(0x2),
   BAN_MEMBERS:      BigInt(0x4),
+  MANAGE_CHANNELS:  BigInt(0x10),
   VIEW_AUDIT_LOG:   BigInt(0x80),
   SEND_MESSAGES:    BigInt(0x800),
   MANAGE_MESSAGES:  BigInt(0x2000),
@@ -535,6 +576,7 @@ export async function checkBotPermissions(guildId: string): Promise<BotPermissio
       manageNicknames: true,
       manageRoles: true,
       manageMessages: true,
+      manageChannels: true,
       sendMessages: true,
       viewAuditLog: true,
     }
@@ -553,6 +595,7 @@ export async function checkBotPermissions(guildId: string): Promise<BotPermissio
     manageNicknames: has(PERM_BITS.MANAGE_NICKNAMES),
     manageRoles:     has(PERM_BITS.MANAGE_ROLES),
     manageMessages:  has(PERM_BITS.MANAGE_MESSAGES),
+    manageChannels:  has(PERM_BITS.MANAGE_CHANNELS),
     sendMessages:    has(PERM_BITS.SEND_MESSAGES),
     viewAuditLog:    has(PERM_BITS.VIEW_AUDIT_LOG),
   }
@@ -1036,31 +1079,239 @@ export async function postChannelEmbed(
   return { ok: false, error: body.message ?? `Discord API error ${res.status}` }
 }
 
+export type ChannelCreate = {
+  name: string
+  type: CreatableChannelType
+  parent_id?: string | null
+  topic?: string | null
+  nsfw?: boolean
+  rate_limit_per_user?: number
+  bitrate?: number
+  user_limit?: number
+  position?: number
+}
+
+/**
+ * Discord rejects voice/category names with most punctuation but is much
+ * stricter on text channels — those must be lowercase, dashes-only. Normalize
+ * up-front so the user doesn't see "Invalid Form Body" for a stray uppercase.
+ */
+function normalizeChannelName(name: string, type: CreatableChannelType): string {
+  const trimmed = name.trim().slice(0, 100)
+  if (type === 4 || type === 2 || type === 13) {
+    // Categories and voice channels keep case and spaces.
+    return trimmed || 'channel'
+  }
+  return (
+    trimmed
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      .slice(0, 100) || 'channel'
+  )
+}
+
 export async function createGuildChannel(
   guildId: string,
-  params: { name: string; type: 0 | 4; parent_id?: string },
-): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  params: ChannelCreate,
+  reason?: string,
+): Promise<{ ok: true; channel: DiscordChannel } | { ok: false; error: string }> {
   if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
 
-  const name = params.type === 4
-    ? params.name.slice(0, 100)
-    : params.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 100) || 'channel'
-
-  const body: Record<string, unknown> = { name, type: params.type }
-  if (params.parent_id) body.parent_id = params.parent_id
+  const body: Record<string, unknown> = {
+    name: normalizeChannelName(params.name, params.type),
+    type: params.type,
+  }
+  if (params.parent_id !== undefined) body.parent_id = params.parent_id
+  if (params.topic !== undefined) body.topic = params.topic?.slice(0, 1024) ?? null
+  if (params.nsfw !== undefined) body.nsfw = params.nsfw
+  if (params.rate_limit_per_user !== undefined) {
+    body.rate_limit_per_user = Math.max(0, Math.min(21600, params.rate_limit_per_user))
+  }
+  if (params.bitrate !== undefined) body.bitrate = Math.max(8000, params.bitrate)
+  if (params.user_limit !== undefined) {
+    body.user_limit = Math.max(0, Math.min(99, params.user_limit))
+  }
+  if (params.position !== undefined) body.position = params.position
 
   const res = await fetch(`${DISCORD_API}/guilds/${guildId}/channels`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
-      'Content-Type': 'application/json',
-    },
+    headers: jsonHeaders(reason),
     body: JSON.stringify(body),
   })
-  if (res.ok) {
-    const data = await res.json() as { id: string }
-    return { ok: true, id: data.id }
+  if (!res.ok) return { ok: false, error: await discordError(res) }
+  return { ok: true, channel: (await res.json()) as DiscordChannel }
+}
+
+export type ChannelMutation = {
+  name?: string
+  topic?: string | null
+  nsfw?: boolean
+  rate_limit_per_user?: number
+  bitrate?: number
+  user_limit?: number
+  parent_id?: string | null
+  position?: number
+  rtc_region?: string | null
+}
+
+/**
+ * Sanitize a channel patch to the fields Discord accepts and clamp them to
+ * Discord's documented limits. Skips any keys the caller didn't set so the
+ * PATCH only touches what changed.
+ */
+function channelMutationToBody(m: ChannelMutation, type: number): Record<string, unknown> {
+  const body: Record<string, unknown> = {}
+  if (m.name !== undefined) {
+    body.name = normalizeChannelName(m.name, type as CreatableChannelType)
   }
-  const err = await res.json().catch(() => ({})) as { message?: string }
-  return { ok: false, error: err.message ?? `Discord API error ${res.status}` }
+  if (m.topic !== undefined) body.topic = m.topic?.slice(0, 1024) ?? null
+  if (m.nsfw !== undefined) body.nsfw = m.nsfw
+  if (m.rate_limit_per_user !== undefined) {
+    body.rate_limit_per_user = Math.max(0, Math.min(21600, m.rate_limit_per_user))
+  }
+  if (m.bitrate !== undefined) body.bitrate = Math.max(8000, m.bitrate)
+  if (m.user_limit !== undefined) body.user_limit = Math.max(0, Math.min(99, m.user_limit))
+  if (m.parent_id !== undefined) body.parent_id = m.parent_id
+  if (m.position !== undefined) body.position = m.position
+  if (m.rtc_region !== undefined) body.rtc_region = m.rtc_region
+  return body
+}
+
+export async function fetchChannel(channelId: string): Promise<DiscordChannel | null> {
+  if (!process.env.DISCORD_BOT_TOKEN) return null
+  const res = await fetch(`${DISCORD_API}/channels/${channelId}`, {
+    headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+    cache: 'no-store',
+  })
+  if (!res.ok) return null
+  return res.json()
+}
+
+export async function modifyChannel(
+  channelId: string,
+  mutation: ChannelMutation,
+  channelType: number,
+  reason?: string,
+): Promise<{ ok: true; channel: DiscordChannel } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(`${DISCORD_API}/channels/${channelId}`, {
+    method: 'PATCH',
+    headers: jsonHeaders(reason),
+    body: JSON.stringify(channelMutationToBody(mutation, channelType)),
+  })
+  if (!res.ok) return { ok: false, error: await discordError(res) }
+  return { ok: true, channel: (await res.json()) as DiscordChannel }
+}
+
+export async function deleteChannel(
+  channelId: string,
+  reason?: string,
+): Promise<DiscordResult> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(`${DISCORD_API}/channels/${channelId}`, {
+    method: 'DELETE',
+    headers: authHeaders(reason),
+  })
+  if (res.ok) return { ok: true }
+  return { ok: false, error: await discordError(res) }
+}
+
+/**
+ * Bulk reorder channels and re-parent in one call. Discord accepts an array
+ * where each entry can independently change position, parent_id, and an
+ * optional lock_permissions toggle (which we don't expose).
+ */
+export async function reorderGuildChannels(
+  guildId: string,
+  updates: { id: string; position?: number; parent_id?: string | null }[],
+  reason?: string,
+): Promise<DiscordResult> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  if (updates.length === 0) return { ok: true }
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/channels`, {
+    method: 'PATCH',
+    headers: jsonHeaders(reason),
+    body: JSON.stringify(updates),
+  })
+  if (res.ok) return { ok: true }
+  return { ok: false, error: await discordError(res) }
+}
+
+export async function setChannelPermissionOverwrite(
+  channelId: string,
+  overwriteId: string,
+  body: { type: 0 | 1; allow: string; deny: string },
+  reason?: string,
+): Promise<DiscordResult> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(
+    `${DISCORD_API}/channels/${channelId}/permissions/${overwriteId}`,
+    { method: 'PUT', headers: jsonHeaders(reason), body: JSON.stringify(body) },
+  )
+  if (res.ok) return { ok: true }
+  return { ok: false, error: await discordError(res) }
+}
+
+export async function deleteChannelPermissionOverwrite(
+  channelId: string,
+  overwriteId: string,
+  reason?: string,
+): Promise<DiscordResult> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(
+    `${DISCORD_API}/channels/${channelId}/permissions/${overwriteId}`,
+    { method: 'DELETE', headers: authHeaders(reason) },
+  )
+  if (res.ok) return { ok: true }
+  return { ok: false, error: await discordError(res) }
+}
+
+/**
+ * Recreate a channel with the same settings and permission overwrites. Discord
+ * doesn't have a native "duplicate" endpoint, so we re-POST from the source.
+ * Messages and members are not copied.
+ */
+export async function duplicateGuildChannel(
+  guildId: string,
+  sourceId: string,
+  reason?: string,
+): Promise<{ ok: true; channel: DiscordChannel } | { ok: false; error: string }> {
+  const source = await fetchChannel(sourceId)
+  if (!source) return { ok: false, error: 'Could not load source channel.' }
+
+  // Reuse fetchGuildChannels to compute a sensible position (just-below source).
+  const created = await createGuildChannel(
+    guildId,
+    {
+      name: `${source.name}-copy`.slice(0, 100),
+      type: source.type as CreatableChannelType,
+      parent_id: source.parent_id ?? null,
+      topic: source.topic ?? null,
+      nsfw: source.nsfw ?? false,
+      rate_limit_per_user: source.rate_limit_per_user,
+      bitrate: source.bitrate,
+      user_limit: source.user_limit,
+      position: source.position + 1,
+    },
+    reason,
+  )
+  if (!created.ok) return created
+
+  // Best-effort copy of permission overwrites. We don't fail the duplicate if
+  // a single overwrite fails — the user can fix it manually after.
+  if (source.permission_overwrites?.length) {
+    await Promise.all(
+      source.permission_overwrites.map((ow) =>
+        setChannelPermissionOverwrite(
+          created.channel.id,
+          ow.id,
+          { type: ow.type, allow: ow.allow, deny: ow.deny },
+          reason,
+        ),
+      ),
+    )
+  }
+
+  return created
 }
