@@ -99,6 +99,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
       title: 'Server',
       icon: <Server size={16} />,
       items: [
+        { label: 'Server Settings', href: `${base}/server-settings`, icon: <ShieldCheck size={16} /> },
         { label: 'Channels', href: `${base}/channels`, icon: <Hash size={16} /> },
         { label: 'Roles', href: `${base}/roles`, icon: <Users size={16} /> },
         { label: 'Events', href: `${base}/events`, icon: <CalendarDays size={16} /> },

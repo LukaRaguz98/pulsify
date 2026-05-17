@@ -33,7 +33,15 @@
       "Bash(echo \"BUILD EXIT: $?\")",
       "Bash(./node_modules/.bin/eslint components/dashboard/ModerationContent.tsx components/dashboard/moderation components/ui/confirm-dialog.tsx components/ui/pagination.tsx)",
       "Bash(./node_modules/.bin/eslint components/dashboard/moderation components/ui/pagination.tsx components/ui/confirm-dialog.tsx)",
-      "Bash(echo \"exit:$?\")"
+      "Bash(echo \"exit:$?\")",
+      "PowerShell(npx --prefix pulsify-web-app tsc --noEmit -p pulsify-web-app/tsconfig.json 2>&1 | Select-Object -First 100)",
+      "PowerShell(Write-Host \\(Get-Location\\).Path)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 100)",
+      "PowerShell(npx eslint app/dashboard/[guildId]/server-settings components/dashboard/ServerSettingsContent.tsx components/dashboard/GuildSidebar.tsx app/api/discord/guild/[guildId]/route.ts app/api/discord/guild/[guildId]/invites app/api/discord/guild/[guildId]/members/[userId] lib/discord.ts 2>&1 | Select-Object -First 150)",
+      "PowerShell(npx eslint components/dashboard/ChannelsContent.tsx 2>&1 | Select-Object -First 30)",
+      "PowerShell(npx next build 2>&1 | Select-Object -Last 60)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 80)",
+      "PowerShell(npx next build 2>&1 | Select-Object -Last 80)"
     ]
   }
 }
