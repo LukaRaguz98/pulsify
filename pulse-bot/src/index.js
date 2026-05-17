@@ -9,10 +9,12 @@ const {
   EmbedBuilder,
   PermissionFlagsBits,
   Events,
+  AuditLogEvent,
 } = require('discord.js');
 
 const { createClient } = require('@supabase/supabase-js');
 const { createAnalytics } = require('./analytics');
+const { recordNotification, fetchActor } = require('./notifications');
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -29,8 +31,38 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildVoiceStates,
     GatewayIntentBits.MessageContent,
+    // Required for Events.GuildScheduledEvent* — without it the bot never
+    // sees event create/update/delete and our notifications would miss them.
+    GatewayIntentBits.GuildScheduledEvents,
   ],
 });
+
+/**
+ * Shared helper for Discord-side activity → notifications row.
+ *
+ * Fetches the audit log to attribute the action and dedupes against
+ * dashboard-initiated activity: when the audit-log executor is the Pulsify
+ * bot itself, the dashboard already wrote a notification when it called
+ * Discord, so we skip the gateway-side write to avoid duplicates.
+ */
+async function notifyIfNotBot(opts) {
+  const actor = await fetchActor(opts.guild, opts.auditType, opts.targetId, client.user?.id);
+  if (actor && actor.isBot) return;
+  await recordNotification(supabase, {
+    guildId: opts.guild.id,
+    type: opts.type,
+    severity: opts.severity,
+    title: opts.title,
+    body: opts.body ?? actor?.reason ?? null,
+    link: opts.link,
+    actorId: actor?.actorId ?? null,
+    actorName: actor?.actorName ?? null,
+    actorUsername: actor?.actorUsername ?? null,
+    targetId: opts.targetId,
+    targetName: opts.targetName,
+    metadata: opts.metadata,
+  });
+}
 
 const commands = [
   new SlashCommandBuilder()
@@ -184,6 +216,15 @@ client.on(Events.GuildMemberAdd, async (member) => {
       }
     } catch (err) {
       console.error(`[Pulse] Welcome message failed in guild ${member.guild.id}:`, err.message);
+      await recordNotification(supabase, {
+        guildId: member.guild.id,
+        type: 'bot_warning',
+        title: 'Welcome message failed to send',
+        body: err.message,
+        link: `/dashboard/${member.guild.id}/automations`,
+        targetId: settings.welcome.channel_id,
+        metadata: { automation: 'welcome' },
+      });
     }
   }
 
@@ -195,9 +236,27 @@ client.on(Events.GuildMemberAdd, async (member) => {
         console.log(`[Pulse] Auto-role "${role.name}" assigned to ${member.user.tag} in ${member.guild.name}`);
       } else {
         console.warn(`[Pulse] Auto-role not found: ${settings.auto_role.role_id} in guild ${member.guild.id}`);
+        await recordNotification(supabase, {
+          guildId: member.guild.id,
+          type: 'bot_warning',
+          title: 'Auto-role is misconfigured',
+          body: `The configured role ID ${settings.auto_role.role_id} no longer exists. Pick a new role in Automations.`,
+          link: `/dashboard/${member.guild.id}/automations`,
+          metadata: { automation: 'auto_role', role_id: settings.auto_role.role_id },
+        });
       }
     } catch (err) {
       console.error(`[Pulse] Auto-role failed for ${member.user.tag} in guild ${member.guild.id}:`, err.message);
+      await recordNotification(supabase, {
+        guildId: member.guild.id,
+        type: 'bot_warning',
+        title: `Auto-role failed for ${member.user.tag}`,
+        body: err.message,
+        link: `/dashboard/${member.guild.id}/automations`,
+        targetId: member.id,
+        targetName: member.user.tag,
+        metadata: { automation: 'auto_role' },
+      });
     }
   }
 });
@@ -261,6 +320,15 @@ client.on(Events.GuildMemberRemove, async (member) => {
       }
     } catch (err) {
       console.error(`[Pulse] Goodbye message failed in guild ${member.guild.id}:`, err.message);
+      await recordNotification(supabase, {
+        guildId: member.guild.id,
+        type: 'bot_warning',
+        title: 'Goodbye message failed to send',
+        body: err.message,
+        link: `/dashboard/${member.guild.id}/automations`,
+        targetId: settings.goodbye.channel_id,
+        metadata: { automation: 'goodbye' },
+      });
     }
   }
 });
@@ -273,6 +341,29 @@ client.on(Events.GuildBanAdd, async (ban) => {
     userName: ban.user.username,
     metadata: { action: 'ban' },
   });
+
+  // Surface bans done outside the dashboard (Discord client, other bots, etc.)
+  // in the activity feed. Dashboard-initiated bans already write a
+  // notification, so notifyIfNotBot skips when the actor is us.
+  const actor = await fetchActor(ban.guild, AuditLogEvent.MemberBanAdd, ban.user.id, client.user?.id);
+  if (!actor?.isBot) {
+    await recordNotification(supabase, {
+      guildId: ban.guild.id,
+      type: 'mod_action',
+      severity: 'error',
+      title: actor
+        ? `${actor.actorName ?? 'A moderator'} banned ${ban.user.tag}`
+        : `${ban.user.tag} was banned`,
+      body: actor?.reason ?? ban.reason ?? null,
+      link: `/dashboard/${ban.guild.id}/moderation`,
+      actorId: actor?.actorId ?? null,
+      actorName: actor?.actorName ?? null,
+      actorUsername: actor?.actorUsername ?? null,
+      targetId: ban.user.id,
+      targetName: ban.user.tag,
+      metadata: { action: 'ban' },
+    });
+  }
 
   const settings = await getGuildSettings(ban.guild.id);
   if (settings?.moderation_alerts?.enabled && settings.moderation_alerts.channel_id) {
@@ -297,6 +388,26 @@ client.on(Events.GuildBanRemove, async (ban) => {
     userName: ban.user.username,
     metadata: { action: 'unban' },
   });
+
+  const actor = await fetchActor(ban.guild, AuditLogEvent.MemberBanRemove, ban.user.id, client.user?.id);
+  if (!actor?.isBot) {
+    await recordNotification(supabase, {
+      guildId: ban.guild.id,
+      type: 'mod_action',
+      severity: 'info',
+      title: actor
+        ? `${actor.actorName ?? 'A moderator'} unbanned ${ban.user.tag}`
+        : `${ban.user.tag} was unbanned`,
+      body: actor?.reason ?? null,
+      link: `/dashboard/${ban.guild.id}/moderation`,
+      actorId: actor?.actorId ?? null,
+      actorName: actor?.actorName ?? null,
+      actorUsername: actor?.actorUsername ?? null,
+      targetId: ban.user.id,
+      targetName: ban.user.tag,
+      metadata: { action: 'unban' },
+    });
+  }
 
   const settings = await getGuildSettings(ban.guild.id);
   if (settings?.moderation_alerts?.enabled && settings.moderation_alerts.channel_id) {
@@ -350,6 +461,201 @@ client.on(Events.VoiceStateUpdate, (oldState, newState) => {
         analytics.voiceJoin(guildId, userId, userName, newState.channelId, newState.channel?.name)
       );
   }
+});
+
+// ── Channels ────────────────────────────────────────────────────────────────
+// Discord-side channel changes (someone creates/deletes/renames a channel
+// in the Discord client rather than the dashboard). notifyIfNotBot skips
+// when the dashboard was the source — it already wrote a notification.
+
+client.on(Events.ChannelCreate, async (channel) => {
+  if (!channel.guild) return;
+  await notifyIfNotBot({
+    guild: channel.guild,
+    auditType: AuditLogEvent.ChannelCreate,
+    targetId: channel.id,
+    type: 'channel_created',
+    title: `#${channel.name} was created`,
+    link: `/dashboard/${channel.guild.id}/channels`,
+    targetName: channel.name,
+    metadata: { channel_type: channel.type },
+  });
+});
+
+client.on(Events.ChannelDelete, async (channel) => {
+  if (!channel.guild) return;
+  await notifyIfNotBot({
+    guild: channel.guild,
+    auditType: AuditLogEvent.ChannelDelete,
+    targetId: channel.id,
+    type: 'channel_deleted',
+    title: `#${channel.name} was deleted`,
+    link: `/dashboard/${channel.guild.id}/channels`,
+    targetName: channel.name,
+    metadata: { channel_type: channel.type },
+  });
+});
+
+client.on(Events.ChannelUpdate, async (oldChannel, newChannel) => {
+  if (!newChannel.guild) return;
+  // Discord fires ChannelUpdate for a lot of low-signal changes (last-message
+  // pointer churn, position rebalancing). Only emit when something a human
+  // would care about changed.
+  const meaningful =
+    oldChannel.name !== newChannel.name ||
+    oldChannel.topic !== newChannel.topic ||
+    oldChannel.nsfw !== newChannel.nsfw ||
+    oldChannel.parentId !== newChannel.parentId ||
+    oldChannel.rateLimitPerUser !== newChannel.rateLimitPerUser ||
+    oldChannel.bitrate !== newChannel.bitrate ||
+    oldChannel.userLimit !== newChannel.userLimit;
+  if (!meaningful) return;
+
+  const title = oldChannel.name !== newChannel.name
+    ? `#${oldChannel.name} was renamed to #${newChannel.name}`
+    : `#${newChannel.name} was updated`;
+  await notifyIfNotBot({
+    guild: newChannel.guild,
+    auditType: AuditLogEvent.ChannelUpdate,
+    targetId: newChannel.id,
+    type: 'channel_updated',
+    title,
+    link: `/dashboard/${newChannel.guild.id}/channels`,
+    targetName: newChannel.name,
+  });
+});
+
+// ── Roles ───────────────────────────────────────────────────────────────────
+
+client.on(Events.GuildRoleCreate, async (role) => {
+  await notifyIfNotBot({
+    guild: role.guild,
+    auditType: AuditLogEvent.RoleCreate,
+    targetId: role.id,
+    type: 'role_created',
+    title: `Role @${role.name} was created`,
+    link: `/dashboard/${role.guild.id}/roles`,
+    targetName: role.name,
+  });
+});
+
+client.on(Events.GuildRoleDelete, async (role) => {
+  await notifyIfNotBot({
+    guild: role.guild,
+    auditType: AuditLogEvent.RoleDelete,
+    targetId: role.id,
+    type: 'role_deleted',
+    title: `Role @${role.name} was deleted`,
+    link: `/dashboard/${role.guild.id}/roles`,
+    targetName: role.name,
+  });
+});
+
+client.on(Events.GuildRoleUpdate, async (oldRole, newRole) => {
+  // Skip silent position rebalancing — only attribute changes a moderator
+  // would recognise as an "update".
+  const meaningful =
+    oldRole.name !== newRole.name ||
+    oldRole.color !== newRole.color ||
+    oldRole.permissions.bitfield !== newRole.permissions.bitfield ||
+    oldRole.mentionable !== newRole.mentionable ||
+    oldRole.hoist !== newRole.hoist;
+  if (!meaningful) return;
+
+  const title = oldRole.name !== newRole.name
+    ? `Role @${oldRole.name} was renamed to @${newRole.name}`
+    : `Role @${newRole.name} was updated`;
+  await notifyIfNotBot({
+    guild: newRole.guild,
+    auditType: AuditLogEvent.RoleUpdate,
+    targetId: newRole.id,
+    type: 'role_updated',
+    title,
+    link: `/dashboard/${newRole.guild.id}/roles`,
+    targetName: newRole.name,
+  });
+});
+
+// ── Scheduled events ────────────────────────────────────────────────────────
+
+client.on(Events.GuildScheduledEventCreate, async (event) => {
+  if (!event.guild) return;
+  await notifyIfNotBot({
+    guild: event.guild,
+    auditType: AuditLogEvent.GuildScheduledEventCreate,
+    targetId: event.id,
+    type: 'event_created',
+    title: `"${event.name}" was scheduled`,
+    body: event.scheduledStartAt
+      ? `Starts ${event.scheduledStartAt.toLocaleString()}`
+      : null,
+    link: `/dashboard/${event.guild.id}/events`,
+    targetName: event.name,
+  });
+});
+
+client.on(Events.GuildScheduledEventUpdate, async (oldEvent, newEvent) => {
+  if (!newEvent.guild) return;
+  // Status 4 = CANCELED — treat as a deletion in the activity feed so the
+  // user sees one logical "the event went away" entry instead of an update
+  // immediately followed by a delete.
+  const wasCancelled = newEvent.status === 4 && (oldEvent?.status ?? null) !== 4;
+  await notifyIfNotBot({
+    guild: newEvent.guild,
+    auditType: AuditLogEvent.GuildScheduledEventUpdate,
+    targetId: newEvent.id,
+    type: wasCancelled ? 'event_deleted' : 'event_updated',
+    title: wasCancelled
+      ? `"${newEvent.name}" was cancelled`
+      : `"${newEvent.name}" was updated`,
+    link: `/dashboard/${newEvent.guild.id}/events`,
+    targetName: newEvent.name,
+  });
+});
+
+client.on(Events.GuildScheduledEventDelete, async (event) => {
+  if (!event.guild) return;
+  await notifyIfNotBot({
+    guild: event.guild,
+    auditType: AuditLogEvent.GuildScheduledEventDelete,
+    targetId: event.id,
+    type: 'event_deleted',
+    title: `"${event.name}" was deleted`,
+    link: `/dashboard/${event.guild.id}/events`,
+    targetName: event.name,
+  });
+});
+
+// ── Server settings ─────────────────────────────────────────────────────────
+
+client.on(Events.GuildUpdate, async (oldGuild, newGuild) => {
+  // Discord fires GuildUpdate on a wide range of internal state changes
+  // (member counts, presence, etc.). Filter to fields we actually expose in
+  // the dashboard's Server Settings page so the feed isn't noisy.
+  const meaningful =
+    oldGuild.name !== newGuild.name ||
+    oldGuild.icon !== newGuild.icon ||
+    oldGuild.verificationLevel !== newGuild.verificationLevel ||
+    oldGuild.defaultMessageNotifications !== newGuild.defaultMessageNotifications ||
+    oldGuild.explicitContentFilter !== newGuild.explicitContentFilter ||
+    oldGuild.afkChannelId !== newGuild.afkChannelId ||
+    oldGuild.afkTimeout !== newGuild.afkTimeout ||
+    oldGuild.systemChannelId !== newGuild.systemChannelId ||
+    oldGuild.rulesChannelId !== newGuild.rulesChannelId ||
+    oldGuild.publicUpdatesChannelId !== newGuild.publicUpdatesChannelId;
+  if (!meaningful) return;
+
+  await notifyIfNotBot({
+    guild: newGuild,
+    auditType: AuditLogEvent.GuildUpdate,
+    targetId: newGuild.id,
+    type: 'server_settings_changed',
+    title: oldGuild.name !== newGuild.name
+      ? `Server was renamed to "${newGuild.name}"`
+      : `Server settings were changed`,
+    link: `/dashboard/${newGuild.id}/server-settings`,
+    targetName: newGuild.name,
+  });
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {

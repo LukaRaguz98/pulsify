@@ -143,9 +143,10 @@ function PermissionRow({
 }) {
   const visuallyChecked = forcedOn || checked
   const dangerStyle = perm.danger ? DANGER_COLORS[perm.danger] : null
+  const interactionDisabled = disabled || forcedOn
   return (
-    <label
-      className="flex cursor-pointer items-start gap-3 border-b px-3 py-2 transition-colors last:border-b-0"
+    <div
+      className="flex items-start gap-3 border-b px-3 py-2 transition-colors last:border-b-0"
       style={{
         borderColor: 'var(--line)',
         opacity: disabled ? 0.5 : 1,
@@ -153,13 +154,6 @@ function PermissionRow({
       onMouseEnter={(e) => { e.currentTarget.style.background = 'color-mix(in srgb, var(--panel) 60%, transparent)' }}
       onMouseLeave={(e) => { e.currentTarget.style.background = '' }}
     >
-      <input
-        type="checkbox"
-        checked={visuallyChecked}
-        disabled={disabled || forcedOn}
-        onChange={(e) => onToggle(e.target.checked)}
-        className="mt-0.5 h-3.5 w-3.5 shrink-0 cursor-pointer accent-[var(--p-1)]"
-      />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-foreground">{perm.label}</span>
@@ -181,6 +175,25 @@ function PermissionRow({
           </p>
         )}
       </div>
-    </label>
+      {/* Sliding toggle matches the pattern used in App Design, Automations,
+          and Notification Preferences so all bool controls feel the same. */}
+      <button
+        type="button"
+        onClick={() => { if (!interactionDisabled) onToggle(!checked) }}
+        disabled={interactionDisabled}
+        aria-checked={visuallyChecked}
+        role="switch"
+        className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors duration-200 disabled:cursor-not-allowed"
+        style={{
+          background: visuallyChecked ? 'var(--p-1)' : 'var(--line-strong)',
+          cursor: interactionDisabled ? 'not-allowed' : 'pointer',
+        }}
+      >
+        <span
+          className="absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200"
+          style={{ transform: visuallyChecked ? 'translateX(16px)' : 'translateX(0)' }}
+        />
+      </button>
+    </div>
   )
 }

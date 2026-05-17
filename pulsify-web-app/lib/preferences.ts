@@ -18,6 +18,8 @@ export interface UserPreferences {
   fontSize: FontSize
   /** Whether the radial-gradient ambient glow in `body::before` is visible. */
   ambientGlow: boolean
+  /** Whether the live Discord-latency chip in the bottom-right corner shows. */
+  pingIndicator: boolean
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -29,6 +31,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   themeCustomColor: null,
   fontSize: 'medium',
   ambientGlow: true,
+  pingIndicator: true,
 }
 
 export const PREF_COOKIES = {
@@ -40,4 +43,5 @@ export const PREF_COOKIES = {
   themeCustomColor: 'pulsify-theme-custom-color',
   fontSize: 'pulsify-font-size',
   ambientGlow: 'pulsify-ambient-glow',
+  pingIndicator: 'pulsify-ping-indicator',
 } as const

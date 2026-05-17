@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase-server'
 import { isBotInGuild, checkBotPermissions } from '@/lib/discord'
+import { recordNotification } from '@/lib/notifications-server'
 
 type EmbedConfig = {
   color: string
@@ -113,6 +114,30 @@ export async function saveAutomations(
     )
 
   if (dbError) return { ok: false, error: `Failed to save: ${dbError.message}` }
+
+  // Summarise which automations are currently active so the notification body
+  // gives the reader a quick read on what just changed.
+  const enabled: string[] = []
+  if (settings.welcome.enabled) enabled.push('Welcome')
+  if (settings.goodbye.enabled) enabled.push('Goodbye')
+  if (settings.auto_role.enabled) enabled.push('Auto-Role')
+  if (settings.moderation_alerts.enabled) enabled.push('Moderation Alerts')
+  const automationClaims = user.user_metadata?.custom_claims as
+    | { global_name?: string; username?: string }
+    | undefined
+  await recordNotification({
+    guildId,
+    type: 'automation_saved',
+    title: 'Automations saved',
+    body: enabled.length > 0 ? `Active: ${enabled.join(', ')}` : 'No automations are currently enabled.',
+    link: `/dashboard/${guildId}/automations`,
+    actorId: user.user_metadata?.provider_id ?? user.id,
+    actorName: automationClaims?.global_name
+      ?? automationClaims?.username
+      ?? user.user_metadata?.full_name
+      ?? null,
+    actorUsername: automationClaims?.username ?? null,
+  })
   return { ok: true }
 }
 

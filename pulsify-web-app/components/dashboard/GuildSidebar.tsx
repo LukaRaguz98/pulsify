@@ -20,7 +20,7 @@ import {
   Server,
   Sparkles,
   ShieldCheck,
-  Cog,
+  SlidersHorizontal,
 } from 'lucide-react'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
 
@@ -99,7 +99,6 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
       title: 'Server',
       icon: <Server size={16} />,
       items: [
-        { label: 'Server Settings', href: `${base}/server-settings`, icon: <ShieldCheck size={16} /> },
         { label: 'Channels', href: `${base}/channels`, icon: <Hash size={16} /> },
         { label: 'Roles', href: `${base}/roles`, icon: <Users size={16} /> },
         { label: 'Events', href: `${base}/events`, icon: <CalendarDays size={16} /> },
@@ -121,9 +120,9 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
     },
     {
       title: 'Settings',
-      icon: <Cog size={16} />,
+      icon: <Settings size={16} />,
       items: [
-        { label: 'Preferences', href: `${base}/settings`, icon: <Settings size={16} /> },
+        { label: 'Preferences', href: `${base}/settings`, icon: <SlidersHorizontal size={16} /> },
       ],
     },
   ]
@@ -238,43 +237,60 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
         )}
       </div>
 
-      {/* Server card */}
-      <div
-        className="mx-2 my-3 flex items-center rounded-xl cursor-pointer border"
-        style={{
-          background: 'var(--panel)',
-          borderColor: 'var(--line-strong)',
-          padding: collapsed ? '0.5rem' : '0.625rem',
-          justifyContent: collapsed ? 'center' : 'flex-start',
-          gap: collapsed ? '0' : '0.625rem',
-        }}
-      >
-        {icon ? (
-          <Image
-            src={icon}
-            alt={guild.name}
-            width={30}
-            height={30}
-            className="rounded-lg shrink-0"
-            unoptimized
-          />
-        ) : (
-          <div
-            className="flex h-[30px] w-[30px] items-center justify-center rounded-lg shrink-0 font-bold text-sm text-white"
-            style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}
+      {/* Server card — doubles as the entry point to the Server Profile
+          (server-settings) page. Replaces the old nav item under "Server"
+          so the affordance lives where users actually look first. Highlights
+          when that route is active, same as any other nav link. */}
+      {(() => {
+        const serverProfileHref = `${base}/server-settings`
+        const profileActive = isItemActive(serverProfileHref)
+        return (
+          <Link
+            href={serverProfileHref}
+            title={collapsed ? `${guild.name} — Server Profile` : 'Open Server Profile'}
+            className="mx-2 my-3 flex items-center rounded-xl border transition-colors"
+            style={{
+              background: profileActive ? 'var(--p-soft)' : 'var(--panel)',
+              borderColor: profileActive ? 'var(--p-1)' : 'var(--line-strong)',
+              padding: collapsed ? '0.5rem' : '0.625rem',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              gap: collapsed ? '0' : '0.625rem',
+            }}
+            onMouseEnter={(e) => {
+              if (!profileActive) e.currentTarget.style.background = 'var(--bg-2)'
+            }}
+            onMouseLeave={(e) => {
+              if (!profileActive) e.currentTarget.style.background = 'var(--panel)'
+            }}
           >
-            {guild.name.charAt(0)}
-          </div>
-        )}
-        {!collapsed && (
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-foreground">{guild.name}</p>
-            {memberCount && (
-              <p className="text-xs text-subtle">{memberCount.toLocaleString()} members</p>
+            {icon ? (
+              <Image
+                src={icon}
+                alt={guild.name}
+                width={30}
+                height={30}
+                className="rounded-lg shrink-0"
+                unoptimized
+              />
+            ) : (
+              <div
+                className="flex h-[30px] w-[30px] items-center justify-center rounded-lg shrink-0 font-bold text-sm text-white"
+                style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}
+              >
+                {guild.name.charAt(0)}
+              </div>
             )}
-          </div>
-        )}
-      </div>
+            {!collapsed && (
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-foreground">{guild.name}</p>
+                {memberCount && (
+                  <p className="text-xs text-subtle">{memberCount.toLocaleString()} members</p>
+                )}
+              </div>
+            )}
+          </Link>
+        )
+      })()}
 
       {/* Nav — categories are the primary level. Click a category header to
           toggle its sub-items. In collapsed-sidebar mode each category is a

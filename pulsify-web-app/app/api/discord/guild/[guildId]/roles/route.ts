@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
+import { recordNotification } from '@/lib/notifications-server'
 import { fetchGuildRoles, reorderGuildRoles, createGuildRole, type RoleMutation } from '@/lib/discord'
 import { ALL_PERMISSION_BITS } from '@/lib/discord-permissions'
 
@@ -26,6 +27,19 @@ export async function POST(
   const mutation = sanitizeMutation(body)
   const result = await createGuildRole(guildId, mutation, body.reason)
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 })
+
+  await recordNotification({
+    guildId,
+    type: 'role_created',
+    title: `${auth.moderator.username ?? 'A moderator'} created role @${result.role.name}`,
+    body: body.reason ?? null,
+    link: `/dashboard/${guildId}/roles`,
+    actorId: auth.moderator.userId,
+    actorName: auth.moderator.username,
+    actorUsername: auth.moderator.handle,
+    targetId: result.role.id,
+    targetName: result.role.name,
+  })
   return NextResponse.json(result.role)
 }
 

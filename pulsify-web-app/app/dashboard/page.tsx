@@ -1,10 +1,12 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { Activity, Unplug } from 'lucide-react'
 import { createClient } from '@/lib/supabase-server'
 import { fetchUserGuilds, fetchSelfUser, hasManageGuild, userBannerUrl, type DiscordGuild } from '@/lib/discord'
 import { ServerCard } from '@/components/dashboard/ServerCard'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
+import { CategorySection } from '@/components/ui/category-section'
 import { Footer } from '@/components/Footer'
 
 type GuildWithBot = DiscordGuild & { botInstalled: boolean }
@@ -68,7 +70,9 @@ export default async function DashboardPage() {
   const notConnected = guilds.filter((g) => !g.botInstalled)
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    // flex-col + main with flex-1 pins the Footer to the viewport bottom on
+    // short pages instead of letting it float mid-screen below the content.
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Header */}
       <header className="border-b sticky top-0 z-10" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)', backdropFilter: 'blur(12px)' }}>
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
@@ -99,7 +103,7 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 py-10">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
         <div className="mb-10">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
             Welcome back, {displayName.split(' ')[0]}
@@ -138,29 +142,33 @@ export default async function DashboardPage() {
         )}
 
         {active.length > 0 && (
-          <section className="mb-10">
-            <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-subtle">
-              Active Servers ({active.length})
-            </h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {active.map((guild) => (
-                <ServerCard key={guild.id} guild={guild} />
-              ))}
-            </div>
-          </section>
+          <div className="mb-10">
+            <CategorySection
+              icon={<Activity size={14} />}
+              title="Active Servers"
+              description={`${active.length} server${active.length === 1 ? '' : 's'} where Pulse is installed and ready to manage.`}
+            >
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {active.map((guild) => (
+                  <ServerCard key={guild.id} guild={guild} />
+                ))}
+              </div>
+            </CategorySection>
+          </div>
         )}
 
         {notConnected.length > 0 && (
-          <section>
-            <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-subtle">
-              Not Connected ({notConnected.length})
-            </h2>
+          <CategorySection
+            icon={<Unplug size={14} />}
+            title="Not Connected"
+            description={`${notConnected.length} server${notConnected.length === 1 ? '' : 's'} you manage that don't have Pulse yet.`}
+          >
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {notConnected.map((guild) => (
                 <ServerCard key={guild.id} guild={guild} />
               ))}
             </div>
-          </section>
+          </CategorySection>
         )}
 
         {!tokenMissing && guilds.length === 0 && (

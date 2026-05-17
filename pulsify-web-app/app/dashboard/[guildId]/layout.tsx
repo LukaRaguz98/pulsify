@@ -5,6 +5,10 @@ import { GuildSidebar } from '@/components/dashboard/GuildSidebar'
 import { CornerDecorations } from '@/components/dashboard/CornerDecorations'
 import { DiscordCornerIcon } from '@/components/dashboard/DiscordCornerIcon'
 import { Footer } from '@/components/Footer'
+import { NotificationsProvider } from '@/components/dashboard/notifications/NotificationsProvider'
+import { NotificationBell } from '@/components/dashboard/notifications/NotificationBell'
+import { Toaster } from '@/components/dashboard/notifications/Toaster'
+import { PingIndicator } from '@/components/dashboard/PingIndicator'
 
 export default async function GuildLayout({
   children,
@@ -31,20 +35,25 @@ export default async function GuildLayout({
   const bannerUrl = selfUser?.banner ? userBannerUrl(selfUser.id ?? discordId, selfUser.banner) : undefined
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-foreground">
-      <GuildSidebar
-        guild={guild}
-        guildId={guildId}
-        user={session.user}
-        selfUser={selfUser ?? undefined}
-        bannerUrl={bannerUrl}
-      />
-      <CornerDecorations />
-      <DiscordCornerIcon guildId={guildId} />
-      <main className="flex-1 overflow-y-auto flex flex-col">
-        <div className="flex-1">{children}</div>
-        <Footer />
-      </main>
-    </div>
+    <NotificationsProvider guildId={guildId}>
+      <div className="flex h-screen overflow-hidden bg-background text-foreground">
+        <GuildSidebar
+          guild={guild}
+          guildId={guildId}
+          user={session.user}
+          selfUser={selfUser ?? undefined}
+          bannerUrl={bannerUrl}
+        />
+        <CornerDecorations />
+        <DiscordCornerIcon guildId={guildId} />
+        <NotificationBell guildId={guildId} />
+        <PingIndicator />
+        <main className="flex-1 overflow-y-auto flex flex-col">
+          <div className="flex-1">{children}</div>
+          <Footer />
+        </main>
+        <Toaster />
+      </div>
+    </NotificationsProvider>
   )
 }
