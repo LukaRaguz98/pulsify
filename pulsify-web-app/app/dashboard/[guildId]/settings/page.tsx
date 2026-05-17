@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { usePreferences } from '@/components/ThemeProvider'
 import { THEMES } from '@/lib/themes'
 import { SectionCard } from '@/components/ui/section-card'
 import { CategorySection } from '@/components/ui/category-section'
+import { SaveBar } from '@/components/ui/save-bar'
 import {
   Check, Moon, Sun, Maximize2, Minimize2, Zap, ZapOff, Palette, Sparkles, Crosshair,
   Server, Type, Aperture,
@@ -102,35 +103,86 @@ export default function SettingsPage() {
 
   const [activeTab, setActiveTab] = useState<TabId>('appearance')
   const [echoPrefs, setEchoPrefs] = useState<EchoPrefs>(DEFAULT_ECHO_PREFS)
-  const [echoSaved, setEchoSaved] = useState(false)
-  const [appSaved, setAppSaved] = useState(false)
+
+  // ── App Design snapshot ─────────────────────────────────────────────────
+  // App prefs persist live via ThemeProvider, but we still track a snapshot
+  // so Reset can undo a session of theme tweaks and Save can clear the dirty
+  // indicator. Captured once on first render and re-captured after Save.
+  type AppPrefs = {
+    theme: typeof theme; scheme: typeof scheme; density: typeof density
+    animations: boolean; cornerDeco: boolean
+    themeCustomColor: string | null
+    fontSize: typeof fontSize; ambientGlow: boolean
+  }
+  const [appSnapshot, setAppSnapshot] = useState<AppPrefs>(() => ({
+    theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow,
+  }))
+  const appCurrent: AppPrefs = { theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow }
+  const appChangedCount = useMemo(() => {
+    let n = 0
+    for (const k of Object.keys(appSnapshot) as (keyof AppPrefs)[]) {
+      if (appSnapshot[k] !== appCurrent[k]) n += 1
+    }
+    return n
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appSnapshot, theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow])
+  const appDirty = appChangedCount > 0
+
+  function handleResetAppPrefs() {
+    setTheme(appSnapshot.theme)
+    setScheme(appSnapshot.scheme)
+    setDensity(appSnapshot.density)
+    setAnimations(appSnapshot.animations)
+    setCornerDeco(appSnapshot.cornerDeco)
+    setThemeCustomColor(appSnapshot.themeCustomColor)
+    setFontSize(appSnapshot.fontSize)
+    setAmbientGlow(appSnapshot.ambientGlow)
+  }
+
+  function handleSaveAppPrefs() {
+    // Preferences are already persisted live via ThemeProvider — Save just
+    // commits the current values as the new baseline so the dirty indicator
+    // clears and Reset starts comparing from here on.
+    setAppSnapshot(appCurrent)
+  }
+
+  // ── Echo snapshot ──────────────────────────────────────────────────────
+  const [echoSnapshot, setEchoSnapshot] = useState<EchoPrefs>(DEFAULT_ECHO_PREFS)
+  const echoChangedCount = useMemo(() => {
+    let n = 0
+    for (const k of Object.keys(echoSnapshot) as (keyof EchoPrefs)[]) {
+      if (echoSnapshot[k] !== echoPrefs[k]) n += 1
+    }
+    return n
+  }, [echoSnapshot, echoPrefs])
+  const echoDirty = echoChangedCount > 0
 
   function updatePref<K extends keyof EchoPrefs>(key: K, value: EchoPrefs[K]) {
     setEchoPrefs(prev => ({ ...prev, [key]: value }))
-    setEchoSaved(false)
   }
 
   useEffect(() => {
     if (!guildId) return
     try {
       const saved = localStorage.getItem(ECHO_PREFS_KEY(guildId))
-      if (saved) setEchoPrefs({ ...DEFAULT_ECHO_PREFS, ...JSON.parse(saved) as EchoPrefs })
+      if (saved) {
+        const parsed = { ...DEFAULT_ECHO_PREFS, ...JSON.parse(saved) as EchoPrefs }
+        setEchoPrefs(parsed)
+        setEchoSnapshot(parsed)
+      }
     } catch {}
   }, [guildId])
+
+  function handleResetEchoPrefs() {
+    setEchoPrefs(echoSnapshot)
+  }
 
   function handleSaveEchoPrefs() {
     if (!guildId) return
     try {
       localStorage.setItem(ECHO_PREFS_KEY(guildId), JSON.stringify(echoPrefs))
-      setEchoSaved(true)
-      setTimeout(() => setEchoSaved(false), 3000)
+      setEchoSnapshot(echoPrefs)
     } catch {}
-  }
-
-  // App Design prefs apply instantly via ThemeProvider — this just confirms.
-  function handleSaveAppPrefs() {
-    setAppSaved(true)
-    setTimeout(() => setAppSaved(false), 3000)
   }
 
   const activeMeta = TABS.find((t) => t.id === activeTab)!
@@ -518,25 +570,18 @@ export default function SettingsPage() {
           </SectionCard>
           </CategorySection>
 
-          {/* Save */}
-          <div
-            className="flex flex-wrap items-center justify-end gap-4 border-t pt-6"
-            style={{ borderColor: 'var(--line-strong)' }}
-          >
-            {appSaved && (
-              <span className="flex items-center gap-1.5 text-sm" style={{ color: '#10b981' }}>
-                <Check size={15} /> Saved successfully!
-              </span>
-            )}
-            <button
-              onClick={handleSaveAppPrefs}
-              className="flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
-              style={{ background: 'linear-gradient(180deg, var(--p-1) 0%, var(--p-2) 100%)', boxShadow: '0 4px 14px -4px var(--p-glow)' }}
-            >
-              <Palette size={15} />
-              Save Preferences
-            </button>
-          </div>
+          <SaveBar
+            dirty={appDirty}
+            changedCount={appChangedCount}
+            saveLabel="Save Preferences"
+            cleanText="All preferences saved. Changes preview live as you edit."
+            dirtyHintText="review and save to keep these preferences."
+            confirmTitle="Save preferences?"
+            confirmDescription="Your dashboard preferences will be kept across sessions."
+            confirmLabel="Save Preferences"
+            onReset={handleResetAppPrefs}
+            onSave={handleSaveAppPrefs}
+          />
         </div>
       )}
 
@@ -852,25 +897,18 @@ export default function SettingsPage() {
           </SectionCard>
           </CategorySection>
 
-          {/* Save */}
-          <div
-            className="flex flex-wrap items-center justify-end gap-4 border-t pt-6"
-            style={{ borderColor: 'var(--line-strong)' }}
-          >
-            {echoSaved && (
-              <span className="flex items-center gap-1.5 text-sm" style={{ color: '#10b981' }}>
-                <Check size={15} /> Saved successfully!
-              </span>
-            )}
-            <button
-              onClick={handleSaveEchoPrefs}
-              className="flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
-              style={{ background: 'linear-gradient(180deg, var(--p-1) 0%, var(--p-2) 100%)', boxShadow: '0 4px 14px -4px var(--p-glow)' }}
-            >
-              <Sparkles size={15} />
-              Save Preferences
-            </button>
-          </div>
+          <SaveBar
+            dirty={echoDirty}
+            changedCount={echoChangedCount}
+            saveLabel="Save Preferences"
+            cleanText="All Echo preferences saved."
+            dirtyHintText="review and save to keep these preferences."
+            confirmTitle="Save Echo preferences?"
+            confirmDescription="Echo will use these settings for every generation in this server."
+            confirmLabel="Save Preferences"
+            onReset={handleResetEchoPrefs}
+            onSave={handleSaveEchoPrefs}
+          />
         </div>
       )}
     </div>

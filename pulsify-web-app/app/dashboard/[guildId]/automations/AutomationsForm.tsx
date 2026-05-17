@@ -1,19 +1,20 @@
 'use client'
 
-import { useState, useTransition, type ReactNode } from 'react'
+import { useMemo, useState, useTransition, type ReactNode } from 'react'
 import { saveAutomations, removeEchoContent, type AutomationSettings } from './actions'
 import { applyRules, applyOnboarding, applyChannelsReference } from '@/app/dashboard/[guildId]/ai-setup/actions'
 import type { DiscordChannel, DiscordRole } from '@/lib/discord'
 import { AppEmbedPreview } from '@/components/dashboard/AppEmbedPreview'
 import { DiscordEmbedPreview, type EmbedData } from '@/components/dashboard/DiscordEmbedPreview'
 import { CategorySection } from '@/components/ui/category-section'
+import { SaveBar } from '@/components/ui/save-bar'
 import { usePreferences } from '@/components/ThemeProvider'
 import { THEMES } from '@/lib/themes'
 import {
-  Zap, MessageSquare, Star, Bell,
-  CheckCircle, AlertCircle, Sparkles, RotateCcw,
+  MessageSquare, Star, Bell,
+  AlertCircle, Sparkles, RotateCcw,
   ShieldCheck, BookOpen, LayoutGrid, Loader2, Check, Trash2, RefreshCw,
-  UserPlus, Shield, FolderTree, LogOut, Send, Plus, X,
+  UserPlus, Shield, FolderTree, LogOut, Send, Plus, X, Zap,
 } from 'lucide-react'
 
 type Props = {
@@ -100,8 +101,7 @@ function validate(
 
 export function AutomationsForm({ guildId, guildName, channels, roles, initialSettings }: Props) {
   const [isPending, startTransition] = useTransition()
-  const [saved,  setSaved]  = useState(false)
-  const [error,  setError]  = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const { theme } = usePreferences()
   const accentHex = THEMES.find((t) => t.id === theme)?.accent ?? '#8b5cf6'
@@ -169,7 +169,66 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
   const [echoGenError,         setEchoGenError]         = useState<string | null>(null)
   const [echoGenErrorSection,  setEchoGenErrorSection]  = useState<string | null>(null)
 
-  function clearFeedback() { setSaved(false); setError(null) }
+  // Snapshot of last-saved state for dirty tracking. SaveBar uses the diff
+  // between this and the current values to render "N unsaved changes" and gate
+  // the Save/Reset buttons. Reset restores all editable state from here.
+  type Snapshot = {
+    welcome: WelcomeConfig
+    goodbye: GoodbyeConfig
+    autoRole: AutoRoleConfig
+    modAlerts: ModerationAlertsConfig
+    rulesVisible: boolean; rulesChannel: string; rulesTitle: string; rulesContent: string
+    onboardVisible: boolean; onboardChannel: string; onboardTitle: string; onboardContent: string
+    chRefVisible: boolean; chStructure: { category: string; channels: string[] }[] | null
+  }
+  const buildSnapshot = (): Snapshot => ({
+    welcome, goodbye, autoRole, modAlerts,
+    rulesVisible, rulesChannel, rulesTitle, rulesContent,
+    onboardVisible, onboardChannel, onboardTitle, onboardContent,
+    chRefVisible, chStructure,
+  })
+  const [snapshot, setSnapshot] = useState<Snapshot>(() => ({
+    welcome, goodbye, autoRole, modAlerts,
+    rulesVisible, rulesChannel, rulesTitle, rulesContent,
+    onboardVisible, onboardChannel, onboardTitle, onboardContent,
+    chRefVisible, chStructure,
+  }))
+
+  const current = buildSnapshot()
+  const changedCount = useMemo(() => {
+    let n = 0
+    const keys = Object.keys(snapshot) as (keyof Snapshot)[]
+    for (const k of keys) {
+      if (JSON.stringify(current[k]) !== JSON.stringify(snapshot[k])) n += 1
+    }
+    return n
+    // current is rebuilt every render; comparison is cheap relative to render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshot, welcome, goodbye, autoRole, modAlerts,
+    rulesVisible, rulesChannel, rulesTitle, rulesContent,
+    onboardVisible, onboardChannel, onboardTitle, onboardContent,
+    chRefVisible, chStructure])
+  const dirty = changedCount > 0
+
+  function handleReset() {
+    setWelcome(snapshot.welcome)
+    setGoodbye(snapshot.goodbye)
+    setAutoRole(snapshot.autoRole)
+    setModAlerts(snapshot.modAlerts)
+    setRulesVisible(snapshot.rulesVisible)
+    setRulesChannel(snapshot.rulesChannel)
+    setRulesTitle(snapshot.rulesTitle)
+    setRulesContent(snapshot.rulesContent)
+    setOnboardVisible(snapshot.onboardVisible)
+    setOnboardChannel(snapshot.onboardChannel)
+    setOnboardTitle(snapshot.onboardTitle)
+    setOnboardContent(snapshot.onboardContent)
+    setChRefVisible(snapshot.chRefVisible)
+    setChStructure(snapshot.chStructure)
+    setError(null)
+  }
+
+  function clearFeedback() { setError(null) }
 
   // Editing the suggested structure marks it as not-yet-created on Discord.
   function updateStructure(next: { category: string; channels: string[] }[]) {
@@ -207,28 +266,31 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     ))
   }
 
-  function handleSave() {
+  function handleSave(): Promise<void> {
     const validationError = validate(welcome, goodbye, autoRole, modAlerts)
-    if (validationError) { setError(validationError); setSaved(false); return }
+    if (validationError) { setError(validationError); return Promise.resolve() }
 
-    startTransition(async () => {
-      const result = await saveAutomations(guildId, {
-        welcome,
-        goodbye,
-        auto_role: autoRole,
-        moderation_alerts: modAlerts,
-        rules: { enabled: rulesVisible, channel_id: rulesChannel, title: rulesTitle, content: rulesContent },
-        onboarding: { enabled: onboardVisible, channel_id: onboardChannel, title: onboardTitle, content: onboardContent },
-        channels_reference: chStructure ? { enabled: chRefVisible, structure: chStructure } : undefined,
+    return new Promise<void>((resolve) => {
+      startTransition(async () => {
+        const result = await saveAutomations(guildId, {
+          welcome,
+          goodbye,
+          auto_role: autoRole,
+          moderation_alerts: modAlerts,
+          rules: { enabled: rulesVisible, channel_id: rulesChannel, title: rulesTitle, content: rulesContent },
+          onboarding: { enabled: onboardVisible, channel_id: onboardChannel, title: onboardTitle, content: onboardContent },
+          channels_reference: chStructure ? { enabled: chRefVisible, structure: chStructure } : undefined,
+        })
+        if (result.ok) {
+          setError(null)
+          // Snapshot the just-saved state so "dirty" resets to false and the
+          // save bar shows "All changes saved."
+          setSnapshot(buildSnapshot())
+        } else {
+          setError(result.error)
+        }
+        resolve()
       })
-      if (result.ok) {
-        setSaved(true)
-        setError(null)
-        setTimeout(() => setSaved(false), 4000)
-      } else {
-        setError(result.error)
-        setSaved(false)
-      }
     })
   }
 
@@ -721,32 +783,26 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
         )}
       </CategorySection>
 
-      {/* Save row */}
-      <div className="space-y-4 border-t pt-6" style={{ borderColor: 'var(--line-strong)' }}>
-        <div className="flex flex-wrap items-center justify-end gap-4">
-          {saved && (
-            <span className="flex items-center gap-1.5 text-sm" style={{ color: '#10b981' }}>
-              <CheckCircle size={15} /> Saved successfully!
-            </span>
-          )}
-          <button
-            onClick={handleSave}
-            disabled={isPending}
-            className="flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50"
-            style={{ background: 'linear-gradient(180deg, var(--p-1) 0%, var(--p-2) 100%)', boxShadow: '0 4px 14px -4px var(--p-glow)' }}
-          >
-            <Zap size={15} />
-            {isPending ? 'Saving…' : 'Save Automations'}
-          </button>
+      {error && (
+        <div className="mt-6 flex items-start gap-2.5 rounded-xl border p-4 text-sm" style={{ background: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.25)', color: '#f87171' }}>
+          <AlertCircle size={15} className="mt-px shrink-0" />
+          {error}
         </div>
+      )}
 
-        {error && (
-          <div className="flex items-start gap-2.5 rounded-xl border p-4 text-sm" style={{ background: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.25)', color: '#f87171' }}>
-            <AlertCircle size={15} className="mt-px shrink-0" />
-            {error}
-          </div>
-        )}
-      </div>
+      <SaveBar
+        dirty={dirty}
+        changedCount={changedCount}
+        saving={isPending}
+        saveLabel="Save Automations"
+        cleanText="All changes saved. Automations apply through the Pulse bot."
+        dirtyHintText="review and save to apply via the Pulse bot."
+        confirmTitle="Save automations?"
+        confirmDescription="These changes will be applied by the Pulse bot immediately."
+        confirmLabel="Save Automations"
+        onReset={handleReset}
+        onSave={handleSave}
+      />
     </div>
   )
 }
