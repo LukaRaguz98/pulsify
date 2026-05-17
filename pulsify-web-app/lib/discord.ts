@@ -20,6 +20,25 @@ export type DiscordGuildFull = {
   member_count: number
   approximate_member_count: number
   approximate_presence_count: number
+  /** 0=NONE, 1=LOW, 2=MEDIUM, 3=HIGH, 4=VERY_HIGH. */
+  verification_level?: 0 | 1 | 2 | 3 | 4
+  /** 0=ALL_MESSAGES, 1=ONLY_MENTIONS. */
+  default_message_notifications?: 0 | 1
+  /** 0=DISABLED, 1=MEMBERS_WITHOUT_ROLES, 2=ALL_MEMBERS. */
+  explicit_content_filter?: 0 | 1 | 2
+  /** 0=NONE, 1=TIER_1, 2=TIER_2, 3=TIER_3. */
+  premium_tier?: 0 | 1 | 2 | 3
+  premium_subscription_count?: number
+  afk_channel_id?: string | null
+  afk_timeout?: number
+  system_channel_id?: string | null
+  rules_channel_id?: string | null
+  public_updates_channel_id?: string | null
+  preferred_locale?: string
+  vanity_url_code?: string | null
+  banner?: string | null
+  splash?: string | null
+  features?: string[]
 }
 
 export type DiscordPermissionOverwrite = {
@@ -224,6 +243,136 @@ export async function fetchGuild(guildId: string): Promise<DiscordGuildFull | nu
   })
   if (!res.ok) return null
   return res.json()
+}
+
+/** Force a fresh fetch of the guild — skips Next's data cache. Use after PATCH. */
+export async function fetchGuildFresh(guildId: string): Promise<DiscordGuildFull | null> {
+  if (!process.env.DISCORD_BOT_TOKEN) return null
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}?with_counts=true`, {
+    headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+    cache: 'no-store',
+  })
+  if (!res.ok) return null
+  return res.json()
+}
+
+export type GuildMutation = {
+  name?: string
+  /** Base64 data URI ("data:image/png;base64,…"). null clears the icon. */
+  icon?: string | null
+  verification_level?: 0 | 1 | 2 | 3 | 4
+  default_message_notifications?: 0 | 1
+  explicit_content_filter?: 0 | 1 | 2
+  afk_channel_id?: string | null
+  afk_timeout?: number
+  system_channel_id?: string | null
+  rules_channel_id?: string | null
+  public_updates_channel_id?: string | null
+}
+
+function guildMutationToBody(m: GuildMutation): Record<string, unknown> {
+  const body: Record<string, unknown> = {}
+  if (m.name !== undefined) body.name = m.name.slice(0, 100)
+  if (m.icon !== undefined) body.icon = m.icon
+  if (m.verification_level !== undefined) body.verification_level = m.verification_level
+  if (m.default_message_notifications !== undefined) {
+    body.default_message_notifications = m.default_message_notifications
+  }
+  if (m.explicit_content_filter !== undefined) body.explicit_content_filter = m.explicit_content_filter
+  if (m.afk_channel_id !== undefined) body.afk_channel_id = m.afk_channel_id
+  if (m.afk_timeout !== undefined) {
+    // Discord only accepts: 60, 300, 900, 1800, 3600.
+    body.afk_timeout = m.afk_timeout
+  }
+  if (m.system_channel_id !== undefined) body.system_channel_id = m.system_channel_id
+  if (m.rules_channel_id !== undefined) body.rules_channel_id = m.rules_channel_id
+  if (m.public_updates_channel_id !== undefined) {
+    body.public_updates_channel_id = m.public_updates_channel_id
+  }
+  return body
+}
+
+export async function modifyGuild(
+  guildId: string,
+  mutation: GuildMutation,
+  reason?: string,
+): Promise<{ ok: true; guild: DiscordGuildFull } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const body = guildMutationToBody(mutation)
+  if (Object.keys(body).length === 0) {
+    return { ok: false, error: 'No changes to save.' }
+  }
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}`, {
+    method: 'PATCH',
+    headers: jsonHeaders(reason),
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) return { ok: false, error: await discordError(res) }
+  return { ok: true, guild: (await res.json()) as DiscordGuildFull }
+}
+
+export type DiscordInvite = {
+  code: string
+  channel: { id: string; name: string; type: number } | null
+  inviter: {
+    id: string
+    username: string
+    global_name: string | null
+    avatar: string | null
+  } | null
+  uses: number
+  max_uses: number
+  max_age: number
+  temporary: boolean
+  created_at: string | null
+  expires_at: string | null
+}
+
+export async function fetchGuildInvites(guildId: string): Promise<DiscordInvite[]> {
+  if (!process.env.DISCORD_BOT_TOKEN) return []
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/invites`, {
+    headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  return res.json()
+}
+
+export type InviteCreate = {
+  max_age?: number
+  max_uses?: number
+  temporary?: boolean
+  unique?: boolean
+}
+
+export async function createChannelInvite(
+  channelId: string,
+  params: InviteCreate,
+  reason?: string,
+): Promise<{ ok: true; invite: DiscordInvite } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const body: Record<string, unknown> = {}
+  if (params.max_age !== undefined) body.max_age = Math.max(0, Math.min(604800, params.max_age))
+  if (params.max_uses !== undefined) body.max_uses = Math.max(0, Math.min(100, params.max_uses))
+  if (params.temporary !== undefined) body.temporary = params.temporary
+  if (params.unique !== undefined) body.unique = params.unique
+  const res = await fetch(`${DISCORD_API}/channels/${channelId}/invites`, {
+    method: 'POST',
+    headers: jsonHeaders(reason),
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) return { ok: false, error: await discordError(res) }
+  return { ok: true, invite: (await res.json()) as DiscordInvite }
+}
+
+export async function deleteInvite(code: string, reason?: string): Promise<DiscordResult> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(`${DISCORD_API}/invites/${code}`, {
+    method: 'DELETE',
+    headers: authHeaders(reason),
+  })
+  if (res.ok) return { ok: true }
+  return { ok: false, error: await discordError(res) }
 }
 
 export async function fetchGuildChannels(guildId: string): Promise<DiscordChannel[]> {
