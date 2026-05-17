@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
+import { recordNotification } from '@/lib/notifications-server'
 import {
   fetchGuildChannels,
   createGuildChannel,
@@ -58,6 +59,20 @@ export async function POST(
     body.reason,
   )
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 })
+
+  await recordNotification({
+    guildId,
+    type: 'channel_created',
+    title: `${auth.moderator.username ?? 'A moderator'} created #${result.channel.name}`,
+    body: body.reason ?? null,
+    link: `/dashboard/${guildId}/channels`,
+    actorId: auth.moderator.userId,
+    actorName: auth.moderator.username,
+    actorUsername: auth.moderator.handle,
+    targetId: result.channel.id,
+    targetName: result.channel.name,
+    metadata: { channel_type: result.channel.type, parent_id: result.channel.parent_id },
+  })
   return NextResponse.json(result.channel)
 }
 

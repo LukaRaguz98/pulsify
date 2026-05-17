@@ -14,6 +14,7 @@ type PreferencesContextType = {
   themeCustomColor: string | null
   fontSize: FontSize
   ambientGlow: boolean
+  pingIndicator: boolean
   setTheme: (theme: ThemeId) => void
   setScheme: (scheme: ColorScheme) => void
   setDensity: (density: LayoutDensity) => void
@@ -23,6 +24,7 @@ type PreferencesContextType = {
   setThemeCustomColor: (color: string | null) => void
   setFontSize: (size: FontSize) => void
   setAmbientGlow: (on: boolean) => void
+  setPingIndicator: (on: boolean) => void
 }
 
 const PreferencesContext = createContext<PreferencesContextType>({
@@ -34,6 +36,7 @@ const PreferencesContext = createContext<PreferencesContextType>({
   themeCustomColor: null,
   fontSize: 'medium',
   ambientGlow: true,
+  pingIndicator: true,
   setTheme: () => {},
   setScheme: () => {},
   setDensity: () => {},
@@ -42,6 +45,7 @@ const PreferencesContext = createContext<PreferencesContextType>({
   setThemeCustomColor: () => {},
   setFontSize: () => {},
   setAmbientGlow: () => {},
+  setPingIndicator: () => {},
 })
 
 function saveCookie(key: string, value: string) {
@@ -79,6 +83,7 @@ export function ThemeProvider({
   initialCustomColor = null,
   initialFontSize = 'medium',
   initialAmbientGlow = true,
+  initialPingIndicator = true,
 }: {
   children: React.ReactNode
   initialTheme: ThemeId
@@ -89,6 +94,7 @@ export function ThemeProvider({
   initialCustomColor?: string | null
   initialFontSize?: FontSize
   initialAmbientGlow?: boolean
+  initialPingIndicator?: boolean
 }) {
   const [theme, setThemeState] = useState<ThemeId>(initialTheme)
   const [scheme, setSchemeState] = useState<ColorScheme>(initialScheme)
@@ -98,6 +104,7 @@ export function ThemeProvider({
   const [themeCustomColor, setThemeCustomColorState] = useState<string | null>(initialCustomColor)
   const [fontSize, setFontSizeState] = useState<FontSize>(initialFontSize)
   const [ambientGlow, setAmbientGlowState] = useState<boolean>(initialAmbientGlow)
+  const [pingIndicator, setPingIndicatorState] = useState<boolean>(initialPingIndicator)
 
   const setTheme = (next: ThemeId) => {
     setThemeState(next)
@@ -154,12 +161,17 @@ export function ThemeProvider({
     saveCookie(PREF_COOKIES.ambientGlow, String(on))
   }
 
+  const setPingIndicator = (on: boolean) => {
+    setPingIndicatorState(on)
+    saveCookie(PREF_COOKIES.pingIndicator, String(on))
+  }
+
   return (
     <PreferencesContext.Provider
       value={{
-        theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow,
+        theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow, pingIndicator,
         setTheme, setScheme, setDensity, setAnimations, setCornerDeco, setThemeCustomColor,
-        setFontSize, setAmbientGlow,
+        setFontSize, setAmbientGlow, setPingIndicator,
       }}
     >
       {children}

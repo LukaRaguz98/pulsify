@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
+import { recordNotification } from '@/lib/notifications-server'
 import { fetchGuild, fetchGuildFresh, modifyGuild, type GuildMutation } from '@/lib/discord'
 
 const VERIFICATION_LEVELS = new Set([0, 1, 2, 3, 4])
@@ -112,5 +113,22 @@ export async function PATCH(
   // Re-fetch with `with_counts=true` so the response includes member counts
   // (PATCH /guilds/:id never returns them).
   const fresh = await fetchGuildFresh(guildId)
+
+  const changedKeys = Object.keys(mutation)
+  await recordNotification({
+    guildId,
+    type: 'server_settings_changed',
+    title: `${auth.moderator.username ?? 'A moderator'} updated server settings`,
+    body: changedKeys.length === 1
+      ? `Changed ${changedKeys[0].replace(/_/g, ' ')}`
+      : `Changed ${changedKeys.length} settings`,
+    link: `/dashboard/${guildId}/server-settings`,
+    actorId: auth.moderator.userId,
+    actorName: auth.moderator.username,
+    actorUsername: auth.moderator.handle,
+    targetId: guildId,
+    targetName: fresh?.name ?? result.guild.name,
+    metadata: { changed_keys: changedKeys },
+  })
   return NextResponse.json(fresh ?? result.guild)
 }

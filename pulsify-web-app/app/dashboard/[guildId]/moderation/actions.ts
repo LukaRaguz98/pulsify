@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
+import { recordNotification } from '@/lib/notifications-server'
 import {
   unbanUser,
   banGuildMember,
@@ -36,9 +37,24 @@ type LogParams = {
   metadata?: Record<string, unknown>
 }
 
+const ACTION_LABELS: Record<string, string> = {
+  ban: 'banned',
+  unban: 'unbanned',
+  kick: 'kicked',
+  timeout: 'timed out',
+  remove_timeout: 'removed timeout from',
+  warn: 'warned',
+  nickname: 'set the nickname of',
+  add_role: 'added a role to',
+  remove_role: 'removed a role from',
+  delete_message: 'deleted a message from',
+  bulk_delete_messages: 'bulk-deleted messages from',
+}
+
 async function recordLog(
   moderatorId: string,
   moderatorUsername: string | null,
+  moderatorHandle: string | null,
   params: LogParams,
 ) {
   const supabase = await createClient()
@@ -52,6 +68,29 @@ async function recordLog(
     moderator_username: moderatorUsername,
     reason: params.reason ?? null,
     metadata: params.metadata ?? {},
+  })
+
+  // Fire-and-forget notification so the activity feed reflects mod actions in
+  // real time. recordNotification swallows errors so a failure here never
+  // blocks the underlying moderation action.
+  const actionLabel = ACTION_LABELS[params.action] ?? params.action.replace(/_/g, ' ')
+  const targetLabel = params.target?.displayName ?? params.target?.username ?? null
+  const title = targetLabel
+    ? `${moderatorUsername ?? 'Moderator'} ${actionLabel} ${targetLabel}`
+    : `${moderatorUsername ?? 'Moderator'} ${actionLabel}`
+  await recordNotification({
+    guildId: params.guildId,
+    type: 'mod_action',
+    severity: params.action === 'ban' ? 'error' : params.action === 'warn' ? 'warning' : 'info',
+    title,
+    body: params.reason ?? null,
+    link: `/dashboard/${params.guildId}/moderation`,
+    actorId: moderatorId,
+    actorName: moderatorUsername,
+    actorUsername: moderatorHandle,
+    targetId: params.target?.id ?? null,
+    targetName: targetLabel,
+    metadata: { action: params.action, ...(params.metadata ?? {}) },
   })
 }
 
@@ -114,7 +153,7 @@ export async function unbanMember(
   const result = await unbanUser(guildId, target.id, reason)
   if (!result.ok) return failed(result.error)
 
-  await recordLog(auth.moderator.userId, auth.moderator.username, {
+  await recordLog(auth.moderator.userId, auth.moderator.username, auth.moderator.handle, {
     guildId,
     action: 'unban',
     target,
@@ -140,7 +179,7 @@ export async function banMember(
   const result = await banGuildMember(guildId, target.id, opts)
   if (!result.ok) return failed(result.error)
 
-  await recordLog(auth.moderator.userId, auth.moderator.username, {
+  await recordLog(auth.moderator.userId, auth.moderator.username, auth.moderator.handle, {
     guildId,
     action: 'ban',
     target,
@@ -171,7 +210,7 @@ export async function kickMember(
   const result = await kickGuildMember(guildId, target.id, reason)
   if (!result.ok) return failed(result.error)
 
-  await recordLog(auth.moderator.userId, auth.moderator.username, {
+  await recordLog(auth.moderator.userId, auth.moderator.username, auth.moderator.handle, {
     guildId,
     action: 'kick',
     target,
@@ -201,7 +240,7 @@ export async function timeoutMember(
   const result = await timeoutMemberDiscord(guildId, target.id, until, reason)
   if (!result.ok) return failed(result.error)
 
-  await recordLog(auth.moderator.userId, auth.moderator.username, {
+  await recordLog(auth.moderator.userId, auth.moderator.username, auth.moderator.handle, {
     guildId,
     action: 'timeout',
     target,
@@ -228,7 +267,7 @@ export async function removeMemberTimeout(
   const result = await clearMemberTimeoutDiscord(guildId, target.id, reason)
   if (!result.ok) return failed(result.error)
 
-  await recordLog(auth.moderator.userId, auth.moderator.username, {
+  await recordLog(auth.moderator.userId, auth.moderator.username, auth.moderator.handle, {
     guildId,
     action: 'remove_timeout',
     target,
@@ -258,7 +297,7 @@ export async function setMemberNickname(
   const result = await setMemberNicknameDiscord(guildId, target.id, value, reason)
   if (!result.ok) return failed(result.error)
 
-  await recordLog(auth.moderator.userId, auth.moderator.username, {
+  await recordLog(auth.moderator.userId, auth.moderator.username, auth.moderator.handle, {
     guildId,
     action: 'nickname',
     target,
@@ -289,7 +328,7 @@ export async function addMemberRole(
   const result = await addMemberRoleDiscord(guildId, target.id, roleId, reason)
   if (!result.ok) return failed(result.error)
 
-  await recordLog(auth.moderator.userId, auth.moderator.username, {
+  await recordLog(auth.moderator.userId, auth.moderator.username, auth.moderator.handle, {
     guildId,
     action: 'add_role',
     target,
@@ -318,7 +357,7 @@ export async function removeMemberRole(
   const result = await removeMemberRoleDiscord(guildId, target.id, roleId, reason)
   if (!result.ok) return failed(result.error)
 
-  await recordLog(auth.moderator.userId, auth.moderator.username, {
+  await recordLog(auth.moderator.userId, auth.moderator.username, auth.moderator.handle, {
     guildId,
     action: 'remove_role',
     target,
@@ -355,7 +394,7 @@ export async function warnMember(
   })
   if (error) return failed(`Failed to record warning: ${error.message}`)
 
-  await recordLog(auth.moderator.userId, auth.moderator.username, {
+  await recordLog(auth.moderator.userId, auth.moderator.username, auth.moderator.handle, {
     guildId,
     action: 'warn',
     target,
@@ -383,7 +422,7 @@ export async function deleteSingleMessage(
   const result = await deleteChannelMessage(channelId, messageId, reason)
   if (!result.ok) return failed(result.error)
 
-  await recordLog(auth.moderator.userId, auth.moderator.username, {
+  await recordLog(auth.moderator.userId, auth.moderator.username, auth.moderator.handle, {
     guildId,
     action: 'delete_message',
     target: authorId ? { id: authorId, displayName: null, username: null } : null,
@@ -410,7 +449,7 @@ export async function bulkDeleteMessages(
   const result = await bulkDeleteChannelMessages(channelId, messageIds, reason)
   if (!result.ok) return failed(result.error)
 
-  await recordLog(auth.moderator.userId, auth.moderator.username, {
+  await recordLog(auth.moderator.userId, auth.moderator.username, auth.moderator.handle, {
     guildId,
     action: 'bulk_delete_messages',
     reason,

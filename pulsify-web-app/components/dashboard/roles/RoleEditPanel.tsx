@@ -242,7 +242,7 @@ export function RoleEditPanel({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40"
+        className="fixed inset-0 z-[60]"
         style={{ background: 'rgba(0,0,0,0.4)' }}
         onClick={() => !busy && onClose()}
       />
@@ -251,7 +251,7 @@ export function RoleEditPanel({
       <aside
         role="dialog"
         aria-label={isCreating ? 'Create role' : `Edit role ${role?.name ?? ''}`}
-        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[656px] flex-col border-l shadow-2xl"
+        className="fixed inset-y-0 right-0 z-[70] flex w-full max-w-[656px] flex-col border-l shadow-2xl"
         style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
       >
         <header
