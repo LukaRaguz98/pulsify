@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
+import { recordNotification } from '@/lib/notifications-server'
 import {
   fetchGuildEvents,
   createGuildEvent,
@@ -40,6 +41,22 @@ export async function POST(
 
   const result = await createGuildEvent(guildId, body, body.reason)
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 })
+
+  await recordNotification({
+    guildId,
+    type: 'event_created',
+    title: `${auth.moderator.username ?? 'A moderator'} scheduled "${result.event.name}"`,
+    body: result.event.scheduled_start_time
+      ? `Starts ${new Date(result.event.scheduled_start_time).toLocaleString()}`
+      : null,
+    link: `/dashboard/${guildId}/events`,
+    actorId: auth.moderator.userId,
+    actorName: auth.moderator.username,
+    actorUsername: auth.moderator.handle,
+    targetId: result.event.id,
+    targetName: result.event.name,
+    metadata: { entity_type: result.event.entity_type, start: result.event.scheduled_start_time },
+  })
   return NextResponse.json(result.event)
 }
 

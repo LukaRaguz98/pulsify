@@ -283,11 +283,11 @@ export function EventEditor({
 
   return (
     <>
-      <div className="fixed inset-0 z-40" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={() => !busy && onClose()} />
+      <div className="fixed inset-0 z-[60]" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={() => !busy && onClose()} />
       <aside
         role="dialog"
         aria-label={isCreating ? 'Create event' : `Edit event ${event?.name ?? ''}`}
-        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[656px] flex-col border-l shadow-2xl"
+        className="fixed inset-y-0 right-0 z-[70] flex w-full max-w-[656px] flex-col border-l shadow-2xl"
         style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
       >
         <header className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: 'var(--line-strong)' }}>

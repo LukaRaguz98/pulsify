@@ -9,7 +9,10 @@ import {
 
 export type ModeratorContext = {
   userId: string
+  /** Display name: global_name (or full_name fallback) — what to put in titles. */
   username: string | null
+  /** Raw @handle — used for the "(username)" suffix in notification detail views. */
+  handle: string | null
 }
 
 export type AuthResult =
@@ -57,16 +60,21 @@ export async function authorizeGuildModerator(guildId: string): Promise<AuthResu
     (session.user.user_metadata?.provider_id as string | undefined) ?? session.user.id
   let moderatorUsername =
     claims?.global_name ?? claims?.username ?? session.user.user_metadata?.full_name ?? null
+  let moderatorHandle = claims?.username ?? null
 
   // Fetch the live Discord identity so logs always have a username, even if
   // the metadata claims are missing.
-  if (!moderatorUsername) {
+  if (!moderatorUsername || !moderatorHandle) {
     const self = await fetchSelfUser(token)
     if (self) {
       moderatorId = self.id
-      moderatorUsername = self.global_name ?? self.username
+      if (!moderatorUsername) moderatorUsername = self.global_name ?? self.username
+      if (!moderatorHandle) moderatorHandle = self.username
     }
   }
 
-  return { ok: true, moderator: { userId: moderatorId, username: moderatorUsername } }
+  return {
+    ok: true,
+    moderator: { userId: moderatorId, username: moderatorUsername, handle: moderatorHandle },
+  }
 }

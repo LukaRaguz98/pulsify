@@ -44,6 +44,7 @@ export default async function RootLayout({
     ? rawFontSize
     : DEFAULT_PREFERENCES.fontSize
   const ambientGlow = (cookieStore.get(PREF_COOKIES.ambientGlow)?.value ?? 'true') !== 'false'
+  const pingIndicator = (cookieStore.get(PREF_COOKIES.pingIndicator)?.value ?? 'true') !== 'false'
 
   // Inline-style the accent CSS vars when a custom color is set, so SSR ships
   // the right colors on first paint (no theme flash).
@@ -81,6 +82,7 @@ export default async function RootLayout({
           initialCustomColor={themeCustomColor}
           initialFontSize={fontSize}
           initialAmbientGlow={ambientGlow}
+          initialPingIndicator={pingIndicator}
         >
           {children}
         </ThemeProvider>

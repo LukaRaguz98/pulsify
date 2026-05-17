@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
+import { recordNotification } from '@/lib/notifications-server'
 import {
   fetchChannel,
   modifyChannel,
@@ -38,6 +39,19 @@ export async function PATCH(
 
   const result = await modifyChannel(channelId, body, current.type, body.reason)
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 })
+
+  await recordNotification({
+    guildId,
+    type: 'channel_updated',
+    title: `${auth.moderator.username ?? 'A moderator'} updated #${result.channel.name}`,
+    body: body.reason ?? null,
+    link: `/dashboard/${guildId}/channels`,
+    actorId: auth.moderator.userId,
+    actorName: auth.moderator.username,
+    actorUsername: auth.moderator.handle,
+    targetId: result.channel.id,
+    targetName: result.channel.name,
+  })
   return NextResponse.json(result.channel)
 }
 
@@ -51,7 +65,22 @@ export async function DELETE(
 
   const url = new URL(req.url)
   const reason = url.searchParams.get('reason') ?? undefined
+  // Capture the name before deletion so the notification can reference it.
+  const existing = await fetchChannel(channelId)
   const result = await deleteChannel(channelId, reason)
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 })
+
+  await recordNotification({
+    guildId,
+    type: 'channel_deleted',
+    title: `${auth.moderator.username ?? 'A moderator'} deleted #${existing?.name ?? 'a channel'}`,
+    body: reason ?? null,
+    link: `/dashboard/${guildId}/channels`,
+    actorId: auth.moderator.userId,
+    actorName: auth.moderator.username,
+    actorUsername: auth.moderator.handle,
+    targetId: channelId,
+    targetName: existing?.name ?? null,
+  })
   return NextResponse.json({ ok: true })
 }
