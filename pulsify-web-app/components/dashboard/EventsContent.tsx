@@ -25,7 +25,9 @@ type Toast = { kind: 'ok' | 'err'; text: string }
 type Props = { guildId: string }
 
 const STATUS_STYLES: Record<number, { bg: string; color: string; label: string }> = {
-  1: { bg: 'rgba(59,130,246,0.12)', color: '#3b82f6', label: 'Scheduled' },
+  // Scheduled === Upcoming — share the accent purple of the Upcoming stat
+  // card + group header so the visual language stays consistent.
+  1: { bg: 'var(--p-soft)', color: 'var(--p-1)', label: 'Scheduled' },
   2: { bg: 'rgba(16,185,129,0.12)', color: '#10b981', label: 'Live' },
   3: { bg: 'var(--bg-2)', color: 'var(--text-3)', label: 'Completed' },
   4: { bg: 'rgba(239,68,68,0.12)', color: '#ef4444', label: 'Canceled' },
@@ -234,9 +236,9 @@ export function EventsContent({ guildId }: Props) {
           description="Snapshot of events in this server right now."
         >
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat icon={<CalendarDays size={16} />} label="Total events" value={events.length} accent="var(--p-1)" />
+            <Stat icon={<CalendarDays size={16} />} label="Total events" value={events.length} accent="#3b82f6" />
             <Stat icon={<Activity size={16} />} label="Live now" value={live.length} accent="#10b981" />
-            <Stat icon={<CalendarIcon size={16} />} label="Upcoming" value={upcoming.length} accent="#3b82f6" />
+            <Stat icon={<CalendarIcon size={16} />} label="Upcoming" value={upcoming.length} accent="var(--p-1)" />
             <Stat icon={<Users size={16} />} label="Total interested" value={totalParticipants} accent="#f59e0b" />
           </div>
           {topInterest.length > 0 && topInterest[0].user_count !== undefined && topInterest[0].user_count > 0 && (
@@ -420,7 +422,7 @@ function ListView({
         </EventGroup>
       )}
       {upcoming.length > 0 && (
-        <EventGroup label={`Upcoming (${upcoming.length})`} accent="#3b82f6">
+        <EventGroup label={`Upcoming (${upcoming.length})`} accent="var(--p-1)">
           {upcoming.map((e) => <EventCard key={e.id} event={e} onEdit={onEdit} onShowParticipants={onShowParticipants} />)}
         </EventGroup>
       )}

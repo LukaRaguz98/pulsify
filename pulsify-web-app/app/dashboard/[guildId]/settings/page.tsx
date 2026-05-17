@@ -1,15 +1,25 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { usePreferences } from '@/components/ThemeProvider'
 import { THEMES } from '@/lib/themes'
 import { SectionCard } from '@/components/ui/section-card'
 import { CategorySection } from '@/components/ui/category-section'
 import { SaveBar } from '@/components/ui/save-bar'
+import { useNotifications } from '@/components/dashboard/notifications/NotificationsProvider'
+import {
+  NOTIFICATION_TYPES,
+  TYPE_TO_CATEGORY,
+  CATEGORY_LABELS,
+  TYPE_LABELS,
+  TYPE_DESCRIPTIONS,
+  type NotificationCategory,
+  type NotificationType,
+} from '@/lib/notifications'
 import {
   Check, Moon, Sun, Maximize2, Minimize2, Zap, ZapOff, Palette, Sparkles, Crosshair,
-  Server, Type, Aperture,
+  Server, Type, Aperture, Bell, Gauge,
 } from 'lucide-react'
 
 // ─── Echo preferences ─────────────────────────────────────────────────────────
@@ -72,7 +82,7 @@ const ECHO_SERVER_SIZES = [
 
 // ─── Subtabs ──────────────────────────────────────────────────────────────────
 
-type TabId = 'appearance' | 'echo'
+type TabId = 'appearance' | 'echo' | 'notifications'
 
 const TABS: { id: TabId; label: string; description: string; icon: typeof Palette }[] = [
   {
@@ -87,21 +97,37 @@ const TABS: { id: TabId; label: string; description: string; icon: typeof Palett
     description: 'Configure what Echo knows about your server when generating content.',
     icon: Sparkles,
   },
+  {
+    id: 'notifications',
+    label: 'Notifications',
+    description: 'Pick which server events should notify you and whether to show in-app toasts.',
+    icon: Bell,
+  },
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
   const {
-    theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow,
+    theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow, pingIndicator,
     setTheme, setScheme, setDensity, setAnimations, setCornerDeco, setThemeCustomColor,
-    setFontSize, setAmbientGlow,
+    setFontSize, setAmbientGlow, setPingIndicator,
   } = usePreferences()
 
   const params = useParams()
   const guildId = params.guildId as string
 
-  const [activeTab, setActiveTab] = useState<TabId>('appearance')
+  // Honour ?tab=… on first mount so deep links from the bell dropdown's
+  // gear icon land on the right subtab. Initializer reads the URL once;
+  // subsequent tab switches stay in local state without rewriting the URL.
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState<TabId>(() => {
+    const requested = searchParams.get('tab')
+    if (requested === 'appearance' || requested === 'echo' || requested === 'notifications') {
+      return requested
+    }
+    return 'appearance'
+  })
   const [echoPrefs, setEchoPrefs] = useState<EchoPrefs>(DEFAULT_ECHO_PREFS)
 
   // ── App Design snapshot ─────────────────────────────────────────────────
@@ -112,12 +138,12 @@ export default function SettingsPage() {
     theme: typeof theme; scheme: typeof scheme; density: typeof density
     animations: boolean; cornerDeco: boolean
     themeCustomColor: string | null
-    fontSize: typeof fontSize; ambientGlow: boolean
+    fontSize: typeof fontSize; ambientGlow: boolean; pingIndicator: boolean
   }
   const [appSnapshot, setAppSnapshot] = useState<AppPrefs>(() => ({
-    theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow,
+    theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow, pingIndicator,
   }))
-  const appCurrent: AppPrefs = { theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow }
+  const appCurrent: AppPrefs = { theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow, pingIndicator }
   const appChangedCount = useMemo(() => {
     let n = 0
     for (const k of Object.keys(appSnapshot) as (keyof AppPrefs)[]) {
@@ -125,7 +151,7 @@ export default function SettingsPage() {
     }
     return n
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appSnapshot, theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow])
+  }, [appSnapshot, theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow, pingIndicator])
   const appDirty = appChangedCount > 0
 
   function handleResetAppPrefs() {
@@ -137,6 +163,7 @@ export default function SettingsPage() {
     setThemeCustomColor(appSnapshot.themeCustomColor)
     setFontSize(appSnapshot.fontSize)
     setAmbientGlow(appSnapshot.ambientGlow)
+    setPingIndicator(appSnapshot.pingIndicator)
   }
 
   function handleSaveAppPrefs() {
@@ -184,6 +211,74 @@ export default function SettingsPage() {
       setEchoSnapshot(echoPrefs)
     } catch {}
   }
+
+  // ── Notification prefs snapshot ────────────────────────────────────────
+  // Provider holds the canonical prefs; this tab tracks a local draft so the
+  // user can flip toggles and Reset before committing via SaveBar.
+  const { prefs: notifPrefs, savePrefs: persistNotifPrefs } = useNotifications()
+  type NotifDraft = {
+    enabled_types: Record<NotificationType, boolean>
+    toast_enabled: boolean
+  }
+  const buildNotifDraft = (): NotifDraft => {
+    const types = {} as Record<NotificationType, boolean>
+    for (const t of NOTIFICATION_TYPES) {
+      types[t] = notifPrefs.enabled_types[t] !== false
+    }
+    return { enabled_types: types, toast_enabled: notifPrefs.toast_enabled }
+  }
+  const [notifDraft, setNotifDraft] = useState<NotifDraft>(buildNotifDraft)
+  const [notifSnapshot, setNotifSnapshot] = useState<NotifDraft>(buildNotifDraft)
+
+  // Resync draft when the provider's prefs change (initial fetch completes).
+  // We compare against snapshot so user-in-progress edits aren't clobbered.
+  useEffect(() => {
+    const fresh = buildNotifDraft()
+    setNotifDraft((prev) =>
+      JSON.stringify(prev) === JSON.stringify(notifSnapshot) ? fresh : prev,
+    )
+    setNotifSnapshot(fresh)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notifPrefs])
+
+  const notifChangedCount = useMemo(() => {
+    let n = 0
+    if (notifDraft.toast_enabled !== notifSnapshot.toast_enabled) n += 1
+    for (const t of NOTIFICATION_TYPES) {
+      if (notifDraft.enabled_types[t] !== notifSnapshot.enabled_types[t]) n += 1
+    }
+    return n
+  }, [notifDraft, notifSnapshot])
+  const notifDirty = notifChangedCount > 0
+
+  function toggleNotifType(type: NotificationType) {
+    setNotifDraft((prev) => ({
+      ...prev,
+      enabled_types: { ...prev.enabled_types, [type]: !prev.enabled_types[type] },
+    }))
+  }
+
+  function handleResetNotifPrefs() {
+    setNotifDraft(notifSnapshot)
+  }
+
+  async function handleSaveNotifPrefs() {
+    await persistNotifPrefs({
+      enabled_types: notifDraft.enabled_types,
+      toast_enabled: notifDraft.toast_enabled,
+    })
+    setNotifSnapshot(notifDraft)
+  }
+
+  // Group notification types by category for the UI grid.
+  const notifTypesByCategory = useMemo(() => {
+    const groups: Partial<Record<NotificationCategory, NotificationType[]>> = {}
+    for (const t of NOTIFICATION_TYPES) {
+      const cat = TYPE_TO_CATEGORY[t]
+      ;(groups[cat] ??= []).push(t)
+    }
+    return groups
+  }, [])
 
   const activeMeta = TABS.find((t) => t.id === activeTab)!
 
@@ -449,7 +544,7 @@ export default function SettingsPage() {
           <CategorySection
             icon={<Zap size={14} />}
             title="Behaviour"
-            description="Motion effects and activity notifications."
+            description="Dashboard interactions, motion, and live indicators."
           >
           {/* Animations & Effects */}
           <SectionCard title="Animations & Effects" description="Control motion and decorative visual elements.">
@@ -514,8 +609,8 @@ export default function SettingsPage() {
                 </button>
               </div>
 
-              {/* Row 3 — Background glow (new). Toggles the radial gradient
-                  baked into body::before via the --glow-opacity var. */}
+              {/* Row 3 — Background glow. Toggles the radial gradient baked
+                  into body::before via the --glow-opacity var. */}
               <div className="flex items-center justify-between pt-4">
                 <div className="flex items-center gap-3">
                   <span style={{ color: ambientGlow ? 'var(--p-1)' : 'var(--text-3)' }}>
@@ -544,30 +639,38 @@ export default function SettingsPage() {
             </div>
           </SectionCard>
 
-          {/* Notifications */}
-          <SectionCard
-            title="Notifications"
-            description="Manage how Pulsify notifies you about server activity."
-            footer={<p className="text-xs" style={{ color: 'var(--text-3)' }}>Push notification support is coming soon. Stay tuned for updates.</p>}
-          >
-            <div className="space-y-3">
-              {[
-                { label: 'Server alerts',      description: 'Critical events like raids or mass bans' },
-                { label: 'Moderation actions', description: 'Bans, kicks, and warning summaries' },
-                { label: 'Weekly digest',      description: 'Server health and activity summary' },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center justify-between rounded-lg p-3" style={{ background: 'var(--bg-2)' }}>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{item.label}</p>
-                    <p className="text-xs" style={{ color: 'var(--text-3)' }}>{item.description}</p>
-                  </div>
-                  <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ background: 'var(--bg)', color: 'var(--text-3)', border: '1px solid var(--line-strong)' }}>
-                    Soon
-                  </span>
+          {/* Status indicators — not motion/decoration, so they live in their
+              own card rather than inside Animations & Effects. */}
+          <SectionCard title="Status Indicators" description="Live system signals shown in the dashboard chrome.">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span style={{ color: pingIndicator ? 'var(--p-1)' : 'var(--text-3)' }}>
+                  <Gauge size={18} />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Ping Indicator</p>
+                  <p className="text-xs" style={{ color: 'var(--text-3)' }}>
+                    {pingIndicator
+                      ? 'Live Discord latency chip in the bottom-right corner'
+                      : 'Latency chip hidden — no polling happens'}
+                  </p>
                 </div>
-              ))}
+              </div>
+              <button
+                onClick={() => setPingIndicator(!pingIndicator)}
+                className="relative shrink-0 h-6 w-11 rounded-full transition-colors duration-200"
+                style={{ background: pingIndicator ? 'var(--p-1)' : 'var(--line-strong)' }}
+                aria-checked={pingIndicator}
+                role="switch"
+              >
+                <span
+                  className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
+                  style={{ transform: pingIndicator ? 'translateX(20px)' : 'translateX(0)' }}
+                />
+              </button>
             </div>
           </SectionCard>
+
           </CategorySection>
 
           <SaveBar
@@ -908,6 +1011,120 @@ export default function SettingsPage() {
             confirmLabel="Save Preferences"
             onReset={handleResetEchoPrefs}
             onSave={handleSaveEchoPrefs}
+          />
+        </div>
+      )}
+
+      {/* ─── Notifications tab ──────────────────────────────────────────────── */}
+      {activeTab === 'notifications' && (
+        <div className="space-y-8">
+          <CategorySection
+            icon={<Bell size={14} />}
+            title="Delivery"
+            description="How notifications reach you in the dashboard."
+          >
+            <SectionCard
+              title="In-app toasts"
+              description="Show a transient toast in the bottom-right corner when new activity arrives. Notifications still show up in the bell and on the Notifications page regardless of this setting."
+            >
+              <div
+                className="flex items-center justify-between rounded-xl border p-4"
+                style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)' }}
+              >
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Show toasts</p>
+                  <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
+                    {notifDraft.toast_enabled
+                      ? 'New notifications pop up in the corner for a few seconds.'
+                      : 'Notifications are silent — check the bell to see them.'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setNotifDraft((p) => ({ ...p, toast_enabled: !p.toast_enabled }))}
+                  className="relative shrink-0 h-6 w-11 rounded-full transition-colors duration-200"
+                  style={{ background: notifDraft.toast_enabled ? 'var(--p-1)' : 'var(--line-strong)' }}
+                  aria-checked={notifDraft.toast_enabled}
+                  role="switch"
+                >
+                  <span
+                    className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
+                    style={{ transform: notifDraft.toast_enabled ? 'translateX(20px)' : 'translateX(0)' }}
+                  />
+                </button>
+              </div>
+            </SectionCard>
+          </CategorySection>
+
+          <CategorySection
+            icon={<Bell size={14} />}
+            title="Event Types"
+            description="Toggle individual event types. Disabled types are also skipped by toasts."
+          >
+            {(Object.entries(notifTypesByCategory) as [NotificationCategory, NotificationType[]][]).map(([cat, types]) => (
+              <SectionCard key={cat} title={CATEGORY_LABELS[cat]} description={`Events grouped under "${CATEGORY_LABELS[cat]}".`}>
+                {/* Each type renders as a row matching the App Design
+                    Animations & Effects card: semibold label + description on
+                    the left, full-size sliding switch on the right, rows
+                    separated by a subtle border instead of individual bg-2
+                    chips. Keeps every toggle in the dashboard visually
+                    consistent. */}
+                <div>
+                  {types.map((type, i) => {
+                    const enabled = notifDraft.enabled_types[type]
+                    const last = i === types.length - 1
+                    return (
+                      <div
+                        key={type}
+                        className="flex items-center justify-between py-4"
+                        style={{
+                          borderBottom: last ? 'none' : '1px solid var(--line-strong)',
+                          paddingTop: i === 0 ? 0 : undefined,
+                        }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span style={{ color: enabled ? 'var(--p-1)' : 'var(--text-3)' }}>
+                            <Bell size={18} />
+                          </span>
+                          <div>
+                            <p className="text-sm font-semibold text-foreground">{TYPE_LABELS[type]}</p>
+                            <p className="text-xs" style={{ color: 'var(--text-3)' }}>
+                              {TYPE_DESCRIPTIONS[type]}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => toggleNotifType(type)}
+                          className="relative shrink-0 h-6 w-11 rounded-full transition-colors duration-200"
+                          style={{ background: enabled ? 'var(--p-1)' : 'var(--line-strong)' }}
+                          aria-checked={enabled}
+                          role="switch"
+                        >
+                          <span
+                            className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
+                            style={{ transform: enabled ? 'translateX(20px)' : 'translateX(0)' }}
+                          />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </SectionCard>
+            ))}
+          </CategorySection>
+
+          <SaveBar
+            dirty={notifDirty}
+            changedCount={notifChangedCount}
+            saveLabel="Save Preferences"
+            cleanText="All notification preferences saved."
+            dirtyHintText="review and save to apply."
+            confirmTitle="Save notification preferences?"
+            confirmDescription="These preferences are stored per user, per server."
+            confirmLabel="Save Preferences"
+            onReset={handleResetNotifPrefs}
+            onSave={handleSaveNotifPrefs}
           />
         </div>
       )}

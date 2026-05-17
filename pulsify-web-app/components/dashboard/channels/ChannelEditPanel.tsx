@@ -282,14 +282,14 @@ export function ChannelEditPanel({
   return (
     <>
       <div
-        className="fixed inset-0 z-40"
+        className="fixed inset-0 z-[60]"
         style={{ background: 'rgba(0,0,0,0.4)' }}
         onClick={() => !busy && onClose()}
       />
       <aside
         role="dialog"
         aria-label={isCreating ? `Create ${meta.label.toLowerCase()}` : `Edit ${channel?.name ?? ''}`}
-        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[680px] flex-col border-l shadow-2xl"
+        className="fixed inset-y-0 right-0 z-[70] flex w-full max-w-[680px] flex-col border-l shadow-2xl"
         style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
       >
         <header
@@ -392,20 +392,34 @@ export function ChannelEditPanel({
           {/* NSFW + Slowmode — text-like only */}
           {isTextLike && (
             <Section icon={<EyeOff size={13} />} label="Channel settings" description="Age gating and rate limit.">
-              <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5"
-                style={{ borderColor: 'var(--line-strong)', background: 'var(--bg-2)' }}>
+              <div
+                className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5"
+                style={{ borderColor: 'var(--line-strong)', background: 'var(--bg-2)' }}
+              >
                 <div>
                   <p className="text-sm font-medium text-foreground">Age-restricted (NSFW)</p>
                   <p className="text-xs text-subtle">Members must confirm they&apos;re 18+ to view this channel.</p>
                 </div>
-                <input
-                  type="checkbox"
-                  checked={draft.nsfw}
+                {/* Sliding toggle — matches the pattern in App Design,
+                    Notification Preferences, and the Roles edit panel. */}
+                <button
+                  type="button"
+                  onClick={() => { if (!busy) setField('nsfw', !draft.nsfw) }}
                   disabled={busy}
-                  onChange={(e) => setField('nsfw', e.target.checked)}
-                  className="h-4 w-4"
-                />
-              </label>
+                  aria-checked={draft.nsfw}
+                  role="switch"
+                  className="relative shrink-0 h-6 w-11 rounded-full transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    background: draft.nsfw ? 'var(--p-1)' : 'var(--line-strong)',
+                    cursor: busy ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  <span
+                    className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
+                    style={{ transform: draft.nsfw ? 'translateX(20px)' : 'translateX(0)' }}
+                  />
+                </button>
+              </div>
               <div>
                 <p className="mb-1.5 text-xs font-medium text-muted-foreground">Slow mode</p>
                 <select

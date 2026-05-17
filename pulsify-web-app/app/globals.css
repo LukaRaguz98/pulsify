@@ -279,3 +279,61 @@ body.slide-over-open [data-app-footer="true"] {
   margin-inline: auto;
 }
 
+/* Chrome widgets (bell, ping) sit at a low z so dialogs cover them, but
+   several side editors render inside the page tree where the browser's
+   stacking context calculation can still let those widgets bleed through.
+   Belt-and-braces: when any `role="dialog"` element exists in the DOM, hide
+   the chrome widgets entirely via :has(). Applies to channel/role/event
+   edit panels and to centered modals. */
+body:has([role="dialog"]) [data-pulsify-bell],
+body:has([role="dialog"]) [data-pulsify-ping] {
+  visibility: hidden;
+}
+
+/* ── Button hover effects ──────────────────────────────────────
+   Most primary/secondary buttons in the app are inline-styled
+   (var(--p-1) gradients for primary, var(--line-strong) borders for
+   secondary). Target them with attribute selectors so the hover state
+   applies app-wide without touching every component. */
+
+/* PRIMARY — filled accent gradient. Lift + brightness on hover, snap on
+   press. Matches both the 180deg (save bars, big CTAs) and 135deg (badges,
+   small icon buttons) gradient variants used across the dashboard. */
+button:not(:disabled)[style*="linear-gradient(180deg, var(--p-1)"],
+button:not(:disabled)[style*="linear-gradient(135deg, var(--p-1)"],
+a[style*="linear-gradient(180deg, var(--p-1)"],
+a[style*="linear-gradient(135deg, var(--p-1)"] {
+  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+}
+button:not(:disabled)[style*="linear-gradient(180deg, var(--p-1)"]:hover,
+button:not(:disabled)[style*="linear-gradient(135deg, var(--p-1)"]:hover,
+a[style*="linear-gradient(180deg, var(--p-1)"]:hover,
+a[style*="linear-gradient(135deg, var(--p-1)"]:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+button:not(:disabled)[style*="linear-gradient(180deg, var(--p-1)"]:active,
+button:not(:disabled)[style*="linear-gradient(135deg, var(--p-1)"]:active,
+a[style*="linear-gradient(180deg, var(--p-1)"]:active,
+a[style*="linear-gradient(135deg, var(--p-1)"]:active {
+  transform: translateY(0);
+  filter: brightness(1);
+}
+
+/* SECONDARY — outline buttons keyed off the standard `var(--line-strong)`
+   border. Hover tints the bg, lifts the border to accent, brightens the text.
+   Scoped to button/a so we don't accidentally restyle cards or section
+   containers that share the same border colour. `!important` is required
+   here because most secondary buttons set borderColor / color inline, and
+   inline-style specificity (1000) otherwise beats this :hover rule. */
+button:not(:disabled)[style*="line-strong"],
+a[style*="line-strong"] {
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+button:not(:disabled)[style*="line-strong"]:hover,
+a[style*="line-strong"]:hover {
+  background-color: var(--bg-2) !important;
+  border-color: var(--p-1) !important;
+  color: var(--text) !important;
+}
+

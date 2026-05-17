@@ -1,8 +1,12 @@
 'use client'
 
-// Discord-link button anchored in the elbow of the top-right L-bracket
-// animation. Offset so the bracket's corner falls roughly at the icon's
-// center, color follows the active accent via var(--p-1).
+// Discord-link button anchored in the elbow of the bottom-left L-bracket
+// animation. The bell now owns the top-right corner — moving Discord to the
+// opposite diagonal keeps each corner's affordance visible without overlap.
+//
+// Position is anchored to the inner content area (right of the sidebar) via
+// the same `--sidebar-w` CSS var the bracket SVG uses, so the icon slides
+// with the sidebar when it collapses instead of overlapping it.
 type Props = { guildId: string }
 
 export function DiscordCornerIcon({ guildId }: Props) {
@@ -14,11 +18,17 @@ export function DiscordCornerIcon({ guildId }: Props) {
       title="Open this server in Discord"
       aria-label="Open this server in Discord"
       data-discord-corner="true"
-      className="fixed top-2 right-3 z-30 mt-[40px] mr-[40px] flex h-9 w-9 items-center justify-center rounded-md border transition-colors hover:bg-[var(--bg-2)]"
+      className="fixed z-10 flex h-9 w-9 items-center justify-center rounded-md border bg-[var(--panel)] border-[var(--line-strong)] text-[var(--p-1)] hover:bg-[var(--p-soft)] hover:border-[var(--p-1)] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_-4px_var(--p-glow)] active:translate-y-0 active:shadow-none"
       style={{
-        background: 'var(--panel)',
-        borderColor: 'var(--line-strong)',
-        color: 'var(--p-1)',
+        // Mirror top-right bell offsets (right-3 + mr-[40px] = 52px;
+        // bottom-2 + mb-[40px] = 48px) so the two corner buttons look
+        // symmetric across the diagonal.
+        bottom: '48px',
+        left: 'calc(var(--sidebar-w, 230px) + 52px)',
+        // Multi-property transition: `left` matches the sidebar collapse
+        // (0.2s) so the icon slides in sync; the rest are 0.15s for the
+        // hover lift/glow to feel responsive without dragging.
+        transition: 'left 0.2s ease, background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
       }}
     >
       <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">

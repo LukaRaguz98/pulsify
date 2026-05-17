@@ -41,7 +41,16 @@
       "PowerShell(npx eslint components/dashboard/ChannelsContent.tsx 2>&1 | Select-Object -First 30)",
       "PowerShell(npx next build 2>&1 | Select-Object -Last 60)",
       "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 80)",
-      "PowerShell(npx next build 2>&1 | Select-Object -Last 80)"
+      "PowerShell(npx next build 2>&1 | Select-Object -Last 80)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 60)",
+      "PowerShell(node --check ..\\\\pulse-bot\\\\src\\\\notifications.js 2>&1; node --check ..\\\\pulse-bot\\\\src\\\\index.js 2>&1)",
+      "PowerShell(npx next build 2>&1 | Select-Object -Last 20)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 40)",
+      "PowerShell(npx next build 2>&1 | Select-Object -Last 10)",
+      "PowerShell(npx next build 2>&1 | Select-Object -Last 12)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 20)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 10)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 30)"
     ]
   }
 }
