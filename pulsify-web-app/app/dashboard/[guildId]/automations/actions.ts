@@ -13,9 +13,9 @@ type EmbedConfig = {
   banner_color: string
 }
 
-export type EchoRulesConfig      = { enabled: boolean; channel_id: string; title: string; content: string }
-export type EchoOnboardingConfig = { enabled: boolean; channel_id: string; title: string; content: string }
-export type EchoChannelsConfig   = { enabled: boolean; structure: { category: string; channels: string[] }[] }
+export type PulseRulesConfig      = { enabled: boolean; channel_id: string; title: string; content: string }
+export type PulseOnboardingConfig = { enabled: boolean; channel_id: string; title: string; content: string }
+export type PulseChannelsConfig   = { enabled: boolean; structure: { category: string; channels: string[] }[] }
 
 export type AutomationSettings = {
   welcome: {
@@ -34,10 +34,10 @@ export type AutomationSettings = {
   }
   auto_role:         { enabled: boolean; role_id: string }
   moderation_alerts: { enabled: boolean; channel_id: string }
-  // Echo content — optional: when omitted, existing stored values are preserved.
-  rules?:              EchoRulesConfig
-  onboarding?:         EchoOnboardingConfig
-  channels_reference?: EchoChannelsConfig
+  // Pulse content — optional: when omitted, existing stored values are preserved.
+  rules?:              PulseRulesConfig
+  onboarding?:         PulseOnboardingConfig
+  channels_reference?: PulseChannelsConfig
 }
 
 export type SaveResult = { ok: true } | { ok: false; error: string }
@@ -141,7 +141,7 @@ export async function saveAutomations(
   return { ok: true }
 }
 
-export async function removeEchoContent(
+export async function removePulseContent(
   guildId: string,
   type: 'rules' | 'onboarding' | 'channels_reference',
 ): Promise<{ ok: true } | { ok: false; error: string }> {

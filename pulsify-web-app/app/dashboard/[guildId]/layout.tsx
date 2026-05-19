@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
+import { getValidDiscordToken } from '@/lib/discord-session'
 import { fetchGuild, fetchSelfUser, userBannerUrl } from '@/lib/discord'
 import { GuildSidebar } from '@/components/dashboard/GuildSidebar'
 import { CornerDecorations } from '@/components/dashboard/CornerDecorations'
@@ -25,9 +26,13 @@ export default async function GuildLayout({
 
   if (!session) redirect('/')
 
+  const providerToken = await getValidDiscordToken({
+    access_token: session.provider_token,
+    refresh_token: session.provider_refresh_token,
+  })
   const [guild, selfUser] = await Promise.all([
     fetchGuild(guildId),
-    session.provider_token ? fetchSelfUser(session.provider_token) : null,
+    providerToken ? fetchSelfUser(providerToken) : null,
   ])
   if (!guild) redirect('/dashboard')
 

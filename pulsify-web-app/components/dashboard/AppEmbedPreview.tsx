@@ -31,10 +31,25 @@ function renderMd(text: string, lineIdx: number) {
   return parts
 }
 
+// Heading-aware line renderer — mirrors how Discord renders the V2
+// TextDisplay markdown: `#`/`##`/`###` headings, `-#` subtext, blank lines as
+// spacing. Everything else is a normal paragraph line.
 function renderContent(text: string) {
-  return text.split('\n').flatMap((line, i, arr) => {
-    const nodes = renderMd(line, i)
-    return i < arr.length - 1 ? [...nodes, <br key={`br-${i}`} />] : nodes
+  return text.split('\n').map((line, i) => {
+    if (line.startsWith('### ')) {
+      return <div key={i} style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text)', margin: '6px 0 2px', lineHeight: 1.3 }}>{renderMd(line.slice(4), i)}</div>
+    }
+    if (line.startsWith('## ')) {
+      return <div key={i} style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)', margin: '8px 0 3px', lineHeight: 1.3 }}>{renderMd(line.slice(3), i)}</div>
+    }
+    if (line.startsWith('# ')) {
+      return <div key={i} style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', margin: '8px 0 4px', lineHeight: 1.3 }}>{renderMd(line.slice(2), i)}</div>
+    }
+    if (line.startsWith('-# ')) {
+      return <div key={i} style={{ fontSize: '12px', color: 'var(--text-3)', margin: '2px 0', lineHeight: 1.3 }}>{renderMd(line.slice(3), i)}</div>
+    }
+    if (line.trim() === '') return <div key={i} style={{ height: '8px' }} />
+    return <div key={i} style={{ lineHeight: '1.45' }}>{renderMd(line, i)}</div>
   })
 }
 
@@ -81,30 +96,32 @@ export function AppEmbedPreview({ title, content, color }: Props) {
             <span style={{ color: 'var(--text-3)', fontSize: '12px' }}>Today at {timeStr}</span>
           </div>
 
-          {/* Embed card */}
+          {/* Components V2 container — rounded card with a full-height left
+              accent stripe. Title renders as a markdown `#` heading to match
+              how the posted V2 message looks. */}
           <div style={{
             borderLeft: `4px solid ${color ?? 'var(--p-1)'}`,
             background: 'var(--bg-2)',
-            borderRadius: '4px',
-            padding: '10px 14px 12px',
+            borderRadius: '8px',
+            padding: '12px 16px',
+            maxWidth: '432px',
           }}>
-            <p style={{
+            <div style={{
               color: 'var(--text)',
-              fontWeight: '600',
-              fontSize: '15px',
+              fontWeight: '700',
+              fontSize: '20px',
               margin: '0 0 6px',
               lineHeight: '1.3',
             }}>
-              {title || <span style={{ color: 'var(--text-3)' }}>No title…</span>}
-            </p>
-            <p style={{
+              {title || <span style={{ color: 'var(--text-3)', fontWeight: 600, fontSize: '15px' }}>No title…</span>}
+            </div>
+            <div style={{
               color: 'var(--text-2)',
-              fontSize: '13.5px',
-              margin: 0,
+              fontSize: '14px',
               lineHeight: '1.45',
             }}>
               {content ? renderContent(content) : <span style={{ color: 'var(--text-3)' }}>No content yet…</span>}
-            </p>
+            </div>
           </div>
         </div>
       </div>
