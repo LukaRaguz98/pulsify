@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase-server'
-import { postChannelEmbed, createGuildChannel } from '@/lib/discord'
+import { postChannelComponents, createGuildChannel, type V2Container } from '@/lib/discord'
 
 type EmbedConfig = {
   color: string
@@ -100,6 +100,23 @@ function hexToInt(hex: string): number {
   return parseInt(hex.replace('#', ''), 16)
 }
 
+/**
+ * Build a Components V2 container for a posted content block (rules,
+ * onboarding). Title becomes an `#` heading TextDisplay, body a second
+ * TextDisplay, both wrapped in an accent-coloured Container.
+ */
+function buildContentContainer(title: string, content: string, accentHex: string): V2Container {
+  const components: V2Container['components'] = []
+  const trimmedTitle = title.trim()
+  if (trimmedTitle) components.push({ type: 10, content: `# ${trimmedTitle}` })
+  components.push({ type: 10, content: content.slice(0, 3900) })
+  return {
+    type: 17,
+    accent_color: hexToInt(accentHex),
+    components,
+  }
+}
+
 export async function applyRules(
   guildId: string,
   channelId: string,
@@ -111,11 +128,9 @@ export async function applyRules(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, error: 'Unauthorized.' }
 
-  const postResult = await postChannelEmbed(channelId, {
-    color: hexToInt(accentHex),
-    title,
-    description: content,
-  })
+  const postResult = await postChannelComponents(channelId, [
+    buildContentContainer(title, content, accentHex),
+  ])
   if (!postResult.ok) return postResult
 
   const { data: existing } = await supabase
@@ -147,11 +162,9 @@ export async function applyOnboarding(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, error: 'Unauthorized.' }
 
-  const postResult = await postChannelEmbed(channelId, {
-    color: hexToInt(accentHex),
-    title,
-    description: content,
-  })
+  const postResult = await postChannelComponents(channelId, [
+    buildContentContainer(title, content, accentHex),
+  ])
   if (!postResult.ok) return postResult
 
   const { data: existing } = await supabase

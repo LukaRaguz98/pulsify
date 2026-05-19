@@ -29,7 +29,7 @@ export default function Home() {
           </p>
         </div>
 
-        <LoginButton />
+        <LoginButton forceConsent />
 
         <p className="text-sm text-subtle">
           No credit card required. Free tier available.

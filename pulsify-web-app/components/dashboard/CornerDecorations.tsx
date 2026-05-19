@@ -38,7 +38,7 @@ const KEYFRAMES = `
 //   outer bracket: M216 16 H302 V222   (larger, dashed)
 //   corner dot   : (288, 28)
 //   chamfer      : (279,28)→(288,37)
-//   inner echo   : M272 36 H280 V44
+//   inner Pulse   : M272 36 H280 V44
 //   ticks H      : x=258, y 22–34
 //   ticks V 1/3  : y= 88, x 282–294
 //   ticks V 2/3  : y=148, x 283–293
@@ -49,7 +49,7 @@ const KEYFRAMES = `
 //   outer bracket: M104 304 H18 V98    (larger, dashed)
 //   corner dot   : (32, 292)
 //   chamfer      : (41,283)→(32,292)
-//   inner echo   : M48 284 H40 V276
+//   inner Pulse   : M48 284 H40 V276
 //   ticks H      : x= 62, y 286–298
 //   ticks V 1/3  : y=232, x  26– 38
 //   ticks V 2/3  : y=172, x  27– 37
@@ -179,7 +179,7 @@ function CornerDeco({ pos }: { pos: 'tr' | 'bl' }) {
         style={{ stroke: 'var(--p-1)', opacity: 0.55 }}
       />
 
-      {/* ── Inner echo bracket (nested 8 px inside main corner) ── */}
+      {/* ── Inner Pulse bracket (nested 8 px inside main corner) ── */}
       <path
         d={isTR ? 'M272 36 H280 V44' : 'M48 284 H40 V276'}
         fill="none" strokeWidth={0.75} strokeLinecap="round"

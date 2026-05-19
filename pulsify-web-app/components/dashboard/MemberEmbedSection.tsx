@@ -39,7 +39,7 @@ type Props = {
 const VARIANT_META = {
   welcome: {
     title:        'Welcome Embed',
-    subtitle:     'Echo generated embed card shown when a member joins',
+    subtitle:     'Pulse generated embed card shown when a member joins',
     emptyHint:    'create a beautiful Discord embed with a custom banner for welcoming new members.',
     crafting:     'Crafting your welcome embed…',
     applyLabel:   'Select channel to post welcome embeds:',
@@ -49,7 +49,7 @@ const VARIANT_META = {
   },
   goodbye: {
     title:        'Goodbye Embed',
-    subtitle:     'Echo generated embed card shown when a member leaves',
+    subtitle:     'Pulse generated embed card shown when a member leaves',
     emptyHint:    'create a graceful Discord embed with a custom banner for members who leave.',
     crafting:     'Crafting your goodbye embed…',
     applyLabel:   'Select channel to post goodbye embeds:',
