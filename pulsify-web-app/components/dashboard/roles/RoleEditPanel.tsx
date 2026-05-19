@@ -324,7 +324,7 @@ export function RoleEditPanel({
 
           {/* Color */}
           <Section icon={<Palette size={13} />} label="Role color" description="Pick a preset or a custom hex value.">
-            {/* Circular swatches matching Preferences › App Design + Echo
+            {/* Circular swatches matching Preferences › App Design + Pulse
                 Assistant. Active state uses an outline ring instead of an
                 inner check so the geometry stays uniform across the app. */}
             <div className="flex flex-wrap items-center gap-2.5">
@@ -353,7 +353,7 @@ export function RoleEditPanel({
                   />
                 )
               })}
-              {/* Custom color picker — same pattern as Echo Assistant. Native
+              {/* Custom color picker — same pattern as Pulse Assistant. Native
                   <input type="color"> hidden behind a conic-gradient swatch;
                   outline lights up when the current color isn't a preset. */}
               <label

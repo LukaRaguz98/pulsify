@@ -1,13 +1,14 @@
 import Image from 'next/image'
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Activity, Unplug } from 'lucide-react'
 import { createClient } from '@/lib/supabase-server'
+import { getValidDiscordToken } from '@/lib/discord-session'
 import { fetchUserGuilds, fetchSelfUser, hasManageGuild, userBannerUrl, type DiscordGuild } from '@/lib/discord'
 import { ServerCard } from '@/components/dashboard/ServerCard'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
 import { CategorySection } from '@/components/ui/category-section'
 import { Footer } from '@/components/Footer'
+import { ReconnectDiscordButton } from '@/components/ReconnectDiscordButton'
 
 type GuildWithBot = DiscordGuild & { botInstalled: boolean }
 
@@ -19,7 +20,10 @@ export default async function DashboardPage() {
 
   if (!session) redirect('/')
 
-  const providerToken = session.provider_token
+  const providerToken = await getValidDiscordToken({
+    access_token: session.provider_token,
+    refresh_token: session.provider_refresh_token,
+  })
   let guilds: GuildWithBot[] = []
   let tokenMissing = false
   let discordError = false
@@ -115,17 +119,16 @@ export default async function DashboardPage() {
 
         {tokenMissing && (
           <div
-            className="mb-8 rounded-xl p-5 border"
+            className="mb-8 rounded-xl p-5 border flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
             style={{ background: 'rgba(245,158,11,0.07)', borderColor: 'rgba(245,158,11,0.25)' }}
           >
-            <p className="font-medium text-amber-400">Session expired</p>
-            <p className="mt-1 text-sm" style={{ color: 'rgba(245,158,11,0.7)' }}>
-              Your Discord session has expired. Please{' '}
-              <Link href="/" className="underline hover:text-amber-300">
-                log in again
-              </Link>{' '}
-              to continue.
-            </p>
+            <div>
+              <p className="font-medium text-amber-400">Discord session expired</p>
+              <p className="mt-1 text-sm" style={{ color: 'rgba(245,158,11,0.7)' }}>
+                Your Discord access token couldn&apos;t be refreshed. Reconnect to keep using Pulsify — you&apos;ll stay signed in.
+              </p>
+            </div>
+            <ReconnectDiscordButton redirectAfter="/dashboard" />
           </div>
         )}
 

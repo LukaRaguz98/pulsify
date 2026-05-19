@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useTransition, type ReactNode } from 'react'
-import { saveAutomations, removeEchoContent, type AutomationSettings } from './actions'
+import { saveAutomations, removePulseContent, type AutomationSettings } from './actions'
 import { applyRules, applyOnboarding, applyChannelsReference } from '@/app/dashboard/[guildId]/ai-setup/actions'
 import type { DiscordChannel, DiscordRole } from '@/lib/discord'
 import { AppEmbedPreview } from '@/components/dashboard/AppEmbedPreview'
@@ -32,9 +32,9 @@ type ModerationAlertsConfig = AutomationSettings['moderation_alerts']
 // Welcome and Goodbye share the exact same shape — both can be a plain message or an embed.
 type MemberEventConfig      = WelcomeConfig
 
-type EchoRulesConfig      = { enabled: boolean; channel_id: string; title?: string; content: string }
-type EchoOnboardingConfig = { enabled: boolean; channel_id: string; title?: string; content: string }
-type EchoChannelsConfig   = { enabled: boolean; structure: { category: string; channels: string[] }[] }
+type PulseRulesConfig      = { enabled: boolean; channel_id: string; title?: string; content: string }
+type PulseOnboardingConfig = { enabled: boolean; channel_id: string; title?: string; content: string }
+type PulseChannelsConfig   = { enabled: boolean; structure: { category: string; channels: string[] }[] }
 
 type GenerationResult = {
   welcome_message: string
@@ -51,7 +51,7 @@ type CardDef = {
   iconColor: string
   title: string
   description: string
-  echoBadge: boolean
+  pulseBadge: boolean
   enabled: boolean
   onToggle: (v: boolean) => void
   extra: ReactNode
@@ -111,9 +111,9 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
   const rawAutoRole  = initialSettings.auto_role          as Partial<AutoRoleConfig>         | undefined
   const rawModAlerts = initialSettings.moderation_alerts  as Partial<ModerationAlertsConfig> | undefined
 
-  const rawRules   = initialSettings.rules             as EchoRulesConfig      | undefined
-  const rawOnboard = initialSettings.onboarding        as EchoOnboardingConfig | undefined
-  const rawChRef   = initialSettings.channels_reference as EchoChannelsConfig  | undefined
+  const rawRules   = initialSettings.rules             as PulseRulesConfig      | undefined
+  const rawOnboard = initialSettings.onboarding        as PulseOnboardingConfig | undefined
+  const rawChRef   = initialSettings.channels_reference as PulseChannelsConfig  | undefined
 
   const [welcome, setWelcome] = useState<WelcomeConfig>({
     enabled:    rawWelcome?.enabled    ?? false,
@@ -141,7 +141,7 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     channel_id: rawModAlerts?.channel_id ?? '',
   })
 
-  // Echo content sections
+  // Pulse content sections
   const [rulesVisible,    setRulesVisible]    = useState(rawRules?.enabled    ?? false)
   const [rulesChannel,    setRulesChannel]    = useState(rawRules?.channel_id ?? (channels[0]?.id ?? ''))
   const [rulesTitle,      setRulesTitle]      = useState(rawRules?.title      ?? '📜 Server Rules')
@@ -164,10 +164,10 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
   const [createChResult, setCreateChResult] = useState<'success' | 'error' | null>(null)
   const [createChError,  setCreateChError]  = useState('')
 
-  // Echo generation
+  // Pulse generation
   const [generatingSection,    setGeneratingSection]    = useState<string | null>(null)
-  const [echoGenError,         setEchoGenError]         = useState<string | null>(null)
-  const [echoGenErrorSection,  setEchoGenErrorSection]  = useState<string | null>(null)
+  const [pulseGenError,         setPulseGenError]         = useState<string | null>(null)
+  const [pulseGenErrorSection,  setPulseGenErrorSection]  = useState<string | null>(null)
 
   // Snapshot of last-saved state for dirty tracking. SaveBar uses the diff
   // between this and the current values to render "N unsaved changes" and gate
@@ -313,13 +313,13 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
   }
 
   async function handleRemoveChRef() {
-    const res = await removeEchoContent(guildId, 'channels_reference')
+    const res = await removePulseContent(guildId, 'channels_reference')
     if (res.ok) { setChRefVisible(false); setChStructure(null) }
   }
 
-  function getEchoPrefs() {
+  function getPulsePrefs() {
     try {
-      const saved = localStorage.getItem(`pulsify:echo-prefs:${guildId}`)
+      const saved = localStorage.getItem(`pulsify:Pulse-prefs:${guildId}`)
       if (!saved) return null
       return JSON.parse(saved) as {
         description: string; tone: string; customTone: string; language: string; customLanguage: string;
@@ -328,16 +328,16 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     } catch { return null }
   }
 
-  async function generateWithEcho(section: string) {
-    const prefs = getEchoPrefs()
+  async function generateWithPulse(section: string) {
+    const prefs = getPulsePrefs()
     if (!prefs?.description?.trim()) {
-      setEchoGenError('Add a server description in Settings → Echo to get started.')
-      setEchoGenErrorSection(section)
+      setPulseGenError('Add a server description in Settings → Pulse to get started.')
+      setPulseGenErrorSection(section)
       return
     }
     setGeneratingSection(section)
-    setEchoGenError(null)
-    setEchoGenErrorSection(null)
+    setPulseGenError(null)
+    setPulseGenErrorSection(null)
 
     try {
       if (section === 'welcome' || section === 'goodbye') {
@@ -358,7 +358,7 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
           }),
         })
         const data = await res.json() as { result?: EmbedConfig; error?: string }
-        if (!res.ok) { setEchoGenError(data.error ?? 'Generation failed.'); setEchoGenErrorSection(section); return }
+        if (!res.ok) { setPulseGenError(data.error ?? 'Generation failed.'); setPulseGenErrorSection(section); return }
         if (section === 'welcome') setWelcome(prev => ({ ...prev, type: 'embed', embed: data.result }))
         else setGoodbye(prev => ({ ...prev, type: 'embed', embed: data.result }))
         clearFeedback()
@@ -378,7 +378,7 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
           }),
         })
         const data = await res.json() as { result?: GenerationResult; error?: string }
-        if (!res.ok) { setEchoGenError(data.error ?? 'Generation failed.'); setEchoGenErrorSection(section); return }
+        if (!res.ok) { setPulseGenError(data.error ?? 'Generation failed.'); setPulseGenErrorSection(section); return }
         const result = data.result!
         if (section === 'rules') {
           setRulesContent(result.rules.map((r, i) => `${i + 1}. ${r}`).join('\n'))
@@ -392,8 +392,8 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
         }
       }
     } catch {
-      setEchoGenError('Network error. Please try again.')
-      setEchoGenErrorSection(section)
+      setPulseGenError('Network error. Please try again.')
+      setPulseGenErrorSection(section)
     } finally {
       setGeneratingSection(null)
     }
@@ -418,9 +418,9 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     iconColor:   '#3b82f6',
     title:       'Welcome Message',
     description: isEmbed
-      ? 'Sends an Echo generated embed card when a new member joins.'
+      ? 'Sends an Pulse generated embed card when a new member joins.'
       : 'Send a message when a new member joins.',
-    echoBadge:  isEmbed,
+    pulseBadge:  isEmbed,
     enabled:  welcome.enabled,
     onToggle: (v: boolean) => { setWelcome({ ...welcome, enabled: v }); clearFeedback() },
     extra: welcome.enabled && (
@@ -431,9 +431,9 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
         guildName={guildName}
         channels={channels}
         generatingSection={generatingSection}
-        onGenerate={() => generateWithEcho('welcome')}
-        echoGenError={echoGenError}
-        echoGenErrorSection={echoGenErrorSection}
+        onGenerate={() => generateWithPulse('welcome')}
+        pulseGenError={pulseGenError}
+        pulseGenErrorSection={pulseGenErrorSection}
       />
     ),
   }
@@ -444,9 +444,9 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     iconColor:   '#fb7185',
     title:       'Goodbye Message',
     description: isGoodbyeEmbed
-      ? 'Sends an Echo generated embed card when a member leaves.'
+      ? 'Sends an Pulse generated embed card when a member leaves.'
       : 'Send a message when a member leaves the server.',
-    echoBadge:  isGoodbyeEmbed,
+    pulseBadge:  isGoodbyeEmbed,
     enabled:  goodbye.enabled,
     onToggle: (v: boolean) => { setGoodbye({ ...goodbye, enabled: v }); clearFeedback() },
     extra: goodbye.enabled && (
@@ -457,9 +457,9 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
         guildName={guildName}
         channels={channels}
         generatingSection={generatingSection}
-        onGenerate={() => generateWithEcho('goodbye')}
-        echoGenError={echoGenError}
-        echoGenErrorSection={echoGenErrorSection}
+        onGenerate={() => generateWithPulse('goodbye')}
+        pulseGenError={pulseGenError}
+        pulseGenErrorSection={pulseGenErrorSection}
       />
     ),
   }
@@ -469,12 +469,12 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     iconBg:      'rgba(245,158,11,0.12)',
     iconColor:   '#f59e0b',
     title:       'Server Rules',
-    description: 'Post an Echo generated rules embed to a channel.',
-    echoBadge:  true,
+    description: 'Post an Pulse generated rules embed to a channel.',
+    pulseBadge:  true,
     enabled:  rulesVisible,
     onToggle: (v: boolean) => { setRulesVisible(v); clearFeedback() },
     extra: rulesVisible && (
-      <EchoContentExtra
+      <PulseContentExtra
         section="rules"
         genLabel="rules"
         mono
@@ -487,9 +487,9 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
         onContentChange={setRulesContent}
         accentHex={accentHex}
         generatingSection={generatingSection}
-        onGenerate={() => generateWithEcho('rules')}
-        echoGenError={echoGenError}
-        echoGenErrorSection={echoGenErrorSection}
+        onGenerate={() => generateWithPulse('rules')}
+        pulseGenError={pulseGenError}
+        pulseGenErrorSection={pulseGenErrorSection}
         applying={applyingRules}
         applyResult={rulesResult}
         applyError={rulesError}
@@ -503,12 +503,12 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     iconBg:      'rgba(16,185,129,0.12)',
     iconColor:   '#10b981',
     title:       'Onboarding Guide',
-    description: 'Post an Echo generated onboarding guide to a channel.',
-    echoBadge:  true,
+    description: 'Post an Pulse generated onboarding guide to a channel.',
+    pulseBadge:  true,
     enabled:  onboardVisible,
     onToggle: (v: boolean) => { setOnboardVisible(v); clearFeedback() },
     extra: onboardVisible && (
-      <EchoContentExtra
+      <PulseContentExtra
         section="onboarding"
         genLabel="onboarding guide"
         mono={false}
@@ -521,9 +521,9 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
         onContentChange={setOnboardContent}
         accentHex={accentHex}
         generatingSection={generatingSection}
-        onGenerate={() => generateWithEcho('onboarding')}
-        echoGenError={echoGenError}
-        echoGenErrorSection={echoGenErrorSection}
+        onGenerate={() => generateWithPulse('onboarding')}
+        pulseGenError={pulseGenError}
+        pulseGenErrorSection={pulseGenErrorSection}
         applying={applyingOnboard}
         applyResult={onboardResult}
         applyError={onboardError}
@@ -538,7 +538,7 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     iconColor:   '#10b981',
     title:       'Auto-Role',
     description: 'Automatically assign a role to new members.',
-    echoBadge:  false,
+    pulseBadge:  false,
     enabled:  autoRole.enabled,
     onToggle: (v: boolean) => { setAutoRole({ ...autoRole, enabled: v }); clearFeedback() },
     extra: autoRole.enabled && (
@@ -564,7 +564,7 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     iconColor:   '#f59e0b',
     title:       'Moderation Alerts',
     description: 'Get notified when moderation actions occur.',
-    echoBadge:  false,
+    pulseBadge:  false,
     enabled:  modAlerts.enabled,
     onToggle: (v: boolean) => { setModAlerts({ ...modAlerts, enabled: v }); clearFeedback() },
     extra: modAlerts.enabled && (
@@ -616,7 +616,7 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
       <CategorySection
         icon={<FolderTree size={14} />}
         title="Server Structure"
-        description="An Echo suggested category and channel layout for your server."
+        description="An Pulse suggested category and channel layout for your server."
       >
         {chStructure ? (
           <div className="rounded-xl border p-5" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
@@ -628,17 +628,17 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="font-semibold text-foreground">Suggested Channels</h2>
-                    <span className="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide leading-none" style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))', color: '#fff' }}>Echo</span>
+                    <span className="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide leading-none" style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))', color: '#fff' }}>Pulse</span>
                   </div>
                   <p className="text-sm text-subtle">
-                    {chRefVisible ? 'Channels created on your server via Echo.' : 'Rename, add or remove channels, then create them on Discord.'}
+                    {chRefVisible ? 'Channels created on your server via Pulse.' : 'Rename, add or remove channels, then create them on Discord.'}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => generateWithEcho('channels')}
+                  onClick={() => generateWithPulse('channels')}
                   disabled={generatingSection !== null}
                   className="flex items-center gap-1.5 text-xs transition-colors disabled:opacity-50"
                   style={{ color: 'var(--text-3)' }}
@@ -761,24 +761,24 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
               </div>
             )}
 
-            {echoGenError && echoGenErrorSection === 'channels' && (
+            {pulseGenError && pulseGenErrorSection === 'channels' && (
               <div className="mt-3 flex items-center gap-2 text-xs" style={{ color: '#f87171' }}>
-                <AlertCircle size={12} /> {echoGenError}
+                <AlertCircle size={12} /> {pulseGenError}
               </div>
             )}
           </div>
         ) : (
-          <EchoEmptyState
+          <PulseEmptyState
             icon={<LayoutGrid size={16} />}
             iconBg="rgba(59,130,246,0.12)"
             iconColor="#3b82f6"
             title="Suggested Channels"
-            description="Generate a suggested channel structure with Echo."
+            description="Generate a suggested channel structure with Pulse."
             section="channels"
             generatingSection={generatingSection}
-            echoGenError={echoGenError}
-            echoGenErrorSection={echoGenErrorSection}
-            onGenerate={() => generateWithEcho('channels')}
+            pulseGenError={pulseGenError}
+            pulseGenErrorSection={pulseGenErrorSection}
+            onGenerate={() => generateWithPulse('channels')}
           />
         )}
       </CategorySection>
@@ -823,12 +823,12 @@ function CardItem({ card }: { card: CardDef }) {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-semibold text-foreground">{card.title}</h2>
-              {card.echoBadge && (
+              {card.pulseBadge && (
                 <span
                   className="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide leading-none"
                   style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))', color: '#fff' }}
                 >
-                  Echo
+                  Pulse
                 </span>
               )}
             </div>
@@ -847,7 +847,7 @@ function CardItem({ card }: { card: CardDef }) {
 
 function MemberEventExtra({
   variant, config, onChange, guildName, channels,
-  generatingSection, onGenerate, echoGenError, echoGenErrorSection,
+  generatingSection, onGenerate, pulseGenError, pulseGenErrorSection,
 }: {
   variant: 'welcome' | 'goodbye'
   config: MemberEventConfig
@@ -856,8 +856,8 @@ function MemberEventExtra({
   channels: DiscordChannel[]
   generatingSection: string | null
   onGenerate: () => void
-  echoGenError: string | null
-  echoGenErrorSection: string | null
+  pulseGenError: string | null
+  pulseGenErrorSection: string | null
 }) {
   const isEmbed = config.type === 'embed'
   const embed = config.embed
@@ -877,7 +877,7 @@ function MemberEventExtra({
     : null
 
   const channelLabel = variant === 'welcome' ? 'Welcome Channel' : 'Goodbye Channel'
-  const genLabel     = variant === 'welcome' ? 'Generate welcome embed with Echo' : 'Generate goodbye embed with Echo'
+  const genLabel     = variant === 'welcome' ? 'Generate welcome embed with Pulse' : 'Generate goodbye embed with Pulse'
   const userHint     = variant === 'welcome' ? '{user} = mention' : '{user} = name'
 
   return (
@@ -896,7 +896,7 @@ function MemberEventExtra({
         </select>
       </div>
 
-      {/* Echo generate */}
+      {/* Pulse generate */}
       <div
         className="rounded-lg border p-3 flex items-center justify-between gap-3"
         style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)' }}
@@ -918,8 +918,8 @@ function MemberEventExtra({
           }
         </button>
       </div>
-      {echoGenError && echoGenErrorSection === variant && (
-        <p className="text-xs" style={{ color: '#f87171' }}>{echoGenError}</p>
+      {pulseGenError && pulseGenErrorSection === variant && (
+        <p className="text-xs" style={{ color: '#f87171' }}>{pulseGenError}</p>
       )}
 
       {isEmbed && previewEmbed && embed ? (
@@ -978,16 +978,16 @@ function MemberEventExtra({
   )
 }
 
-// ─── EchoContentExtra ────────────────────────────────────────────────────────
-// Shared body for the Rules and Onboarding cards — Echo generated content posted
+// ─── PulseContentExtra ────────────────────────────────────────────────────────
+// Shared body for the Rules and Onboarding cards — Pulse generated content posted
 // to a channel as an embed. Mirrors the Welcome/Goodbye card layout.
 
-function EchoContentExtra({
+function PulseContentExtra({
   section, genLabel, mono,
   channels, channelId, onChannelChange,
   title, onTitleChange, content, onContentChange,
   accentHex, generatingSection, onGenerate,
-  echoGenError, echoGenErrorSection,
+  pulseGenError, pulseGenErrorSection,
   applying, applyResult, applyError, onRepost,
 }: {
   section: string
@@ -1003,8 +1003,8 @@ function EchoContentExtra({
   accentHex: string
   generatingSection: string | null
   onGenerate: () => void
-  echoGenError: string | null
-  echoGenErrorSection: string | null
+  pulseGenError: string | null
+  pulseGenErrorSection: string | null
   applying: boolean
   applyResult: 'success' | 'error' | null
   applyError: string
@@ -1026,14 +1026,14 @@ function EchoContentExtra({
         </select>
       </div>
 
-      {/* Echo generate */}
+      {/* Pulse generate */}
       <div
         className="rounded-lg border p-3 flex items-center justify-between gap-3"
         style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)' }}
       >
         <div className="flex items-center gap-2 min-w-0">
           <Sparkles size={12} style={{ color: 'var(--p-1)' }} />
-          <p className="text-xs font-medium text-foreground truncate">Generate {genLabel} with Echo</p>
+          <p className="text-xs font-medium text-foreground truncate">Generate {genLabel} with Pulse</p>
         </div>
         <button
           type="button"
@@ -1048,8 +1048,8 @@ function EchoContentExtra({
           }
         </button>
       </div>
-      {echoGenError && echoGenErrorSection === section && (
-        <p className="text-xs" style={{ color: '#f87171' }}>{echoGenError}</p>
+      {pulseGenError && pulseGenErrorSection === section && (
+        <p className="text-xs" style={{ color: '#f87171' }}>{pulseGenError}</p>
       )}
 
       <AppEmbedPreview title={title} content={content} color={accentHex} />
@@ -1105,21 +1105,21 @@ function EchoContentExtra({
   )
 }
 
-// ─── EchoEmptyState ──────────────────────────────────────────────────────────
+// ─── PulseEmptyState ──────────────────────────────────────────────────────────
 
-function EchoEmptyState({
+function PulseEmptyState({
   icon, iconBg, iconColor, title, description, section,
-  generatingSection, echoGenError, echoGenErrorSection, onGenerate,
+  generatingSection, pulseGenError, pulseGenErrorSection, onGenerate,
 }: {
   icon: ReactNode; iconBg: string; iconColor: string
   title: string; description: string; section: string
   generatingSection: string | null
-  echoGenError: string | null
-  echoGenErrorSection: string | null
+  pulseGenError: string | null
+  pulseGenErrorSection: string | null
   onGenerate: () => void
 }) {
   const isGenerating = generatingSection === section
-  const hasError = echoGenError !== null && echoGenErrorSection === section
+  const hasError = pulseGenError !== null && pulseGenErrorSection === section
 
   return (
     <div className="rounded-xl border p-5" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
@@ -1131,7 +1131,7 @@ function EchoEmptyState({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="font-semibold text-foreground">{title}</h2>
-              <span className="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide leading-none" style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))', color: '#fff' }}>Echo</span>
+              <span className="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide leading-none" style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))', color: '#fff' }}>Pulse</span>
             </div>
             <p className="text-sm text-subtle">{description}</p>
           </div>
@@ -1151,7 +1151,7 @@ function EchoEmptyState({
       </div>
       {hasError && (
         <div className="mt-3 flex items-center gap-2 text-xs" style={{ color: '#f87171' }}>
-          <AlertCircle size={12} /> {echoGenError}
+          <AlertCircle size={12} /> {pulseGenError}
         </div>
       )}
     </div>

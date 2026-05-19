@@ -1210,9 +1210,26 @@ export async function postChannelMessage(
   return { ok: false, error: body.message ?? `Discord API error ${res.status}` }
 }
 
+/**
+ * Discord embed payload. Mirrors the API shape; only the fields we actually
+ * use are typed. Callers can pass any subset.
+ */
+export type DiscordEmbedPayload = {
+  color?: number
+  title?: string
+  description?: string
+  url?: string
+  timestamp?: string
+  author?: { name: string; icon_url?: string; url?: string }
+  thumbnail?: { url: string }
+  image?: { url: string }
+  footer?: { text: string; icon_url?: string }
+  fields?: { name: string; value: string; inline?: boolean }[]
+}
+
 export async function postChannelEmbed(
   channelId: string,
-  embed: { color: number; title: string; description: string },
+  embed: DiscordEmbedPayload,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
   const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
@@ -1226,6 +1243,121 @@ export async function postChannelEmbed(
   if (res.ok) return { ok: true }
   const body = await res.json().catch(() => ({})) as { message?: string }
   return { ok: false, error: body.message ?? `Discord API error ${res.status}` }
+}
+
+// ─── Discord Components V2 ──────────────────────────────────────────────────
+//
+// Sets the IS_COMPONENTS_V2 message flag (1 << 15) so Discord renders the
+// `components` field with the rich Container/Section/TextDisplay set rather
+// than the legacy embed pipeline. V2 messages CANNOT carry `content`,
+// `embeds`, `stickers` or `poll` — anything in those fields is rejected.
+
+const IS_COMPONENTS_V2_FLAG = 1 << 15 // 32768
+
+export type V2TextDisplay = { type: 10; content: string }
+export type V2Separator = { type: 14; divider?: boolean; spacing?: 1 | 2 }
+export type V2Thumbnail = { type: 11; media: { url: string }; description?: string; spoiler?: boolean }
+export type V2Button =
+  | { type: 2; style: 1 | 2 | 3 | 4; label: string; custom_id: string; disabled?: boolean }
+  | { type: 2; style: 5; label: string; url: string; disabled?: boolean }
+export type V2Section = {
+  type: 9
+  components: V2TextDisplay[]
+  accessory: V2Thumbnail | V2Button
+}
+export type V2ActionRow = { type: 1; components: V2Button[] }
+export type V2Container = {
+  type: 17
+  accent_color?: number
+  spoiler?: boolean
+  components: (V2TextDisplay | V2Separator | V2Section | V2ActionRow)[]
+}
+export type V2TopLevelComponent = V2Container | V2TextDisplay | V2Separator | V2Section | V2ActionRow
+
+/** Inline file uploaded alongside the message. Reference inside components
+ *  via `attachment://<filename>` in any media.url field. */
+export type V2Attachment = { filename: string; data: Buffer; contentType?: string }
+
+export async function postChannelComponents(
+  channelId: string,
+  components: V2TopLevelComponent[],
+  attachments?: V2Attachment[],
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+
+  const hasFiles = attachments && attachments.length > 0
+  const payload: Record<string, unknown> = {
+    flags: IS_COMPONENTS_V2_FLAG,
+    components,
+  }
+  if (hasFiles) {
+    // Discord requires an `attachments` manifest pairing each file id with
+    // its filename so the API can resolve `attachment://filename` URLs
+    // embedded in component media fields.
+    payload.attachments = attachments!.map((a, i) => ({ id: i, filename: a.filename }))
+  }
+
+  const headers: Record<string, string> = {
+    Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+  }
+
+  let body: string | FormData
+  if (hasFiles) {
+    const form = new FormData()
+    form.append('payload_json', JSON.stringify(payload))
+    attachments!.forEach((a, i) => {
+      const blob = new Blob([new Uint8Array(a.data)], { type: a.contentType ?? 'application/octet-stream' })
+      form.append(`files[${i}]`, blob, a.filename)
+    })
+    body = form
+    // Intentionally NOT setting Content-Type — FormData adds the multipart
+    // boundary itself; overriding strips it and Discord rejects the upload.
+  } else {
+    body = JSON.stringify(payload)
+    headers['Content-Type'] = 'application/json'
+  }
+
+  const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+    method: 'POST',
+    headers,
+    body,
+  })
+  if (res.ok) return { ok: true }
+  const errBody = await res.json().catch(() => ({})) as { message?: string }
+  return { ok: false, error: errBody.message ?? `Discord API error ${res.status}` }
+}
+
+let cachedBotAvatarUrl: string | null | undefined = undefined
+
+/**
+ * URL to the bot's own Discord avatar. Used as the author icon in embeds.
+ * Cached after the first lookup; returns null when the bot token is missing
+ * or the bot has no custom avatar set.
+ */
+export async function getBotAvatarUrl(): Promise<string | null> {
+  if (cachedBotAvatarUrl !== undefined) return cachedBotAvatarUrl
+  if (!process.env.DISCORD_BOT_TOKEN) {
+    cachedBotAvatarUrl = null
+    return null
+  }
+  try {
+    const res = await fetch(`${DISCORD_API}/users/@me`, {
+      headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+      cache: 'no-store',
+    })
+    if (!res.ok) {
+      cachedBotAvatarUrl = null
+      return null
+    }
+    const me: { id: string; avatar: string | null } = await res.json()
+    cachedBotAvatarUrl = me.avatar
+      ? `https://cdn.discordapp.com/avatars/${me.id}/${me.avatar}.png?size=128`
+      : null
+    return cachedBotAvatarUrl
+  } catch {
+    cachedBotAvatarUrl = null
+    return null
+  }
 }
 
 export type ChannelCreate = {

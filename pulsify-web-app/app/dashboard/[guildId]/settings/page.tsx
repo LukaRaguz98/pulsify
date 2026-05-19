@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
-import { useParams, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { usePreferences } from '@/components/ThemeProvider'
 import { THEMES } from '@/lib/themes'
 import { SectionCard } from '@/components/ui/section-card'
@@ -18,71 +18,17 @@ import {
   type NotificationType,
 } from '@/lib/notifications'
 import {
-  Check, Moon, Sun, Maximize2, Minimize2, Zap, ZapOff, Palette, Sparkles, Crosshair,
-  Server, Type, Aperture, Bell, Gauge,
+  Check, Moon, Sun, Maximize2, Minimize2, Zap, ZapOff, Palette, Crosshair,
+  Aperture, Bell, Gauge,
 } from 'lucide-react'
 
-// ─── Echo preferences ─────────────────────────────────────────────────────────
-
-type EchoPrefs = {
-  description: string
-  tone: string
-  customTone: string
-  language: string
-  customLanguage: string
-  embedColor: string
-  serverSize: 'small' | 'medium' | 'large'
-  contentDepth: 'brief' | 'standard' | 'detailed'
-  includeEmojis: boolean
-}
-
-const DEFAULT_ECHO_PREFS: EchoPrefs = {
-  description: '',
-  tone: 'friendly',
-  customTone: '',
-  language: 'english',
-  customLanguage: '',
-  embedColor: '#8b5cf6',
-  serverSize: 'medium',
-  contentDepth: 'standard',
-  includeEmojis: true,
-}
-
-const ECHO_PREFS_KEY = (guildId: string) => `pulsify:echo-prefs:${guildId}`
-
-const ECHO_TONES = [
-  { id: 'friendly',     label: 'Friendly',     emoji: '😊' },
-  { id: 'professional', label: 'Professional', emoji: '💼' },
-  { id: 'gaming',       label: 'Gaming',       emoji: '🎮' },
-  { id: 'community',    label: 'Community',    emoji: '🤝' },
-  { id: 'other',        label: 'Other…',       emoji: '✏️' },
-]
-
-const ECHO_LANGUAGES = [
-  { id: 'english', label: 'English',  flag: '🇬🇧' },
-  { id: 'spanish', label: 'Español',  flag: '🇪🇸' },
-  { id: 'french',  label: 'Français', flag: '🇫🇷' },
-  { id: 'german',  label: 'Deutsch',  flag: '🇩🇪' },
-  { id: 'italian', label: 'Italiano', flag: '🇮🇹' },
-  { id: 'custom',  label: 'Other…',   flag: '✏️'  },
-]
-
-const ECHO_CONTENT_DEPTHS = [
-  { id: 'brief'    as const, label: 'Brief',    sub: 'Short & punchy',      icon: '⚡' },
-  { id: 'standard' as const, label: 'Standard', sub: 'Balanced',            icon: '✦' },
-  { id: 'detailed' as const, label: 'Detailed', sub: 'Thorough & complete', icon: '📖' },
-]
-
-const ECHO_SERVER_SIZES = [
-  { id: 'small'  as const, label: 'Cozy',     sub: '< 100',  icon: '🌱' },
-  { id: 'medium' as const, label: 'Growing',  sub: '100–1k', icon: '🌿' },
-  { id: 'large'  as const, label: 'Thriving', sub: '1k+',    icon: '🌳' },
-]
-
-
 // ─── Subtabs ──────────────────────────────────────────────────────────────────
+//
+// Pulse Assistant lives on its own page now (`/dashboard/[guildId]/Pulse`) — see
+// the Settings group in `GuildSidebar.tsx`. This page focuses on dashboard-level
+// preferences (look & feel, notifications).
 
-type TabId = 'appearance' | 'echo' | 'notifications'
+type TabId = 'appearance' | 'notifications'
 
 const TABS: { id: TabId; label: string; description: string; icon: typeof Palette }[] = [
   {
@@ -90,12 +36,6 @@ const TABS: { id: TabId; label: string; description: string; icon: typeof Palett
     label: 'App Design',
     description: 'Customise the look and feel of your Pulsify dashboard.',
     icon: Palette,
-  },
-  {
-    id: 'echo',
-    label: 'Echo Assistant',
-    description: 'Configure what Echo knows about your server when generating content.',
-    icon: Sparkles,
   },
   {
     id: 'notifications',
@@ -114,21 +54,17 @@ export default function SettingsPage() {
     setFontSize, setAmbientGlow, setPingIndicator,
   } = usePreferences()
 
-  const params = useParams()
-  const guildId = params.guildId as string
-
   // Honour ?tab=… on first mount so deep links from the bell dropdown's
   // gear icon land on the right subtab. Initializer reads the URL once;
   // subsequent tab switches stay in local state without rewriting the URL.
   const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState<TabId>(() => {
     const requested = searchParams.get('tab')
-    if (requested === 'appearance' || requested === 'echo' || requested === 'notifications') {
+    if (requested === 'appearance' || requested === 'notifications') {
       return requested
     }
     return 'appearance'
   })
-  const [echoPrefs, setEchoPrefs] = useState<EchoPrefs>(DEFAULT_ECHO_PREFS)
 
   // ── App Design snapshot ─────────────────────────────────────────────────
   // App prefs persist live via ThemeProvider, but we still track a snapshot
@@ -171,45 +107,6 @@ export default function SettingsPage() {
     // commits the current values as the new baseline so the dirty indicator
     // clears and Reset starts comparing from here on.
     setAppSnapshot(appCurrent)
-  }
-
-  // ── Echo snapshot ──────────────────────────────────────────────────────
-  const [echoSnapshot, setEchoSnapshot] = useState<EchoPrefs>(DEFAULT_ECHO_PREFS)
-  const echoChangedCount = useMemo(() => {
-    let n = 0
-    for (const k of Object.keys(echoSnapshot) as (keyof EchoPrefs)[]) {
-      if (echoSnapshot[k] !== echoPrefs[k]) n += 1
-    }
-    return n
-  }, [echoSnapshot, echoPrefs])
-  const echoDirty = echoChangedCount > 0
-
-  function updatePref<K extends keyof EchoPrefs>(key: K, value: EchoPrefs[K]) {
-    setEchoPrefs(prev => ({ ...prev, [key]: value }))
-  }
-
-  useEffect(() => {
-    if (!guildId) return
-    try {
-      const saved = localStorage.getItem(ECHO_PREFS_KEY(guildId))
-      if (saved) {
-        const parsed = { ...DEFAULT_ECHO_PREFS, ...JSON.parse(saved) as EchoPrefs }
-        setEchoPrefs(parsed)
-        setEchoSnapshot(parsed)
-      }
-    } catch {}
-  }, [guildId])
-
-  function handleResetEchoPrefs() {
-    setEchoPrefs(echoSnapshot)
-  }
-
-  function handleSaveEchoPrefs() {
-    if (!guildId) return
-    try {
-      localStorage.setItem(ECHO_PREFS_KEY(guildId), JSON.stringify(echoPrefs))
-      setEchoSnapshot(echoPrefs)
-    } catch {}
   }
 
   // ── Notification prefs snapshot ────────────────────────────────────────
@@ -363,7 +260,7 @@ export default function SettingsPage() {
           {/* Accent Colour — full-width below Color Scheme. Wider card lets
               the 7 presets + Custom sit in a single row with breathing space. */}
           <SectionCard title="Accent Colour" description="Choose an accent colour for the interface.">
-            {/* Hex badge mirrors the Echo Assistant > Embed Color row.
+            {/* Hex badge mirrors the Pulse Assistant > Embed Color row.
                 Reflects custom override if set, otherwise the active preset. */}
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-semibold text-foreground">Accent Color</p>
@@ -688,332 +585,6 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* ─── Echo Assistant tab ─────────────────────────────────────────────── */}
-      {activeTab === 'echo' && (
-        <div className="space-y-8">
-          {/* ── Server Context ───────────────────────────────────────────── */}
-          <CategorySection
-            icon={<Server size={14} />}
-            title="Server Context"
-            description="What Echo knows about your server when generating content."
-          >
-          {/* Server Profile */}
-          <SectionCard
-            title="Server Profile"
-            description="Tell Echo what your server is about. Used as context for every generation."
-          >
-            <textarea
-              value={echoPrefs.description}
-              onChange={(e) => updatePref('description', e.target.value)}
-              rows={3}
-              placeholder="e.g. A competitive gaming community focused on Valorant and CS2. We host weekly tournaments and welcome players of all skill levels."
-              className="w-full rounded-lg border px-3.5 py-2.5 text-sm resize-none outline-none transition-colors placeholder:text-subtle"
-              style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--p-1)' }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--line-strong)' }}
-            />
-          </SectionCard>
-          </CategorySection>
-
-          {/* ── Writing Style ────────────────────────────────────────────── */}
-          <CategorySection
-            icon={<Type size={14} />}
-            title="Writing Style"
-            description="Tone, language and how much detail Echo produces."
-          >
-          {/* Voice & Language */}
-          <SectionCard
-            title="Voice & Language"
-            description="Set the tone and language Echo writes in."
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-semibold text-foreground mb-2">Tone & Style</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {ECHO_TONES.map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => updatePref('tone', t.id)}
-                      className="flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all"
-                      style={{
-                        borderColor: echoPrefs.tone === t.id ? 'var(--p-1)' : 'var(--line-strong)',
-                        background:  echoPrefs.tone === t.id ? 'var(--p-soft)' : 'var(--bg-2)',
-                        color:       echoPrefs.tone === t.id ? 'var(--p-1)' : 'var(--text-2)',
-                      }}
-                    >
-                      <span>{t.emoji}</span>{t.label}
-                    </button>
-                  ))}
-                </div>
-                <input
-                  type="text"
-                  value={echoPrefs.customTone}
-                  onChange={(e) => updatePref('customTone', e.target.value)}
-                  placeholder="e.g. Anime, Chill, Corporate…"
-                  disabled={echoPrefs.tone !== 'other'}
-                  className="mt-2 w-full rounded-lg border px-3 py-1.5 text-xs outline-none transition-all"
-                  style={{
-                    background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)',
-                    opacity: echoPrefs.tone === 'other' ? 1 : 0.35,
-                    cursor:  echoPrefs.tone === 'other' ? 'text' : 'not-allowed',
-                  }}
-                  onFocus={(e) => { if (echoPrefs.tone === 'other') e.currentTarget.style.borderColor = 'var(--p-1)' }}
-                  onBlur={(e)  => { e.currentTarget.style.borderColor = 'var(--line-strong)' }}
-                />
-              </div>
-
-              <div>
-                <p className="text-sm font-semibold text-foreground mb-2">Language</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {ECHO_LANGUAGES.map((l) => (
-                    <button
-                      key={l.id}
-                      onClick={() => updatePref('language', l.id)}
-                      className="flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all"
-                      style={{
-                        borderColor: echoPrefs.language === l.id ? 'var(--p-1)' : 'var(--line-strong)',
-                        background:  echoPrefs.language === l.id ? 'var(--p-soft)' : 'var(--bg-2)',
-                        color:       echoPrefs.language === l.id ? 'var(--p-1)' : 'var(--text-2)',
-                      }}
-                    >
-                      <span>{l.flag}</span>{l.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="mt-2 space-y-1">
-                  <input
-                    type="text"
-                    value={echoPrefs.customLanguage}
-                    onChange={(e) => updatePref('customLanguage', e.target.value)}
-                    placeholder="e.g. Croatian, Korean…"
-                    disabled={echoPrefs.language !== 'custom'}
-                    className="w-full rounded-lg border px-3 py-1.5 text-xs outline-none transition-all"
-                    style={{
-                      background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)',
-                      opacity: echoPrefs.language === 'custom' ? 1 : 0.35,
-                      cursor:  echoPrefs.language === 'custom' ? 'text' : 'not-allowed',
-                    }}
-                    onFocus={(e) => { if (echoPrefs.language === 'custom') e.currentTarget.style.borderColor = 'var(--p-1)' }}
-                    onBlur={(e)  => { e.currentTarget.style.borderColor = 'var(--line-strong)' }}
-                  />
-                  {echoPrefs.language === 'custom' && (
-                    <p className="text-[10px]" style={{ color: 'var(--text-3)' }}>
-                      Results in less common languages may be inconsistent — review before applying.
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </SectionCard>
-
-          {/* Generation Style */}
-          <SectionCard
-            title="Generation Style"
-            description="Tune how much detail Echo produces and who it's writing for."
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-semibold text-foreground mb-2">Content Depth</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {ECHO_CONTENT_DEPTHS.map((d) => {
-                    const active = echoPrefs.contentDepth === d.id
-                    return (
-                      <button
-                        key={d.id}
-                        onClick={() => updatePref('contentDepth', d.id)}
-                        className="relative flex flex-col items-center gap-1 rounded-xl border p-2.5 text-center transition-all duration-150"
-                        style={{
-                          background:  active ? 'var(--p-soft)' : 'var(--bg-2)',
-                          borderColor: active ? 'var(--p-1)' : 'var(--line-strong)',
-                        }}
-                      >
-                        <span className="text-lg leading-none">{d.icon}</span>
-                        <span className="text-xs font-semibold text-foreground">{d.label}</span>
-                        <span className="text-[10px] text-foreground opacity-60">{d.sub}</span>
-                        {active && (
-                          <span className="absolute top-1.5 right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full" style={{ background: 'var(--p-1)' }}>
-                            <Check size={8} strokeWidth={3} color="white" />
-                          </span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <p className="text-sm font-semibold text-foreground mb-2">Server Size</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {ECHO_SERVER_SIZES.map((s) => {
-                    const active = echoPrefs.serverSize === s.id
-                    return (
-                      <button
-                        key={s.id}
-                        onClick={() => updatePref('serverSize', s.id)}
-                        className="relative flex flex-col items-center gap-1 rounded-xl border p-2.5 text-center transition-all duration-150"
-                        style={{
-                          background:  active ? 'var(--p-soft)' : 'var(--bg-2)',
-                          borderColor: active ? 'var(--p-1)' : 'var(--line-strong)',
-                        }}
-                      >
-                        <span className="text-lg leading-none">{s.icon}</span>
-                        <span className="text-xs font-semibold text-foreground">{s.label}</span>
-                        <span className="text-[10px] text-foreground opacity-60">{s.sub}</span>
-                        {active && (
-                          <span className="absolute top-1.5 right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full" style={{ background: 'var(--p-1)' }}>
-                            <Check size={8} strokeWidth={3} color="white" />
-                          </span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Emojis */}
-            <div
-              className="mt-4 flex items-center justify-between rounded-xl border p-4"
-              style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)' }}
-            >
-              <div>
-                <p className="text-sm font-semibold text-foreground">Emojis in Generated Content</p>
-                <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
-                  {echoPrefs.includeEmojis
-                    ? 'Emojis will be added throughout generated content'
-                    : 'Generated content will use plain text only'}
-                </p>
-              </div>
-              <button
-                onClick={() => updatePref('includeEmojis', !echoPrefs.includeEmojis)}
-                className="relative shrink-0 h-6 w-11 rounded-full transition-colors duration-200"
-                style={{ background: echoPrefs.includeEmojis ? 'var(--p-1)' : 'var(--line-strong)' }}
-                aria-checked={echoPrefs.includeEmojis}
-                role="switch"
-              >
-                <span
-                  className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
-                  style={{ transform: echoPrefs.includeEmojis ? 'translateX(20px)' : 'translateX(0)' }}
-                />
-              </button>
-            </div>
-          </SectionCard>
-          </CategorySection>
-
-          {/* ── Discord Output ───────────────────────────────────────────── */}
-          <CategorySection
-            icon={<Palette size={14} />}
-            title="Discord Output"
-            description="How Echo's embeds appear when posted to Discord."
-          >
-          {/* Embed Appearance */}
-          <SectionCard
-            title="Embed Appearance"
-            description="The accent colour applied to embeds Echo posts to Discord."
-          >
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-semibold text-foreground">Embed Color</p>
-              <span className="font-mono text-xs rounded px-1.5 py-0.5" style={{ background: 'var(--bg-2)', color: 'var(--text-3)', border: '1px solid var(--line-strong)' }}>
-                {echoPrefs.embedColor}
-              </span>
-            </div>
-            {/* Identical layout to App Design › Accent Colour so the two pickers
-                feel like one component. THEMES is the shared palette source. */}
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-7">
-              {THEMES.map((t) => {
-                const active = echoPrefs.embedColor.toLowerCase() === t.accent.toLowerCase()
-                return (
-                  <button
-                    key={t.id}
-                    onClick={() => updatePref('embedColor', t.accent)}
-                    title={t.name}
-                    className="group relative flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all duration-150"
-                    style={{
-                      background: active ? `${t.accent}14` : 'var(--bg-2)',
-                      borderColor: active ? t.accent : 'var(--line-strong)',
-                      boxShadow: active ? `0 0 0 1px ${t.accent}40` : 'none',
-                    }}
-                  >
-                    <div
-                      className="h-8 w-8 rounded-full"
-                      style={{
-                        background: `linear-gradient(135deg, ${t.accent}cc, ${t.accent})`,
-                        boxShadow: active ? `0 4px 12px -4px ${t.accent}80` : `0 2px 6px -4px ${t.accent}60`,
-                      }}
-                    />
-                    {active && (
-                      <span className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full" style={{ background: t.accent }}>
-                        <Check size={9} strokeWidth={3} color="white" />
-                      </span>
-                    )}
-                    <p className="text-xs font-medium text-foreground leading-none">{t.name}</p>
-                  </button>
-                )
-              })}
-
-              {/* Custom — active when the current embed color is outside the
-                  THEMES palette. Mirrors the App Design custom card. */}
-              {(() => {
-                const presetHits = THEMES.some(
-                  (t) => t.accent.toLowerCase() === echoPrefs.embedColor.toLowerCase(),
-                )
-                const customActive = !presetHits
-                const display = echoPrefs.embedColor
-                return (
-                  <label
-                    title="Custom color"
-                    aria-label="Pick a custom embed color"
-                    className="group relative flex cursor-pointer flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all duration-150"
-                    style={{
-                      background: customActive ? `${display}14` : 'var(--bg-2)',
-                      borderColor: customActive ? display : 'var(--line-strong)',
-                      boxShadow: customActive ? `0 0 0 1px ${display}40` : 'none',
-                    }}
-                  >
-                    <div
-                      className="h-8 w-8 rounded-full"
-                      style={{
-                        background: customActive
-                          ? `linear-gradient(135deg, ${display}cc, ${display})`
-                          : 'conic-gradient(from 0deg, #f43f5e, #f59e0b, #84cc16, #06b6d4, #6366f1, #ec4899, #f43f5e)',
-                        boxShadow: customActive
-                          ? `0 4px 12px -4px ${display}80`
-                          : '0 2px 6px -4px rgba(255,255,255,0.15)',
-                      }}
-                    />
-                    {customActive && (
-                      <span className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full" style={{ background: display }}>
-                        <Check size={9} strokeWidth={3} color="white" />
-                      </span>
-                    )}
-                    <p className="text-xs font-medium text-foreground leading-none">Custom</p>
-                    <input
-                      type="color"
-                      value={display}
-                      onChange={(e) => updatePref('embedColor', e.target.value)}
-                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    />
-                  </label>
-                )
-              })()}
-            </div>
-          </SectionCard>
-          </CategorySection>
-
-          <SaveBar
-            dirty={echoDirty}
-            changedCount={echoChangedCount}
-            saveLabel="Save Preferences"
-            cleanText="All Echo preferences saved."
-            dirtyHintText="review and save to keep these preferences."
-            confirmTitle="Save Echo preferences?"
-            confirmDescription="Echo will use these settings for every generation in this server."
-            confirmLabel="Save Preferences"
-            onReset={handleResetEchoPrefs}
-            onSave={handleSaveEchoPrefs}
-          />
-        </div>
-      )}
 
       {/* ─── Notifications tab ──────────────────────────────────────────────── */}
       {activeTab === 'notifications' && (

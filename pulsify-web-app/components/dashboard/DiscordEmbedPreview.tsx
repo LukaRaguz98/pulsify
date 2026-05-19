@@ -41,10 +41,24 @@ function renderMd(text: string, lineIdx: number) {
   return parts
 }
 
+// Heading-aware line renderer — mirrors how Discord renders V2 TextDisplay
+// markdown: `#`/`##`/`###` headings, `-#` subtext, blank lines as spacing.
 function renderContent(text: string) {
-  return text.split('\n').flatMap((line, i, arr) => {
-    const nodes = renderMd(line, i)
-    return i < arr.length - 1 ? [...nodes, <br key={`br-${i}`} />] : nodes
+  return text.split('\n').map((line, i) => {
+    if (line.startsWith('### ')) {
+      return <div key={i} style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text)', margin: '6px 0 2px', lineHeight: 1.3 }}>{renderMd(line.slice(4), i)}</div>
+    }
+    if (line.startsWith('## ')) {
+      return <div key={i} style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)', margin: '8px 0 3px', lineHeight: 1.3 }}>{renderMd(line.slice(3), i)}</div>
+    }
+    if (line.startsWith('# ')) {
+      return <div key={i} style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', margin: '8px 0 4px', lineHeight: 1.3 }}>{renderMd(line.slice(2), i)}</div>
+    }
+    if (line.startsWith('-# ')) {
+      return <div key={i} style={{ fontSize: '12px', color: 'var(--text-3)', margin: '2px 0', lineHeight: 1.3 }}>{renderMd(line.slice(3), i)}</div>
+    }
+    if (line.trim() === '') return <div key={i} style={{ height: '8px' }} />
+    return <div key={i} style={{ lineHeight: '1.45' }}>{renderMd(line, i)}</div>
   })
 }
 
@@ -91,61 +105,57 @@ export function DiscordEmbedPreview({ embed, serverName }: Props) {
             <span style={{ color: 'var(--text-3)', fontSize: '12px' }}>Today at {timeStr}</span>
           </div>
 
-          {/* Embed card */}
+          {/* Components V2 container — rounded card with a full-height left
+              accent stripe. Mirrors the bot's V2 builder: title → `#` heading,
+              fields → stacked bold-label blocks, banner → media gallery,
+              footer → subtext. No inline-field grid (V2 stacks them). */}
           <div style={{
             background: 'var(--bg-2)',
             borderLeft: `4px solid ${embed.color}`,
-            borderRadius: '4px',
+            borderRadius: '8px',
             overflow: 'hidden',
             maxWidth: '432px',
+            padding: '12px 16px',
           }}>
-            {/* Text content */}
-            <div style={{ padding: '8px 16px 0 12px' }}>
-              {/* Title */}
-              <p style={{
-                color: 'var(--text)', fontWeight: '600',
-                fontSize: '15px', margin: '8px 0 6px', lineHeight: '1.3',
+            {/* Title — H1 heading */}
+            {resolve(embed.title) && (
+              <div style={{
+                color: 'var(--text)', fontWeight: '700',
+                fontSize: '20px', margin: '0 0 6px', lineHeight: '1.3',
               }}>
                 {resolve(embed.title)}
-              </p>
+              </div>
+            )}
 
-              {/* Description */}
-              <p style={{
-                color: 'var(--text-2)', fontSize: '13.5px',
+            {/* Description */}
+            {resolve(embed.description) && (
+              <div style={{
+                color: 'var(--text-2)', fontSize: '14px',
                 margin: '0 0 10px', lineHeight: '1.45',
               }}>
                 {renderContent(resolve(embed.description))}
-              </p>
+              </div>
+            )}
 
-              {/* Fields */}
-              {embed.fields.length > 0 && (() => {
-                const inlineCount = Math.min(embed.fields.filter(f => f.inline).length, 3)
-                const cols = inlineCount > 1 ? inlineCount : 1
-                return (
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: `repeat(${cols}, 1fr)`,
-                  gap: '6px 8px',
-                  marginBottom: '10px',
-                }}>
-                  {embed.fields.map((field, i) => (
-                    <div key={i} style={{ gridColumn: field.inline ? 'span 1' : `1 / -1` }}>
-                      <p style={{ color: 'var(--text)', fontSize: '12px', fontWeight: '600', margin: '0 0 2px' }}>
-                        {field.name}
-                      </p>
-                      <p style={{ color: 'var(--text-2)', fontSize: '12px', margin: 0, lineHeight: '1.35' }}>
-                        {renderContent(field.value)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-                )
-              })()}
-            </div>
+            {/* Fields — stacked bold-label blocks, one per row */}
+            {embed.fields.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '10px' }}>
+                {embed.fields.map((field, i) => (
+                  <div key={i}>
+                    <p style={{ color: 'var(--text)', fontSize: '14px', fontWeight: '700', margin: '0 0 2px' }}>
+                      {resolve(field.name)}
+                    </p>
+                    <p style={{ color: 'var(--text-2)', fontSize: '14px', margin: 0, lineHeight: '1.45' }}>
+                      {renderContent(resolve(field.value))}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
 
-            {/* Image */}
+            {/* Banner — media gallery image, full width with rounded corners */}
             {embed.banner_url && (
-              <div style={{ padding: '4px 8px 8px' }}>
+              <div style={{ marginTop: '4px' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={embed.banner_url}
@@ -153,28 +163,19 @@ export function DiscordEmbedPreview({ embed, serverName }: Props) {
                   style={{
                     width: '100%', display: 'block',
                     aspectRatio: '3 / 1', objectFit: 'cover',
-                    borderRadius: '4px',
+                    borderRadius: '8px',
                   }}
                 />
               </div>
             )}
 
-            {/* Footer */}
+            {/* Footer — subtext (`-#`) style, no avatar chip */}
             {embed.footer_text && (
               <div style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '4px 12px 10px',
-                borderTop: embed.banner_url ? 'none' : '1px solid var(--line-strong)',
+                color: 'var(--text-3)', fontSize: '12px',
+                marginTop: '10px', lineHeight: '1.3',
               }}>
-                <div style={{
-                  width: '16px', height: '16px', borderRadius: '50%', flexShrink: 0,
-                  background: 'var(--p-1)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#fff', fontSize: '8px', fontWeight: '700',
-                }}>P</div>
-                <span style={{ color: 'var(--text-3)', fontSize: '11.5px' }}>
-                  {resolve(embed.footer_text)}
-                </span>
+                {resolve(embed.footer_text)}
               </div>
             )}
           </div>
