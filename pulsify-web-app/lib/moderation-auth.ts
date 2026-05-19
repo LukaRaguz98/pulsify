@@ -1,4 +1,5 @@
 import { createClient as createServerSupabase } from '@/lib/supabase-server'
+import { getValidDiscordToken } from '@/lib/discord-session'
 import {
   fetchUserGuilds,
   hasManageGuild,
@@ -29,8 +30,14 @@ export async function authorizeGuildModerator(guildId: string): Promise<AuthResu
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) return { ok: false, error: 'You must be signed in.' }
 
-  const token = session.provider_token
-  if (!token) return { ok: false, error: 'Your Discord session expired — please sign in again.' }
+  // getValidDiscordToken transparently refreshes via Discord's token endpoint
+  // when the access token is about to expire, so a multi-day dashboard session
+  // doesn't get booted out as soon as supabase rotates its own access token.
+  const token = await getValidDiscordToken({
+    access_token: session.provider_token,
+    refresh_token: session.provider_refresh_token,
+  })
+  if (!token) return { ok: false, error: 'Your Discord session expired — please reconnect Discord.' }
 
   let guilds: DiscordGuild[]
   try {

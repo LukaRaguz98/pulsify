@@ -11,6 +11,7 @@ import {
   CalendarDays,
   Zap,
   Shield,
+  ShieldAlert,
   Users,
   Hash,
   ChevronLeft,
@@ -108,7 +109,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
       title: 'Engagement',
       icon: <Sparkles size={16} />,
       items: [
-        { label: 'Automations', href: `${base}/automations`, icon: <Zap size={16} /> },
+        { label: 'Automations', href: `${base}/automations`, icon: <Zap size={16} />, badge: 'Pulse' },
       ],
     },
     {
@@ -116,6 +117,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
       icon: <ShieldCheck size={16} />,
       items: [
         { label: 'Moderation', href: `${base}/moderation`, icon: <Shield size={16} /> },
+        { label: 'Pulse Guard', href: `${base}/ai-moderation`, icon: <ShieldAlert size={16} />, badge: 'Pulse' },
       ],
     },
     {
@@ -123,6 +125,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
       icon: <Settings size={16} />,
       items: [
         { label: 'Preferences', href: `${base}/settings`, icon: <SlidersHorizontal size={16} /> },
+        { label: 'Pulse', href: `${base}/Pulse`, icon: <Sparkles size={16} /> },
       ],
     },
   ]

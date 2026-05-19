@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+import { getValidDiscordToken } from '@/lib/discord-session'
 import { fetchUserGuilds, isBotInGuild, hasManageGuild, DiscordFetchError } from '@/lib/discord'
 
 export async function GET() {
@@ -12,7 +13,10 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const providerToken = session.provider_token
+  const providerToken = await getValidDiscordToken({
+    access_token: session.provider_token,
+    refresh_token: session.provider_refresh_token,
+  })
   if (!providerToken) {
     return NextResponse.json({ error: 'No Discord token' }, { status: 401 })
   }

@@ -1,4 +1,4 @@
-require('dotenv').config();
+require("dotenv").config();
 
 const {
   Client,
@@ -8,17 +8,19 @@ const {
   SlashCommandBuilder,
   EmbedBuilder,
   PermissionFlagsBits,
+  MessageFlags,
   Events,
   AuditLogEvent,
-} = require('discord.js');
+} = require("discord.js");
 
-const { createClient } = require('@supabase/supabase-js');
-const { createAnalytics } = require('./analytics');
-const { recordNotification, fetchActor } = require('./notifications');
+const { createClient } = require("@supabase/supabase-js");
+const { createAnalytics } = require("./analytics");
+const { recordNotification, fetchActor } = require("./notifications");
+const { forwardMessageToPulseGuard } = require("./ai-moderation");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 );
 
 const analytics = createAnalytics(supabase);
@@ -46,7 +48,12 @@ const client = new Client({
  * Discord, so we skip the gateway-side write to avoid duplicates.
  */
 async function notifyIfNotBot(opts) {
-  const actor = await fetchActor(opts.guild, opts.auditType, opts.targetId, client.user?.id);
+  const actor = await fetchActor(
+    opts.guild,
+    opts.auditType,
+    opts.targetId,
+    client.user?.id,
+  );
   if (actor && actor.isBot) return;
   await recordNotification(supabase, {
     guildId: opts.guild.id,
@@ -64,45 +71,60 @@ async function notifyIfNotBot(opts) {
   });
 }
 
+/**
+ * Build a Components V2 container for a member welcome/goodbye embed.
+ *
+ * Mirrors the old EmbedBuilder layout but as V2: title → `#` heading,
+ * description → body, fields → bold label blocks, banner → MediaGallery,
+ * footer → subtext. `resolve` runs the {user}/{server} placeholder swap on
+ * every text field. Returns the raw container object — the caller sends it
+ * with the IS_COMPONENTS_V2 flag.
+ */
+function buildMemberV2Container(cfg, resolve, hasBanner) {
+  const colorInt = parseInt((cfg.color ?? "#6366f1").replace("#", ""), 16);
+  const components = [];
+
+  const title = resolve(cfg.title ?? "");
+  if (title) components.push({ type: 10, content: `# ${title}` });
+
+  const description = resolve(cfg.description ?? "");
+  if (description) components.push({ type: 10, content: description });
+
+  if (Array.isArray(cfg.fields) && cfg.fields.length > 0) {
+    const fieldText = cfg.fields
+      .filter((f) => f && (f.name || f.value))
+      .map((f) => `**${resolve(f.name ?? "")}**\n${resolve(f.value ?? "")}`)
+      .join("\n\n");
+    if (fieldText) components.push({ type: 10, content: fieldText });
+  }
+
+  // Banner — MediaGallery (type 12) referencing the attached banner.png.
+  if (hasBanner) {
+    components.push({
+      type: 12,
+      items: [{ media: { url: "attachment://banner.png" } }],
+    });
+  }
+
+  if (cfg.footer_text) {
+    components.push({ type: 10, content: `-# ${resolve(cfg.footer_text)}` });
+  }
+
+  return {
+    type: 17,
+    accent_color: isNaN(colorInt) ? 0x6366f1 : colorInt,
+    components,
+  };
+}
+
+// Only commands that bridge to the Pulsify web app. User-facing slash
+// commands (ping, stats, warn, etc.) were removed — moderators handle all
+// of that from the dashboard now. Keep `/sync` because it's the manual
+// trigger when the automatic `GuildCreate` sync gets missed.
 const commands = [
   new SlashCommandBuilder()
-    .setName('ping')
-    .setDescription('Check if Pulse bot is online'),
-
-  new SlashCommandBuilder()
-    .setName('stats')
-    .setDescription('Show server statistics'),
-
-  new SlashCommandBuilder()
-    .setName('warn')
-    .setDescription('Warn a member')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
-    .addUserOption((o) =>
-      o.setName('user').setDescription('The user to warn').setRequired(true)
-    )
-    .addStringOption((o) =>
-      o.setName('reason').setDescription('Reason for the warning').setRequired(true)
-    ),
-
-  new SlashCommandBuilder()
-    .setName('warnings')
-    .setDescription('View warnings for a member')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
-    .addUserOption((o) =>
-      o.setName('user').setDescription('The user to check').setRequired(true)
-    ),
-
-  new SlashCommandBuilder()
-    .setName('clearwarnings')
-    .setDescription('Clear all warnings for a member')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
-    .addUserOption((o) =>
-      o.setName('user').setDescription('The user to clear warnings for').setRequired(true)
-    ),
-
-  new SlashCommandBuilder()
-    .setName('sync')
-    .setDescription('Sync this server\'s data to the Pulse dashboard')
+    .setName("sync")
+    .setDescription("Sync this server's data to the Pulse dashboard")
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 ].map((c) => c.toJSON());
 
@@ -110,15 +132,29 @@ client.once(Events.ClientReady, async (readyClient) => {
   console.log(`[Pulse] Logged in as ${readyClient.user.tag}`);
 
   readyClient.user.setPresence({
-    activities: [{ name: 'Powered by Pulsify' }],
-    status: 'online',
+    activities: [{ name: "Powered by Pulsify" }],
+    status: "online",
   });
 
+  // Per-guild command registration: stale commands (ping/stats/warn/…) that
+  // were previously registered globally take up to an hour to disappear, so
+  // we wipe the global list AND register the minimal set per guild. Per-guild
+  // commands propagate in seconds.
   const rest = new REST().setToken(process.env.DISCORD_BOT_TOKEN);
-  await rest.put(Routes.applicationCommands(readyClient.user.id), { body: commands });
-  console.log('[Pulse] Slash commands registered.');
+  await rest.put(Routes.applicationCommands(readyClient.user.id), { body: [] });
+  console.log("[Pulse] Cleared global slash commands.");
 
   for (const guild of readyClient.guilds.cache.values()) {
+    await rest
+      .put(Routes.applicationGuildCommands(readyClient.user.id, guild.id), {
+        body: commands,
+      })
+      .catch((err) =>
+        console.warn(
+          `[Pulse] Failed to register commands for guild ${guild.id}:`,
+          err.message,
+        ),
+      );
     await syncGuild(guild);
 
     // Seed analytics with members already connected to voice channels.
@@ -129,7 +165,7 @@ client.once(Events.ClientReady, async (readyClient) => {
           vs.id,
           vs.member?.user?.username,
           vs.channelId,
-          vs.channel?.name
+          vs.channel?.name,
         );
       }
     }
@@ -137,30 +173,49 @@ client.once(Events.ClientReady, async (readyClient) => {
 
   // Remove stale synced_guilds entries for servers the bot is no longer in
   const currentIds = [...readyClient.guilds.cache.keys()];
-  const { data: stored } = await supabase.from('synced_guilds').select('guild_id');
+  const { data: stored } = await supabase
+    .from("synced_guilds")
+    .select("guild_id");
   const stale = (stored ?? []).filter((r) => !currentIds.includes(r.guild_id));
   if (stale.length > 0) {
     await supabase
-      .from('synced_guilds')
+      .from("synced_guilds")
       .delete()
-      .in('guild_id', stale.map((r) => r.guild_id));
-    console.log(`[Pulse] Removed ${stale.length} stale guild(s) from synced_guilds.`);
+      .in(
+        "guild_id",
+        stale.map((r) => r.guild_id),
+      );
+    console.log(
+      `[Pulse] Removed ${stale.length} stale guild(s) from synced_guilds.`,
+    );
   }
 });
 
 client.on(Events.GuildCreate, async (guild) => {
   console.log(`[Pulse] Joined guild: ${guild.name}`);
+  // Register commands per-guild so the new server gets them immediately.
+  const rest = new REST().setToken(process.env.DISCORD_BOT_TOKEN);
+  await rest
+    .put(Routes.applicationGuildCommands(client.user.id, guild.id), {
+      body: commands,
+    })
+    .catch((err) =>
+      console.warn(
+        `[Pulse] Failed to register commands for guild ${guild.id}:`,
+        err.message,
+      ),
+    );
   await syncGuild(guild);
 });
 
 client.on(Events.GuildDelete, async (guild) => {
   console.log(`[Pulse] Left/kicked from guild: ${guild.name} (${guild.id})`);
-  await supabase.from('synced_guilds').delete().eq('guild_id', guild.id);
+  await supabase.from("synced_guilds").delete().eq("guild_id", guild.id);
 });
 
 client.on(Events.GuildMemberAdd, async (member) => {
   analytics.track({
-    type: 'member_join',
+    type: "member_join",
     guildId: member.guild.id,
     userId: member.id,
     userName: member.user.username,
@@ -171,59 +226,53 @@ client.on(Events.GuildMemberAdd, async (member) => {
 
   if (settings?.welcome?.enabled && settings.welcome.channel_id) {
     try {
-      const channel = await member.guild.channels.fetch(settings.welcome.channel_id);
+      const channel = await member.guild.channels.fetch(
+        settings.welcome.channel_id,
+      );
       if (channel?.isTextBased()) {
         const resolve = (text) =>
-          text.replace(/\{user\}/g, member.toString()).replace(/\{server\}/g, member.guild.name);
+          text
+            .replace(/\{user\}/g, member.toString())
+            .replace(/\{server\}/g, member.guild.name);
 
-        if (settings.welcome.type === 'embed' && settings.welcome.embed) {
+        if (settings.welcome.type === "embed" && settings.welcome.embed) {
           const cfg = settings.welcome.embed;
-          const colorInt = parseInt((cfg.color ?? '#6366f1').replace('#', ''), 16);
-          const embed = new EmbedBuilder()
-            .setColor(isNaN(colorInt) ? 0x6366f1 : colorInt)
-            .setTitle(resolve(cfg.title ?? 'Welcome!'))
-            .setDescription(resolve(cfg.description ?? ''));
-
-          if (Array.isArray(cfg.fields) && cfg.fields.length > 0) {
-            embed.addFields(cfg.fields.map((f) => ({
-              name: f.name,
-              value: f.value,
-              inline: f.inline ?? true,
-            })));
-          }
-
-          if (cfg.footer_text) {
-            embed.setFooter({ text: resolve(cfg.footer_text) });
-          }
-
-          if (cfg.banner_color) {
+          const hasBanner = !!cfg.banner_color;
+          const container = buildMemberV2Container(cfg, resolve, hasBanner);
+          const payload = {
+            flags: MessageFlags.IsComponentsV2,
+            components: [container],
+          };
+          if (hasBanner) {
             // Bot fetches banner from the web app and sends it as a Discord attachment.
             // This works in both local dev (same machine) and production.
-            const appUrl = process.env.APP_URL ?? 'http://localhost:3000';
+            const appUrl = process.env.APP_URL ?? "http://localhost:3000";
             const bannerFetchUrl = `${appUrl}/api/banner?name=${encodeURIComponent(member.guild.name)}&color=${cfg.banner_color}`;
-            embed.setImage('attachment://banner.png');
-            await channel.send({
-              embeds: [embed],
-              files: [{ attachment: bannerFetchUrl, name: 'banner.png' }],
-            });
-          } else {
-            await channel.send({ embeds: [embed] });
+            payload.files = [
+              { attachment: bannerFetchUrl, name: "banner.png" },
+            ];
           }
+          await channel.send(payload);
         } else {
-          const msg = resolve(settings.welcome.message ?? 'Welcome to {server}, {user}!');
+          const msg = resolve(
+            settings.welcome.message ?? "Welcome to {server}, {user}!",
+          );
           await channel.send(msg);
         }
       }
     } catch (err) {
-      console.error(`[Pulse] Welcome message failed in guild ${member.guild.id}:`, err.message);
+      console.error(
+        `[Pulse] Welcome message failed in guild ${member.guild.id}:`,
+        err.message,
+      );
       await recordNotification(supabase, {
         guildId: member.guild.id,
-        type: 'bot_warning',
-        title: 'Welcome message failed to send',
+        type: "bot_warning",
+        title: "Welcome message failed to send",
         body: err.message,
         link: `/dashboard/${member.guild.id}/automations`,
         targetId: settings.welcome.channel_id,
-        metadata: { automation: 'welcome' },
+        metadata: { automation: "welcome" },
       });
     }
   }
@@ -233,39 +282,51 @@ client.on(Events.GuildMemberAdd, async (member) => {
       const role = await member.guild.roles.fetch(settings.auto_role.role_id);
       if (role) {
         await member.roles.add(role);
-        console.log(`[Pulse] Auto-role "${role.name}" assigned to ${member.user.tag} in ${member.guild.name}`);
+        console.log(
+          `[Pulse] Auto-role "${role.name}" assigned to ${member.user.tag} in ${member.guild.name}`,
+        );
       } else {
-        console.warn(`[Pulse] Auto-role not found: ${settings.auto_role.role_id} in guild ${member.guild.id}`);
+        console.warn(
+          `[Pulse] Auto-role not found: ${settings.auto_role.role_id} in guild ${member.guild.id}`,
+        );
         await recordNotification(supabase, {
           guildId: member.guild.id,
-          type: 'bot_warning',
-          title: 'Auto-role is misconfigured',
+          type: "bot_warning",
+          title: "Auto-role is misconfigured",
           body: `The configured role ID ${settings.auto_role.role_id} no longer exists. Pick a new role in Automations.`,
           link: `/dashboard/${member.guild.id}/automations`,
-          metadata: { automation: 'auto_role', role_id: settings.auto_role.role_id },
+          metadata: {
+            automation: "auto_role",
+            role_id: settings.auto_role.role_id,
+          },
         });
       }
     } catch (err) {
-      console.error(`[Pulse] Auto-role failed for ${member.user.tag} in guild ${member.guild.id}:`, err.message);
+      console.error(
+        `[Pulse] Auto-role failed for ${member.user.tag} in guild ${member.guild.id}:`,
+        err.message,
+      );
       await recordNotification(supabase, {
         guildId: member.guild.id,
-        type: 'bot_warning',
+        type: "bot_warning",
         title: `Auto-role failed for ${member.user.tag}`,
         body: err.message,
         link: `/dashboard/${member.guild.id}/automations`,
         targetId: member.id,
         targetName: member.user.tag,
-        metadata: { automation: 'auto_role' },
+        metadata: { automation: "auto_role" },
       });
     }
   }
 });
 
 client.on(Events.GuildMemberRemove, async (member) => {
-  console.log(`[Pulse] Member left: ${member.user.tag} from ${member.guild.name}`);
+  console.log(
+    `[Pulse] Member left: ${member.user.tag} from ${member.guild.name}`,
+  );
 
   analytics.track({
-    type: 'member_leave',
+    type: "member_leave",
     guildId: member.guild.id,
     userId: member.id,
     userName: member.user.username,
@@ -276,58 +337,52 @@ client.on(Events.GuildMemberRemove, async (member) => {
 
   if (settings?.goodbye?.enabled && settings.goodbye.channel_id) {
     try {
-      const channel = await member.guild.channels.fetch(settings.goodbye.channel_id);
+      const channel = await member.guild.channels.fetch(
+        settings.goodbye.channel_id,
+      );
       if (channel?.isTextBased()) {
         // The member already left, so {user} resolves to their name (a mention would be dead).
         const resolve = (text) =>
-          text.replace(/\{user\}/g, member.user.username).replace(/\{server\}/g, member.guild.name);
+          text
+            .replace(/\{user\}/g, member.user.username)
+            .replace(/\{server\}/g, member.guild.name);
 
-        if (settings.goodbye.type === 'embed' && settings.goodbye.embed) {
+        if (settings.goodbye.type === "embed" && settings.goodbye.embed) {
           const cfg = settings.goodbye.embed;
-          const colorInt = parseInt((cfg.color ?? '#6366f1').replace('#', ''), 16);
-          const embed = new EmbedBuilder()
-            .setColor(isNaN(colorInt) ? 0x6366f1 : colorInt)
-            .setTitle(resolve(cfg.title ?? 'Goodbye!'))
-            .setDescription(resolve(cfg.description ?? ''));
-
-          if (Array.isArray(cfg.fields) && cfg.fields.length > 0) {
-            embed.addFields(cfg.fields.map((f) => ({
-              name: f.name,
-              value: f.value,
-              inline: f.inline ?? true,
-            })));
-          }
-
-          if (cfg.footer_text) {
-            embed.setFooter({ text: resolve(cfg.footer_text) });
-          }
-
-          if (cfg.banner_color) {
-            const appUrl = process.env.APP_URL ?? 'http://localhost:3000';
+          const hasBanner = !!cfg.banner_color;
+          const container = buildMemberV2Container(cfg, resolve, hasBanner);
+          const payload = {
+            flags: MessageFlags.IsComponentsV2,
+            components: [container],
+          };
+          if (hasBanner) {
+            const appUrl = process.env.APP_URL ?? "http://localhost:3000";
             const bannerFetchUrl = `${appUrl}/api/banner?name=${encodeURIComponent(member.guild.name)}&color=${cfg.banner_color}`;
-            embed.setImage('attachment://banner.png');
-            await channel.send({
-              embeds: [embed],
-              files: [{ attachment: bannerFetchUrl, name: 'banner.png' }],
-            });
-          } else {
-            await channel.send({ embeds: [embed] });
+            payload.files = [
+              { attachment: bannerFetchUrl, name: "banner.png" },
+            ];
           }
+          await channel.send(payload);
         } else {
-          const msg = resolve(settings.goodbye.message ?? '{user} has left {server}.');
+          const msg = resolve(
+            settings.goodbye.message ?? "{user} has left {server}.",
+          );
           await channel.send(msg);
         }
       }
     } catch (err) {
-      console.error(`[Pulse] Goodbye message failed in guild ${member.guild.id}:`, err.message);
+      console.error(
+        `[Pulse] Goodbye message failed in guild ${member.guild.id}:`,
+        err.message,
+      );
       await recordNotification(supabase, {
         guildId: member.guild.id,
-        type: 'bot_warning',
-        title: 'Goodbye message failed to send',
+        type: "bot_warning",
+        title: "Goodbye message failed to send",
         body: err.message,
         link: `/dashboard/${member.guild.id}/automations`,
         targetId: settings.goodbye.channel_id,
-        metadata: { automation: 'goodbye' },
+        metadata: { automation: "goodbye" },
       });
     }
   }
@@ -335,24 +390,29 @@ client.on(Events.GuildMemberRemove, async (member) => {
 
 client.on(Events.GuildBanAdd, async (ban) => {
   analytics.track({
-    type: 'mod_action',
+    type: "mod_action",
     guildId: ban.guild.id,
     userId: ban.user.id,
     userName: ban.user.username,
-    metadata: { action: 'ban' },
+    metadata: { action: "ban" },
   });
 
   // Surface bans done outside the dashboard (Discord client, other bots, etc.)
   // in the activity feed. Dashboard-initiated bans already write a
   // notification, so notifyIfNotBot skips when the actor is us.
-  const actor = await fetchActor(ban.guild, AuditLogEvent.MemberBanAdd, ban.user.id, client.user?.id);
+  const actor = await fetchActor(
+    ban.guild,
+    AuditLogEvent.MemberBanAdd,
+    ban.user.id,
+    client.user?.id,
+  );
   if (!actor?.isBot) {
     await recordNotification(supabase, {
       guildId: ban.guild.id,
-      type: 'mod_action',
-      severity: 'error',
+      type: "mod_action",
+      severity: "error",
       title: actor
-        ? `${actor.actorName ?? 'A moderator'} banned ${ban.user.tag}`
+        ? `${actor.actorName ?? "A moderator"} banned ${ban.user.tag}`
         : `${ban.user.tag} was banned`,
       body: actor?.reason ?? ban.reason ?? null,
       link: `/dashboard/${ban.guild.id}/moderation`,
@@ -361,19 +421,27 @@ client.on(Events.GuildBanAdd, async (ban) => {
       actorUsername: actor?.actorUsername ?? null,
       targetId: ban.user.id,
       targetName: ban.user.tag,
-      metadata: { action: 'ban' },
+      metadata: { action: "ban" },
     });
   }
 
   const settings = await getGuildSettings(ban.guild.id);
-  if (settings?.moderation_alerts?.enabled && settings.moderation_alerts.channel_id) {
-    const channel = ban.guild.channels.cache.get(settings.moderation_alerts.channel_id);
+  if (
+    settings?.moderation_alerts?.enabled &&
+    settings.moderation_alerts.channel_id
+  ) {
+    const channel = ban.guild.channels.cache.get(
+      settings.moderation_alerts.channel_id,
+    );
     if (channel?.isTextBased()) {
       const embed = new EmbedBuilder()
         .setColor(0xef4444)
-        .setTitle('Member Banned')
+        .setTitle("Member Banned")
         .setDescription(`**${ban.user.tag}** (${ban.user.id}) was banned.`)
-        .addFields({ name: 'Reason', value: ban.reason ?? 'No reason provided' })
+        .addFields({
+          name: "Reason",
+          value: ban.reason ?? "No reason provided",
+        })
         .setTimestamp();
       await channel.send({ embeds: [embed] }).catch(console.error);
     }
@@ -382,21 +450,26 @@ client.on(Events.GuildBanAdd, async (ban) => {
 
 client.on(Events.GuildBanRemove, async (ban) => {
   analytics.track({
-    type: 'mod_action',
+    type: "mod_action",
     guildId: ban.guild.id,
     userId: ban.user.id,
     userName: ban.user.username,
-    metadata: { action: 'unban' },
+    metadata: { action: "unban" },
   });
 
-  const actor = await fetchActor(ban.guild, AuditLogEvent.MemberBanRemove, ban.user.id, client.user?.id);
+  const actor = await fetchActor(
+    ban.guild,
+    AuditLogEvent.MemberBanRemove,
+    ban.user.id,
+    client.user?.id,
+  );
   if (!actor?.isBot) {
     await recordNotification(supabase, {
       guildId: ban.guild.id,
-      type: 'mod_action',
-      severity: 'info',
+      type: "mod_action",
+      severity: "info",
       title: actor
-        ? `${actor.actorName ?? 'A moderator'} unbanned ${ban.user.tag}`
+        ? `${actor.actorName ?? "A moderator"} unbanned ${ban.user.tag}`
         : `${ban.user.tag} was unbanned`,
       body: actor?.reason ?? null,
       link: `/dashboard/${ban.guild.id}/moderation`,
@@ -405,17 +478,22 @@ client.on(Events.GuildBanRemove, async (ban) => {
       actorUsername: actor?.actorUsername ?? null,
       targetId: ban.user.id,
       targetName: ban.user.tag,
-      metadata: { action: 'unban' },
+      metadata: { action: "unban" },
     });
   }
 
   const settings = await getGuildSettings(ban.guild.id);
-  if (settings?.moderation_alerts?.enabled && settings.moderation_alerts.channel_id) {
-    const channel = ban.guild.channels.cache.get(settings.moderation_alerts.channel_id);
+  if (
+    settings?.moderation_alerts?.enabled &&
+    settings.moderation_alerts.channel_id
+  ) {
+    const channel = ban.guild.channels.cache.get(
+      settings.moderation_alerts.channel_id,
+    );
     if (channel?.isTextBased()) {
       const embed = new EmbedBuilder()
         .setColor(0x22c55e)
-        .setTitle('Member Unbanned')
+        .setTitle("Member Unbanned")
         .setDescription(`**${ban.user.tag}** (${ban.user.id}) was unbanned.`)
         .setTimestamp();
       await channel.send({ embeds: [embed] }).catch(console.error);
@@ -426,7 +504,7 @@ client.on(Events.GuildBanRemove, async (ban) => {
 client.on(Events.MessageCreate, (message) => {
   if (message.author.bot || !message.guild) return;
   analytics.track({
-    type: 'message',
+    type: "message",
     guildId: message.guild.id,
     userId: message.author.id,
     // Server display name (guild nickname → global name → username).
@@ -434,6 +512,11 @@ client.on(Events.MessageCreate, (message) => {
     channelId: message.channelId,
     channelName: message.channel?.name,
   });
+
+  // Fire-and-forget — Pulse Guard runs the analysis + auto-action on the web
+  // app side. Failures are logged inside the helper, never thrown, so a web
+  // app outage can't break message tracking.
+  void forwardMessageToPulseGuard(message);
 });
 
 client.on(Events.VoiceStateUpdate, (oldState, newState) => {
@@ -453,12 +536,24 @@ client.on(Events.VoiceStateUpdate, (oldState, newState) => {
   if (left) {
     analytics.voiceLeave(guildId, userId);
   } else if (joined) {
-    analytics.voiceJoin(guildId, userId, userName, newState.channelId, newState.channel?.name);
+    analytics.voiceJoin(
+      guildId,
+      userId,
+      userName,
+      newState.channelId,
+      newState.channel?.name,
+    );
   } else if (moved) {
     analytics
       .voiceLeave(guildId, userId)
       .then(() =>
-        analytics.voiceJoin(guildId, userId, userName, newState.channelId, newState.channel?.name)
+        analytics.voiceJoin(
+          guildId,
+          userId,
+          userName,
+          newState.channelId,
+          newState.channel?.name,
+        ),
       );
   }
 });
@@ -474,7 +569,7 @@ client.on(Events.ChannelCreate, async (channel) => {
     guild: channel.guild,
     auditType: AuditLogEvent.ChannelCreate,
     targetId: channel.id,
-    type: 'channel_created',
+    type: "channel_created",
     title: `#${channel.name} was created`,
     link: `/dashboard/${channel.guild.id}/channels`,
     targetName: channel.name,
@@ -488,7 +583,7 @@ client.on(Events.ChannelDelete, async (channel) => {
     guild: channel.guild,
     auditType: AuditLogEvent.ChannelDelete,
     targetId: channel.id,
-    type: 'channel_deleted',
+    type: "channel_deleted",
     title: `#${channel.name} was deleted`,
     link: `/dashboard/${channel.guild.id}/channels`,
     targetName: channel.name,
@@ -511,14 +606,15 @@ client.on(Events.ChannelUpdate, async (oldChannel, newChannel) => {
     oldChannel.userLimit !== newChannel.userLimit;
   if (!meaningful) return;
 
-  const title = oldChannel.name !== newChannel.name
-    ? `#${oldChannel.name} was renamed to #${newChannel.name}`
-    : `#${newChannel.name} was updated`;
+  const title =
+    oldChannel.name !== newChannel.name
+      ? `#${oldChannel.name} was renamed to #${newChannel.name}`
+      : `#${newChannel.name} was updated`;
   await notifyIfNotBot({
     guild: newChannel.guild,
     auditType: AuditLogEvent.ChannelUpdate,
     targetId: newChannel.id,
-    type: 'channel_updated',
+    type: "channel_updated",
     title,
     link: `/dashboard/${newChannel.guild.id}/channels`,
     targetName: newChannel.name,
@@ -532,7 +628,7 @@ client.on(Events.GuildRoleCreate, async (role) => {
     guild: role.guild,
     auditType: AuditLogEvent.RoleCreate,
     targetId: role.id,
-    type: 'role_created',
+    type: "role_created",
     title: `Role @${role.name} was created`,
     link: `/dashboard/${role.guild.id}/roles`,
     targetName: role.name,
@@ -544,7 +640,7 @@ client.on(Events.GuildRoleDelete, async (role) => {
     guild: role.guild,
     auditType: AuditLogEvent.RoleDelete,
     targetId: role.id,
-    type: 'role_deleted',
+    type: "role_deleted",
     title: `Role @${role.name} was deleted`,
     link: `/dashboard/${role.guild.id}/roles`,
     targetName: role.name,
@@ -562,14 +658,15 @@ client.on(Events.GuildRoleUpdate, async (oldRole, newRole) => {
     oldRole.hoist !== newRole.hoist;
   if (!meaningful) return;
 
-  const title = oldRole.name !== newRole.name
-    ? `Role @${oldRole.name} was renamed to @${newRole.name}`
-    : `Role @${newRole.name} was updated`;
+  const title =
+    oldRole.name !== newRole.name
+      ? `Role @${oldRole.name} was renamed to @${newRole.name}`
+      : `Role @${newRole.name} was updated`;
   await notifyIfNotBot({
     guild: newRole.guild,
     auditType: AuditLogEvent.RoleUpdate,
     targetId: newRole.id,
-    type: 'role_updated',
+    type: "role_updated",
     title,
     link: `/dashboard/${newRole.guild.id}/roles`,
     targetName: newRole.name,
@@ -584,7 +681,7 @@ client.on(Events.GuildScheduledEventCreate, async (event) => {
     guild: event.guild,
     auditType: AuditLogEvent.GuildScheduledEventCreate,
     targetId: event.id,
-    type: 'event_created',
+    type: "event_created",
     title: `"${event.name}" was scheduled`,
     body: event.scheduledStartAt
       ? `Starts ${event.scheduledStartAt.toLocaleString()}`
@@ -599,12 +696,13 @@ client.on(Events.GuildScheduledEventUpdate, async (oldEvent, newEvent) => {
   // Status 4 = CANCELED — treat as a deletion in the activity feed so the
   // user sees one logical "the event went away" entry instead of an update
   // immediately followed by a delete.
-  const wasCancelled = newEvent.status === 4 && (oldEvent?.status ?? null) !== 4;
+  const wasCancelled =
+    newEvent.status === 4 && (oldEvent?.status ?? null) !== 4;
   await notifyIfNotBot({
     guild: newEvent.guild,
     auditType: AuditLogEvent.GuildScheduledEventUpdate,
     targetId: newEvent.id,
-    type: wasCancelled ? 'event_deleted' : 'event_updated',
+    type: wasCancelled ? "event_deleted" : "event_updated",
     title: wasCancelled
       ? `"${newEvent.name}" was cancelled`
       : `"${newEvent.name}" was updated`,
@@ -619,7 +717,7 @@ client.on(Events.GuildScheduledEventDelete, async (event) => {
     guild: event.guild,
     auditType: AuditLogEvent.GuildScheduledEventDelete,
     targetId: event.id,
-    type: 'event_deleted',
+    type: "event_deleted",
     title: `"${event.name}" was deleted`,
     link: `/dashboard/${event.guild.id}/events`,
     targetName: event.name,
@@ -636,7 +734,8 @@ client.on(Events.GuildUpdate, async (oldGuild, newGuild) => {
     oldGuild.name !== newGuild.name ||
     oldGuild.icon !== newGuild.icon ||
     oldGuild.verificationLevel !== newGuild.verificationLevel ||
-    oldGuild.defaultMessageNotifications !== newGuild.defaultMessageNotifications ||
+    oldGuild.defaultMessageNotifications !==
+      newGuild.defaultMessageNotifications ||
     oldGuild.explicitContentFilter !== newGuild.explicitContentFilter ||
     oldGuild.afkChannelId !== newGuild.afkChannelId ||
     oldGuild.afkTimeout !== newGuild.afkTimeout ||
@@ -649,10 +748,11 @@ client.on(Events.GuildUpdate, async (oldGuild, newGuild) => {
     guild: newGuild,
     auditType: AuditLogEvent.GuildUpdate,
     targetId: newGuild.id,
-    type: 'server_settings_changed',
-    title: oldGuild.name !== newGuild.name
-      ? `Server was renamed to "${newGuild.name}"`
-      : `Server settings were changed`,
+    type: "server_settings_changed",
+    title:
+      oldGuild.name !== newGuild.name
+        ? `Server was renamed to "${newGuild.name}"`
+        : `Server settings were changed`,
     link: `/dashboard/${newGuild.id}/server-settings`,
     targetName: newGuild.name,
   });
@@ -664,7 +764,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   const { commandName } = interaction;
 
   analytics.track({
-    type: 'command',
+    type: "command",
     guildId: interaction.guildId,
     userId: interaction.user.id,
     userName: interaction.user.username,
@@ -672,138 +772,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
     metadata: { command: commandName },
   });
 
-  if (commandName === 'ping') {
-    const ws = client.ws.ping;
-    await interaction.reply({
-      content: `Pong! Pulse is online. Latency: \`${ws}ms\``,
-      ephemeral: true,
-    });
-    return;
-  }
-
-  if (commandName === 'stats') {
-    await interaction.deferReply();
-    const guild = interaction.guild;
-    if (!guild) return interaction.editReply('This command can only be used in a server.');
-
-    await guild.members.fetch().catch(() => null);
-
-    const embed = new EmbedBuilder()
-      .setColor(0x6366f1)
-      .setTitle(`${guild.name} — Server Stats`)
-      .setThumbnail(guild.iconURL())
-      .addFields(
-        { name: 'Members', value: guild.memberCount.toString(), inline: true },
-        { name: 'Channels', value: guild.channels.cache.size.toString(), inline: true },
-        { name: 'Roles', value: (guild.roles.cache.size - 1).toString(), inline: true },
-        { name: 'Boosts', value: guild.premiumSubscriptionCount?.toString() ?? '0', inline: true },
-        { name: 'Created', value: `<t:${Math.floor(guild.createdTimestamp / 1000)}:R>`, inline: true },
-      )
-      .setFooter({ text: 'Pulse · Dashboard at pulsify.app' })
-      .setTimestamp();
-
-    await interaction.editReply({ embeds: [embed] });
-    return;
-  }
-
-  if (commandName === 'warn') {
-    const target = interaction.options.getUser('user', true);
-    const reason = interaction.options.getString('reason', true);
-    const guild = interaction.guild;
-    if (!guild) return;
-
-    await supabase.from('guild_warnings').insert({
-      guild_id: guild.id,
-      user_id: target.id,
-      username: target.tag,
-      moderator_id: interaction.user.id,
-      moderator_username: interaction.user.tag,
-      reason,
-      active: true,
-    });
-
-    analytics.track({
-      type: 'mod_action',
-      guildId: guild.id,
-      userId: target.id,
-      userName: target.username,
-      metadata: { action: 'warn', moderator_id: interaction.user.id },
-    });
-
-    const embed = new EmbedBuilder()
-      .setColor(0xf59e0b)
-      .setTitle('Warning Issued')
-      .setDescription(`**${target.tag}** has been warned.`)
-      .addFields({ name: 'Reason', value: reason })
-      .setFooter({ text: `Warned by ${interaction.user.tag}` })
-      .setTimestamp();
-
-    await interaction.reply({ embeds: [embed] });
-    return;
-  }
-
-  if (commandName === 'warnings') {
-    const target = interaction.options.getUser('user', true);
-    const guild = interaction.guild;
-    if (!guild) return;
-
-    const { data: warnings } = await supabase
-      .from('guild_warnings')
-      .select('*')
-      .eq('guild_id', guild.id)
-      .eq('user_id', target.id)
-      .eq('active', true)
-      .order('created_at', { ascending: false });
-
-    if (!warnings?.length) {
-      await interaction.reply({ content: `**${target.tag}** has no active warnings.`, ephemeral: true });
-      return;
-    }
-
-    const embed = new EmbedBuilder()
-      .setColor(0x6366f1)
-      .setTitle(`Warnings for ${target.tag}`)
-      .setDescription(
-        warnings.map((w, i) => `**${i + 1}.** ${w.reason} — by ${w.moderator_username}`).join('\n')
-      )
-      .setFooter({ text: `${warnings.length} active warning(s)` });
-
-    await interaction.reply({ embeds: [embed], ephemeral: true });
-    return;
-  }
-
-  if (commandName === 'clearwarnings') {
-    const target = interaction.options.getUser('user', true);
-    const guild = interaction.guild;
-    if (!guild) return;
-
-    await supabase
-      .from('guild_warnings')
-      .update({ active: false })
-      .eq('guild_id', guild.id)
-      .eq('user_id', target.id);
-
-    analytics.track({
-      type: 'mod_action',
-      guildId: guild.id,
-      userId: target.id,
-      userName: target.username,
-      metadata: { action: 'clearwarnings', moderator_id: interaction.user.id },
-    });
-
-    await interaction.reply({
-      content: `All warnings for **${target.tag}** have been cleared.`,
-      ephemeral: true,
-    });
-    return;
-  }
-
-  if (commandName === 'sync') {
+  if (commandName === "sync") {
     await interaction.deferReply({ ephemeral: true });
     const guild = interaction.guild;
     if (!guild) return;
     await syncGuild(guild);
-    await interaction.editReply('Server data synced to the Pulse dashboard successfully.');
+    await interaction.editReply(
+      "Server data synced to the Pulse dashboard successfully.",
+    );
     return;
   }
 });
@@ -811,7 +787,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 async function syncGuild(guild) {
   try {
     await guild.members.fetch().catch(() => null);
-    await supabase.from('synced_guilds').upsert(
+    await supabase.from("synced_guilds").upsert(
       {
         guild_id: guild.id,
         name: guild.name,
@@ -820,7 +796,7 @@ async function syncGuild(guild) {
         member_count: guild.memberCount,
         synced_at: new Date().toISOString(),
       },
-      { onConflict: 'guild_id' }
+      { onConflict: "guild_id" },
     );
     console.log(`[Pulse] Synced guild: ${guild.name}`);
   } catch (err) {
@@ -830,25 +806,28 @@ async function syncGuild(guild) {
 
 async function getGuildSettings(guildId) {
   const { data } = await supabase
-    .from('guild_settings')
-    .select('settings')
-    .eq('guild_id', guildId)
+    .from("guild_settings")
+    .select("settings")
+    .eq("guild_id", guildId)
     .maybeSingle();
   return data?.settings ?? null;
 }
 
 async function shutdown() {
-  console.log('[Pulse] Shutting down — flushing analytics...');
+  console.log("[Pulse] Shutting down — flushing analytics...");
   try {
     await analytics.flushAllVoice();
     await analytics.flush();
   } catch (err) {
-    console.error('[Pulse] Error during analytics flush on shutdown:', err.message);
+    console.error(
+      "[Pulse] Error during analytics flush on shutdown:",
+      err.message,
+    );
   }
   process.exit(0);
 }
 
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
 
 client.login(process.env.DISCORD_BOT_TOKEN);
