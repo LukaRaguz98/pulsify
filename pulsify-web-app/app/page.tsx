@@ -1,40 +1,39 @@
-import Image from 'next/image'
-import { LoginButton } from '@/components/LoginButton'
+import { LandingNav } from '@/components/landing/LandingNav'
+import { Hero } from '@/components/landing/Hero'
+import { DashboardPreview } from '@/components/landing/DashboardPreview'
+import { Features } from '@/components/landing/Features'
+import { Showcases } from '@/components/landing/Showcases'
+import { HowItWorks, WhyPulsify } from '@/components/landing/Platform'
+import { Pricing } from '@/components/landing/Pricing'
+import { Faq } from '@/components/landing/Faq'
+import { Community, FinalCta } from '@/components/landing/Community'
+import { LandingFooter } from '@/components/landing/LandingFooter'
+import { Reveal } from '@/components/landing/Reveal'
+import { LandingBackdrop } from '@/components/landing/LandingBackdrop'
+import { ScrollProgress } from '@/components/landing/ScrollProgress'
+import { BackToTop } from '@/components/landing/BackToTop'
 
 export default function Home() {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-background text-foreground min-h-screen">
-      <div className="flex flex-col items-center gap-8 text-center px-6">
-        <div className="flex items-center gap-3 mb-2">
-          <Image
-            src="/logo.png"
-            alt="Pulsify"
-            width={64}
-            height={64}
-            className="shrink-0"
-            style={{ filter: 'drop-shadow(0 8px 24px var(--p-glow))' }}
-            priority
-          />
-          <span className="text-2xl font-bold tracking-tight" style={{ color: 'var(--p-1)' }}>Pulsify</span>
-        </div>
-
-        <div>
-          <h1 className="text-5xl font-bold tracking-tight text-foreground leading-tight">
-            Manage your Discord
-            <br />
-            <span style={{ color: 'var(--p-1)' }}>community</span>, smarter.
-          </h1>
-          <p className="mt-4 max-w-md text-lg text-muted-foreground leading-relaxed">
-            Analytics, automations, events, moderation — all in one clean dashboard powered by the Pulse bot.
-          </p>
-        </div>
-
-        <LoginButton forceConsent />
-
-        <p className="text-sm text-subtle">
-          No credit card required. Free tier available.
-        </p>
-      </div>
+    <div className="relative min-h-screen bg-background text-foreground">
+      <ScrollProgress />
+      <LandingBackdrop />
+      <LandingNav />
+      <main>
+        {/* Hero keeps its own load-in animation; the rest reveal on scroll. */}
+        <Hero />
+        <Reveal><DashboardPreview /></Reveal>
+        <Reveal><Features /></Reveal>
+        <Reveal><Showcases /></Reveal>
+        <Reveal><HowItWorks /></Reveal>
+        <Reveal><WhyPulsify /></Reveal>
+        <Reveal><Pricing /></Reveal>
+        <Reveal><Faq /></Reveal>
+        <Reveal><Community /></Reveal>
+        <Reveal><FinalCta /></Reveal>
+      </main>
+      <LandingFooter />
+      <BackToTop />
     </div>
   )
 }

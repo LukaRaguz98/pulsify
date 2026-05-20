@@ -337,3 +337,53 @@ a[style*="line-strong"]:hover {
   color: var(--text) !important;
 }
 
+/* ── Landing page ──────────────────────────────────────────────
+   Marketing-only helpers: smooth anchor scrolling, hero gradient blobs,
+   scroll-reveal entrance, and shared card hover. All motion is auto-
+   neutralised by the [data-animations="false"] rule defined above. */
+html { scroll-behavior: smooth; }
+
+@keyframes lp-float {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(0, -26px, 0) scale(1.07); }
+}
+@keyframes lp-float-alt {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(0, 22px, 0) scale(1.09); }
+}
+@keyframes lp-fade-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes lp-shimmer {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.lp-anchor       { scroll-margin-top: 88px; }
+.lp-blob         { animation: lp-float 15s ease-in-out infinite; will-change: transform; }
+.lp-blob-alt     { animation: lp-float-alt 19s ease-in-out infinite; will-change: transform; }
+.lp-fade-up      { animation: lp-fade-up 0.6s ease both; }
+.lp-fade-up-1    { animation: lp-fade-up 0.6s ease 0.08s both; }
+.lp-fade-up-2    { animation: lp-fade-up 0.6s ease 0.16s both; }
+.lp-fade-up-3    { animation: lp-fade-up 0.6s ease 0.24s both; }
+
+/* Shared lift-on-hover for feature/pricing cards. Scoped class so it only
+   applies to landing cards (plain <div>s, untouched by the button rules). */
+.lp-card { transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease; }
+.lp-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--p-1);
+  box-shadow: 0 18px 40px -22px var(--p-glow);
+}
+
+/* Animated gradient text for the hero headline accent. */
+.lp-gradient-text {
+  background: linear-gradient(110deg, var(--p-1), var(--cyan), var(--p-1));
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: lp-shimmer 7s linear infinite;
+}
+
