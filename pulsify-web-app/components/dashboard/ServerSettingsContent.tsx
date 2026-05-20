@@ -44,6 +44,8 @@ import { CategorySection } from '@/components/ui/category-section'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { SaveBar } from '@/components/ui/save-bar'
+import { BotBrandingCard } from '@/components/dashboard/server-settings/BotBrandingCard'
+import type { BotBrandingResponse } from '@/lib/bot-branding'
 
 type Props = { guildId: string }
 
@@ -152,6 +154,13 @@ export function ServerSettingsContent({ guildId }: Props) {
   const [initial, setInitial] = useState<EditState | null>(null)
   const [edit, setEdit] = useState<EditState | null>(null)
 
+  // Bot branding (saved together with the rest via the global Save bar).
+  const [branding, setBranding] = useState<BotBrandingResponse | null>(null)
+  const [brandingLoading, setBrandingLoading] = useState(true)
+  const [brandingNick, setBrandingNick] = useState('')
+  // '' = unchanged · data URI = new avatar · null = clear to default
+  const [brandingAvatar, setBrandingAvatar] = useState<string | null | ''>('')
+
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -171,10 +180,11 @@ export function ServerSettingsContent({ guildId }: Props) {
 
   const loadAll = useCallback(async (silent = false) => {
     if (!silent) setRefreshing(true)
-    const [guildRes, channelsRes, botRes] = await Promise.all([
+    const [guildRes, channelsRes, botRes, brandingRes] = await Promise.all([
       fetch(`/api/discord/guild/${guildId}`, { cache: 'no-store' }),
       fetch(`/api/discord/guild/${guildId}/channels`, { cache: 'no-store' }),
       fetch(`/api/discord/guild/${guildId}/bot-permissions`, { cache: 'no-store' }),
+      fetch(`/api/discord/guild/${guildId}/bot-branding`, { cache: 'no-store' }),
     ])
 
     if (!guildRes.ok) {
@@ -197,6 +207,17 @@ export function ServerSettingsContent({ guildId }: Props) {
 
     if (channelsRes.ok) setChannels((await channelsRes.json()) as DiscordChannel[])
     if (botRes.ok) setBotPerms(await botRes.json())
+
+    if (brandingRes.ok) {
+      const brandingData = (await brandingRes.json()) as BotBrandingResponse
+      setBranding(brandingData)
+      // Reset the editable branding fields to the live server state. On a
+      // silent post-save reload this confirms the new values; on manual
+      // refresh it discards unsaved branding edits (same as a fresh load).
+      setBrandingNick(brandingData.current.nickname ?? '')
+      setBrandingAvatar('')
+    }
+    setBrandingLoading(false)
 
     // Best-effort owner lookup. Falls back to the raw owner ID in the UI if
     // the bot can't see the member (e.g. lacking GUILD_MEMBERS intent).
@@ -251,6 +272,13 @@ export function ServerSettingsContent({ guildId }: Props) {
     return diffEditState(initial, edit)
   }, [initial, edit])
 
+  // Branding diff — folded into the same dirty/save flow as guild settings.
+  const brandingNameDirty =
+    !!branding && brandingNick.trim() !== (branding.current.nickname ?? '')
+  const brandingAvatarDirty = brandingAvatar !== ''
+  const brandingDirty = brandingNameDirty || brandingAvatarDirty
+  const brandingChangeCount = (brandingNameDirty ? 1 : 0) + (brandingAvatarDirty ? 1 : 0)
+
   const textChannels = useMemo(
     () => channels
       .filter((c) => c.type === CHANNEL_TYPES.TEXT || c.type === CHANNEL_TYPES.ANNOUNCEMENT)
@@ -270,6 +298,10 @@ export function ServerSettingsContent({ guildId }: Props) {
 
   function resetEdits() {
     if (initial) setEdit(initial)
+    if (branding) {
+      setBrandingNick(branding.current.nickname ?? '')
+      setBrandingAvatar('')
+    }
   }
 
   function onPickIcon(file: File) {
@@ -296,48 +328,90 @@ export function ServerSettingsContent({ guildId }: Props) {
   async function doSave() {
     if (!initial || !edit) return
     setSaving(true)
+    const failures: string[] = []
 
-    const body: Record<string, unknown> = {}
-    if (changes.name !== undefined) body.name = changes.name
-    if (changes.iconDataUri !== undefined) body.icon = changes.iconDataUri
-    if (changes.verification_level !== undefined) body.verification_level = changes.verification_level
-    if (changes.default_message_notifications !== undefined) {
-      body.default_message_notifications = changes.default_message_notifications
-    }
-    if (changes.explicit_content_filter !== undefined) {
-      body.explicit_content_filter = changes.explicit_content_filter
-    }
-    if (changes.afk_channel_id !== undefined) body.afk_channel_id = changes.afk_channel_id
-    if (changes.afk_timeout !== undefined) body.afk_timeout = changes.afk_timeout
-    if (changes.system_channel_id !== undefined) body.system_channel_id = changes.system_channel_id
-    if (changes.rules_channel_id !== undefined) body.rules_channel_id = changes.rules_channel_id
-    if (changes.public_updates_channel_id !== undefined) {
-      body.public_updates_channel_id = changes.public_updates_channel_id
-    }
-    body.reason = 'Updated from Pulsify dashboard'
+    // 1. Guild settings — only PATCH when something actually changed, so a
+    //    branding-only save doesn't hit the route with an empty body.
+    if (Object.keys(changes).length > 0) {
+      const body: Record<string, unknown> = {}
+      if (changes.name !== undefined) body.name = changes.name
+      if (changes.iconDataUri !== undefined) body.icon = changes.iconDataUri
+      if (changes.verification_level !== undefined) body.verification_level = changes.verification_level
+      if (changes.default_message_notifications !== undefined) {
+        body.default_message_notifications = changes.default_message_notifications
+      }
+      if (changes.explicit_content_filter !== undefined) {
+        body.explicit_content_filter = changes.explicit_content_filter
+      }
+      if (changes.afk_channel_id !== undefined) body.afk_channel_id = changes.afk_channel_id
+      if (changes.afk_timeout !== undefined) body.afk_timeout = changes.afk_timeout
+      if (changes.system_channel_id !== undefined) body.system_channel_id = changes.system_channel_id
+      if (changes.rules_channel_id !== undefined) body.rules_channel_id = changes.rules_channel_id
+      if (changes.public_updates_channel_id !== undefined) {
+        body.public_updates_channel_id = changes.public_updates_channel_id
+      }
+      body.reason = 'Updated from Pulsify dashboard'
 
-    const res = await fetch(`/api/discord/guild/${guildId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
+      const res = await fetch(`/api/discord/guild/${guildId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string }
+        failures.push(data.error ?? 'Could not save server settings.')
+      } else {
+        const updated = (await res.json()) as DiscordGuildFull
+        setGuild(updated)
+        const fresh = buildEditState(updated)
+        setInitial(fresh)
+        setEdit(fresh)
+      }
+    }
+
+    // 2. Bot branding — only PATCH the fields the admin touched.
+    if (brandingDirty && branding) {
+      const bbody: { nickname?: string | null; avatar?: string | null } = {}
+      if (brandingNameDirty) bbody.nickname = brandingNick.trim() || null
+      if (brandingAvatarDirty) bbody.avatar = brandingAvatar
+
+      const res = await fetch(`/api/discord/guild/${guildId}/bot-branding`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bbody),
+      })
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string }
+        failures.push(data.error ?? 'Could not save bot branding.')
+      } else {
+        const data = (await res.json()) as {
+          current: { nickname: string | null; avatarUrl: string | null }
+          lastUpdated: { at: string; by: string | null }
+        }
+        setBranding((prev) =>
+          prev
+            ? {
+                ...prev,
+                current: data.current,
+                hasCustomBranding: Boolean(data.current.nickname || data.current.avatarUrl),
+                lastUpdated: data.lastUpdated,
+              }
+            : prev,
+        )
+        setBrandingNick(data.current.nickname ?? '')
+        setBrandingAvatar('')
+      }
+    }
 
     setSaving(false)
 
-    if (!res.ok) {
-      const data = (await res.json().catch(() => ({}))) as { error?: string }
-      setError(data.error ?? 'Could not save settings.')
-      setToast({ kind: 'err', text: data.error ?? 'Save failed.' })
+    if (failures.length > 0) {
+      setError(failures.join(' '))
+      setToast({ kind: 'err', text: failures[0] })
       return
     }
-
-    const updated = (await res.json()) as DiscordGuildFull
-    setGuild(updated)
-    const fresh = buildEditState(updated)
-    setInitial(fresh)
-    setEdit(fresh)
     setError(null)
-    setToast({ kind: 'ok', text: 'Server settings saved.' })
+    setToast({ kind: 'ok', text: 'Settings saved.' })
   }
 
   // ── Invites ───────────────────────────────────────────────────────────────
@@ -436,6 +510,9 @@ export function ServerSettingsContent({ guildId }: Props) {
   const changedKeys = Object.keys(changes) as (keyof EditState)[]
   const isSensitive = (k: keyof EditState): boolean =>
     k === 'name' || k === 'verification_level' || k === 'explicit_content_filter' || k === 'iconDataUri'
+  // Branding (name/avatar) is member-visible, so treat it as a sensitive change.
+  const sensitiveChange = changedKeys.some(isSensitive) || brandingDirty
+  const totalChangeCount = changedKeys.length + brandingChangeCount
 
   return (
     <div className="page-content">
@@ -654,6 +731,17 @@ export function ServerSettingsContent({ guildId }: Props) {
               </div>
             </div>
           </SectionCard>
+
+          <BotBrandingCard
+            loading={brandingLoading}
+            branding={branding}
+            nickname={brandingNick}
+            onNicknameChange={setBrandingNick}
+            avatar={brandingAvatar}
+            onAvatarChange={setBrandingAvatar}
+            onNotice={(kind, text) => setToast({ kind, text })}
+            error={error}
+          />
         </CategorySection>
 
         {/* ── Safety ───────────────────────────────────────────────────── */}
@@ -976,21 +1064,23 @@ export function ServerSettingsContent({ guildId }: Props) {
       </div>
 
       <SaveBar
-        dirty={dirty}
-        changedCount={changedKeys.length}
+        dirty={dirty || brandingDirty}
+        changedCount={totalChangeCount}
         saving={saving}
-        disabled={!botCanEdit}
+        // Guild inputs are already disabled when the bot can't edit, so the
+        // only changes possible then are branding — keep Save reachable for it.
+        disabled={!botCanEdit && !brandingDirty}
         saveLabel="Save Settings"
         cleanText="All changes saved. Edits sync to Discord on save."
         dirtyHintText="review and save to sync with Discord."
         confirmTitle="Apply server settings?"
         confirmDescription={
-          changedKeys.some(isSensitive)
-            ? 'You’re changing settings that are visible to every member. This action syncs immediately with Discord.'
+          sensitiveChange
+            ? 'You’re changing settings that are visible to every member (which may include the bot’s name or avatar). This action syncs immediately with Discord.'
             : 'These changes will sync immediately with Discord.'
         }
         confirmLabel="Sync to Discord"
-        confirmTone={changedKeys.some(isSensitive) ? 'warning' : 'default'}
+        confirmTone={sensitiveChange ? 'warning' : 'default'}
         onReset={resetEdits}
         onSave={doSave}
       />

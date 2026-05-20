@@ -338,6 +338,9 @@ export function NotificationsContent({ guildId }: Props) {
           onClick={() => setSelected(null)}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Notification details"
             // overflow-hidden clips the footer's bg-2 fill so the rounded
             // bottom corners stay rounded (otherwise the square footer
             // square-cuts them).

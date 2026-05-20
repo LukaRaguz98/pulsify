@@ -14,6 +14,8 @@ const {
 } = require("discord.js");
 
 const { createClient } = require("@supabase/supabase-js");
+const { readFile } = require("node:fs/promises");
+const path = require("node:path");
 const { createAnalytics } = require("./analytics");
 const { recordNotification, fetchActor } = require("./notifications");
 const { forwardMessageToPulseGuard } = require("./ai-moderation");
@@ -113,6 +115,112 @@ function buildMemberV2Container(cfg, resolve, hasBanner) {
   return {
     type: 17,
     accent_color: isNaN(colorInt) ? 0x6366f1 : colorInt,
+    components,
+  };
+}
+
+// ── /sync embed ──────────────────────────────────────────────────────────────
+// The /sync reply is a Components V2 container themed with the guild's Pulse
+// Guard accent colour. The pulse-sync.png badge is recoloured to match via the
+// web app's /api/pulse-icon endpoint (the same tint pipeline Pulse Guard alerts
+// use); if that fetch fails we fall back to the bundled untinted PNG so the
+// command always answers.
+
+const SYNC_ICON_NAME = "pulse-sync.png";
+const SYNC_ICON_PATH = path.join(__dirname, "..", "resources", SYNC_ICON_NAME);
+const DEFAULT_PULSE_COLOR = "#8b5cf6";
+let cachedLocalSyncIcon;
+
+/** Read the guild's configured Pulse Guard accent colour, defaulting to violet. */
+async function getPulseColor(guildId) {
+  try {
+    const { data } = await supabase
+      .from("ai_moderation_settings")
+      .select("settings")
+      .eq("guild_id", guildId)
+      .maybeSingle();
+    const color = data?.settings?.embed_color;
+    return /^#[0-9a-fA-F]{6}$/.test(color ?? "") ? color : DEFAULT_PULSE_COLOR;
+  } catch {
+    return DEFAULT_PULSE_COLOR;
+  }
+}
+
+/**
+ * Resolve the /sync badge as a Discord attachment. Tries the web app's tinted
+ * icon endpoint first (bounded by a short timeout so the 3s interaction window
+ * is never at risk) and falls back to the bundled PNG.
+ */
+async function loadSyncIcon(colorHex) {
+  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+  const hex = colorHex.replace("#", "");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 2000);
+  try {
+    const res = await fetch(`${appUrl}/api/pulse-icon?icon=sync&color=${hex}`, {
+      signal: controller.signal,
+    });
+    if (res.ok) {
+      const buf = Buffer.from(await res.arrayBuffer());
+      return { attachment: buf, name: SYNC_ICON_NAME };
+    }
+  } catch {
+    // fall through to the bundled icon
+  } finally {
+    clearTimeout(timer);
+  }
+  try {
+    if (!cachedLocalSyncIcon) cachedLocalSyncIcon = await readFile(SYNC_ICON_PATH);
+    return { attachment: cachedLocalSyncIcon, name: SYNC_ICON_NAME };
+  } catch {
+    return null;
+  }
+}
+
+/** Build the /sync Components V2 container, themed with the guild's accent. */
+function buildSyncContainer(guild, colorHex, hasIcon) {
+  const colorInt = parseInt(colorHex.replace("#", ""), 16);
+  const unix = Math.floor(Date.now() / 1000);
+  const components = [];
+
+  const headerLines = [
+    { type: 10, content: `**Pulse**` },
+    { type: 10, content: `# Server synced` },
+    { type: 10, content: `-# ${guild.name}` },
+  ];
+  if (hasIcon) {
+    components.push({
+      type: 9,
+      components: headerLines,
+      accessory: {
+        type: 11,
+        media: { url: `attachment://${SYNC_ICON_NAME}` },
+        description: "Pulse",
+      },
+    });
+  } else {
+    components.push(...headerLines);
+  }
+
+  components.push({
+    type: 10,
+    content:
+      `**Members:** ${guild.memberCount.toLocaleString()}\n` + `**Status:** Up to date`,
+  });
+
+  components.push({ type: 14, divider: true, spacing: 1 });
+
+  components.push({
+    type: 10,
+    content:
+      "This server's data is now available on the Pulse dashboard. Analytics, moderation, and automations stay in sync from here.",
+  });
+
+  components.push({ type: 10, content: `-# Pulse · Synced <t:${unix}:R>` });
+
+  return {
+    type: 17,
+    accent_color: Number.isNaN(colorInt) ? 0x8b5cf6 : colorInt,
     components,
   };
 }
@@ -773,13 +881,26 @@ client.on(Events.InteractionCreate, async (interaction) => {
   });
 
   if (commandName === "sync") {
-    await interaction.deferReply({ ephemeral: true });
     const guild = interaction.guild;
     if (!guild) return;
+
+    // Prepare the themed reply first (bounded work), then reply within the 3s
+    // interaction window. The data upsert runs right after — member_count comes
+    // from the cached gateway value, so it doesn't depend on a member fetch.
+    const colorHex = await getPulseColor(guild.id);
+    const icon = await loadSyncIcon(colorHex);
+
+    try {
+      await interaction.reply({
+        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+        components: [buildSyncContainer(guild, colorHex, !!icon)],
+        files: icon ? [icon] : [],
+      });
+    } catch (err) {
+      console.warn(`[Pulse] /sync reply failed for guild ${guild.id}:`, err.message);
+    }
+
     await syncGuild(guild);
-    await interaction.editReply(
-      "Server data synced to the Pulse dashboard successfully.",
-    );
     return;
   }
 });
