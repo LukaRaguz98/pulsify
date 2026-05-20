@@ -57,6 +57,9 @@ export function ParticipantsModal({ guildId, eventId, eventName, onClose }: Prop
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Interested in ${eventName}`}
         onClick={(e) => e.stopPropagation()}
         className="flex w-full max-w-md flex-col rounded-xl border shadow-2xl"
         style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)', maxHeight: '80vh' }}

@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server'
-import { readFile } from 'node:fs/promises'
-import path from 'node:path'
 import { createClient } from '@/lib/supabase-server'
 import {
   analyzeContent,
@@ -15,10 +13,13 @@ import {
   deleteChannelMessage,
   timeoutMemberDiscord,
   postChannelComponents,
+  fetchGuild,
   type V2Container,
 } from '@/lib/discord'
 import type { V2Attachment } from '@/lib/discord'
 import { recordNotification } from '@/lib/notifications-server'
+import { getTintedPulseIcon, pulseIconFilename } from '@/lib/pulse-icon'
+import { sendPulseGuardWarningDM } from '@/lib/pulse-guard-dm'
 
 // ─── Alert styling ────────────────────────────────────────────────────────────
 // Restraint > flair. The container's accent stripe uses the guild's
@@ -47,102 +48,11 @@ const ACTION_LABEL: Record<AutoAction, string> = {
   timeout: 'Member timed out',
 }
 
-/**
- * Bundled Pulse Guard icon — `public/pulse-guard.png` is uploaded inline with
- * each alert as `attachment://pulse-guard.png`. The icon is recoloured on the
- * fly using the guild's configured `embed_color` so the alert chrome and the
- * icon share a single accent, then cached per hex so we only do the sharp
- * pass once per colour per process.
- */
-const PULSE_GUARD_ICON_FILENAME = 'pulse-guard.png'
-let cachedPulseGuardIcon: Buffer | null = null
-let pulseGuardIconLoadFailed = false
-const tintedIconCache = new Map<string, Buffer>()
-
-async function loadPulseGuardIcon(): Promise<Buffer | null> {
-  if (cachedPulseGuardIcon) return cachedPulseGuardIcon
-  if (pulseGuardIconLoadFailed) return null
-  try {
-    const filePath = path.join(process.cwd(), 'public', PULSE_GUARD_ICON_FILENAME)
-    cachedPulseGuardIcon = await readFile(filePath)
-    return cachedPulseGuardIcon
-  } catch (err) {
-    pulseGuardIconLoadFailed = true
-    console.warn(`[PulseGuard] failed to load icon from public/${PULSE_GUARD_ICON_FILENAME}:`, err)
-    return null
-  }
-}
-
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex)
-  if (!m) return { r: 139, g: 92, b: 246 } // fallback: pulsify violet
-  const n = parseInt(m[1], 16)
-  return { r: (n >> 16) & 0xff, g: (n >> 8) & 0xff, b: n & 0xff }
-}
-
-/**
- * Return the Pulse Guard icon recoloured to the given hex.
- *
- * We walk the PNG's raw RGBA pixels and lerp each pixel between the target
- * colour and pure white based on a "whiteness" score. White pixels (the
- * shield silhouette) stay white; saturated pixels (the background plate)
- * become the target colour; antialiased edges get the smooth transition
- * between the two.
- *
- *   whiteness = clamp01((1 - saturation·3) · brightness)
- *   output    = lerp(target, white, whiteness)
- *
- * Sharp is loaded lazily so this route doesn't crash if the native module
- * is broken — we fall back to the untinted PNG.
- */
-async function getTintedPulseGuardIcon(hex: string): Promise<Buffer | null> {
-  const base = await loadPulseGuardIcon()
-  if (!base) return null
-  const key = hex.toLowerCase()
-  const cached = tintedIconCache.get(key)
-  if (cached) return cached
-  try {
-    const { default: sharp } = await import('sharp')
-    const target = hexToRgb(hex)
-
-    const { data, info } = await sharp(base)
-      .ensureAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true })
-
-    const pixels = Buffer.from(data)
-    for (let i = 0; i < pixels.length; i += 4) {
-      const r = pixels[i]
-      const g = pixels[i + 1]
-      const b = pixels[i + 2]
-      // alpha at i+3 is preserved as-is
-
-      const maxC = Math.max(r, g, b)
-      const minC = Math.min(r, g, b)
-      const sat = maxC === 0 ? 0 : (maxC - minC) / maxC
-      const brightness = maxC / 255
-      // Saturation × 3 means anything with sat > ~0.33 is fully recoloured,
-      // giving a tight antialias band rather than a muddy halo.
-      const w = Math.max(0, Math.min(1, (1 - sat * 3) * brightness))
-
-      pixels[i] = Math.round(target.r * (1 - w) + 255 * w)
-      pixels[i + 1] = Math.round(target.g * (1 - w) + 255 * w)
-      pixels[i + 2] = Math.round(target.b * (1 - w) + 255 * w)
-    }
-
-    const tinted = await sharp(pixels, {
-      raw: { width: info.width, height: info.height, channels: 4 },
-    })
-      .png()
-      .toBuffer()
-
-    tintedIconCache.set(key, tinted)
-    return tinted
-  } catch (err) {
-    console.warn('[PulseGuard] icon tint failed, using original:', err)
-    return base
-  }
-}
+// The bundled Pulse Guard badge is recoloured to the guild's configured
+// `embed_color` so the alert chrome and the icon share one accent. The tint
+// pass lives in lib/pulse-icon.ts (shared with the warning DM and /sync). The
+// alert header references the upload as `attachment://<filename>`.
+const PULSE_GUARD_ICON_FILENAME = pulseIconFilename('guard')
 
 /**
  * Bot-facing endpoint.
@@ -322,7 +232,7 @@ export async function POST(req: Request) {
     if (settings.alert_channel_id) {
       // Tint the icon to match settings.embed_color so the alert chrome
       // and the icon share one accent. Cached per colour after first call.
-      const iconBuffer = await getTintedPulseGuardIcon(settings.embed_color)
+      const iconBuffer = await getTintedPulseIcon('guard', settings.embed_color)
       const attachments: V2Attachment[] = iconBuffer
         ? [{ filename: PULSE_GUARD_ICON_FILENAME, data: iconBuffer, contentType: 'image/png' }]
         : []
@@ -365,6 +275,23 @@ export async function POST(req: Request) {
           top_category: verdict.topCategory,
           action: executedAction,
         },
+      })
+    }
+
+    // Courtesy DM to the warned member — DM only. The moderator-facing
+    // "… detected" alert (posted above to the alert channel) is what mods see;
+    // this user-facing "you've received a warning" embed goes to the member's
+    // DM exclusively. Best-effort: a member with bot DMs disabled just won't
+    // get it.
+    if (executedAction === 'warn' && body.author_id) {
+      const guild = await fetchGuild(guildId)
+      void sendPulseGuardWarningDM({
+        userId: body.author_id,
+        guildName: guild?.name ?? 'the server',
+        reason: verdict.aiReasoning ?? verdict.reasoning,
+        categoryLabel: verdict.topCategory ? CATEGORY_LABELS[verdict.topCategory] : null,
+        severityLabel: SEVERITY_LABEL[verdict.severity],
+        embedColor: settings.embed_color,
       })
     }
   }
