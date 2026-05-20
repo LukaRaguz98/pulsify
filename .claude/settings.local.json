@@ -60,7 +60,8 @@
       "Bash(node -e \"console.log\\(require\\('discord.js'\\).version\\)\")",
       "Bash(cp E:/projects/pulsify/pulse-bot/resources/pulse-warn.png E:/projects/pulsify/pulsify-web-app/public/pulse-warn.png)",
       "Bash(cp E:/projects/pulsify/pulse-bot/resources/pulse-sync.png E:/projects/pulsify/pulsify-web-app/public/pulse-sync.png)",
-      "Bash(node --check src/index.js)"
+      "Bash(node --check src/index.js)",
+      "Bash(node -e 'const L=require\\(\"lucide-react\"\\); console.log\\([\"ArrowUp\",\"ChevronUp\"].map\\(n=>n+\":\"+\\(n in L\\)\\).join\\(\" \"\\)\\)')"
     ]
   }
 }
