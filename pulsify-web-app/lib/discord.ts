@@ -144,6 +144,8 @@ export type DiscordMember = {
     bot?: boolean
   }
   nick: string | null
+  /** Per-guild member avatar hash (distinct from the global user avatar). */
+  avatar?: string | null
   roles: string[]
   joined_at: string
   communication_disabled_until?: string | null
@@ -619,6 +621,8 @@ export type BotPermissions = {
   manageChannels: boolean
   sendMessages: boolean
   viewAuditLog: boolean
+  /** Lets the bot change its OWN nickname — required for per-server branding. */
+  changeNickname: boolean
 }
 
 const EMPTY_PERMS: BotPermissions = {
@@ -633,6 +637,7 @@ const EMPTY_PERMS: BotPermissions = {
   manageChannels: false,
   sendMessages: false,
   viewAuditLog: false,
+  changeNickname: false,
 }
 
 const PERM_BITS = {
@@ -643,6 +648,7 @@ const PERM_BITS = {
   VIEW_AUDIT_LOG:   BigInt(0x80),
   SEND_MESSAGES:    BigInt(0x800),
   MANAGE_MESSAGES:  BigInt(0x2000),
+  CHANGE_NICKNAME:  BigInt(0x4000000),
   MANAGE_NICKNAMES: BigInt(0x8000000),
   MANAGE_ROLES:     BigInt(0x10000000),
   // 1 << 40 = 0x10000000000 — Moderate Members (timeout)
@@ -728,6 +734,7 @@ export async function checkBotPermissions(guildId: string): Promise<BotPermissio
       manageChannels: true,
       sendMessages: true,
       viewAuditLog: true,
+      changeNickname: true,
     }
   }
 
@@ -747,6 +754,7 @@ export async function checkBotPermissions(guildId: string): Promise<BotPermissio
     manageChannels:  has(PERM_BITS.MANAGE_CHANNELS),
     sendMessages:    has(PERM_BITS.SEND_MESSAGES),
     viewAuditLog:    has(PERM_BITS.VIEW_AUDIT_LOG),
+    changeNickname:  has(PERM_BITS.CHANGE_NICKNAME),
   }
 }
 
@@ -1327,6 +1335,28 @@ export async function postChannelComponents(
   return { ok: false, error: errBody.message ?? `Discord API error ${res.status}` }
 }
 
+/**
+ * Open (or fetch) the DM channel with a user and return its id. Discord
+ * dedupes — repeated calls return the same channel. Returns null when the bot
+ * token is missing or Discord refuses to open the channel. Note: a successful
+ * open does NOT guarantee the user accepts DMs; that surfaces as an error when
+ * you actually post (handled by the caller as best-effort).
+ */
+export async function openDMChannel(userId: string): Promise<string | null> {
+  if (!process.env.DISCORD_BOT_TOKEN) return null
+  const res = await fetch(`${DISCORD_API}/users/@me/channels`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ recipient_id: userId }),
+  })
+  if (!res.ok) return null
+  const dm = (await res.json()) as { id?: string }
+  return dm.id ?? null
+}
+
 let cachedBotAvatarUrl: string | null | undefined = undefined
 
 /**
@@ -1358,6 +1388,94 @@ export async function getBotAvatarUrl(): Promise<string | null> {
     cachedBotAvatarUrl = null
     return null
   }
+}
+
+export type DiscordBotUser = {
+  id: string
+  username: string
+  global_name: string | null
+  avatar: string | null
+}
+
+let cachedBotUser: DiscordBotUser | null | undefined = undefined
+
+/**
+ * The bot's own global Discord identity (default name + avatar). Cached for the
+ * process. Used as the fallback when a guild has no custom Pulse branding.
+ */
+export async function getBotUser(): Promise<DiscordBotUser | null> {
+  if (cachedBotUser !== undefined) return cachedBotUser
+  if (!process.env.DISCORD_BOT_TOKEN) {
+    cachedBotUser = null
+    return null
+  }
+  try {
+    const res = await fetch(`${DISCORD_API}/users/@me`, {
+      headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+      cache: 'no-store',
+    })
+    if (!res.ok) {
+      cachedBotUser = null
+      return null
+    }
+    cachedBotUser = (await res.json()) as DiscordBotUser
+    return cachedBotUser
+  } catch {
+    cachedBotUser = null
+    return null
+  }
+}
+
+/** CDN URL for a member's per-guild avatar, or '' when unset. */
+export function guildMemberAvatarUrl(
+  guildId: string,
+  userId: string,
+  avatarHash: string | null,
+  size = 128,
+): string {
+  if (!avatarHash) return ''
+  const ext = avatarHash.startsWith('a_') ? 'gif' : 'webp'
+  return `https://cdn.discordapp.com/guilds/${guildId}/users/${userId}/avatars/${avatarHash}.${ext}?size=${size}`
+}
+
+/** Fetch the bot's own member object in a guild (its nick + per-guild avatar). */
+export async function fetchBotGuildMember(guildId: string): Promise<DiscordMember | null> {
+  const botId = await getBotId()
+  if (!botId) return null
+  return fetchGuildMember(guildId, botId)
+}
+
+export type BotMemberMutation = {
+  /** New nickname. null clears it (back to the default username). Omit to leave unchanged. */
+  nick?: string | null
+  /** Base64 data URI ("data:image/png;base64,…"). null clears the guild avatar. Omit to leave unchanged. */
+  avatar?: string | null
+}
+
+/**
+ * Update the bot's OWN member in a guild — its per-server nickname and avatar.
+ * Maps to `PATCH /guilds/{guild.id}/members/@me`. Per-guild avatars aren't
+ * available in every server (Discord gates them), so a rejected avatar surfaces
+ * as a normal error string for the caller to show ("where Discord allows it").
+ */
+export async function modifyBotGuildMember(
+  guildId: string,
+  mutation: BotMemberMutation,
+  reason?: string,
+): Promise<{ ok: true; member: DiscordMember } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const body: Record<string, unknown> = {}
+  if (mutation.nick !== undefined) body.nick = mutation.nick ? mutation.nick.slice(0, 32) : null
+  if (mutation.avatar !== undefined) body.avatar = mutation.avatar
+  if (Object.keys(body).length === 0) return { ok: false, error: 'No branding changes to apply.' }
+
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/@me`, {
+    method: 'PATCH',
+    headers: jsonHeaders(reason),
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) return { ok: false, error: await discordError(res) }
+  return { ok: true, member: (await res.json()) as DiscordMember }
 }
 
 export type ChannelCreate = {

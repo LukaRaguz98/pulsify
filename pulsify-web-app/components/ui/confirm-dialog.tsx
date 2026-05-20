@@ -127,6 +127,9 @@ export function ConfirmDialog({
       onClick={() => !busy && onCancel()}
     >
       <form
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         onSubmit={handleSubmit}
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-md rounded-xl border shadow-2xl"
