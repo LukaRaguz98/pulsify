@@ -22,6 +22,8 @@ import {
   Sparkles,
   ShieldCheck,
   SlidersHorizontal,
+  TerminalSquare,
+  Command,
 } from 'lucide-react'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
 
@@ -106,10 +108,17 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
       ],
     },
     {
+      title: 'Pulse Bot',
+      icon: <TerminalSquare size={16} />,
+      items: [
+        { label: 'Commands', href: `${base}/commands`, icon: <Command size={16} />, badge: 'Bot' },
+      ],
+    },
+    {
       title: 'Engagement',
       icon: <Sparkles size={16} />,
       items: [
-        { label: 'Automations', href: `${base}/automations`, icon: <Zap size={16} />, badge: 'Pulse' },
+        { label: 'Automations', href: `${base}/automations`, icon: <Zap size={16} />, badge: 'AI' },
       ],
     },
     {
@@ -117,7 +126,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
       icon: <ShieldCheck size={16} />,
       items: [
         { label: 'Moderation', href: `${base}/moderation`, icon: <Shield size={16} /> },
-        { label: 'Pulse Guard', href: `${base}/ai-moderation`, icon: <ShieldAlert size={16} />, badge: 'Pulse' },
+        { label: 'Pulse Guard', href: `${base}/ai-moderation`, icon: <ShieldAlert size={16} />, badge: 'AI' },
       ],
     },
     {

@@ -5,20 +5,25 @@ const {
   GatewayIntentBits,
   REST,
   Routes,
-  SlashCommandBuilder,
   EmbedBuilder,
-  PermissionFlagsBits,
   MessageFlags,
   Events,
   AuditLogEvent,
 } = require("discord.js");
 
 const { createClient } = require("@supabase/supabase-js");
-const { readFile } = require("node:fs/promises");
-const path = require("node:path");
 const { createAnalytics } = require("./analytics");
 const { recordNotification, fetchActor } = require("./notifications");
 const { forwardMessageToPulseGuard } = require("./ai-moderation");
+const { COMMANDS_BY_NAME } = require("./commands");
+const {
+  loadConfigs,
+  invalidateConfigs,
+  buildGuildCommandBody,
+  getAllowedCommands,
+  logCommand,
+  evaluate,
+} = require("./command-center");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -119,122 +124,32 @@ function buildMemberV2Container(cfg, resolve, hasBanner) {
   };
 }
 
-// ── /sync embed ──────────────────────────────────────────────────────────────
-// The /sync reply is a Components V2 container themed with the guild's Pulse
-// Guard accent colour. The pulse-sync.png badge is recoloured to match via the
-// web app's /api/pulse-icon endpoint (the same tint pipeline Pulse Guard alerts
-// use); if that fetch fails we fall back to the bundled untinted PNG so the
-// command always answers.
+// Slash commands are defined in ./commands.js (the catalog) and gated per
+// server by the Command Center (./command-center.js). Registration only
+// publishes the commands a guild has enabled; execution enforces permissions,
+// cooldowns and usage limits. Registering uses the guild's saved config:
+//
+//   registerGuildCommands(rest, appId, guild) — build + PUT the enabled set.
+//
+// The REST client + bot application id are captured on ready so the realtime
+// command_configs listener can re-register a guild when its config changes.
+let restClient = null;
+let botAppId = null;
 
-const SYNC_ICON_NAME = "pulse-sync.png";
-const SYNC_ICON_PATH = path.join(__dirname, "..", "resources", SYNC_ICON_NAME);
-const DEFAULT_PULSE_COLOR = "#8b5cf6";
-let cachedLocalSyncIcon;
-
-/** Read the guild's configured Pulse Guard accent colour, defaulting to violet. */
-async function getPulseColor(guildId) {
-  try {
-    const { data } = await supabase
-      .from("ai_moderation_settings")
-      .select("settings")
-      .eq("guild_id", guildId)
-      .maybeSingle();
-    const color = data?.settings?.embed_color;
-    return /^#[0-9a-fA-F]{6}$/.test(color ?? "") ? color : DEFAULT_PULSE_COLOR;
-  } catch {
-    return DEFAULT_PULSE_COLOR;
-  }
+async function registerGuildCommands(rest, appId, guild) {
+  // force-refresh the config cache so a freshly-saved dashboard change is
+  // reflected the moment we (re)register.
+  const configMap = await loadConfigs(supabase, guild.id, { force: true });
+  const body = buildGuildCommandBody(configMap);
+  await rest
+    .put(Routes.applicationGuildCommands(appId, guild.id), { body })
+    .catch((err) =>
+      console.warn(
+        `[Pulse] Failed to register commands for guild ${guild.id}:`,
+        err.message,
+      ),
+    );
 }
-
-/**
- * Resolve the /sync badge as a Discord attachment. Tries the web app's tinted
- * icon endpoint first (bounded by a short timeout so the 3s interaction window
- * is never at risk) and falls back to the bundled PNG.
- */
-async function loadSyncIcon(colorHex) {
-  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
-  const hex = colorHex.replace("#", "");
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 2000);
-  try {
-    const res = await fetch(`${appUrl}/api/pulse-icon?icon=sync&color=${hex}`, {
-      signal: controller.signal,
-    });
-    if (res.ok) {
-      const buf = Buffer.from(await res.arrayBuffer());
-      return { attachment: buf, name: SYNC_ICON_NAME };
-    }
-  } catch {
-    // fall through to the bundled icon
-  } finally {
-    clearTimeout(timer);
-  }
-  try {
-    if (!cachedLocalSyncIcon) cachedLocalSyncIcon = await readFile(SYNC_ICON_PATH);
-    return { attachment: cachedLocalSyncIcon, name: SYNC_ICON_NAME };
-  } catch {
-    return null;
-  }
-}
-
-/** Build the /sync Components V2 container, themed with the guild's accent. */
-function buildSyncContainer(guild, colorHex, hasIcon) {
-  const colorInt = parseInt(colorHex.replace("#", ""), 16);
-  const unix = Math.floor(Date.now() / 1000);
-  const components = [];
-
-  const headerLines = [
-    { type: 10, content: `**Pulse**` },
-    { type: 10, content: `# Server synced` },
-    { type: 10, content: `-# ${guild.name}` },
-  ];
-  if (hasIcon) {
-    components.push({
-      type: 9,
-      components: headerLines,
-      accessory: {
-        type: 11,
-        media: { url: `attachment://${SYNC_ICON_NAME}` },
-        description: "Pulse",
-      },
-    });
-  } else {
-    components.push(...headerLines);
-  }
-
-  components.push({
-    type: 10,
-    content:
-      `**Members:** ${guild.memberCount.toLocaleString()}\n` + `**Status:** Up to date`,
-  });
-
-  components.push({ type: 14, divider: true, spacing: 1 });
-
-  components.push({
-    type: 10,
-    content:
-      "This server's data is now available on the Pulse dashboard. Analytics, moderation, and automations stay in sync from here.",
-  });
-
-  components.push({ type: 10, content: `-# Pulse · Synced <t:${unix}:R>` });
-
-  return {
-    type: 17,
-    accent_color: Number.isNaN(colorInt) ? 0x8b5cf6 : colorInt,
-    components,
-  };
-}
-
-// Only commands that bridge to the Pulsify web app. User-facing slash
-// commands (ping, stats, warn, etc.) were removed — moderators handle all
-// of that from the dashboard now. Keep `/sync` because it's the manual
-// trigger when the automatic `GuildCreate` sync gets missed.
-const commands = [
-  new SlashCommandBuilder()
-    .setName("sync")
-    .setDescription("Sync this server's data to the Pulse dashboard")
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
-].map((c) => c.toJSON());
 
 client.once(Events.ClientReady, async (readyClient) => {
   console.log(`[Pulse] Logged in as ${readyClient.user.tag}`);
@@ -244,25 +159,17 @@ client.once(Events.ClientReady, async (readyClient) => {
     status: "online",
   });
 
-  // Per-guild command registration: stale commands (ping/stats/warn/…) that
-  // were previously registered globally take up to an hour to disappear, so
-  // we wipe the global list AND register the minimal set per guild. Per-guild
-  // commands propagate in seconds.
-  const rest = new REST().setToken(process.env.DISCORD_BOT_TOKEN);
-  await rest.put(Routes.applicationCommands(readyClient.user.id), { body: [] });
+  // Per-guild command registration. We wipe the global command list (stale
+  // commands take up to an hour to disappear globally) and register each
+  // guild's enabled command set — per-guild commands propagate in seconds, so
+  // dashboard toggles take effect almost immediately.
+  restClient = new REST().setToken(process.env.DISCORD_BOT_TOKEN);
+  botAppId = readyClient.user.id;
+  await restClient.put(Routes.applicationCommands(botAppId), { body: [] });
   console.log("[Pulse] Cleared global slash commands.");
 
   for (const guild of readyClient.guilds.cache.values()) {
-    await rest
-      .put(Routes.applicationGuildCommands(readyClient.user.id, guild.id), {
-        body: commands,
-      })
-      .catch((err) =>
-        console.warn(
-          `[Pulse] Failed to register commands for guild ${guild.id}:`,
-          err.message,
-        ),
-      );
+    await registerGuildCommands(restClient, botAppId, guild);
     await syncGuild(guild);
 
     // Seed analytics with members already connected to voice channels.
@@ -297,22 +204,35 @@ client.once(Events.ClientReady, async (readyClient) => {
       `[Pulse] Removed ${stale.length} stale guild(s) from synced_guilds.`,
     );
   }
+
+  // Live config sync: when an admin changes a command in the dashboard, drop
+  // our cached config for that guild and re-register its command set so the
+  // change reflects in Discord within seconds (not just at the next restart).
+  supabase
+    .channel("command-configs")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "command_configs" },
+      async (payload) => {
+        const guildId = payload.new?.guild_id ?? payload.old?.guild_id;
+        if (!guildId) return;
+        invalidateConfigs(guildId);
+        const guild = readyClient.guilds.cache.get(guildId);
+        if (guild && restClient) {
+          await registerGuildCommands(restClient, botAppId, guild);
+          console.log(`[Pulse] Re-registered commands for guild ${guildId} after config change.`);
+        }
+      },
+    )
+    .subscribe();
 });
 
 client.on(Events.GuildCreate, async (guild) => {
   console.log(`[Pulse] Joined guild: ${guild.name}`);
-  // Register commands per-guild so the new server gets them immediately.
-  const rest = new REST().setToken(process.env.DISCORD_BOT_TOKEN);
-  await rest
-    .put(Routes.applicationGuildCommands(client.user.id, guild.id), {
-      body: commands,
-    })
-    .catch((err) =>
-      console.warn(
-        `[Pulse] Failed to register commands for guild ${guild.id}:`,
-        err.message,
-      ),
-    );
+  // Register the guild's enabled command set so the new server gets them
+  // immediately (per-guild registration propagates in seconds).
+  const rest = restClient ?? new REST().setToken(process.env.DISCORD_BOT_TOKEN);
+  await registerGuildCommands(rest, botAppId ?? client.user.id, guild);
   await syncGuild(guild);
 });
 
@@ -868,9 +788,13 @@ client.on(Events.GuildUpdate, async (oldGuild, newGuild) => {
 
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
+  const guild = interaction.guild;
+  if (!guild) return;
 
   const { commandName } = interaction;
 
+  // Keep feeding the Overview analytics (total commands) regardless of the
+  // Command Center outcome — every invocation is still a "command" event.
   analytics.track({
     type: "command",
     guildId: interaction.guildId,
@@ -880,28 +804,69 @@ client.on(Events.InteractionCreate, async (interaction) => {
     metadata: { command: commandName },
   });
 
-  if (commandName === "sync") {
-    const guild = interaction.guild;
-    if (!guild) return;
+  const logBase = {
+    guildId: guild.id,
+    commandName,
+    userId: interaction.user.id,
+    userName: interaction.member?.displayName ?? interaction.user.username,
+    channelId: interaction.channelId,
+    channelName: interaction.channel?.name ?? null,
+  };
 
-    // Prepare the themed reply first (bounded work), then reply within the 3s
-    // interaction window. The data upsert runs right after — member_count comes
-    // from the cached gateway value, so it doesn't depend on a member fetch.
-    const colorHex = await getPulseColor(guild.id);
-    const icon = await loadSyncIcon(colorHex);
+  // Gate the command through the Command Center: enable/maintenance,
+  // channel + role allow/deny, baseline access level, cooldown, usage cap.
+  const verdict = await evaluate(supabase, interaction);
 
-    try {
-      await interaction.reply({
-        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
-        components: [buildSyncContainer(guild, colorHex, !!icon)],
-        files: icon ? [icon] : [],
-      });
-    } catch (err) {
-      console.warn(`[Pulse] /sync reply failed for guild ${guild.id}:`, err.message);
-    }
-
-    await syncGuild(guild);
+  if (verdict.kind === "unknown") {
+    // Registered command with no handler — should not happen, but never hang.
+    await interaction
+      .reply({ content: "Unknown command.", flags: MessageFlags.Ephemeral })
+      .catch(() => {});
     return;
+  }
+
+  if (verdict.kind === "blocked") {
+    await interaction
+      .reply({ content: verdict.reason, flags: MessageFlags.Ephemeral })
+      .catch(() => {});
+    await logCommand(supabase, { ...logBase, status: verdict.status, detail: verdict.reason });
+    return;
+  }
+
+  const command = COMMANDS_BY_NAME.get(commandName);
+  const startedAt = Date.now();
+  try {
+    await command.execute({
+      interaction,
+      guild,
+      client,
+      supabase,
+      syncGuild,
+      getAllowedCommands,
+      ephemeral: verdict.ephemeral,
+    });
+    verdict.commit();
+    await logCommand(supabase, {
+      ...logBase,
+      status: "success",
+      durationMs: Date.now() - startedAt,
+    });
+  } catch (err) {
+    console.error(`[Pulse] /${commandName} failed in guild ${guild.id}:`, err.message);
+    await logCommand(supabase, {
+      ...logBase,
+      status: "failed",
+      detail: err.message,
+      durationMs: Date.now() - startedAt,
+    });
+    // Surface a generic failure without leaking internals; ignore if the
+    // interaction was already answered by the handler before it threw.
+    const failMsg = { content: "Something went wrong running that command.", flags: MessageFlags.Ephemeral };
+    if (interaction.replied || interaction.deferred) {
+      await interaction.followUp(failMsg).catch(() => {});
+    } else {
+      await interaction.reply(failMsg).catch(() => {});
+    }
   }
 });
 

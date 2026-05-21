@@ -22,6 +22,12 @@ export const PULSE_ICONS = {
   warn: 'pulse-warn.png',
   /** Sync glyph — the bot's /sync reply. */
   sync: 'pulse-sync.png',
+  /** Help glyph — the bot's /help reply. */
+  help: 'pulse-help.png',
+  /** Info glyph — the bot's /serverinfo + /userinfo replies. */
+  info: 'pulse-info.png',
+  /** Stats glyph — the bot's /stats reply. */
+  stats: 'pulse-stats.png',
 } as const
 
 export type PulseIconName = keyof typeof PULSE_ICONS
