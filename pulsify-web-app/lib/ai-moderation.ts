@@ -17,6 +17,16 @@ export const SENSITIVITY_THRESHOLDS: Record<Sensitivity, number> = {
   aggressive: 0.45,
 }
 
+/**
+ * Spam scored only by the LLM (no structural heuristic evidence) must reach
+ * this near-certain bar before it counts as a violation. Spam is fundamentally
+ * a repetition / volume / advertising signal, so a small model's "this reads
+ * spammy" judgement on a single, normal-looking message — especially in a
+ * language it parses poorly — must not be enough to auto-delete. Structural
+ * spam (repeated characters, wall-of-caps) still uses the normal threshold.
+ */
+export const SPAM_LLM_FLOOR = 0.9
+
 export const SENSITIVITY_LABELS: Record<Sensitivity, string> = {
   low: 'Low',
   medium: 'Medium',
@@ -341,22 +351,35 @@ async function llmScores(
   const AI_BASE_URL = process.env.AI_BASE_URL ?? 'https://api.groq.com/openai/v1'
   const AI_MODEL = process.env.AI_MODEL ?? 'llama-3.1-8b-instant'
 
-  const systemPrompt = `You are a Discord moderation classifier. Read the user message and return a JSON object with a numeric score from 0 to 1 for each requested category, plus a one-sentence reasoning string. Respond with raw JSON only — no markdown.`
+  const systemPrompt = `You are a careful Discord moderation classifier. For one message you assign each requested category a score from 0.0 (clearly does NOT apply) to 1.0 (clearly applies).
+
+Be conservative — the vast majority of chat is harmless and must score near 0.0. Only give a high score when the message itself unambiguously matches the category. When in doubt, score low.
+
+Rules:
+- Messages may be in ANY language (English, Croatian, Spanish, slang, etc.). Ordinary conversation, jokes, small talk, gaming/everyday chatter, plans, or venting are NOT violations — score 0.0 even if the text looks odd to you or you can't fully parse it. Do not penalise a message for being in a language you find hard to read.
+- Talking ABOUT a topic is not committing it. Mentioning the words "spam", "scam", "phishing", or discussing moderation is NOT itself a violation.
+- spam = low-effort repetitive flooding, copy-paste, or unsolicited advertising. A single ordinary sentence is almost never spam — score it 0.0.
+- toxicity / harassment require genuine slurs, insults, or attacks aimed at a person — not mild profanity, banter, or strong opinions.
+- scam / phishing require an actual deceptive offer or credential-stealing link, not casual mention.
+
+Respond with raw JSON only — no markdown, no extra text.`
 
   const categoryList = enabledCategories
     .map((id) => `- ${id}: ${CATEGORY_DESCRIPTIONS[id]}`)
     .join('\n')
 
-  const userPrompt = `Categories to score:
+  const userPrompt = `Score this message for each category (0.0 = does not apply, 1.0 = clearly applies). Default to 0.0 unless the message clearly matches.
+
+Categories:
 ${categoryList}
 
 Message:
 """${content.slice(0, 2000)}"""
 
-Return JSON like:
+Return JSON only:
 {
   "scores": { ${enabledCategories.map((id) => `"${id}": 0.0`).join(', ')} },
-  "reasoning": "one short sentence"
+  "reasoning": "one short sentence (mention the language if relevant)"
 }`
 
   try {
@@ -442,9 +465,25 @@ export async function analyzeContent(
     .filter((c) => c.score > 0)
     .sort((a, b) => b.score - a.score)
 
-  const top = finalScores[0] ?? null
+  // Spam from the LLM alone is an unreliable single-message signal, so it needs
+  // structural evidence (repeated characters / wall-of-caps from the heuristic
+  // pass) OR near-certainty before it counts. Everything else uses the plain
+  // sensitivity threshold.
+  const structuralSpam = (hScores.spam ?? 0) >= 0.5
+  const effectiveThreshold = (id: CategoryId): number =>
+    id === 'spam' && !structuralSpam ? Math.max(threshold, SPAM_LLM_FLOOR) : threshold
+
+  // The violating category is the highest-scoring one that clears its OWN
+  // (possibly raised) threshold — not necessarily the single highest score.
+  // This way a dampened spam score can't shadow a genuine toxicity hit, and a
+  // borderline spam-only message simply doesn't violate.
+  const violatingCategory = finalScores.find((c) => c.score >= effectiveThreshold(c.id)) ?? null
+  const violates = violatingCategory !== null
+
+  // Surface the violating category (it drives the action + alert) when there is
+  // one; otherwise the closest score, so the dashboard still shows context.
+  const top = violatingCategory ?? finalScores[0] ?? null
   const confidence = top?.score ?? 0
-  const violates = top !== null && confidence >= threshold
 
   let severity: AnalysisVerdict['severity'] = 'low'
   if (confidence >= 0.85) severity = 'high'

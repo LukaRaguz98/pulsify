@@ -64,7 +64,10 @@
       "Bash(node -e 'const L=require\\(\"lucide-react\"\\); console.log\\([\"ArrowUp\",\"ChevronUp\"].map\\(n=>n+\":\"+\\(n in L\\)\\).join\\(\" \"\\)\\)')",
       "Bash(node --check src/commands.js)",
       "Read(//e/e/projects/pulsify/**)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(node --check src/scheduler.js)",
+      "Bash(echo \"exit: $?\")",
+      "PowerShell(Get-CimInstance *)"
     ]
   }
 }
