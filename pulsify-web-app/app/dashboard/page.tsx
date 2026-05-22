@@ -7,6 +7,7 @@ import { fetchUserGuilds, fetchSelfUser, hasManageGuild, userBannerUrl, type Dis
 import { ServerCard } from '@/components/dashboard/ServerCard'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
 import { CategorySection } from '@/components/ui/category-section'
+import { highlightBrand } from '@/components/ui/brand-text'
 import { Footer } from '@/components/Footer'
 import { ReconnectDiscordButton } from '@/components/ReconnectDiscordButton'
 
@@ -113,7 +114,7 @@ export default async function DashboardPage() {
             Welcome back, {displayName.split(' ')[0]}
           </h1>
           <p className="mt-1.5 text-muted-foreground">
-            Select a Discord server to manage with Pulsify.
+            {highlightBrand('Select a Discord server to manage with Pulsify.')}
           </p>
         </div>
 

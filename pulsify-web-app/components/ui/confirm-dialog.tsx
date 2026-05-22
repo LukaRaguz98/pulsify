@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Loader2, AlertTriangle } from 'lucide-react'
 
 export type ConfirmTone = 'default' | 'destructive' | 'warning'
@@ -120,9 +121,14 @@ export function ConfirmDialog({
 
   const toneCfg = TONE_STYLES[tone]
 
-  return (
+  if (typeof document === 'undefined') return null
+
+  // Portal to <body> so the dialog escapes the page's per-element stacking
+  // contexts — globals.css sets `* { position: relative; z-index: 1 }`, which
+  // otherwise lets later page cards paint over an inline-rendered dialog.
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
       onClick={() => !busy && onCancel()}
     >
@@ -278,6 +284,7 @@ export function ConfirmDialog({
           </button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   )
 }
