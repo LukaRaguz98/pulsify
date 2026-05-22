@@ -6,6 +6,7 @@ import { usePreferences } from '@/components/ThemeProvider'
 import { THEMES } from '@/lib/themes'
 import { SectionCard } from '@/components/ui/section-card'
 import { CategorySection } from '@/components/ui/category-section'
+import { highlightBrand } from '@/components/ui/brand-text'
 import { SaveBar } from '@/components/ui/save-bar'
 import { useNotifications } from '@/components/dashboard/notifications/NotificationsProvider'
 import {
@@ -183,7 +184,7 @@ export default function SettingsPage() {
     <div className="page-content max-w-4xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Preferences</h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">{activeMeta.description}</p>
+        <p className="mt-1.5 text-sm text-muted-foreground">{highlightBrand(activeMeta.description)}</p>
       </div>
 
       {/* Subtab switcher */}
