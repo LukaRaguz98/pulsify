@@ -9,6 +9,7 @@ import {
   BarChart2,
   Activity,
   CalendarDays,
+  CalendarClock,
   Zap,
   Shield,
   ShieldAlert,
@@ -121,6 +122,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
       icon: <Sparkles size={16} />,
       items: [
         { label: 'Automations', href: `${base}/automations`, icon: <Zap size={16} />, badge: 'AI' },
+        { label: 'Scheduled', href: `${base}/scheduled`, icon: <CalendarClock size={16} />, badge: 'Bot' },
       ],
     },
     {
