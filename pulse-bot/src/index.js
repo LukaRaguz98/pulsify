@@ -24,6 +24,7 @@ const {
   logCommand,
   evaluate,
 } = require("./command-center");
+const { createScheduler } = require("./scheduler");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -45,6 +46,10 @@ const client = new Client({
     GatewayIntentBits.GuildScheduledEvents,
   ],
 });
+
+// Constructed after `client` exists — the scheduler captures it to resolve
+// guilds and run actions when workflows fire.
+const scheduler = createScheduler(client, supabase);
 
 /**
  * Shared helper for Discord-side activity → notifications row.
@@ -225,6 +230,10 @@ client.once(Events.ClientReady, async (readyClient) => {
       },
     )
     .subscribe();
+
+  // Scheduled Automations: load saved workflows, watch for edits + "Run now"
+  // requests over realtime, and fire due workflows once a minute.
+  await scheduler.start();
 });
 
 client.on(Events.GuildCreate, async (guild) => {

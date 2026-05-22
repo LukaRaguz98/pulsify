@@ -142,12 +142,15 @@ export function DiscordEmbedPreview({ embed, serverName }: Props) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '10px' }}>
                 {embed.fields.map((field, i) => (
                   <div key={i}>
-                    <p style={{ color: 'var(--text)', fontSize: '14px', fontWeight: '700', margin: '0 0 2px' }}>
+                    {/* These must be <div>, not <p>: the value renders
+                        renderContent()'s block <div>s, and <p> can't contain a
+                        <div> (invalid HTML → hydration error). */}
+                    <div style={{ color: 'var(--text)', fontSize: '14px', fontWeight: '700', margin: '0 0 2px' }}>
                       {resolve(field.name)}
-                    </p>
-                    <p style={{ color: 'var(--text-2)', fontSize: '14px', margin: 0, lineHeight: '1.45' }}>
+                    </div>
+                    <div style={{ color: 'var(--text-2)', fontSize: '14px', margin: 0, lineHeight: '1.45' }}>
                       {renderContent(resolve(field.value))}
-                    </p>
+                    </div>
                   </div>
                 ))}
               </div>
