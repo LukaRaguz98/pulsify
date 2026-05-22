@@ -536,6 +536,52 @@ export async function fetchGuildBans(guildId: string): Promise<DiscordBan[]> {
   return res.json()
 }
 
+/**
+ * Look up a single ban by user id. Returns the ban (with reason) when the user
+ * is banned, or null when they aren't (Discord 404s for non-banned users) or
+ * the lookup can't be performed. Cheaper than scanning the whole ban list when
+ * you only care about one member.
+ */
+export async function fetchGuildBan(
+  guildId: string,
+  userId: string,
+): Promise<DiscordBan | null> {
+  if (!process.env.DISCORD_BOT_TOKEN) return null
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/bans/${userId}`, {
+    headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+    cache: 'no-store',
+  })
+  if (!res.ok) return null
+  return res.json()
+}
+
+export type DiscordUser = {
+  id: string
+  username: string
+  global_name: string | null
+  avatar: string | null
+  /** Profile banner hash — only returned by the full /users/{id} fetch, NOT
+   *  by the guild-member endpoint. */
+  banner: string | null
+  /** Decimal RGB profile accent colour; null when unset. */
+  accent_color: number | null
+}
+
+/**
+ * Fetch a user's full Discord profile by id (bot token). Unlike the guild
+ * member object, this includes the profile `banner` and `accent_color`.
+ * Returns null when the token is missing or the lookup fails.
+ */
+export async function fetchDiscordUser(userId: string): Promise<DiscordUser | null> {
+  if (!process.env.DISCORD_BOT_TOKEN) return null
+  const res = await fetch(`${DISCORD_API}/users/${userId}`, {
+    headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+    next: { revalidate: 300 },
+  })
+  if (!res.ok) return null
+  return res.json()
+}
+
 // Discord audit log action types — only the ones we care about.
 export const AUDIT_LOG_ACTION = {
   MEMBER_BAN_ADD: 22,

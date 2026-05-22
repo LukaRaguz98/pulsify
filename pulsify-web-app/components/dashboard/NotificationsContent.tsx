@@ -24,6 +24,9 @@ const CATEGORY_ORDER: NotificationCategory[] = [
   'members', 'moderation', 'roles', 'events', 'channels', 'automations', 'settings', 'bot',
 ]
 
+// Show this many at first; "Load older" reveals/fetches another batch of this size.
+const PAGE_SIZE = 25
+
 export function NotificationsContent({ guildId }: Props) {
   const router = useRouter()
   const {
@@ -34,6 +37,7 @@ export function NotificationsContent({ guildId }: Props) {
   const [olderRows, setOlderRows] = useState<NotificationRow[]>([])
   const [loadingMore, setLoadingMore] = useState(false)
   const [reachedEnd, setReachedEnd] = useState(false)
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [selected, setSelected] = useState<NotificationRow | null>(null)
   const [clearOpen, setClearOpen] = useState(false)
   const [clearing, setClearing] = useState(false)
@@ -71,18 +75,39 @@ export function NotificationsContent({ guildId }: Props) {
     })
   }, [allRows, filters])
 
+  // Only the first `visibleCount` of the filtered list are shown; the rest are
+  // revealed (or fetched) in PAGE_SIZE steps via "Load older".
+  const displayed = useMemo(() => visible.slice(0, visibleCount), [visible, visibleCount])
+
+  // Switching filters starts a fresh window so you don't land deep in a list.
+  function selectCategory(category: Filters['category']) {
+    setFilters((f) => ({ ...f, category }))
+    setVisibleCount(PAGE_SIZE)
+  }
+
+  function toggleShowRead() {
+    setFilters((f) => ({ ...f, showRead: !f.showRead }))
+    setVisibleCount(PAGE_SIZE)
+  }
+
   async function handleLoadMore() {
-    if (loadingMore || reachedEnd) return
-    const oldest = allRows[allRows.length - 1]
-    if (!oldest) return
-    setLoadingMore(true)
-    const more = await loadMore(oldest.created_at)
-    setLoadingMore(false)
-    if (more.length === 0) {
-      setReachedEnd(true)
-      return
+    if (loadingMore) return
+    const nextCount = visibleCount + PAGE_SIZE
+    // Reveal already-loaded rows first; only hit the API when revealing the
+    // next batch would run past what's loaded and older rows may still exist.
+    if (visible.length < nextCount && !reachedEnd) {
+      const oldest = allRows[allRows.length - 1]
+      if (oldest) {
+        setLoadingMore(true)
+        const more = await loadMore(oldest.created_at)
+        setLoadingMore(false)
+        if (more.length === 0) setReachedEnd(true)
+        else setOlderRows((prev) => [...prev, ...more])
+      } else {
+        setReachedEnd(true)
+      }
     }
-    setOlderRows((prev) => [...prev, ...more])
+    setVisibleCount(nextCount)
   }
 
   async function handleClearAll() {
@@ -93,6 +118,7 @@ export function NotificationsContent({ guildId }: Props) {
     if (res.ok) {
       setOlderRows([])
       setReachedEnd(true)
+      setVisibleCount(PAGE_SIZE)
       await refresh()
     }
   }
@@ -154,7 +180,7 @@ export function NotificationsContent({ guildId }: Props) {
         </span>
         <button
           type="button"
-          onClick={() => setFilters((f) => ({ ...f, category: 'all' }))}
+          onClick={() => selectCategory('all')}
           className="rounded-full border px-3 py-1 text-xs font-medium transition-colors"
           style={{
             background: filters.category === 'all' ? 'var(--p-soft)' : 'var(--bg-2)',
@@ -170,7 +196,7 @@ export function NotificationsContent({ guildId }: Props) {
             <button
               key={cat}
               type="button"
-              onClick={() => setFilters((f) => ({ ...f, category: cat }))}
+              onClick={() => selectCategory(cat)}
               className="rounded-full border px-3 py-1 text-xs font-medium transition-colors"
               style={{
                 background: active ? 'var(--p-soft)' : 'var(--bg-2)',
@@ -185,7 +211,7 @@ export function NotificationsContent({ guildId }: Props) {
         <span className="mx-2 hidden h-4 w-px sm:inline-block" style={{ background: 'var(--line-strong)' }} />
         <button
           type="button"
-          onClick={() => setFilters((f) => ({ ...f, showRead: !f.showRead }))}
+          onClick={toggleShowRead}
           className="rounded-full border px-3 py-1 text-xs font-medium transition-colors"
           style={{
             background: !filters.showRead ? 'var(--p-soft)' : 'var(--bg-2)',
@@ -217,7 +243,7 @@ export function NotificationsContent({ guildId }: Props) {
           className="divide-y rounded-xl border"
           style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
         >
-          {visible.map((n) => (
+          {displayed.map((n) => (
             <li
               key={n.id}
               className="flex items-start gap-3 px-5 py-4 transition-colors"
@@ -309,8 +335,8 @@ export function NotificationsContent({ guildId }: Props) {
         </ul>
       )}
 
-      {/* Load more */}
-      {visible.length > 0 && !reachedEnd && (
+      {/* Load older — reveals/fetches PAGE_SIZE more at a time */}
+      {visible.length > 0 && (visibleCount < visible.length || !reachedEnd) && (
         <div className="mt-5 flex justify-center">
           <button
             type="button"
@@ -320,13 +346,13 @@ export function NotificationsContent({ guildId }: Props) {
             style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
           >
             {loadingMore && <Loader2 size={12} className="animate-spin" />}
-            Load older
+            Load older...
           </button>
         </div>
       )}
-      {reachedEnd && visible.length > 0 && (
+      {reachedEnd && visibleCount >= visible.length && visible.length > 0 && (
         <p className="mt-5 text-center text-xs" style={{ color: 'var(--text-3)' }}>
-          Older activity has been cleared up to your retention window.
+          You’ve reached the oldest notification.
         </p>
       )}
 

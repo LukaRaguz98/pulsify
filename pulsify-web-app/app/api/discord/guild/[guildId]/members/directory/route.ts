@@ -1,0 +1,106 @@
+import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase-server'
+import { fetchGuildMembers, fetchGuildRoles, fetchGuild, type DiscordRole } from '@/lib/discord'
+import {
+  EMPTY_ACTIVITY,
+  EMPTY_INFRACTIONS,
+  type DirectoryMember,
+  type DirectoryResponse,
+  type MemberActivityStats,
+  type MemberInfractions,
+} from '@/lib/member-profile'
+
+// Permission bits that mark a role (and therefore its holders) as "staff".
+const STAFF_PERM_BITS = [
+  BigInt(0x8), // ADMINISTRATOR
+  BigInt(0x20), // MANAGE_GUILD
+  BigInt(0x2), // KICK_MEMBERS
+  BigInt(0x4), // BAN_MEMBERS
+  BigInt(0x2000), // MANAGE_MESSAGES
+  BigInt(0x10000000), // MANAGE_ROLES
+  BigInt('0x10000000000'), // MODERATE_MEMBERS
+]
+
+function roleIsStaff(role: DiscordRole): boolean {
+  if (role.managed) return false
+  let perms: bigint
+  try {
+    perms = BigInt(role.permissions)
+  } catch {
+    return false
+  }
+  return STAFF_PERM_BITS.some((bit) => (perms & bit) !== BigInt(0))
+}
+
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ guildId: string }> },
+) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { guildId } = await params
+  const url = new URL(req.url)
+  const limit = Math.min(Math.max(Number(url.searchParams.get('limit') ?? 1000), 1), 1000)
+
+  const [members, roles, guild, statsRes, infrRes] = await Promise.all([
+    fetchGuildMembers(guildId, limit),
+    fetchGuildRoles(guildId),
+    fetchGuild(guildId),
+    supabase.rpc('get_guild_members_stats', { p_guild_id: guildId, p_since: null }),
+    supabase.rpc('get_guild_members_infractions', { p_guild_id: guildId }),
+  ])
+
+  const statsByUser = new Map<string, MemberActivityStats>()
+  for (const r of (statsRes.data ?? []) as Record<string, unknown>[]) {
+    statsByUser.set(String(r.user_id), {
+      message_count: Number(r.message_count ?? 0),
+      command_count: Number(r.command_count ?? 0),
+      voice_seconds: Number(r.voice_seconds ?? 0),
+      last_active: (r.last_active as string | null) ?? null,
+    })
+  }
+
+  const infrByUser = new Map<string, MemberInfractions>()
+  for (const r of (infrRes.data ?? []) as Record<string, unknown>[]) {
+    infrByUser.set(String(r.user_id), {
+      warnings: Number(r.warnings ?? 0),
+      active_warnings: Number(r.active_warnings ?? 0),
+      timeouts: Number(r.timeouts ?? 0),
+      kicks: Number(r.kicks ?? 0),
+      bans: Number(r.bans ?? 0),
+      total_infractions: Number(r.total_infractions ?? 0),
+      last_infraction_at: (r.last_infraction_at as string | null) ?? null,
+    })
+  }
+
+  const staffRoleIds = new Set(roles.filter(roleIsStaff).map((r) => r.id))
+  const rolePosById = new Map(roles.map((r) => [r.id, r.position]))
+
+  const directory: DirectoryMember[] = members.map((m) => {
+    let topRolePosition = 0
+    let isStaff = false
+    for (const roleId of m.roles) {
+      const pos = rolePosById.get(roleId)
+      if (pos !== undefined && pos > topRolePosition) topRolePosition = pos
+      if (staffRoleIds.has(roleId)) isStaff = true
+    }
+    return {
+      member: m,
+      activity: statsByUser.get(m.user.id) ?? EMPTY_ACTIVITY,
+      infractions: infrByUser.get(m.user.id) ?? EMPTY_INFRACTIONS,
+      topRolePosition,
+      isStaff,
+    }
+  })
+
+  const response: DirectoryResponse = {
+    members: directory,
+    roles,
+    approximateMemberCount: guild?.approximate_member_count ?? null,
+  }
+  return NextResponse.json(response)
+}
