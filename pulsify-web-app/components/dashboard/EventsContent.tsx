@@ -5,7 +5,7 @@ import Image from 'next/image'
 import {
   CalendarDays, MapPin, Mic2, Volume2, Users, RefreshCw, Loader2, Plus,
   Search, LayoutGrid, Calendar as CalendarIcon, AlertCircle, CheckCircle2,
-  TrendingUp, Activity, Globe, ChevronRight, Sparkles,
+  TrendingUp, Activity, Globe, Sparkles,
 } from 'lucide-react'
 import { formatEventStatus, formatEntityType, type DiscordScheduledEvent, type DiscordChannel } from '@/lib/discord'
 import { PageHeader } from '@/components/ui/page-header'
@@ -461,7 +461,17 @@ function EventCard({
     : null
   return (
     <div
-      className="overflow-hidden rounded-xl border transition-all hover:border-[var(--p-1)]"
+      role="button"
+      tabIndex={0}
+      aria-label={`${event.status === 1 ? 'Edit' : 'View'} ${event.name}`}
+      onClick={() => onEdit(event)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onEdit(event)
+        }
+      }}
+      className="cursor-pointer overflow-hidden rounded-xl border transition-all hover:border-[var(--p-1)] focus:outline-none focus-visible:border-[var(--p-1)]"
       style={{
         background: 'var(--panel)',
         borderColor: 'var(--line-strong)',
@@ -517,7 +527,10 @@ function EventCard({
             {event.user_count !== undefined && event.user_count > 0 && (
               <button
                 type="button"
-                onClick={() => onShowParticipants(event)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onShowParticipants(event)
+                }}
                 className="inline-flex items-center gap-1 transition hover:text-foreground"
               >
                 <Users size={11} />
@@ -525,17 +538,6 @@ function EventCard({
               </button>
             )}
           </div>
-        </div>
-        <div className="flex shrink-0 items-center">
-          <button
-            type="button"
-            onClick={() => onEdit(event)}
-            className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition hover:bg-[var(--bg-2)]"
-            style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
-          >
-            {event.status === 1 ? 'Edit' : 'View'}
-            <ChevronRight size={12} />
-          </button>
         </div>
       </div>
     </div>
