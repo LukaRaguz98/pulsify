@@ -25,17 +25,15 @@ export function Footer() {
           <Link href="/terms" className="transition-colors hover:text-[var(--p-1)]">
             Terms of Service
           </Link>
+          <Link href="/faq" className="transition-colors hover:text-[var(--p-1)]">
+            FAQ
+          </Link>
           <Link href="/support" className="transition-colors hover:text-[var(--p-1)]">
             Support
           </Link>
-          <a
-            href="https://discord.gg"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="transition-colors hover:text-[var(--p-1)]"
-          >
+          <Link href="/community" className="transition-colors hover:text-[var(--p-1)]">
             Community
-          </a>
+          </Link>
         </nav>
       </div>
     </footer>
