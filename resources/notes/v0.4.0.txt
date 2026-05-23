@@ -1,0 +1,18 @@
+# Pulsify v0.4.0 — AI Server Setup Assistant
+
+Pulsify's first AI-powered feature helps administrators set up a polished, professional server in seconds. Describe your community, and Pulse generates the content for you.
+
+**What it generates**
+- **Welcome message** — a warm, on-brand greeting for new members.
+- **Server rules** — a clear, ready-to-post set of guidelines.
+- **Onboarding instructions** — guidance that helps newcomers find their way around.
+- **Channel and category suggestions** — a sensible starting structure for your server.
+
+**Built for control**
+- **Tone selection** — choose Professional, Gaming, Community, Minimal or Friendly, and the output adapts to match your community's character.
+- **Preview before applying** — review everything before anything touches your server.
+- **Regenerate freely** — not quite right? Generate again until it fits.
+- **Apply to Discord** — push the generated welcome message straight to your server in one step.
+- **Fair usage** — generation requests are rate-limited to keep the feature fast and dependable for everyone.
+
+A standout shortcut that turns a blank server into a finished community in minutes.

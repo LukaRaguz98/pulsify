@@ -1,0 +1,20 @@
+# Pulsify v0.9.0 — Channels & Server Structure
+
+Build and reorganize your entire server layout from a single screen, without the friction of managing it inside Discord.
+
+**A complete view of your server**
+- **Structure tree** — see every category and channel at once, including text, voice, stage and forum channels.
+
+**Full channel management**
+- **Create** channels and categories quickly.
+- **Edit settings** — name, topic, NSFW flag, slowmode, and bitrate and user limits for voice channels.
+- **Reorganize** — drag and drop to reorder, and move channels between categories.
+- **Duplicate and delete** channels as your server evolves.
+
+**Fine-grained access control**
+- **Permission overwrites** — manage per-role and per-user permissions on any channel.
+
+**Insight**
+- **Channel statistics** — message activity, active users and voice usage per channel.
+
+Changes are validated against the bot's permissions and applied to Discord immediately, so reorganizing even a busy server stays fast and safe.
