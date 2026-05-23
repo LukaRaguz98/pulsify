@@ -67,7 +67,13 @@
       "Bash(npm run *)",
       "Bash(node --check src/scheduler.js)",
       "Bash(echo \"exit: $?\")",
-      "PowerShell(Get-CimInstance *)"
+      "PowerShell(Get-CimInstance *)",
+      "Bash(echo \"tsc exit: $?\")",
+      "Bash(echo \"eslint exit: $?\")",
+      "Bash(echo \"ESLINT_EXIT=$?\")",
+      "Bash(git diff *)",
+      "Bash(echo \"tsc=$?\")",
+      "Bash(echo \"eslint=$?\")"
     ]
   }
 }

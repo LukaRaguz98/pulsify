@@ -90,6 +90,18 @@ export function EventsContent({ guildId }: Props) {
     }
   }, [fetchAll])
 
+  // Deep-link: the command palette's "Create event" quick action lands here
+  // with ?new=1 — open the creator once, then strip the param so a refresh
+  // doesn't reopen it.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('new') !== '1') return
+    openCreate()
+    params.delete('new')
+    const qs = params.toString()
+    window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''))
+  }, [])
+
   // Silent polling so live status changes (Scheduled → Live → Completed) show
   // up without manual refresh. Skipped while the editor is open to avoid
   // overwriting in-flight edits the user can see.
