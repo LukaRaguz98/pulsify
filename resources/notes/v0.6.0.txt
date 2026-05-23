@@ -1,0 +1,16 @@
+# Pulsify v0.6.0 — Moderation Panel
+
+A complete moderation workspace inside Pulsify, so your team can manage members and respond to issues without ever leaving the dashboard.
+
+**Full moderation toolkit**
+- **Member actions** — timeout, remove timeout, kick, ban, unban, warn, change nickname, and add or remove roles.
+- **Message management** — delete an individual message or bulk-delete many at once.
+- **Ban list** — review every ban and lift them with a single click.
+
+**Safe and accountable**
+- **A reason on every action** — record why each action was taken, for a clear paper trail.
+- **Moderation logs** — every action is saved to a complete, reviewable history.
+- **Confirmation dialogs** — destructive actions ask for confirmation before they run.
+- **Permission and hierarchy checks** — Pulsify verifies both your access and the bot's role position before acting, and explains clearly when an action would be rejected by Discord.
+
+Every action is mirrored on Discord instantly, keeping the dashboard and your server perfectly in sync.

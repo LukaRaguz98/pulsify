@@ -1,0 +1,19 @@
+# Pulsify v0.18.0 — Global Search & Command Palette
+
+Navigating a large server should be instant. This release adds a powerful global search and a command palette that put everything one click — or one keystroke — away.
+
+**Search everything**
+- **One search bar** — find members, roles, channels, events, moderation logs, automations, notifications and commands from a single place.
+- **Fuzzy matching** — results appear even with partial or imperfect spelling.
+- **Categorized results** — grouped by type, so the right match is easy to spot.
+- **Recent searches and recently opened** — pick up right where you left off.
+
+**Command palette**
+- **Open from anywhere** — press Ctrl/Cmd + K to launch it instantly.
+- **Quick actions** — warn or time out a member, create an event or a role, open analytics or moderation, or trigger a sync, all without leaving the page.
+- **Keyboard-first** — full keyboard navigation for fast, mouse-free control.
+
+**Built for scale**
+- Debounced search, cached indexing and lazy loading keep results quick even on very large servers.
+
+A modern, keyboard-driven way to move through Pulsify and manage your server at speed.

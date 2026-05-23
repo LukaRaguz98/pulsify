@@ -1,0 +1,20 @@
+# Pulsify v0.8.0 — Events Management
+
+Plan, run and review Discord events entirely from Pulsify, with a calendar, cover images and real participation insight.
+
+**Manage every event**
+- **Create, edit, cancel and delete** events without opening Discord.
+- **All event types** — Voice channel, Stage and External events are fully supported.
+- **Cover images** — add artwork and preview the event before publishing it.
+
+**See your schedule clearly**
+- **Calendar view** — visualize everything on a proper calendar.
+- **Organized sections** — upcoming, live and past events, each grouped for quick scanning.
+- **Search and filtering** — find any event in seconds.
+- **Recurring events** — set up events that repeat automatically on a schedule.
+
+**Understand attendance**
+- **Participant lists** — see exactly who is interested in each event.
+- **Event analytics** — track participation and attendance trends, and identify your most popular events.
+
+Every change syncs with Discord, so your dashboard and your server always show the same schedule.
