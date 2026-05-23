@@ -131,6 +131,18 @@ export function RolesContent({ guildId }: Props) {
     }
   }, [fetchAll])
 
+  // Deep-link: the command palette's "Create role" quick action lands here with
+  // ?new=1 — open the creator once, then strip the param so a refresh doesn't
+  // reopen it.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('new') !== '1') return
+    openCreate()
+    params.delete('new')
+    const qs = params.toString()
+    window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''))
+  }, [])
+
   useEffect(() => {
     if (!toast) return
     const t = setTimeout(() => setToast(null), 4000)

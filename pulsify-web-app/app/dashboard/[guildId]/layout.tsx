@@ -10,6 +10,7 @@ import { NotificationsProvider } from '@/components/dashboard/notifications/Noti
 import { NotificationBell } from '@/components/dashboard/notifications/NotificationBell'
 import { Toaster } from '@/components/dashboard/notifications/Toaster'
 import { PingIndicator } from '@/components/dashboard/PingIndicator'
+import { CommandPaletteProvider } from '@/components/dashboard/search/CommandPaletteProvider'
 
 export default async function GuildLayout({
   children,
@@ -41,24 +42,26 @@ export default async function GuildLayout({
 
   return (
     <NotificationsProvider guildId={guildId}>
-      <div className="flex h-screen overflow-hidden bg-background text-foreground">
-        <GuildSidebar
-          guild={guild}
-          guildId={guildId}
-          user={session.user}
-          selfUser={selfUser ?? undefined}
-          bannerUrl={bannerUrl}
-        />
-        <CornerDecorations />
-        <DiscordCornerIcon guildId={guildId} />
-        <NotificationBell guildId={guildId} />
-        <PingIndicator />
-        <main className="flex-1 overflow-y-auto flex flex-col">
-          <div className="flex-1">{children}</div>
-          <Footer />
-        </main>
-        <Toaster />
-      </div>
+      <CommandPaletteProvider guildId={guildId}>
+        <div className="flex h-screen overflow-hidden bg-background text-foreground">
+          <GuildSidebar
+            guild={guild}
+            guildId={guildId}
+            user={session.user}
+            selfUser={selfUser ?? undefined}
+            bannerUrl={bannerUrl}
+          />
+          <CornerDecorations />
+          <DiscordCornerIcon guildId={guildId} />
+          <NotificationBell guildId={guildId} />
+          <PingIndicator />
+          <main className="flex-1 overflow-y-auto flex flex-col">
+            <div className="flex-1">{children}</div>
+            <Footer />
+          </main>
+          <Toaster />
+        </div>
+      </CommandPaletteProvider>
     </NotificationsProvider>
   )
 }
