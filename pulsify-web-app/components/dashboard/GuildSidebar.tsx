@@ -28,6 +28,7 @@ import {
   UserRound,
 } from 'lucide-react'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
+import { SearchTrigger } from '@/components/dashboard/search/SearchTrigger'
 
 type NavItem = {
   label: string
@@ -307,6 +308,11 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
           </Link>
         )
       })()}
+
+      {/* Global search / command palette launcher. */}
+      <div className="px-2 pb-2">
+        <SearchTrigger collapsed={collapsed} />
+      </div>
 
       {/* Nav — categories are the primary level. Click a category header to
           toggle its sub-items. In collapsed-sidebar mode each category is a
