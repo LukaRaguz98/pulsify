@@ -1,0 +1,19 @@
+# Pulsify v0.12.0 — Pulse Guard (AI Moderation)
+
+Pulse Guard is Pulsify's AI-powered moderation system. It reads messages as they arrive, identifies harmful content, and can act on it automatically — significantly reducing your team's manual workload while keeping the rules firmly in your hands.
+
+**Intelligent detection**
+- **Wide coverage** — spam, scam links, phishing attempts, toxicity, excessive mentions, suspicious invite links and NSFW content.
+- **Confidence scoring** — every detection includes a confidence level, so responses can be tuned to avoid false positives.
+
+**Automatic, configurable response**
+- **Sensitivity levels** — choose Low, Medium or Aggressive to match your community's tolerance.
+- **Auto-actions** — delete the message, time out the member, issue a warning, or simply flag it for review.
+- **Review queue** — flagged content lands in a dedicated queue where moderators make the final call.
+
+**Stay in control**
+- **Whitelists** — exempt trusted users and channels from detection entirely.
+- **Ignored roles and channels** — exclude areas where automated moderation isn't wanted.
+- **Alerts and analytics** — real-time notifications when something is caught, plus statistics on what Pulse Guard is handling.
+
+Around-the-clock protection that catches what manual moderation misses, without taking control away from your team.

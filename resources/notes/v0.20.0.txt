@@ -1,0 +1,20 @@
+# Pulsify v0.20.0 — Onboarding & First-Time Setup
+
+Getting started with Pulsify is now effortless. This release introduces a guided setup experience that takes a new server from connected to fully configured in just a few minutes.
+
+**A guided setup wizard**
+- **Step by step** — a multi-step wizard walks you through the entire setup, with progress tracking and a clear completion state so you always know how far along you are.
+- **Skip and resume** — step away at any point and pick up exactly where you left off.
+
+**Connection and health checks**
+- **Permission validation** — Pulsify checks that the Pulse bot is connected and has the permissions it needs, clearly highlighting anything that is missing.
+- **Quick fixes** — actionable suggestions, including a one-click re-invite, to resolve any gaps on the spot.
+- **Primary channels** — choose your welcome and moderation channels and a default auto-role as part of the flow.
+
+**One-click feature templates**
+- **Turn on the essentials** — moderation alerts, the welcome system, auto-roles, Pulse Guard and analytics, each applied with recommended defaults so there's nothing to configure by hand.
+
+**Personalized recommendations**
+- **Tailored to you** — tell Pulsify your server type, preferred moderation intensity, dashboard layout and theme, and the recommended setup adapts to match.
+
+You can re-run the setup at any time from Preferences. A polished first impression that gets new servers up and running fast.

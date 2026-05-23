@@ -1,0 +1,22 @@
+# Pulsify v0.15.0 — Command Center
+
+The Command Center brings complete, per-server control over Pulse's slash commands directly to the dashboard.
+
+**See every command**
+- **Full catalog** — each command's name, description, category, enabled status, usage count and permissions.
+- **Searchable list** — find any command quickly, even as the catalog grows.
+
+**Configure per server**
+- **Enable or disable** any command on a given server.
+- **Permissions** — restrict commands to admins only, moderators only, specific roles, or specific channels.
+- **Allow and deny lists** — fine-tune access by role and by channel.
+- **Limits** — set per-command cooldowns and daily usage caps, and put a command into a maintenance state when needed.
+
+**Understand usage**
+- **Analytics** — most and least used commands, failed executions and usage trends over time.
+- **Execution logs** — a clear record of how your commands are being used.
+
+**Polish**
+- Command examples, quick tests and clear status indicators throughout.
+
+Everything stays in sync with Discord, giving you precise control over how Pulse behaves on each server.
