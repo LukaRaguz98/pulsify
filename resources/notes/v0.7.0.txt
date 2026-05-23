@@ -1,0 +1,19 @@
+# Pulsify v0.7.0 — Roles & Permissions Management
+
+Managing Discord roles has always been tedious. This release brings a complete, visual role and permission manager to the dashboard.
+
+**See and edit everything**
+- **Full role overview** — name, color, member count, hierarchy position and permissions for every role.
+- **Visual editing** — change a role's name, color, permissions, visibility and whether it can be mentioned.
+- **Permission editor** — browse permissions grouped by category, with search to find exactly what you need.
+
+**Powerful management tools**
+- **Create, duplicate and delete** roles in a few clicks.
+- **Drag-and-drop hierarchy** — reorder your roles and have the new positions saved to Discord automatically.
+- **Permission presets** — apply ready-made templates for Admin, Moderator, Member, Verified and Bot roles.
+
+**Safety first**
+- **Dangerous-permission warnings** — clear flags on sensitive permissions such as Administrator, Manage Server, Ban Members and Manage Roles.
+- **Validation before changes** — the bot's permissions and position are checked so edits don't silently fail.
+
+Every change syncs with Discord, giving you complete control over your server's hierarchy from a single screen.

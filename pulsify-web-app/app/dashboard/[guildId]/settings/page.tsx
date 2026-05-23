@@ -9,6 +9,7 @@ import { CategorySection } from '@/components/ui/category-section'
 import { highlightBrand } from '@/components/ui/brand-text'
 import { SaveBar } from '@/components/ui/save-bar'
 import { useNotifications } from '@/components/dashboard/notifications/NotificationsProvider'
+import { RestartOnboardingCard } from '@/components/dashboard/onboarding/RestartOnboardingCard'
 import {
   NOTIFICATION_TYPES,
   TYPE_TO_CATEGORY,
@@ -570,6 +571,8 @@ export default function SettingsPage() {
           </SectionCard>
 
           </CategorySection>
+
+          <RestartOnboardingCard />
 
           <SaveBar
             dirty={appDirty}

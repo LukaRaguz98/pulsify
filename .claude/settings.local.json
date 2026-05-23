@@ -73,7 +73,8 @@
       "Bash(echo \"ESLINT_EXIT=$?\")",
       "Bash(git diff *)",
       "Bash(echo \"tsc=$?\")",
-      "Bash(echo \"eslint=$?\")"
+      "Bash(echo \"eslint=$?\")",
+      "Bash(grep -nA30 -i 'guild_settings')"
     ]
   }
 }

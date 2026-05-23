@@ -1,0 +1,1177 @@
+PULSIFY-1 Project Initialization(v0.1.0)
+
+Description
+	Initialize the Pulsify project infrastructure and development environment.
+	
+Setup
+	Next.js frontend application
+	Discord bot application
+	GitHub repository
+	Supabase project and authentication
+	Discord Developer Portal application
+	Base project structure and configuration
+
+Tasks
+	Create Next.js app with:
+		TypeScript
+		TailwindCSS
+		App Router
+		ESLint
+		Turbopack
+	Configure shadcn/ui
+	Create Discord bot setup
+	Configure Discord OAuth
+	Configure Supabase Auth
+	Create environment variable setup
+	Configure GitHub repository
+	Add .gitignore
+	Setup initial folder structure
+	Verify local development environment
+
+Acceptance Criteria
+	Frontend runs locally on localhost:3000
+	Discord bot connects successfully
+	Discord OAuth login works
+	Supabase connection works
+	GitHub repository is connected
+	Environment variables are configured correctly
+	Initial commit pushed to GitHub
+	
+PULSIFY-2 Dashboard UI & Preferences System (v0.2.0)
+
+Description
+	Improve the initial Pulsify dashboard design and establish a scalable UI foundation before implementing core functionality.
+	Refactor the current layout, styling, and preferences system to support future features and provide a polished SaaS experience.
+
+Goals
+	Modernize dashboard appearance
+	Improve visual consistency
+	Expand user preferences/settings
+	Prepare reusable UI components
+	Establish design system foundations
+
+Tasks
+	Refactor dashboard layout
+	Improve sidebar navigation styling
+	Create reusable:
+		cards
+		buttons
+		section headers
+		modal/dialog styles
+	Add dark/light theme improvements
+	Add additional color presets/themes
+	Add preferences page sections:
+		Theme selection
+		Accent color selection
+		Compact/comfortable layout mode
+		Dashboard density options
+		Animation toggle
+		Notification preferences
+	Improve responsive/mobile layout
+	Create empty states/loading states
+	Add transitions and hover animations
+	Standardize spacing/typography
+
+Acceptance Criteria
+	Dashboard has polished SaaS-style UI
+	Preferences system supports multiple customization options
+	UI components are reusable
+	Layout is responsive
+	Theme switching works correctly
+	Design system is ready for future features
+	
+PULSIFY-3 Connect Web App Features With Discord Bot (v0.3.0)
+
+Description
+	Connect the currently available Pulsify web app features with the Discord bot so that settings configured in the dashboard are saved, synced, and applied directly on the selected Discord server.
+	This includes enabling real Discord behavior for Welcome Message, Auto Role, Moderation Alerts, and Events.
+
+Goals
+	Persist dashboard feature settings
+	Sync feature configuration with Discord servers
+	Apply enabled automations through the bot
+	Fetch real Discord server events into the web app
+
+Tasks
+	Create database tables for server feature settings
+	Save Welcome Message configuration from web app
+	Send configured welcome message when a new member joins
+	Save Auto Role configuration from web app
+	Assign configured role when a new member joins
+	Save Moderation Alerts configuration from web app
+	Send moderation alerts to the selected Discord channel
+	Fetch Discord server events from Discord API
+	Display real Discord events inside the web app
+	Add enabled/disabled status for each automation
+	Add success/error states after saving settings
+	Validate that bot is installed on selected server
+	Validate required bot permissions per feature
+	Add unban functionality to the moderation ban list so administrators can remove bans directly from the Pulsify web app and sync the action with the Discord server.
+
+Acceptance Criteria
+	Welcome Message settings can be saved from the web app
+	New Discord members receive or trigger the configured welcome message
+	Auto Role settings can be saved from the web app
+	New Discord members automatically receive the selected role
+	Moderation Alerts settings can be saved from the web app
+	Alerts are sent to the configured Discord channel
+	Web app displays actual Discord server events
+	Settings persist after page refresh
+	Disabled automations do not run
+	User receives clear error if bot lacks permissions
+	
+PULSIFY-4 Connect Web App Features With Discord Bot (v0.4.0)
+
+Description
+	Implement the first AI-powered feature in Pulsify that helps server administrators automatically generate welcome messages, server rules, onboarding text, and starter channel ideas directly from the web app.
+	This feature introduces AI-assisted community setup and improves onboarding experience for new Discord servers.
+
+Goals
+	Introduce AI-powered functionality into Pulsify
+	Simplify Discord server setup
+	Improve onboarding and server professionalism
+	Create a standout MVP feature
+
+Tasks
+	Create AI generation UI inside the web app
+	Add prompt input for server description/type
+	Generate:
+		Welcome message
+		Server rules
+		Onboarding instructions
+		Suggested channels/categories
+	Add selectable tone/style:
+		Professional
+		Gaming
+		Community
+		Minimal
+		Friendly
+	Add preview before applying generated content
+	Save generated configurations to database
+	Allow applying generated welcome message to Discord
+	Add loading/error/success states
+	Add rate limiting for AI generation requests
+	Integrate AI provider API
+
+Acceptance Criteria
+	User can generate server setup content using AI
+	Generated content appears inside preview UI
+	User can regenerate results
+	Generated content can be saved
+	Welcome message can be applied to Discord server
+	AI requests handle loading and error states properly
+	Generated output matches selected tone/style
+	
+PULSIFY-5 Analytics Dashboard & Statistics System (v0.5.0)
+
+Description
+	Expand and improve the Pulsify analytics section by enhancing the Overview dashboard and introducing a new Statistics tab with detailed server activity metrics.
+	The goal is to provide server administrators with useful, visually appealing, and actionable analytics about their Discord community activity.
+
+Goals
+	Improve the Overview analytics experience
+	Add detailed server statistics tracking
+	Create visually appealing charts and graphs
+	Provide meaningful community insights
+	Prepare analytics system for future AI insights/recommendations
+
+Tasks
+	Redesign the Overview analytics layout
+	Add modern analytics cards and chart components
+		Add activity graphs for:
+		messages over time
+		member joins/leaves
+		voice activity
+		command usage
+		moderation activity
+	Add server engagement overview
+	Add top active channels section
+	Add most active users section
+	Create new Statistics tab
+	Track and display:
+		total messages sent
+		voice channel time (hours/minutes)
+		executed bot commands
+		moderation actions
+		active users
+		peak server activity times
+		daily/weekly/monthly activity
+	Add timeframe filtering:
+		24h
+		7d
+		30d
+		all time
+	Add loading states and empty analytics states
+	Add backend analytics data collection system
+	Persist analytics data in database
+	Optimize analytics queries and chart rendering
+
+Acceptance Criteria
+	Overview contains useful and visually polished analytics
+	Statistics tab displays real server activity metrics
+	Charts update with live/stored Discord data
+	Voice activity time is tracked correctly
+	Message counts are tracked correctly
+	Command executions are tracked correctly
+	Analytics filtering works correctly
+	Dashboard remains responsive and performant
+	Analytics data persists after refresh/restart
+	
+PULSIFY-6 Moderation Management Panel (v0.6.0)
+
+Description
+	Build a complete Moderation section inside the Pulsify web app, allowing server administrators to perform Discord moderation actions directly from the dashboard.
+
+Goals
+	Centralize Discord moderation inside Pulsify
+	Allow admins to manage members without using Discord manually
+	Sync moderation actions with the Discord server
+	Improve moderation visibility and control
+
+Tasks
+	Build Moderation dashboard UI
+	Add member search and filtering
+	Add moderation actions:
+		Timeout
+		Remove timeout
+		Kick
+		Ban
+		Unban
+		Warn
+		Delete message
+		Bulk delete messages
+		Change nickname
+		Add role
+		Remove role
+	Add ban list with Unban action
+	Add moderation logs
+	Add reason field for every moderation action
+	Add confirmation dialogs for destructive actions
+	Add permission checks for admin/moderator users
+	Validate Discord bot permissions before actions
+	Sync actions with Discord via bot/API
+	Show success/error states after each action
+
+Acceptance Criteria
+	Admin can moderate Discord members from the web app
+	Ban list is visible and supports Unban
+	Every action is saved in moderation logs
+	Actions are reflected on the Discord server
+	Missing permissions show clear errors
+	UI is responsive and safe for destructive actions
+	
+PULSIFY-7 Roles & Permissions Management System (v0.7.0)
+
+Description
+	Build a complete Roles management section inside the Pulsify web app that allows administrators to view, manage, and edit Discord server roles and permissions directly from the dashboard.
+	The Roles system should provide a clean and intuitive interface for managing server hierarchy, permissions, colors, and member assignments without needing to use Discord manually.
+
+Goals
+	Centralize role management inside Pulsify
+	Allow full Discord role and permission editing
+	Improve server administration workflow
+	Provide clear visibility into role hierarchy and permissions
+
+Tasks
+	Edit Roles management UI (It already exists, upgrade it)
+	Display all Discord server roles
+	Show:
+		role name
+		role color
+		member count
+		role hierarchy position
+		role permissions
+	Add role details modal/page when clicking a role
+	Allow editing:
+		role name
+		role color
+		role permissions
+		role visibility
+		mentionable status
+	Add permission management UI:
+		enable/disable Discord permissions
+		grouped permission categories
+		permission search/filter
+	Allow creating new roles
+	Allow deleting roles
+	Allow drag-and-drop role hierarchy sorting
+	Add role duplication feature
+	Add permission presets/templates:
+		Admin
+		Moderator
+		Member
+		Verified
+		Bot
+	Add warning system for dangerous permissions:
+		Administrator
+		Manage Server
+		Ban Members
+		Manage Roles
+	Validate bot permissions before applying changes
+	Sync all role updates with Discord API
+	Add loading/success/error states
+
+Acceptance Criteria
+	All Discord server roles are visible inside the web app
+	Role permissions can be edited successfully
+	Role hierarchy updates correctly
+	Roles can be created, edited, duplicated, and deleted
+	Users can be assigned/removed from roles
+	Changes sync correctly with Discord
+	Dangerous permissions display warnings
+	UI remains responsive and easy to use
+	
+PULSIFY-8 Discord Events Management System (v0.8.0)
+
+Description
+	Expand and improve the Events section inside the Pulsify web app by fully integrating Discord Events functionality.
+	Administrators should be able to view, create, manage, and monitor Discord server events directly from the Pulsify dashboard without needing to use Discord manually.
+
+Goals
+	Fully integrate Discord Events into Pulsify
+	Allow complete event management through the web app
+	Improve event visibility and scheduling
+	Provide analytics and participation insights for server events
+
+Tasks
+	Build complete Events management UI
+	Fetch and display existing Discord server events
+	Display:
+		event name
+		description
+		start/end date
+		event type
+		participant count
+		event status
+		event creator
+	Allow creating new Discord events
+	Allow editing existing events
+	Allow deleting/canceling events
+	Support:
+		Voice channel events
+		Stage events
+		External events
+	Add event cover image support
+	Add event preview before publishing
+	Add event scheduling/calendar view
+	Add participant/member list for events
+	Add event reminders and notifications
+	Add recurring event support
+	Add event filtering and search
+	Add upcoming/past/live event sections
+	Add event analytics:
+		participation
+		attendance trends
+		most active events
+	Sync all changes with Discord API
+	Add loading/error/success states
+	Validate required bot permissions before event actions
+
+Acceptance Criteria
+	Discord server events are visible inside the web app
+	Events can be created, edited, and deleted
+	Event changes sync correctly with Discord
+	Event participants are displayed correctly
+	Calendar/scheduling system works properly
+	Event analytics display useful information
+	UI is responsive and visually polished
+	Errors and permission issues are handled clearly
+	
+PULSIFY-9 Channels & Server Structure Management (v0.9.0)
+
+Description
+	Create a complete Channels management system inside the Pulsify web app that allows administrators to manage Discord server structure directly from the dashboard.
+	Administrators should be able to create, edit, organize, and manage categories, text channels, voice channels, and channel permissions without using Discord manually.
+
+Goals
+	Centralize Discord channel management
+	Simplify server organization
+	Improve visibility of server structure
+	Allow permission management per channel
+	Sync all structure changes directly with Discord
+
+Tasks
+	Build Channels management UI
+	Display complete server structure tree
+	Display:
+		categories
+		text channels
+		voice channels
+		stage channels
+		forum channels
+	Add channel creation functionality
+	Add category creation functionality
+	Allow editing:
+		channel name
+		channel topic/description
+		NSFW status
+		slowmode
+		bitrate/user limits for voice channels
+	Add channel permission management
+	Allow drag-and-drop channel/category sorting
+	Allow moving channels between categories
+	Add channel visibility settings
+	Add channel delete functionality
+	Add channel duplication functionality
+	Add permission overwrite management per role/user
+	Add channel statistics:
+		message activity
+		active users
+		voice usage
+	Add search/filter functionality
+	Validate Discord bot permissions before actions
+	Sync all updates with Discord API
+	Add loading/success/error states
+
+Acceptance Criteria
+	Server channels and categories are visible inside the web app
+	Channels can be created, edited, reordered, and deleted
+	Permission overwrites sync correctly with Discord
+	Drag-and-drop structure management works properly
+	Voice channel settings can be managed
+	Changes are reflected instantly on the Discord server
+	Errors and missing permissions are handled clearly
+	UI remains responsive and intuitive
+	
+PULSIFY-10 Server Settings & Configuration Panel (v0.10.0)
+
+Description
+	Build a Server Settings section inside the Pulsify web app where administrators can view and manage important Discord server configuration directly from the dashboard.
+
+Goals
+	Centralize server configuration
+	Improve admin control from the web app
+	Sync server settings with Discord
+	Prepare settings foundation for future features
+
+Tasks
+	Build Server Settings UI
+	Display server information:
+		server name
+		server icon
+		owner
+		member count
+		boost level
+		verification level
+	Allow editing:
+		server name
+		server icon
+		default notification settings
+		verification level
+		explicit content filter
+		AFK channel
+		system messages channel
+		rules channel
+		community updates channel
+	Add server invite management
+	Add bot permission status overview
+	Add save/reset changes flow
+	Add confirmation dialogs for sensitive changes
+	Sync changes with Discord API
+	Add loading/success/error states
+
+Acceptance Criteria
+	Server settings are visible inside the web app
+	Admin can update supported server settings
+	Changes sync correctly with Discord
+	Bot permission status is clearly displayed
+	Sensitive changes require confirmation
+	Errors are shown clearly to the user
+	
+PULSIFY-11 Notifications & Real-Time Activity System (v0.11.0)
+
+Description
+	Implement a real-time notifications and activity system inside the Pulsify web app to provide administrators with live updates about important Discord server events and actions.
+	The system should improve server awareness, moderation response time, and overall dashboard interactivity.
+
+Goals
+	Provide real-time server activity updates
+	Improve moderation responsiveness
+	Centralize important server notifications
+	Enhance dashboard interactivity and user engagement
+
+Tasks
+	Build Notifications center UI
+	Add real-time activity feed
+	Display notifications for:
+		member joins/leaves
+		moderation actions
+		role changes
+		event creation/updates
+		channel updates
+		bot warnings/errors
+		automations triggered
+	Add notification categories and filtering
+	Add unread/read notification states
+	Add notification badges/counters
+	Add in-app toast notifications
+	Add notification preferences system
+	Allow enabling/disabling notification types
+	Add real-time websocket/event syncing
+	Add activity timestamps
+	Add clickable activity logs with detailed views
+	Persist notification history in database
+	Add auto-cleanup/retention system for old notifications
+	Optimize real-time performance and event handling
+
+Acceptance Criteria
+	Real-time notifications appear inside the web app
+	Activity feed updates without page refresh
+	Notification filtering works correctly
+	Read/unread states persist correctly
+	User can customize notification preferences
+	Important server events are logged properly
+	Real-time updates remain performant and stable
+	UI is responsive and visually polished
+
+PULSIFY-12 AI Moderation & Smart Detection System (v0.12.0)
+
+Description
+	Implement an AI-powered moderation system inside Pulsify that automatically detects spam, scams, toxicity, suspicious behavior, and harmful content within Discord servers.
+	The system should assist moderators by providing intelligent moderation suggestions, automatic actions, and moderation insights directly through the Pulsify dashboard.
+
+Goals
+	Introduce AI-powered moderation into Pulsify
+	Improve server safety and moderation efficiency
+	Reduce manual moderation workload
+	Detect harmful or suspicious behavior automatically
+
+Tasks
+	Build AI Moderation dashboard section
+	Add AI-powered message analysis
+	Detect:
+		spam
+		scam links
+		phishing attempts
+		toxicity
+		excessive mentions
+		suspicious invite links
+		NSFW/inappropriate content
+	Add moderation confidence scoring
+	Add auto-action configuration:
+		delete message
+		timeout member
+		warn member
+		flag for review
+	Add moderation review queue
+	Add AI moderation logs/history
+	Add moderation sensitivity levels:
+		low
+		medium
+		aggressive
+	Add whitelist system for trusted users/channels
+	Add ignored channels/roles configuration
+	Add real-time moderation alerts
+	Add moderation analytics and statistics
+	Persist moderation events in database
+	Add loading/error/success states
+	Optimize moderation performance and API usage
+
+Acceptance Criteria
+	Harmful content is detected automatically
+	AI moderation actions execute correctly
+	Moderators can review flagged content
+	Moderation sensitivity settings work properly
+	Whitelisted users/channels bypass detection
+	Moderation logs persist correctly
+	Real-time moderation alerts function properly
+	System remains performant under high activity
+	
+PULSIFY-13 Quality of Life Improvements (v0.13.0)
+
+Description
+	Implement a set of quality-of-life improvements across Pulse Guard, bot embeds, sync command output, and server-specific bot branding.
+	This update should improve polish, consistency, customization, and the overall administrator/user experience.
+
+Goals
+	Improve consistency of Pulse bot embeds
+	Improve moderation communication with users
+	Modernize /sync command output
+	Add server-specific bot branding options
+	Improve overall product polish before expanding larger features
+
+Tasks
+	Send DM warning to users when AutoMod warns them (Use pulse-bot/Resources/warn-sync.png)
+	Format AutoMod warning DM as a v2 embed
+	Reuse existing Pulse Guard embed styling guidelines
+	Ensure AutoMod DM embeds match moderation embeds visually
+	Convert /sync response to v2 embed
+	Use pulse-bot/Resources/pulse-sync.png inside the /sync embed
+	Apply Pulse Guard preference color to the /sync embed image/theme
+	Reuse existing Pulse Guard color/image handling logic
+	Add web app settings for server-specific bot branding
+	Allow admins to change bot display name per server
+	Allow admins to change bot icon/avatar per server where supported
+	Store bot branding settings per guild/server (In server info, section Identity, beneath Server Info)
+	Sync branding changes with Discord
+	Add validation for image type, size, and dimensions
+	Add preview before saving bot branding changes
+	Add success/error states for branding updates
+	Add permission checks before applying bot branding changes
+	Add fallback to default Pulse branding when no custom branding exists
+	Add audit/log entry when bot branding is changed
+	Additional QOL Ideas
+	Add confirmation modals for sensitive bot setting changes
+	Add “reset to default branding” button
+	Add preview cards for embeds before sending/saving
+	Add copy-to-clipboard buttons for generated messages/IDs
+	Add clearer empty states across settings pages
+	Add toast notifications after successful saves
+	Add unsaved changes warning when leaving settings pages
+	Add last updated timestamp for preference sections
+	Add loading skeletons for bot/server settings
+	Add quick “test DM” button for warning embed preview
+	Add quick “test sync embed” button for /sync preview
+
+Acceptance Criteria
+	AutoMod warning sends a DM to the warned user
+	AutoMod warning DM uses the same v2 embed style as moderation/Pulse Guard embeds
+	/sync command response is displayed as a v2 embed
+	/sync embed uses pulse-sync.png and applies configured Pulse Guard color styling
+	Bot name can be changed per server from the web app
+	Bot icon/avatar can be changed per server where Discord allows it
+	Branding changes persist per server
+	Admins can preview branding before saving
+	Reset to default branding works correctly
+	Users receive clear success/error feedback
+	Existing Pulse Guard embed styling remains consistent
+	
+PULSIFY-14 Landing Page Expansion, Feature Showcase & Pricing System (v0.14.0)
+
+Description
+	Expand and redesign the Pulsify landing page into a polished SaaS-style presentation website that showcases all major MVP systems, platform capabilities, AI features, and subscription plans.
+	The landing page should clearly communicate the value of Pulsify, improve branding, and prepare the platform for public MVP release and future monetization.
+
+Goals
+	Improve Pulsify branding and first impression
+	Showcase all implemented MVP systems/features
+	Create a professional SaaS landing page experience
+	Introduce pricing/subscription plans
+	Prepare Pulsify for public launch and scaling
+
+Tasks
+	Hero Section
+		Redesign hero section
+		Improve typography and messaging
+		Add animated background/effects
+		Add modern CTA buttons:
+			Invite Pulse
+			Open Dashboardc
+			Join Early Access
+	Feature Showcase
+		Add feature showcase sections for:
+			Moderation
+			Echo Guard (AI Moderation)
+			Analytics
+			Roles Management
+			Events Management
+			Channels Management
+			Automations
+			Server Health
+			Notifications
+			Audit Logs
+		Add dashboard preview/mockup sections
+		Add animated feature cards
+		Add interactive hover effects
+		Add modern gradients and UI polish
+
+	Platform Sections
+		Add “How it works” section
+		Add “Why Pulsify” section
+		Add AI-powered feature highlights
+		Add real-time analytics showcase
+		Add smart moderation showcase
+		Add server customization showcase
+
+	Pricing & Plans
+		Add complete pricing section
+		Add 4 pricing tiers:
+			Free
+			Pro
+			Business
+			Enterprise
+		Add monthly/yearly pricing toggle
+		Add feature comparison cards
+		Highlight recommended plan visually
+		Add feature checklists for each plan
+
+	Plan Features
+		Free
+			Basic moderation
+			Limited analytics
+			Basic automations
+			Limited Echo features
+			Community support
+		Pro
+			Advanced moderation
+			Full analytics
+			AI moderation features
+			Advanced automations
+			Custom branding
+			Priority support
+		Business
+			Multi-server management
+			Advanced audit logs
+			Team/admin management
+			Advanced analytics insights
+			Extended AI features
+			Backup & restore system
+		Enterprise
+			Unlimited scaling
+			Dedicated support
+			Custom integrations
+			Advanced security tools
+			API/Webhook access
+			Early access features
+
+	Additional Landing Page Features
+		Add FAQ section
+		Add responsive mobile layout
+		Add smooth scrolling and transitions
+		Add footer redesign
+		Add trust/status badges:
+			AI Powered
+			Real-Time Analytics
+			Smart Moderation
+			Discord Automation
+		Add testimonials/placeholder community section
+		Optimize performance and responsiveness
+
+	Acceptance Criteria
+		Landing page showcases all major Pulsify systems
+		Landing page feels modern and production-ready
+		Feature sections clearly communicate platform value
+		Pricing section displays 4 polished tiers
+		Free plan is clearly available
+		Recommended plan is highlighted
+		Animations and interactions work smoothly
+		Mobile responsiveness works correctly
+		Landing page is visually consistent with Pulsify branding
+		
+PULSIFY-15 Command Center & Slash Commands Management (v0.15.0)
+
+Description
+	Build a complete Command Center inside the Pulsify web app that allows administrators to manage Discord slash commands, command permissions, command categories, and command visibility directly from the dashboard.
+	The system should centralize Pulse command management and improve server customization and usability.
+
+Goals
+	Centralize slash command management
+	Improve command visibility and organization
+	Allow server-specific command customization
+	Simplify command permissions and configuration
+
+Tasks
+	Command Center UI
+		Build Commands dashboard section
+		Display all Pulse slash commands
+		Display:
+			command name
+			description
+			category
+			enabled/disabled status
+			usage count
+			permissions
+		Add searchable/filterable command list
+
+	Command Management
+		Allow enabling/disabling commands per server
+		Add command category management
+		Add hidden/admin-only commands
+		Add cooldown configuration
+		Add command usage limits
+		Add maintenance/disabled state handling
+
+	Permissions
+		Allow command permissions configuration:
+			admin only
+			moderator only
+			role-based access
+			channel restrictions
+		Add role/channel whitelist system
+		Add role/channel blacklist system
+
+	Command Analytics
+		Track command usage statistics
+		Display:
+			most used commands
+			least used commands
+			failed command executions
+			command usage trends
+		Add command execution logs
+
+	UX Improvements
+		Add command preview/examples
+		Add quick test command buttons
+		Add command status indicators
+		Add loading/error/success states
+		Add responsive mobile layout
+
+Acceptance Criteria
+	Commands are visible inside the dashboard
+	Commands can be enabled/disabled per server
+	Permissions sync correctly with Discord
+	Command analytics display correctly
+	Restrictions and cooldowns function properly
+	UI remains responsive and easy to use
+	Command changes persist correctly
+	
+PULSIFY-16 Command Center & Slash Commands Management (v0.16.0)
+
+Description
+	Implement a complete user profile and reputation system inside Pulsify that provides detailed insights about Discord members, their activity, moderation history, engagement, and server presence.
+	The system should help administrators better understand and manage their communities through advanced member analytics and profiles.
+
+Goals
+	Improve member visibility and management
+	Centralize user-related server data
+	Provide engagement and moderation insights
+	Enhance moderation and community administration workflow
+
+Tasks
+	User Profiles
+		Build detailed member profile page
+		Display:
+			avatar
+			username/display name
+			joined at
+			roles
+			activity statistics
+			voice activity
+			message count
+			warnings/timeouts/bans
+			reputation score
+		Add profile overview cards
+
+	Reputation System
+		Create reputation/trust scoring system
+		Calculate score based on:
+			activity
+			moderation history
+			account age
+			engagement
+			server participation
+		Add reputation indicators/badges
+
+	Activity Tracking
+		Track:
+			messages sent
+			voice activity duration
+			command usage
+			active channels
+			event participation
+		Add activity timeline/history
+		Add activity heatmaps/charts
+
+	Moderation Insights
+		Display moderation history
+		Add moderation risk indicators
+		Add repeat offender detection
+		Add moderation notes system
+		Add moderator-only notes/comments
+
+	Search & Filtering
+		Add advanced member search
+		Add filtering:
+			active users
+			inactive users
+			high-risk users
+			new members
+			staff/moderators
+
+	UX Improvements
+		Add responsive profile UI
+		Add profile quick actions:
+			warn
+			timeout
+			ban
+			assign roles
+		Add loading/error/success states
+		Add smooth transitions and profile animations
+
+Acceptance Criteria
+	Detailed user profiles display correctly
+	Activity statistics are tracked accurately
+	Reputation system updates correctly
+	Moderation history is visible
+	Search and filtering work correctly
+	Quick moderation actions function properly
+	UI remains responsive and visually polished
+	
+PULSIFY-17 Scheduled Tasks & Automation Workflows (v0.17.0)
+
+Description
+	Implement a scheduled automation and workflow system that allows administrators to create recurring automated actions and server routines directly from the Pulsify dashboard.
+	The system should help automate repetitive community management tasks and improve overall server maintenance.
+
+Goals
+	Expand Pulsify automation capabilitie
+	Reduce repetitive moderation/admin work
+	Improve server maintenance workflow
+	Introduce customizable automation scheduling
+
+Tasks
+	Automation System
+		Build Automations dashboard section
+		Create automation/workflow management UI
+		Add enable/disable toggles for workflows
+		Add automation execution logs/history
+
+	Scheduled Tasks
+		Add scheduled automation support:
+			daily
+			weekly
+			monthly
+			custom cron-like scheduling
+		Add timezone handling
+		Add next execution preview
+
+	Automation Features
+		Support automated:
+			announcements
+			welcome reminders
+			inactivity cleanup
+			role synchronization
+			temporary role removal
+			scheduled moderation actions
+			recurring events
+			analytics summaries
+		Add automation conditions/triggers
+		Add delay/cooldown configuration
+
+	Workflow Builder
+		Add visual workflow builder
+		Add trigger/action system
+		Add automation templates/presets
+		Add test automation functionality
+		Add workflow validation
+
+	Notifications & Monitoring
+		Add automation status indicators
+		Add failed automation alerts
+		Add retry system for failed automations
+		Add automation statistics/usage analytics
+
+	UX Improvements
+		Add responsive workflow UI
+		Add loading/error/success states
+		Add automation search/filtering
+		Add execution preview before saving
+
+Acceptance Criteria
+	Scheduled automations execute correctly
+	Workflow system saves and persists correctly
+	Automation logs display properly
+	Failed automations are handled correctly
+	Workflow builder remains responsive and intuitive
+	Automation triggers/actions sync correctly with Discord
+	Admins can enable/disable automations easily
+	
+PULSIFY-18 Advanced Dashboard Search & Global Command Palette (v0.18.0)
+
+Description
+	Implement a global search and command palette system that allows administrators to quickly navigate through the Pulsify dashboard, search server resources, and execute actions instantly from anywhere inside the application.
+	The system should improve usability, navigation speed, and overall SaaS experience.
+
+Goals
+	Improve dashboard navigation speed
+	Simplify access to important features/actions
+	Provide modern SaaS-style UX
+	Reduce friction when managing large servers
+
+Tasks
+	Global Search System
+		Build global search UI
+		Add universal search bar
+		Allow searching:
+			members
+			roles
+			channels
+			events
+			moderation logs
+			automations
+			notifications
+			commands
+		Add fuzzy search support
+		Add recent searches/history
+		Add search result categorization
+
+	Command Palette
+		Build CTRL + K command palette
+		Add quick navigation shortcuts
+		Add quick actions:
+			warn user
+			timeout user
+			create event
+			create role
+			open analytics
+			open moderation
+			trigger sync
+		Add searchable commands/actions
+		Add keyboard navigation support
+
+	UX Improvements
+		Add quick preview cards/results
+		Add loading skeletons
+		Add smooth animations/transitions
+		Add responsive mobile behavior
+		Add “recently opened” section
+
+	Performance & Optimization
+		Optimize search indexing/caching
+		Add debounced searching
+		Add lazy loading for large result sets
+		Optimize command execution performance
+
+Acceptance Criteria
+	Global search works across the dashboard
+	Search results appear quickly and accurately
+	Command palette opens via keyboard shortcut
+	Quick actions execute correctly
+	Navigation shortcuts function properly
+	Search remains performant with large datasets
+	UI feels polished and responsive
+		
+PULSIFY-19 Legal, Support & Community Pages (v0.19.0)
+
+Description
+	Create the missing public pages linked in the Pulsify footer to improve platform professionalism, transparency, and user support experience.
+	The pages should match the overall Pulsify branding and provide a polished SaaS-style public experience.
+
+Goals
+	Complete missing footer/navigation pages
+	Improve platform trust and professionalism
+	Provide legal transparency and support resources
+	Prepare Pulsify for public MVP release
+
+Tasks
+	Privacy Policy
+		Create Privacy Policy page
+		Add sections for:
+			collected data
+			Discord OAuth data usage
+			analytics/tracking usage
+			cookies/session handling
+			data storage/security
+			third-party services
+			contact information
+		Match Pulsify branding/styling
+
+	Terms of Service
+		Create Terms of Service page
+		Add sections for:
+			acceptable usage
+			prohibited behavior
+			service limitations
+			moderation/automation disclaimers
+			account termination
+			liability limitations
+			intellectual property
+		Match Pulsify branding/styling
+
+	Support Page
+		Create Support page
+		Add:
+			contact methods
+			support categories
+			FAQ shortcuts
+			bug reporting section
+			feature request section
+			troubleshooting section
+		Add support CTA buttons
+		Add responsive support layout
+
+	Community Page
+		Create Community page
+		Add:
+			Discord community invite section
+			updates/changelog section
+			roadmap preview
+			community showcase placeholders
+			feedback/community contribution section
+		Add social/community links
+		Add responsive community layout
+
+	General Improvements
+		Add page routing/navigation
+		Add consistent page layouts
+		Add responsive mobile support
+		Add loading/error states
+		Add SEO metadata for all pages
+		Add smooth page transitions/animations
+		Ensure footer links route correctly
+
+Acceptance Criteria
+	Privacy Policy page exists and is accessible
+	Terms of Service page exists and is accessible
+	Support page exists and is accessible
+	Community page exists and is accessible
+	Footer links navigate correctly
+	Pages are responsive and visually polished
+	Styling is consistent with Pulsify branding
+	Public pages feel production-ready
+	
+PULSIFY-20 Onboarding & First-Time Setup Experience (v0.20.0)
+
+Description
+	Implement a complete onboarding and first-time setup system that guides new users through connecting their Discord server, configuring Pulse, and enabling core Pulsify features.
+	The onboarding experience should simplify setup, reduce confusion, and improve first-time user retention.
+
+Goals
+	Improve first-time user experience
+	Simplify Discord server setup
+	Increase feature discoverability
+	Reduce onboarding friction
+
+Tasks
+	Onboarding Flow
+		Build first-time onboarding flow
+		Add multi-step setup wizard
+		Add progress tracking
+		Add onboarding completion state
+
+	Server Setup
+		Guide users through:
+			connecting Discord server
+			inviting Pulse bot
+			granting required permissions
+			selecting primary channels
+		Validate setup completion
+
+	Feature Setup
+		Add quick setup templates for:
+			moderation
+			welcome system
+			auto roles
+			Pulse Guard
+			analytics
+		Add recommended default settings
+
+	UX Improvements
+		Add onboarding tooltips/hints
+		Add interactive setup cards
+		Add animations and transitions
+		Add onboarding skip/resume support
+		Add responsive mobile onboarding
+
+	Validation & Health Checks
+		Add bot permission validation
+		Add missing setup warnings
+		Add setup completion checklist
+		Add quick fix suggestions
+
+	Personalization
+		Allow selecting:
+			server type
+			moderation intensity
+			preferred dashboard layout
+			Pulse branding/theme
+		Customize onboarding recommendations based on selections
+
+Acceptance Criteria
+	New users are guided through setup successfully
+	Pulse bot connection/setup works correctly
+	Required permissions are validated
+	Onboarding progress persists correctly
+	Feature setup templates apply correctly
+	UI feels modern and intuitive
+	First-time setup experience is responsive and polished

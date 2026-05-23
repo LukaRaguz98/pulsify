@@ -5,6 +5,8 @@ import { fetchGuild, fetchGuildChannels, fetchGuildRoles, snowflakeToDate } from
 import { StatsCard } from '@/components/dashboard/StatsCard'
 import { PageHeader } from '@/components/ui/page-header'
 import { CategorySection } from '@/components/ui/category-section'
+import { OnboardingBanner } from '@/components/dashboard/onboarding/OnboardingBanner'
+import type { OnboardingState } from '@/lib/onboarding'
 import { Users, Wifi, Hash, Crown, Activity, LayoutGrid, FolderTree, Sparkles, ShieldCheck, CalendarDays } from 'lucide-react'
 
 const VERIFICATION_LABELS = ['None', 'Low', 'Medium', 'High', 'Very High'] as const
@@ -70,13 +72,22 @@ export default async function GuildOverviewPage({
   } = await supabase.auth.getUser()
   if (!user) redirect('/')
 
-  const [guild, channels, roles] = await Promise.all([
+  const [guild, channels, roles, settingsRow] = await Promise.all([
     fetchGuild(guildId),
     fetchGuildChannels(guildId),
     fetchGuildRoles(guildId),
+    supabase.from('guild_settings').select('settings').eq('guild_id', guildId).maybeSingle(),
   ])
 
   if (!guild) redirect('/dashboard')
+
+  // First-run onboarding: show the entry banner until setup is completed or
+  // explicitly skipped.
+  const onboardingState =
+    ((settingsRow.data?.settings as Record<string, unknown> | undefined)?.onboarding_state as
+      | OnboardingState
+      | undefined) ?? null
+  const showOnboarding = !onboardingState || onboardingState.status === 'in_progress'
 
   const textChannels = channels.filter((c) => c.type === 0)
   const voiceChannels = channels.filter((c) => c.type === 2)
@@ -110,6 +121,10 @@ export default async function GuildOverviewPage({
 
   return (
     <div className="page-content">
+      {showOnboarding && (
+        <OnboardingBanner guildId={guildId} guildName={guild.name} state={onboardingState} />
+      )}
+
       <PageHeader
         title="Server Overview"
         description={

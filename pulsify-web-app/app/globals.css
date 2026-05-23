@@ -302,6 +302,17 @@ body:has([role="dialog"]) [data-pulsify-ping] {
   animation: public-page-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* ── Onboarding wizard step transition ─────────────────────────
+   Replayed when the wizard step (keyed) changes. Neutralised by the
+   [data-animations="false"] reduced-motion rule above. */
+@keyframes onboarding-step {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.onboarding-step {
+  animation: onboarding-step 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* ── Command palette / global search ───────────────────────────
    Entrance transitions for the ⌘K palette. Both are auto-neutralised by the
    [data-animations="false"] rule above (it zeroes every animation-duration). */
