@@ -290,6 +290,18 @@ body:has([role="dialog"]) [data-pulsify-ping] {
   visibility: hidden;
 }
 
+/* ── Command palette / global search ───────────────────────────
+   Entrance transitions for the ⌘K palette. Both are auto-neutralised by the
+   [data-animations="false"] rule above (it zeroes every animation-duration). */
+@keyframes cmdk-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes cmdk-pop {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 /* ── Button hover effects ──────────────────────────────────────
    Most primary/secondary buttons in the app are inline-styled
    (var(--p-1) gradients for primary, var(--line-strong) borders for
