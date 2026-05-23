@@ -15,9 +15,9 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
   {
     title: 'Resources',
     links: [
-      { label: 'FAQ', href: '#faq' },
+      { label: 'FAQ', href: '/faq' },
       { label: 'Support', href: '/support' },
-      { label: 'Community', href: 'https://discord.gg', external: true },
+      { label: 'Community', href: '/community' },
     ],
   },
   {
