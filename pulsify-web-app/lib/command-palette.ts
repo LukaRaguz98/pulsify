@@ -73,6 +73,7 @@ type NavDef = { id: string; label: string; icon: string; path: string; keywords?
 const NAV_CATALOG: NavDef[] = [
   { id: 'nav-overview', label: 'Overview', icon: 'BarChart2', path: '', keywords: 'home analytics dashboard summary' },
   { id: 'nav-statistics', label: 'Statistics', icon: 'Activity', path: '/statistics', keywords: 'stats analytics charts trends' },
+  { id: 'nav-insights', label: 'Insights', icon: 'Lightbulb', path: '/insights', keywords: 'recommendations health suggestions trends growth analysis' },
   { id: 'nav-channels', label: 'Channels', icon: 'Hash', path: '/channels', keywords: 'text voice category' },
   { id: 'nav-members', label: 'Members', icon: 'UserRound', path: '/members', keywords: 'users people directory' },
   { id: 'nav-roles', label: 'Roles', icon: 'Users', path: '/roles', keywords: 'permissions ranks' },
@@ -103,6 +104,7 @@ const ACTION_CATALOG: ActionDef[] = [
   { id: 'act-warn-member', label: 'Warn a member', subtitle: 'Record a warning against a member', icon: 'AlertCircle', keywords: 'warning moderate discipline', action: { kind: 'pick-member', memberAction: 'warn' } },
   { id: 'act-timeout-member', label: 'Timeout a member', subtitle: 'Temporarily mute a member', icon: 'Clock', keywords: 'mute timeout moderate silence', action: { kind: 'pick-member', memberAction: 'timeout' } },
   { id: 'act-open-analytics', label: 'Open analytics', subtitle: 'Jump to the server overview', icon: 'LineChart', keywords: 'stats analytics dashboard', action: { kind: 'navigate', href: '' } },
+  { id: 'act-open-insights', label: 'Open insights', subtitle: 'Server health & recommendations', icon: 'Lightbulb', keywords: 'insights recommendations health suggestions', action: { kind: 'navigate', href: '/insights' } },
   { id: 'act-open-moderation', label: 'Open moderation', subtitle: 'Jump to moderation tools', icon: 'Shield', keywords: 'mod moderation bans', action: { kind: 'navigate', href: '/moderation' } },
   { id: 'act-trigger-sync', label: 'Trigger server sync', subtitle: 'Refresh dashboard data from Discord', icon: 'RefreshCw', keywords: 'sync refresh resync update reload', action: { kind: 'command', commandId: 'sync' } },
 ]

@@ -661,7 +661,7 @@ Tasks
 	Feature Showcase
 		Add feature showcase sections for:
 			Moderation
-			Echo Guard (AI Moderation)
+			Pulse Guard (AI Moderation)
 			Analytics
 			Roles Management
 			Events Management
@@ -700,7 +700,7 @@ Tasks
 			Basic moderation
 			Limited analytics
 			Basic automations
-			Limited Echo features
+			Limited Pulse features
 			Community support
 		Pro
 			Advanced moderation
@@ -1113,7 +1113,7 @@ Acceptance Criteria
 PULSIFY-20 Onboarding & First-Time Setup Experience (v0.20.0)
 
 Description
-	Implement a complete onboarding and first-time setup system that guides new users through connecting their Discord server, configuring Pulse, and enabling core Pulsify features.
+	Implement a complete onboarding and first-time setup system that guides new users through connecting their Discord server, configuring Pulse, and enabling core 	Pulsify features.
 	The onboarding experience should simplify setup, reduce confusion, and improve first-time user retention.
 
 Goals
@@ -1175,3 +1175,71 @@ Acceptance Criteria
 	Feature setup templates apply correctly
 	UI feels modern and intuitive
 	First-time setup experience is responsive and polished
+
+PULSIFY-21 — Server Insights & Recommendations View (v0.21.0)
+
+Description
+	Create a new “Insights” view inside the Pulsify navigation that provides intelligent server recommendations, health insights, growth suggestions, and activity 	analysis based on Discord server behavior and analytics.
+	The Insights view should help administrators better understand their community and improve engagement, moderation, and server organization.
+
+Goals
+	Introduce a completely new dashboard experience
+	Provide actionable server insights
+	Improve community growth and management
+	Make analytics more meaningful and interactive
+
+Tasks
+	Insights Dashboard
+		Create new “Insights” navigation tab/view
+		Build modern insights dashboard layout
+		Add recommendation cards/widgets
+		Add priority/severity indicators
+
+	Server Insights
+		Analyze and display:
+			server growth trends
+			inactive channels
+			inactive roles
+			most active users
+			moderation spikes
+			peak activity times
+			declining engagement
+			voice activity trends
+		Add engagement overview summaries
+
+	Smart Recommendations
+		Add recommendations such as:
+			“This channel is inactive”
+			“Voice activity increased by 40%”
+			“Moderation actions are unusually high”
+			“You should enable AutoMod”
+			“This role has dangerous permissions”
+			“Your onboarding system is incomplete”
+		Add actionable quick-fix buttons
+
+	Visual Improvements
+		Add animated charts and insight cards
+		Add trend indicators:
+			increasing
+			decreasing
+			stable
+		Add responsive/mobile layout
+		Add loading/error/empty states
+		
+	Future AI Preparation
+		Prepare infrastructure for future Pulse recommendations
+		Add insight categorization:
+			Growth
+			Moderation
+			Activity
+			Security
+			Optimization
+			
+Acceptance Criteria
+	New Insights view exists in navigation
+	Insights display meaningful server information
+	Recommendation system works correctly
+	Trend analysis displays properly
+	Quick actions navigate correctly
+	UI remains responsive and visually polished
+	Insights update dynamically with server data

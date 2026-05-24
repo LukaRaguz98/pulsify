@@ -325,6 +325,26 @@ body:has([role="dialog"]) [data-pulsify-ping] {
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* ── Insights view ─────────────────────────────────────────────
+   Cards (metrics, recommendations) rise + fade in on mount. A short
+   per-position stagger inside .insight-grid containers makes a board of
+   cards cascade rather than pop in all at once. Auto-neutralised by the
+   [data-animations="false"] reduced-motion rule above. */
+@keyframes insight-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.insight-card {
+  animation: insight-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.insight-grid > .insight-card:nth-child(1) { animation-delay: 0.02s; }
+.insight-grid > .insight-card:nth-child(2) { animation-delay: 0.06s; }
+.insight-grid > .insight-card:nth-child(3) { animation-delay: 0.10s; }
+.insight-grid > .insight-card:nth-child(4) { animation-delay: 0.14s; }
+.insight-grid > .insight-card:nth-child(5) { animation-delay: 0.18s; }
+.insight-grid > .insight-card:nth-child(6) { animation-delay: 0.22s; }
+.insight-grid > .insight-card:nth-child(n+7) { animation-delay: 0.26s; }
+
 /* ── Button hover effects ──────────────────────────────────────
    Most primary/secondary buttons in the app are inline-styled
    (var(--p-1) gradients for primary, var(--line-strong) borders for
