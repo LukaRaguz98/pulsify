@@ -27,6 +27,7 @@ import {
   Command,
   UserRound,
   Lightbulb,
+  LifeBuoy,
 } from 'lucide-react'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
 import { SearchTrigger } from '@/components/dashboard/search/SearchTrigger'
@@ -117,15 +118,15 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
       title: 'Pulse Bot',
       icon: <TerminalSquare size={16} />,
       items: [
-        { label: 'Commands', href: `${base}/commands`, icon: <Command size={16} />, badge: 'Bot' },
+        { label: 'Commands', href: `${base}/commands`, icon: <Command size={16} /> },
       ],
     },
     {
       title: 'Engagement',
       icon: <Sparkles size={16} />,
       items: [
-        { label: 'Automations', href: `${base}/automations`, icon: <Zap size={16} />, badge: 'AI' },
-        { label: 'Scheduled', href: `${base}/scheduled`, icon: <CalendarClock size={16} />, badge: 'Bot' },
+        { label: 'Automations', href: `${base}/automations`, icon: <Zap size={16} /> },
+        { label: 'Scheduled', href: `${base}/scheduled`, icon: <CalendarClock size={16} /> },
       ],
     },
     {
@@ -133,7 +134,8 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
       icon: <ShieldCheck size={16} />,
       items: [
         { label: 'Moderation', href: `${base}/moderation`, icon: <Shield size={16} /> },
-        { label: 'Pulse Guard', href: `${base}/ai-moderation`, icon: <ShieldAlert size={16} />, badge: 'AI' },
+        { label: 'Pulse Guard', href: `${base}/ai-moderation`, icon: <ShieldAlert size={16} /> },
+        { label: 'Tickets', href: `${base}/tickets`, icon: <LifeBuoy size={16} /> },
       ],
     },
     {
@@ -141,6 +143,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
       icon: <Settings size={16} />,
       items: [
         { label: 'Preferences', href: `${base}/settings`, icon: <SlidersHorizontal size={16} /> },
+        { label: 'Ticket settings', href: `${base}/ticket-settings`, icon: <LifeBuoy size={16} /> },
         { label: 'Pulse', href: `${base}/Pulse`, icon: <Sparkles size={16} /> },
       ],
     },

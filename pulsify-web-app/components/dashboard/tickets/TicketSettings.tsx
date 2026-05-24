@@ -1,0 +1,456 @@
+'use client'
+
+import { useState } from 'react'
+import {
+  Save,
+  Send,
+  Plus,
+  Trash2,
+  GripVertical,
+  Loader2,
+  LayoutPanelTop,
+  Tag,
+  ShieldCheck,
+  FolderTree,
+  FileText,
+  Clock,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react'
+import type { DiscordChannel, DiscordRole } from '@/lib/discord'
+import {
+  formatChannelName,
+  TICKET_LIMITS,
+  slugify,
+  type TicketConfig,
+  type TicketType,
+  type TicketFormField,
+  type PanelMode,
+} from '@/lib/tickets'
+import { THEMES } from '@/lib/themes'
+import { usePreferences } from '@/components/ThemeProvider'
+import type { ActionResult } from '@/app/dashboard/[guildId]/tickets/actions'
+import { saveTicketConfig, postTicketPanel } from '@/app/dashboard/[guildId]/tickets/actions'
+import { ColorPicker } from './ColorPicker'
+
+type RunAction = <T>(fn: () => Promise<ActionResult<T>>, successMsg?: string) => Promise<ActionResult<T>>
+
+type Props = {
+  guildId: string
+  config: TicketConfig
+  channels: DiscordChannel[]
+  categories: DiscordChannel[]
+  roles: DiscordRole[]
+  runAction: RunAction
+}
+
+const inputStyle: React.CSSProperties = { background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }
+
+export function TicketSettings({ guildId, config, channels, categories, roles, runAction }: Props) {
+  // The accent the admin picked in App Design (custom override → preset theme).
+  const { theme, themeCustomColor } = usePreferences()
+  const appAccent = themeCustomColor ?? THEMES.find((t) => t.id === theme)?.accent ?? '#8b5cf6'
+  const [draft, setDraft] = useState<TicketConfig>(() =>
+    // First-time setup (no saved row yet): seed the panel colour from the app
+    // accent so tickets match the rest of the dashboard out of the box.
+    config.updated_at ? config : { ...config, panel: { ...config.panel, color: appAccent } },
+  )
+  const [saving, setSaving] = useState(false)
+  const [posting, setPosting] = useState(false)
+  const [openType, setOpenType] = useState<string | null>(null)
+
+  const patch = (p: Partial<TicketConfig>) => setDraft((d) => ({ ...d, ...p }))
+  const patchPanel = (p: Partial<TicketConfig['panel']>) => setDraft((d) => ({ ...d, panel: { ...d.panel, ...p } }))
+  const patchAutoClose = (p: Partial<TicketConfig['auto_close']>) =>
+    setDraft((d) => ({ ...d, auto_close: { ...d.auto_close, ...p } }))
+
+  function updateType(i: number, p: Partial<TicketType>) {
+    setDraft((d) => ({ ...d, ticket_types: d.ticket_types.map((t, idx) => (idx === i ? { ...t, ...p } : t)) }))
+  }
+  function addType() {
+    if (draft.ticket_types.length >= TICKET_LIMITS.maxTypes) return
+    const id = `type-${Date.now().toString(36)}`
+    setDraft((d) => ({
+      ...d,
+      ticket_types: [...d.ticket_types, { id, label: 'New type', enabled: true, form: [] }],
+    }))
+    setOpenType(id)
+  }
+  function removeType(i: number) {
+    setDraft((d) => ({ ...d, ticket_types: d.ticket_types.filter((_, idx) => idx !== i) }))
+  }
+  function updateField(ti: number, fi: number, p: Partial<TicketFormField>) {
+    setDraft((d) => ({
+      ...d,
+      ticket_types: d.ticket_types.map((t, idx) =>
+        idx === ti ? { ...t, form: t.form.map((f, j) => (j === fi ? { ...f, ...p } : f)) } : t,
+      ),
+    }))
+  }
+  function addField(ti: number) {
+    setDraft((d) => ({
+      ...d,
+      ticket_types: d.ticket_types.map((t, idx) =>
+        idx === ti && t.form.length < TICKET_LIMITS.maxFormFields
+          ? { ...t, form: [...t.form, { id: `q${t.form.length + 1}`, label: 'Question', style: 'short', required: true }] }
+          : t,
+      ),
+    }))
+  }
+  function removeField(ti: number, fi: number) {
+    setDraft((d) => ({
+      ...d,
+      ticket_types: d.ticket_types.map((t, idx) => (idx === ti ? { ...t, form: t.form.filter((_, j) => j !== fi) } : t)),
+    }))
+  }
+  function toggleRole(roleId: string) {
+    setDraft((d) => ({
+      ...d,
+      support_role_ids: d.support_role_ids.includes(roleId)
+        ? d.support_role_ids.filter((r) => r !== roleId)
+        : [...d.support_role_ids, roleId],
+    }))
+  }
+
+  async function save() {
+    setSaving(true)
+    await runAction(() => saveTicketConfig(guildId, draft), 'Ticket settings saved')
+    setSaving(false)
+  }
+  async function postPanel() {
+    setPosting(true)
+    // Save first so the panel reflects the latest types/channel.
+    const saved = await runAction(() => saveTicketConfig(guildId, draft))
+    if (saved.ok) await runAction(() => postTicketPanel(guildId), 'Panel posted to Discord')
+    setPosting(false)
+  }
+
+  const namePreview = formatChannelName(draft.naming_format, {
+    number: (draft.ticket_counter ?? 0) + 1,
+    user: 'username',
+    type: draft.ticket_types[0]?.id ?? 'support',
+  })
+
+  return (
+    <div className="space-y-6 pb-24">
+      {/* Master switch */}
+      <Card icon={<ShieldCheck size={16} />} title="Ticket system" description="Turn Discord-native support tickets on for this server.">
+        <Toggle
+          checked={draft.enabled}
+          onChange={(v) => patch({ enabled: v })}
+          label={draft.enabled ? 'Enabled' : 'Disabled'}
+          hint={draft.enabled ? 'Members can open tickets from the panel.' : 'The panel buttons will not create tickets.'}
+        />
+      </Card>
+
+      {/* Panel */}
+      <Card icon={<LayoutPanelTop size={16} />} title="Ticket panel" description="The message members click to open a ticket.">
+        <div className="space-y-4">
+          <Field label="Panel channel">
+            <ChannelSelect
+              value={draft.panel.channel_id ?? ''}
+              channels={channels}
+              placeholder="Select a channel…"
+              onChange={(v) => patchPanel({ channel_id: v || null })}
+            />
+          </Field>
+          <Field label="Title">
+            <input value={draft.panel.title} maxLength={100} onChange={(e) => patchPanel({ title: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm" style={inputStyle} />
+          </Field>
+          <div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <label className="block text-xs font-medium" style={{ color: 'var(--text-2)' }}>Accent colour</label>
+              {/* Hex badge mirrors App Design › Accent Colour. */}
+              <span
+                className="rounded px-1.5 py-0.5 font-mono text-xs"
+                style={{ background: 'var(--bg-2)', color: 'var(--text-3)', border: '1px solid var(--line-strong)' }}
+              >
+                {draft.panel.color}
+              </span>
+            </div>
+            <ColorPicker value={draft.panel.color} onChange={(c) => patchPanel({ color: c })} />
+            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
+              Defaults to your App Design accent. Used for the panel and ticket embeds.
+            </p>
+          </div>
+          <Field label="Description">
+            <textarea value={draft.panel.description} maxLength={500} rows={2} onChange={(e) => patchPanel({ description: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm" style={inputStyle} />
+          </Field>
+          <Field label="Picker style" hint="Buttons support up to 5 types; switch to a dropdown for more.">
+            <div className="flex gap-2">
+              {(['buttons', 'dropdown'] as PanelMode[]).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => patchPanel({ mode: m })}
+                  className="rounded-lg border px-3 py-1.5 text-sm font-medium capitalize transition-colors"
+                  style={draft.panel.mode === m ? { borderColor: 'var(--p-1)', color: 'var(--p-1)', background: 'var(--p-soft)' } : { borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          </Field>
+          <div className="flex items-center gap-2 border-t pt-4" style={{ borderColor: 'var(--line-strong)' }}>
+            <BusyButton onClick={postPanel} busy={posting} icon={<Send size={14} />} label="Post panel to Discord" tone="primary" />
+            <span className="text-xs" style={{ color: 'var(--text-3)' }}>Re-posting sends a fresh panel message.</span>
+          </div>
+        </div>
+      </Card>
+
+      {/* Ticket types */}
+      <Card icon={<Tag size={16} />} title="Ticket types" description="The categories members can choose from. Each can ask its own questions.">
+        <div className="space-y-3">
+          {draft.ticket_types.map((type, ti) => {
+            const expanded = openType === type.id
+            return (
+              <div key={type.id} className="rounded-xl border" style={{ borderColor: 'var(--line-strong)', background: 'var(--bg-2)' }}>
+                <div className="flex items-center gap-2 px-3 py-2.5">
+                  <Toggle checked={type.enabled} onChange={(v) => updateType(ti, { enabled: v })} compact />
+                  <input
+                    value={type.emoji ?? ''}
+                    onChange={(e) => updateType(ti, { emoji: e.target.value })}
+                    placeholder="🎫"
+                    className="w-10 rounded-md border px-1.5 py-1 text-center text-sm"
+                    style={inputStyle}
+                  />
+                  <input
+                    value={type.label}
+                    onChange={(e) => updateType(ti, { label: e.target.value })}
+                    className="flex-1 rounded-md border px-2.5 py-1 text-sm font-medium"
+                    style={inputStyle}
+                  />
+                  <button onClick={() => setOpenType(expanded ? null : type.id)} className="rounded p-1" style={{ color: 'var(--text-3)' }}>
+                    {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  </button>
+                  <button onClick={() => removeType(ti)} className="rounded p-1" style={{ color: '#f87171' }} aria-label="Remove type">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+                {expanded && (
+                  <div className="space-y-3 border-t px-3 py-3" style={{ borderColor: 'var(--line-strong)' }}>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Field label="Description">
+                        <input value={type.description ?? ''} maxLength={100} onChange={(e) => updateType(ti, { description: e.target.value })} className="w-full rounded-md border px-2.5 py-1.5 text-sm" style={inputStyle} />
+                      </Field>
+                      <Field label="Category override" hint="Where this type's channels are created.">
+                        <CategorySelect value={type.category_id ?? ''} categories={categories} placeholder="Use default category" onChange={(v) => updateType(ti, { category_id: v || null })} />
+                      </Field>
+                    </div>
+
+                    {/* Form questions */}
+                    <div>
+                      <div className="mb-1.5 flex items-center justify-between">
+                        <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>Form questions</p>
+                        <button onClick={() => addField(ti)} disabled={type.form.length >= TICKET_LIMITS.maxFormFields} className="inline-flex items-center gap-1 text-xs font-medium disabled:opacity-40" style={{ color: 'var(--p-1)' }}>
+                          <Plus size={12} /> Add question
+                        </button>
+                      </div>
+                      {type.form.length === 0 ? (
+                        <p className="text-xs" style={{ color: 'var(--text-3)' }}>No questions — the ticket opens immediately.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {type.form.map((f, fi) => (
+                            <div key={fi} className="flex items-center gap-2 rounded-lg border px-2 py-1.5" style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}>
+                              <GripVertical size={13} style={{ color: 'var(--text-3)' }} />
+                              <input value={f.label} onChange={(e) => updateField(ti, fi, { label: e.target.value, id: slugify(e.target.value) })} className="flex-1 rounded-md border px-2 py-1 text-sm" style={inputStyle} />
+                              <select value={f.style} onChange={(e) => updateField(ti, fi, { style: e.target.value as TicketFormField['style'] })} className="rounded-md border px-1.5 py-1 text-xs" style={inputStyle}>
+                                <option value="short">Short</option>
+                                <option value="paragraph">Paragraph</option>
+                              </select>
+                              <label className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-3)' }}>
+                                <input type="checkbox" checked={f.required} onChange={(e) => updateField(ti, fi, { required: e.target.checked })} />
+                                Req
+                              </label>
+                              <button onClick={() => removeField(ti, fi)} className="rounded p-1" style={{ color: '#f87171' }}>
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+          <button onClick={addType} disabled={draft.ticket_types.length >= TICKET_LIMITS.maxTypes} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed px-3 py-2 text-sm font-medium disabled:opacity-40" style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}>
+            <Plus size={14} /> Add ticket type
+          </button>
+        </div>
+      </Card>
+
+      {/* Channels & roles */}
+      <Card icon={<FolderTree size={16} />} title="Channels & access" description="Where ticket channels live and who can see every ticket.">
+        <div className="space-y-4">
+          <Field label="Ticket category" hint="New ticket channels are created under this category.">
+            <CategorySelect value={draft.category_id ?? ''} categories={categories} placeholder="Select a category…" onChange={(v) => patch({ category_id: v || null })} />
+          </Field>
+          <Field label="Support roles" hint="Granted access to every ticket channel.">
+            {roles.length === 0 ? (
+              <p className="text-xs" style={{ color: 'var(--text-3)' }}>No assignable roles found.</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {roles.slice(0, 60).map((r) => {
+                  const on = draft.support_role_ids.includes(r.id)
+                  return (
+                    <button
+                      key={r.id}
+                      onClick={() => toggleRole(r.id)}
+                      className="rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
+                      style={on ? { background: 'var(--p-soft)', color: 'var(--p-1)', boxShadow: 'inset 0 0 0 1px var(--p-1)' } : { background: 'var(--bg-2)', color: 'var(--text-3)' }}
+                    >
+                      @{r.name}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Channel name format" hint={`Preview: #${namePreview}`}>
+              <input value={draft.naming_format} onChange={(e) => patch({ naming_format: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm" style={inputStyle} />
+            </Field>
+            <Field label="Tickets per member" hint="Max open tickets one member can hold. 0 = unlimited.">
+              <input type="number" min={0} max={50} value={draft.per_user_limit} onChange={(e) => patch({ per_user_limit: Number(e.target.value) })} className="w-full rounded-lg border px-3 py-2 text-sm" style={inputStyle} />
+            </Field>
+          </div>
+          <Field label="Opening message" hint="Posted inside a new ticket. Tokens: {user}, {type}.">
+            <textarea value={draft.opening_message ?? ''} maxLength={1000} rows={2} onChange={(e) => patch({ opening_message: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm" style={inputStyle} />
+          </Field>
+          <Toggle checked={draft.ping_support} onChange={(v) => patch({ ping_support: v })} label="Ping support roles when a ticket opens" />
+        </div>
+      </Card>
+
+      {/* Logs & transcripts */}
+      <Card icon={<FileText size={16} />} title="Logs & transcripts" description="Where ticket activity and transcripts are mirrored.">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Transcript channel" hint="A summary is posted here when a ticket closes.">
+            <ChannelSelect value={draft.transcript_channel_id ?? ''} channels={channels} placeholder="None" onChange={(v) => patch({ transcript_channel_id: v || null })} />
+          </Field>
+          <Field label="Log channel" hint="Ticket lifecycle events are mirrored here.">
+            <ChannelSelect value={draft.log_channel_id ?? ''} channels={channels} placeholder="None" onChange={(v) => patch({ log_channel_id: v || null })} />
+          </Field>
+        </div>
+      </Card>
+
+      {/* Auto-close */}
+      <Card icon={<Clock size={16} />} title="Inactivity & auto-close" description="Automatically close tickets that go quiet.">
+        <div className="space-y-4">
+          <Toggle checked={draft.auto_close.enabled} onChange={(v) => patchAutoClose({ enabled: v })} label="Auto-close inactive tickets" />
+          {draft.auto_close.enabled && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Close after (hours of inactivity)">
+                <input type="number" min={1} max={720} value={draft.auto_close.inactivity_hours} onChange={(e) => patchAutoClose({ inactivity_hours: Number(e.target.value) })} className="w-full rounded-lg border px-3 py-2 text-sm" style={inputStyle} />
+              </Field>
+              <Field label="Warn after (hours, 0 = no warning)">
+                <input type="number" min={0} max={720} value={draft.auto_close.warn_hours} onChange={(e) => patchAutoClose({ warn_hours: Number(e.target.value) })} className="w-full rounded-lg border px-3 py-2 text-sm" style={inputStyle} />
+              </Field>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* Sticky save bar */}
+      <div
+        className="fixed bottom-0 right-0 z-40 flex items-center justify-end gap-3 border-t px-6 py-3"
+        style={{ left: 'var(--sidebar-w, 230px)', background: 'var(--bg-2)', borderColor: 'var(--line-strong)' }}
+      >
+        <span className="text-xs" style={{ color: 'var(--text-3)' }}>Changes apply to the bot the moment you save.</span>
+        <BusyButton onClick={save} busy={saving} icon={<Save size={14} />} label="Save settings" tone="primary" />
+      </div>
+    </div>
+  )
+}
+
+// ── Sub-components ─────────────────────────────────────────────────────────────
+
+function Card({ icon, title, description, children }: { icon: React.ReactNode; title: string; description?: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-xl border" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
+      <div className="flex items-start gap-3 border-b px-5 py-4" style={{ borderColor: 'var(--line-strong)' }}>
+        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: 'var(--p-soft)', color: 'var(--p-1)' }}>{icon}</span>
+        <div>
+          <h3 className="font-semibold text-foreground">{title}</h3>
+          {description && <p className="mt-0.5 text-sm" style={{ color: 'var(--text-3)' }}>{description}</p>}
+        </div>
+      </div>
+      <div className="p-5">{children}</div>
+    </section>
+  )
+}
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-medium" style={{ color: 'var(--text-2)' }}>{label}</label>
+      {children}
+      {hint && <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>{hint}</p>}
+    </div>
+  )
+}
+
+function Toggle({ checked, onChange, label, hint, compact }: { checked: boolean; onChange: (v: boolean) => void; label?: string; hint?: string; compact?: boolean }) {
+  return (
+    <label className="flex cursor-pointer items-center gap-3">
+      <button
+        type="button"
+        onClick={() => onChange(!checked)}
+        className="relative inline-flex shrink-0 items-center rounded-full transition-colors"
+        style={{ width: compact ? 32 : 40, height: compact ? 18 : 22, background: checked ? 'var(--p-1)' : 'var(--line-strong)' }}
+        aria-pressed={checked}
+      >
+        <span
+          className="absolute rounded-full bg-white transition-transform"
+          style={{
+            width: compact ? 12 : 16, height: compact ? 12 : 16,
+            left: 3,
+            transform: checked ? `translateX(${compact ? 14 : 18}px)` : 'translateX(0)',
+          }}
+        />
+      </button>
+      {label && (
+        <span>
+          <span className="text-sm font-medium text-foreground">{label}</span>
+          {hint && <span className="block text-xs" style={{ color: 'var(--text-3)' }}>{hint}</span>}
+        </span>
+      )}
+    </label>
+  )
+}
+
+function ChannelSelect({ value, channels, placeholder, onChange }: { value: string; channels: DiscordChannel[]; placeholder: string; onChange: (v: string) => void }) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-sm" style={inputStyle}>
+      <option value="">{placeholder}</option>
+      {channels.map((c) => (
+        <option key={c.id} value={c.id}>#{c.name}</option>
+      ))}
+    </select>
+  )
+}
+
+function CategorySelect({ value, categories, placeholder, onChange }: { value: string; categories: DiscordChannel[]; placeholder: string; onChange: (v: string) => void }) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-sm" style={inputStyle}>
+      <option value="">{placeholder}</option>
+      {categories.map((c) => (
+        <option key={c.id} value={c.id}>{c.name}</option>
+      ))}
+    </select>
+  )
+}
+
+function BusyButton({ onClick, busy, icon, label, tone }: { onClick: () => void; busy: boolean; icon: React.ReactNode; label: string; tone?: 'primary' }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={busy}
+      className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-60"
+      style={tone === 'primary' ? { background: 'var(--p-1)', color: '#fff' } : { borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
+    >
+      {busy ? <Loader2 size={14} className="animate-spin" /> : icon}
+      {label}
+    </button>
+  )
+}
