@@ -25,6 +25,7 @@ const {
   evaluate,
 } = require("./command-center");
 const { createScheduler } = require("./scheduler");
+const { createTickets } = require("./tickets");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -50,6 +51,11 @@ const client = new Client({
 // Constructed after `client` exists — the scheduler captures it to resolve
 // guilds and run actions when workflows fire.
 const scheduler = createScheduler(client, supabase);
+
+// The ticket system registers its own interaction + message listeners on start
+// (it only handles `tkt:` component/modal interactions, never chat-input, so it
+// never collides with the slash-command handler below).
+const tickets = createTickets(client, supabase);
 
 /**
  * Shared helper for Discord-side activity → notifications row.
@@ -234,6 +240,10 @@ client.once(Events.ClientReady, async (readyClient) => {
   // Scheduled Automations: load saved workflows, watch for edits + "Run now"
   // requests over realtime, and fire due workflows once a minute.
   await scheduler.start();
+
+  // Ticket system: load per-guild config + open tickets, subscribe to realtime,
+  // wire up panel/control interactions and the inactivity auto-close scan.
+  await tickets.start();
 });
 
 client.on(Events.GuildCreate, async (guild) => {
@@ -852,6 +862,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       supabase,
       syncGuild,
       getAllowedCommands,
+      tickets,
       ephemeral: verdict.ephemeral,
     });
     verdict.commit();

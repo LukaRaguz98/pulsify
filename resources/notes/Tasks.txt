@@ -1243,3 +1243,101 @@ Acceptance Criteria
 	Quick actions navigate correctly
 	UI remains responsive and visually polished
 	Insights update dynamically with server data
+
+PULSIFY-22 — Discord Ticket System & Support Center (v0.22.0)
+
+Description
+	Implement a complete Discord-integrated Ticket System that allows users to create support tickets directly through dedicated ticket channels on the Discord server, while administrators manage everything through the Pulsify dashboard.
+	The system should support automated ticket channel creation, support workflows, moderation integration, and centralized ticket management.
+
+Goals
+	Provide full Discord-native ticket support
+	Centralize support management inside Pulsify
+	Automate support workflows
+	Improve moderation and support efficiency
+
+Tasks
+	Discord Ticket Integration
+		Add ticket panel/message system inside Discord
+		Allow users to create tickets from configured ticket channels
+		Support:
+			button-based ticket creation
+			dropdown/select menu ticket creation
+			slash command ticket creation
+		Automatically create private ticket channels
+
+	Ticket Types
+		Support multiple ticket categories:
+			support
+			bug reports
+			moderation reports
+			partnership requests
+			applications
+			custom ticket types
+		Add customizable ticket forms/questions
+
+	Ticket Channel System
+		Automatically create ticket channels in configured category
+		Add configurable channel naming format
+		Add automatic permissions for:
+			ticket creator
+			support staff
+			moderators/admins
+		Add ticket transcripts/log export
+		Add ticket inactivity handling
+		Add auto-close timers
+
+	Ticket Dashboard
+		Create “Tickets” navigation view in Pulsify
+		Display:
+			open tickets
+			closed tickets
+			assigned staff
+			ticket type
+			creation time
+			status/priority
+		Add searchable/filterable ticket list
+
+	Ticket Management
+		Allow:
+			assigning tickets
+			claiming/unclaiming tickets
+			closing/reopening tickets
+			deleting tickets
+			renaming ticket channels
+			adding/removing users
+		Add ticket priority system
+		Add ticket notes/internal staff comments
+
+	Notifications & Logs
+		Add ticket notifications for staff
+		Add moderation logs for ticket actions
+		Add transcript export/download
+		Add audit logs for ticket events
+
+	Configuration
+		Add ticket system settings page
+		Allow configuring:
+			ticket channels
+			ticket categories
+			support roles
+			transcript channels
+			auto-close behavior
+			ticket limits per user
+
+	UX Improvements
+		Add modern ticket panel embeds/buttons
+		Add loading/error/success states
+		Add responsive ticket dashboard
+		Add ticket activity timeline
+		Add ticket analytics/statistics
+
+Acceptance Criteria
+	Users can create tickets directly from Discord ticket channels
+	Ticket channels are created automatically
+	Ticket permissions work correctly
+	Tickets are manageable from the Pulsify dashboard
+	Ticket logs/transcripts generate correctly
+	Support staff notifications work properly
+	Ticket analytics display correctly
+	UI remains responsive and visually polished
