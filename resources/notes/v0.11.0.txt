@@ -1,5 +1,4 @@
-# Pulsify v0.11.0 — Notifications & Real-Time Activity
-
+**Pulsify v0.11.0 — Notifications & Real-Time Activity**
 Stay aware of everything happening on your server as it happens. This release adds a real-time activity system that keeps the dashboard live without a single page refresh.
 
 **Live activity feed**

@@ -1,5 +1,4 @@
-# Pulsify v0.6.0 — Moderation Panel
-
+**Pulsify v0.6.0 — Moderation Panel**
 A complete moderation workspace inside Pulsify, so your team can manage members and respond to issues without ever leaving the dashboard.
 
 **Full moderation toolkit**

@@ -1,5 +1,4 @@
-# Pulsify v0.1.0 — Project Initialization
-
+**Pulsify v0.1.0 — Project Initialization**
 The first Pulsify release establishes the foundation the entire platform is built on. There are no user-facing features yet — this groundwork is what makes everything in the releases that follow possible.
 
 **What's included**

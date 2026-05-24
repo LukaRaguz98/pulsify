@@ -1,5 +1,4 @@
-# Pulsify v0.2.0 — Dashboard Redesign & Preferences
-
+**Pulsify v0.2.0 — Dashboard Redesign & Preferences** 
 This release rebuilds the Pulsify dashboard into a polished, modern interface and introduces a full preferences system so each administrator can tailor the experience to the way they work.
 
 **A refreshed dashboard**

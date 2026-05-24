@@ -1,5 +1,4 @@
-# Pulsify v0.17.0 — Scheduled Automations
-
+**Pulsify v0.17.0 — Scheduled Automations**
 Put repetitive server tasks on autopilot. This release introduces scheduled automation workflows that run themselves on the schedule you choose, so routine maintenance no longer needs a person behind it.
 
 **Flexible scheduling**

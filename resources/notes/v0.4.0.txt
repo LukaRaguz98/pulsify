@@ -1,5 +1,4 @@
-# Pulsify v0.4.0 — AI Server Setup Assistant
-
+**Pulsify v0.4.0 — AI Server Setup Assistant**
 Pulsify's first AI-powered feature helps administrators set up a polished, professional server in seconds. Describe your community, and Pulse generates the content for you.
 
 **What it generates**
