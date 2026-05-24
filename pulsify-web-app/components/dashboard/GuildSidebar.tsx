@@ -26,6 +26,7 @@ import {
   TerminalSquare,
   Command,
   UserRound,
+  Lightbulb,
 } from 'lucide-react'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
 import { SearchTrigger } from '@/components/dashboard/search/SearchTrigger'
@@ -99,6 +100,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
       items: [
         { label: 'Overview', href: base, icon: <BarChart2 size={16} /> },
         { label: 'Statistics', href: `${base}/statistics`, icon: <Activity size={16} /> },
+        { label: 'Insights', href: `${base}/insights`, icon: <Lightbulb size={16} /> },
       ],
     },
     {

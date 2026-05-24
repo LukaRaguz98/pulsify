@@ -74,7 +74,13 @@
       "Bash(git diff *)",
       "Bash(echo \"tsc=$?\")",
       "Bash(echo \"eslint=$?\")",
-      "Bash(grep -nA30 -i 'guild_settings')"
+      "Bash(grep -nA30 -i 'guild_settings')",
+      "Bash(node -e \"const i=require\\('lucide-react'\\); const names=['TrendingUp','TrendingDown','Minus','Activity','ShieldAlert','ShieldX','Lock','Sparkles','AlertOctagon','AlertTriangle','Lightbulb','CheckCircle2','Flame','Hand','Mic','Hash','Users','Rocket','Gauge','MessageSquare','UserPlus','Terminal','ArrowRight','Compass','Loader2','AlertCircle','Megaphone','Wand2','Heart']; for \\(const n of names\\) { if \\(!\\(n in i\\)\\) console.log\\('MISSING:', n\\); } console.log\\('checked', names.length\\);\")",
+      "Bash(echo \"---EXIT: $?---\")",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(grep -iE \"insights|RecommendationCard|TrendStat|InsightIcon|insights\\\\\\\\\\\\\\\\icons\" lint.out)",
+      "Bash(node *)",
+      "Bash(node_modules/.bin/tsc --noEmit)"
     ]
   }
 }
