@@ -28,6 +28,8 @@ export const PULSE_ICONS = {
   info: 'pulse-info.png',
   /** Stats glyph — the bot's /stats reply. */
   stats: 'pulse-stats.png',
+  /** Recap glyph — the Insights weekly recap posted to Discord. */
+  recap: 'pulse-recap.png',
 } as const
 
 export type PulseIconName = keyof typeof PULSE_ICONS

@@ -9,6 +9,7 @@ import {
   Zap, CalendarClock, Shield, ShieldAlert, Bell, Server, SlidersHorizontal, Sparkles,
   CalendarPlus, Plus, AlertCircle, Clock, LineChart, RefreshCw, Compass,
   Bot, Volume2, Folder, Megaphone, Radio, MessagesSquare, Image as ImageIcon,
+  Lightbulb,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -29,6 +30,7 @@ const ICONS: Record<string, LucideIcon> = {
   Zap, CalendarClock, Shield, ShieldAlert, Bell, Server, SlidersHorizontal, Sparkles,
   CalendarPlus, Plus, AlertCircle, Clock, LineChart, RefreshCw, Compass, History,
   Bot, Volume2, Folder, Megaphone, Radio, MessagesSquare, Image: ImageIcon,
+  Lightbulb,
 }
 
 function Icon({ name, size = 16 }: { name: string; size?: number }) {
