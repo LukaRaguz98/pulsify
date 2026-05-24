@@ -22,6 +22,9 @@ const TYPE_TO_CATEGORY = {
   server_settings_changed: 'settings',
   automation_saved: 'automations',
   automation_triggered: 'automations',
+  ticket_opened: 'tickets',
+  ticket_updated: 'tickets',
+  ticket_closed: 'tickets',
   bot_warning: 'bot',
   bot_error: 'bot',
 };
@@ -42,6 +45,9 @@ const TYPE_TO_SEVERITY = {
   server_settings_changed: 'info',
   automation_saved: 'info',
   automation_triggered: 'info',
+  ticket_opened: 'info',
+  ticket_updated: 'info',
+  ticket_closed: 'info',
   bot_warning: 'warning',
   bot_error: 'error',
 };

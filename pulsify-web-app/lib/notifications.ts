@@ -34,6 +34,10 @@ export const NOTIFICATION_TYPES = [
   // automations
   'automation_saved',
   'automation_triggered',
+  // tickets
+  'ticket_opened',
+  'ticket_updated',
+  'ticket_closed',
   // bot
   'bot_warning',
   'bot_error',
@@ -49,6 +53,7 @@ export type NotificationCategory =
   | 'channels'
   | 'settings'
   | 'automations'
+  | 'tickets'
   | 'bot'
 
 export type NotificationSeverity = 'info' | 'success' | 'warning' | 'error'
@@ -70,6 +75,9 @@ export const TYPE_TO_CATEGORY: Record<NotificationType, NotificationCategory> = 
   server_settings_changed: 'settings',
   automation_saved: 'automations',
   automation_triggered: 'automations',
+  ticket_opened: 'tickets',
+  ticket_updated: 'tickets',
+  ticket_closed: 'tickets',
   bot_warning: 'bot',
   bot_error: 'bot',
 }
@@ -91,6 +99,9 @@ export const TYPE_TO_SEVERITY: Record<NotificationType, NotificationSeverity> = 
   server_settings_changed: 'info',
   automation_saved: 'info',
   automation_triggered: 'info',
+  ticket_opened: 'info',
+  ticket_updated: 'info',
+  ticket_closed: 'info',
   bot_warning: 'warning',
   bot_error: 'error',
 }
@@ -103,6 +114,7 @@ export const CATEGORY_LABELS: Record<NotificationCategory, string> = {
   channels: 'Channels',
   settings: 'Settings',
   automations: 'Automations',
+  tickets: 'Tickets',
   bot: 'Bot Status',
 }
 
@@ -122,6 +134,9 @@ export const TYPE_LABELS: Record<NotificationType, string> = {
   server_settings_changed: 'Server settings changed',
   automation_saved: 'Automation saved',
   automation_triggered: 'Automation triggered',
+  ticket_opened: 'Ticket opened',
+  ticket_updated: 'Ticket updated',
+  ticket_closed: 'Ticket closed',
   bot_warning: 'Bot warnings',
   bot_error: 'Bot errors',
 }
@@ -143,6 +158,9 @@ export const TYPE_DESCRIPTIONS: Record<NotificationType, string> = {
   server_settings_changed: 'Name, icon, verification, or AFK channel changes.',
   automation_saved: 'Welcome, goodbye, or auto-role config saved.',
   automation_triggered: 'An automation runs in response to an event.',
+  ticket_opened: 'A member opens a support ticket.',
+  ticket_updated: 'A ticket is claimed, assigned, or changed.',
+  ticket_closed: 'A support ticket is closed.',
   bot_warning: 'Recoverable issues like failed welcome messages.',
   bot_error: 'Critical bot failures that need attention.',
 }

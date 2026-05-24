@@ -26,6 +26,7 @@ export const CATEGORY_ACCENT: Record<NotificationCategory, string> = {
   channels:    '#3b82f6',
   settings:    '#94a3b8',
   automations: '#f59e0b',
+  tickets:     '#5865f2',
   bot:         '#ec4899',
 }
 
