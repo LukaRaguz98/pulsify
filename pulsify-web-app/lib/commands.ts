@@ -88,6 +88,15 @@ export const COMMAND_CATALOG: CommandDefinition[] = [
     detail:
       'Refreshes the dashboard with the latest member count and server metadata. Runs automatically when Pulse joins a server; use this if something looks out of date.',
   },
+  {
+    name: 'ticket',
+    description: 'Open a support ticket',
+    category: 'utility',
+    defaultPermission: 'everyone',
+    examples: ['/ticket'],
+    detail:
+      'Opens a private support ticket. Pick a category, optionally answer a short form, and a dedicated channel is created for you and the support team. Configure ticket types and the panel from the Tickets page.',
+  },
 ]
 
 export const CATALOG_BY_NAME: Record<string, CommandDefinition> = Object.fromEntries(

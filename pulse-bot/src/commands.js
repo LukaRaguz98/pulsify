@@ -530,6 +530,24 @@ const COMMANDS = [
       await syncGuild(guild);
     },
   },
+  {
+    name: "ticket",
+    category: "utility",
+    defaultPermission: PERMISSION.EVERYONE,
+    data: new SlashCommandBuilder()
+      .setName("ticket")
+      .setDescription("Open a support ticket"),
+    // Delegates to the ticket module (passed in via the execute context from
+    // index.js) which presents an ephemeral type picker, then opens a private
+    // channel. See pulse-bot/src/tickets.js.
+    async execute({ interaction, tickets }) {
+      if (!tickets) {
+        await interaction.reply({ content: "The ticket system is unavailable right now.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+      await tickets.handleTicketCommand(interaction);
+    },
+  },
 ];
 
 const COMMANDS_BY_NAME = new Map(COMMANDS.map((c) => [c.name, c]));
