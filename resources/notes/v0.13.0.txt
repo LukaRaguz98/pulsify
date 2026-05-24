@@ -1,5 +1,4 @@
-# Pulsify v0.13.0 — Quality of Life Improvements
-
+**Pulsify v0.13.0 — Quality of Life Improvements**
 A focused release that polishes the experience across the bot and dashboard, with particular emphasis on consistency, communication and customization.
 
 **Better moderation communication**

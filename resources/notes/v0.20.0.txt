@@ -1,5 +1,4 @@
-# Pulsify v0.20.0 — Onboarding & First-Time Setup
-
+**Pulsify v0.20.0 — Onboarding & First-Time Setup**
 Getting started with Pulsify is now effortless. This release introduces a guided setup experience that takes a new server from connected to fully configured in just a few minutes.
 
 **A guided setup wizard**

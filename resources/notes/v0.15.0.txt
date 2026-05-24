@@ -1,5 +1,4 @@
-# Pulsify v0.15.0 — Command Center
-
+**Pulsify v0.15.0 — Command Center**
 The Command Center brings complete, per-server control over Pulse's slash commands directly to the dashboard.
 
 **See every command**

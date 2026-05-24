@@ -1,5 +1,4 @@
-# Pulsify v0.3.0 — Connecting the Dashboard to Discord
-
+**Pulsify v0.3.0 — Connecting the Dashboard to Discord**
 This release closes the loop between the dashboard and your server. Settings you configure in Pulsify are now saved, synced, and acted on in real time by the Pulse bot.
 
 **Automations**

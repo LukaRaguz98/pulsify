@@ -1,5 +1,4 @@
-# Pulsify v0.16.0 — Member Profiles & Reputation
-
+**Pulsify v0.16.0 — Member Profiles & Reputation**
 This release helps you truly understand your members through detailed profiles, activity insight and a reputation system built for community administration.
 
 **Detailed member profiles**

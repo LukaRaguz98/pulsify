@@ -1,5 +1,4 @@
-# Pulsify v0.14.0 — New Website & Pricing
-
+**Pulsify v0.14.0 — New Website & Pricing**
 Pulsify's public website has been redesigned into a polished, modern presentation of everything the platform can do — and it now introduces our subscription plans.
 
 **A redesigned experience**

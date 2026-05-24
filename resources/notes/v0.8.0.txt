@@ -1,5 +1,4 @@
-# Pulsify v0.8.0 — Events Management
-
+**Pulsify v0.8.0 — Events Management**
 Plan, run and review Discord events entirely from Pulsify, with a calendar, cover images and real participation insight.
 
 **Manage every event**

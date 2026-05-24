@@ -1,5 +1,4 @@
-# Pulsify v0.7.0 — Roles & Permissions Management
-
+**Pulsify v0.7.0 — Roles & Permissions Management**
 Managing Discord roles has always been tedious. This release brings a complete, visual role and permission manager to the dashboard.
 
 **See and edit everything**

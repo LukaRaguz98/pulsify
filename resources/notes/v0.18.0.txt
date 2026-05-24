@@ -1,5 +1,4 @@
-# Pulsify v0.18.0 — Global Search & Command Palette
-
+**Pulsify v0.18.0 — Global Search & Command Palette**
 Navigating a large server should be instant. This release adds a powerful global search and a command palette that put everything one click — or one keystroke — away.
 
 **Search everything**

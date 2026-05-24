@@ -1,5 +1,4 @@
-# Pulsify v0.5.0 — Analytics & Statistics
-
+**Pulsify v0.5.0 — Analytics & Statistics**
 This release gives administrators a genuine understanding of their community through a redesigned Overview and a dedicated Statistics tab full of meaningful metrics.
 
 **A redesigned Overview**

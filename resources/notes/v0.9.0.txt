@@ -1,5 +1,4 @@
-# Pulsify v0.9.0 — Channels & Server Structure
-
+**Pulsify v0.9.0 — Channels & Server Structure**
 Build and reorganize your entire server layout from a single screen, without the friction of managing it inside Discord.
 
 **A complete view of your server**

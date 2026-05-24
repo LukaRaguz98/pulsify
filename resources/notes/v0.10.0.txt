@@ -1,5 +1,4 @@
-# Pulsify v0.10.0 — Server Settings
-
+**Pulsify v0.10.0 — Server Settings**
 This release centralizes your server's most important configuration in the dashboard, so administrators can manage it without digging through Discord's own settings.
 
 **Server information**

@@ -1,5 +1,4 @@
-# Pulsify v0.19.0 — Legal, Support & Community Pages
-
+**Pulsify v0.19.0 — Legal, Support & Community Pages**
 This release completes Pulsify's public pages, bringing the transparency, support resources and professionalism expected of a finished product.
 
 **Legal**
