@@ -1,0 +1,29 @@
+**Pulsify v0.23.0 — Polish, Mobile & Cleaner Settings**
+A big quality-and-stability pass: smoother loading, a tidier sidebar, a dashboard that finally feels right on your phone, and Discord embeds that all speak the same polished language.
+
+**Smoother, faster-feeling dashboard**
+- **No more blank flashes** — every page now shows a clean loading skeleton while it streams in, so navigating feels instant.
+- **Sharper focus & accessibility** — clear keyboard-focus rings across the app and steadier rendering throughout.
+- **Reliability fix** — squashed an edge case that could bounce you off a page mid-session.
+
+**Now great on mobile**
+- **Slide-out menu** — on phones and tablets the sidebar tucks away behind a tap, so your content gets the full screen.
+- **Tap to navigate** — open the menu, pick a section, and it closes itself as you go.
+
+**Settings where you'd expect them**
+- **Cleaner sidebar** — the Settings group is now just your dashboard Preferences.
+- **Settings live with their feature** — Pulse config sits under Pulse Bot, and ticket setup opens from the Tickets view itself. Less hunting, less clutter.
+
+**Embeds that match**
+- **Polished moderation alerts** — ban and unban notices are rebuilt in Pulse's modern embed style, now with the moderator and reason laid out cleanly.
+- **Prettier scheduled reports** — activity digests and inactivity reports share the same crisp layout, accent and timestamp as the rest of Pulse.
+- **Consistent everywhere** — unified colors, spacing, footers and timestamps across Pulse's replies.
+
+**Landing & links fixed up**
+- **No more blank sections** — fixed a glitch where parts of the landing page could show up blank after scrolling down, opening a link and coming back.
+- **Tidier footer** — since the whole story lives on one page, the Product column now has a single "Overview" link that jumps to the top, plus your Dashboard.
+- **Sign in from the footer** — the footer Dashboard link now sends you to sign-in when you're logged out, instead of going nowhere.
+- **Reach us for real** — Support and Community now point to our live Discord community and support inbox, with a permanent invite that never expires.
+- **Tidier Community page** — trimmed the duplicate "join our Discord" buttons down to the ones that matter.
+
+Nothing to set up — just a smoother, more consistent Pulsify across desktop, mobile and Discord.

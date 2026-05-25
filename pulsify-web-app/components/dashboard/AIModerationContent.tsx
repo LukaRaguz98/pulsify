@@ -8,7 +8,7 @@ import {
   ListChecks,
   ScrollText,
   BarChart3,
-  SlidersHorizontal,
+  Settings,
   RefreshCw,
   Loader2,
   AlertCircle,
@@ -154,12 +154,12 @@ export function AIModerationContent({ guildId, channels, initialSettings }: Prop
               <span className="text-xs text-subtle">Updated {updatedLabel}</span>
             )}
             <Link
-              href={`/dashboard/${guildId}/Pulse?tab=moderation`}
+              href={`/dashboard/${guildId}/ai-moderation-settings`}
               className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors"
               style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
             >
-              <SlidersHorizontal size={12} />
-              Pulse settings
+              <Settings size={12} />
+              Pulse Guard Settings
             </Link>
             <button
               onClick={() => fetchEvents()}
@@ -346,11 +346,11 @@ function DisabledBanner({ guildId }: { guildId: string }) {
         </span>
       </div>
       <Link
-        href={`/dashboard/${guildId}/Pulse?tab=moderation`}
+        href={`/dashboard/${guildId}/ai-moderation-settings`}
         className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-md border px-2.5 py-1 text-xs font-medium transition"
         style={{ borderColor: 'rgba(245,158,11,0.4)', color: '#f59e0b' }}
       >
-        Open Pulse settings
+        Open settings
       </Link>
     </div>
   )

@@ -272,6 +272,38 @@ body.slide-over-open [data-app-footer="true"] {
   ::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
 }
 
+/* ── Accessible keyboard focus ─────────────────
+   Many interactive elements are custom-styled with inline styles + hover
+   handlers and had no visible keyboard-focus indicator. One :focus-visible ring
+   (keyboard only — pointer clicks don't trigger it) gives consistent,
+   accent-tinted focus across the whole app. `:where()` keeps specificity at 0
+   so any component that defines its own focus ring still wins. */
+:where(a, button, input, select, textarea, summary, [role="switch"], [role="button"], [role="tab"], [tabindex="0"]):focus-visible {
+  outline: 2px solid var(--p-1);
+  outline-offset: 2px;
+}
+
+/* ── Mobile sidebar drawer ─────────────────────
+   Below lg the guild sidebar becomes an off-canvas drawer: fixed, full-height,
+   slid out by default and revealed when GuildSidebar sets data-mobile-open
+   (toggled from the mobile top bar). Desktop (lg+) is untouched — the aside
+   stays an in-flow flex column. The aside's inline transition includes
+   `transform` so the slide animates; reduced-motion still neutralises it. */
+@media (max-width: 1023px) {
+  .guild-sidebar {
+    position: fixed;
+    inset-block: 0;
+    left: 0;
+    z-index: 50;
+    width: 230px !important;
+    transform: translateX(-100%);
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.55);
+  }
+  .guild-sidebar[data-mobile-open="true"] {
+    transform: translateX(0);
+  }
+}
+
 /* ── Page layout helpers ───────────────────── */
 .page-content {
   padding: var(--page-padding);
