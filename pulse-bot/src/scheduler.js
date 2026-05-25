@@ -11,12 +11,28 @@
 // fire.
 
 const {
-  EmbedBuilder,
+  MessageFlags,
   PermissionFlagsBits,
   GuildScheduledEventEntityType,
   GuildScheduledEventPrivacyLevel,
 } = require("discord.js");
 const { recordNotification } = require("./notifications");
+
+/**
+ * Components V2 container for scheduled reports — matches the look of the bot's
+ * other embeds (slash replies, moderation alerts): `#` heading, body text
+ * block(s), a divider, and a `-#` footer carrying a relative timestamp. Falsy
+ * `body` entries are skipped. No emoji in the heading — the accent bar carries
+ * the branding, per the Pulse embed design language.
+ */
+function buildScheduleContainer({ colorInt, title, body, footerLabel }) {
+  const unix = Math.floor(Date.now() / 1000);
+  const components = [{ type: 10, content: `# ${title}` }];
+  for (const block of body) if (block) components.push({ type: 10, content: block });
+  components.push({ type: 14, divider: true, spacing: 1 });
+  components.push({ type: 10, content: `-# Pulse · ${footerLabel} <t:${unix}:R>` });
+  return { type: 17, accent_color: colorInt, components };
+}
 
 // ── Timezone-aware schedule maths (mirror of lib/automations.ts) ───────────────
 
@@ -356,20 +372,20 @@ function createScheduler(client, supabase) {
     ]);
 
     const periodLabel = period === "24h" ? "last 24 hours" : period === "7d" ? "last 7 days" : "last 30 days";
-    const embed = new EmbedBuilder()
-      .setColor(0xa855f7)
-      .setTitle(`📊 ${guild.name} — activity digest`)
-      .setDescription(`A summary of the ${periodLabel}.`)
-      .addFields(
-        { name: "Messages", value: messages.toLocaleString(), inline: true },
-        { name: "Commands", value: commands.toLocaleString(), inline: true },
-        { name: "Members", value: `${guild.memberCount ?? 0}`.toLocaleString(), inline: true },
-        { name: "Joins", value: `+${joins.toLocaleString()}`, inline: true },
-        { name: "Leaves", value: `-${leaves.toLocaleString()}`, inline: true },
-        { name: "Net", value: `${joins - leaves >= 0 ? "+" : ""}${(joins - leaves).toLocaleString()}`, inline: true },
-      )
-      .setTimestamp();
-    await channel.send({ embeds: [embed] });
+    const net = joins - leaves;
+    const container = buildScheduleContainer({
+      colorInt: 0x8b5cf6,
+      title: `${guild.name} — activity digest`,
+      body: [
+        `A summary of the ${periodLabel}.`,
+        `**Messages:** ${messages.toLocaleString()} · **Commands:** ${commands.toLocaleString()}\n` +
+          `**Members:** ${(guild.memberCount ?? 0).toLocaleString()}\n` +
+          `**Joins:** +${joins.toLocaleString()} · **Leaves:** -${leaves.toLocaleString()} · ` +
+          `**Net:** ${net >= 0 ? "+" : ""}${net.toLocaleString()}`,
+      ],
+      footerLabel: "Digest",
+    });
+    await channel.send({ flags: MessageFlags.IsComponentsV2, components: [container] });
     return `Posted ${periodLabel} digest to #${channel.name}.`;
   }
 
@@ -495,16 +511,17 @@ function createScheduler(client, supabase) {
     }
 
     const sample = inactive.slice(0, 25).map((m) => `• ${m.user.tag}`).join("\n");
-    const embed = new EmbedBuilder()
-      .setColor(0x94a3b8)
-      .setTitle("🧹 Inactivity report")
-      .setDescription(
+    const container = buildScheduleContainer({
+      colorInt: 0x94a3b8,
+      title: "Inactivity report",
+      body: [
         `**${inactive.length}** member(s) have had no tracked activity in the last **${days}** day(s).` +
           (roleName ? `\nRemoved @${roleName} from **${removed}** of them.` : ""),
-      )
-      .setTimestamp();
-    if (sample) embed.addFields({ name: "Sample", value: sample.slice(0, 1024) });
-    await channel.send({ embeds: [embed] });
+        sample ? `**Sample**\n${sample.slice(0, 1024)}` : null,
+      ],
+      footerLabel: "Housekeeping",
+    });
+    await channel.send({ flags: MessageFlags.IsComponentsV2, components: [container] });
 
     return `Flagged ${inactive.length} inactive member(s)${roleName ? `, removed role from ${removed}` : ""}.`;
   }

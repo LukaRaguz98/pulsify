@@ -802,7 +802,7 @@ function EchoAiNote({ guildId }: { guildId: string }) {
         </div>
       </div>
       <Link
-        href={`/dashboard/${guildId}/Pulse`}
+        href={`/dashboard/${guildId}/ai-moderation`}
         className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors sm:self-center"
         style={{ borderColor: 'var(--line-strong)', color: 'var(--text)' }}
       >

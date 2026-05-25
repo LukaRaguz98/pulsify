@@ -18,7 +18,7 @@ export function DiscordCornerIcon({ guildId }: Props) {
       title="Open this server in Discord"
       aria-label="Open this server in Discord"
       data-discord-corner="true"
-      className="fixed z-10 flex h-9 w-9 items-center justify-center rounded-md border bg-[var(--panel)] border-[var(--line-strong)] text-[var(--p-1)] hover:bg-[var(--p-soft)] hover:border-[var(--p-1)] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_-4px_var(--p-glow)] active:translate-y-0 active:shadow-none"
+      className="max-lg:hidden fixed z-10 flex h-9 w-9 items-center justify-center rounded-md border bg-[var(--panel)] border-[var(--line-strong)] text-[var(--p-1)] hover:bg-[var(--p-soft)] hover:border-[var(--p-1)] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_-4px_var(--p-glow)] active:translate-y-0 active:shadow-none"
       style={{
         // Mirror top-right bell offsets (right-3 + mr-[40px] = 52px;
         // bottom-2 + mb-[40px] = 48px) so the two corner buttons look

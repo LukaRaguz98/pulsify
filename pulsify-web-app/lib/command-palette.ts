@@ -88,7 +88,9 @@ const NAV_CATALOG: NavDef[] = [
   { id: 'nav-server-profile', label: 'Server Profile', icon: 'Server', path: '/server-settings', keywords: 'server settings branding' },
   { id: 'nav-preferences', label: 'Preferences', icon: 'SlidersHorizontal', path: '/settings', keywords: 'theme appearance density settings' },
   { id: 'nav-ticket-settings', label: 'Ticket settings', icon: 'LifeBuoy', path: '/ticket-settings', keywords: 'tickets support panel config setup auto-close transcript' },
-  { id: 'nav-pulse', label: 'Pulse', icon: 'Sparkles', path: '/Pulse', keywords: 'assistant ai chat' },
+  { id: 'nav-guard-settings', label: 'Pulse Guard settings', icon: 'ShieldAlert', path: '/ai-moderation-settings', keywords: 'pulse guard ai moderation sensitivity detectors auto-action exclusions config' },
+  { id: 'nav-pulse-assistant', label: 'Pulse assistant', icon: 'Sparkles', path: '/automations-settings', keywords: 'assistant ai chat generation content tone language embed automations' },
+  { id: 'nav-notification-settings', label: 'Notification settings', icon: 'Bell', path: '/notification-settings', keywords: 'notifications alerts toasts events preferences' },
 ]
 
 type ActionDef = {

@@ -5,7 +5,6 @@ const {
   GatewayIntentBits,
   REST,
   Routes,
-  EmbedBuilder,
   MessageFlags,
   Events,
   AuditLogEvent,
@@ -132,6 +131,28 @@ function buildMemberV2Container(cfg, resolve, hasBanner) {
     type: 17,
     accent_color: isNaN(colorInt) ? 0x6366f1 : colorInt,
     components,
+  };
+}
+
+/**
+ * Build a Components V2 container for a moderation alert posted to a server's
+ * configured alerts channel. Keeps a semantic accent (red = removal,
+ * green = restore) but adopts the same v2 layout the rest of Pulse uses:
+ * `#` heading, bold-label body lines, a divider, and a `-#` footer carrying a
+ * relative timestamp. Falsy `lines` entries are skipped so optional fields
+ * (moderator, reason) collapse cleanly.
+ */
+function buildModAlertContainer({ colorInt, title, lines, footerLabel }) {
+  const unix = Math.floor(Date.now() / 1000);
+  return {
+    type: 17,
+    accent_color: colorInt,
+    components: [
+      { type: 10, content: `# ${title}` },
+      { type: 10, content: lines.filter(Boolean).join("\n") },
+      { type: 14, divider: true, spacing: 1 },
+      { type: 10, content: `-# Pulse · ${footerLabel} <t:${unix}:R>` },
+    ],
   };
 }
 
@@ -481,16 +502,19 @@ client.on(Events.GuildBanAdd, async (ban) => {
       settings.moderation_alerts.channel_id,
     );
     if (channel?.isTextBased()) {
-      const embed = new EmbedBuilder()
-        .setColor(0xef4444)
-        .setTitle("Member Banned")
-        .setDescription(`**${ban.user.tag}** (${ban.user.id}) was banned.`)
-        .addFields({
-          name: "Reason",
-          value: ban.reason ?? "No reason provided",
-        })
-        .setTimestamp();
-      await channel.send({ embeds: [embed] }).catch(console.error);
+      const container = buildModAlertContainer({
+        colorInt: 0xef4444,
+        title: "Member banned",
+        lines: [
+          `**Member:** ${ban.user.tag} (\`${ban.user.id}\`)`,
+          actor?.actorName ? `**Moderator:** ${actor.actorName}` : null,
+          `**Reason:** ${actor?.reason ?? ban.reason ?? "No reason provided"}`,
+        ],
+        footerLabel: "Banned",
+      });
+      await channel
+        .send({ flags: MessageFlags.IsComponentsV2, components: [container] })
+        .catch(console.error);
     }
   }
 });
@@ -538,12 +562,19 @@ client.on(Events.GuildBanRemove, async (ban) => {
       settings.moderation_alerts.channel_id,
     );
     if (channel?.isTextBased()) {
-      const embed = new EmbedBuilder()
-        .setColor(0x22c55e)
-        .setTitle("Member Unbanned")
-        .setDescription(`**${ban.user.tag}** (${ban.user.id}) was unbanned.`)
-        .setTimestamp();
-      await channel.send({ embeds: [embed] }).catch(console.error);
+      const container = buildModAlertContainer({
+        colorInt: 0x22c55e,
+        title: "Member unbanned",
+        lines: [
+          `**Member:** ${ban.user.tag} (\`${ban.user.id}\`)`,
+          actor?.actorName ? `**Moderator:** ${actor.actorName}` : null,
+          actor?.reason ? `**Reason:** ${actor.reason}` : null,
+        ],
+        footerLabel: "Unbanned",
+      });
+      await channel
+        .send({ flags: MessageFlags.IsComponentsV2, components: [container] })
+        .catch(console.error);
     }
   }
 });

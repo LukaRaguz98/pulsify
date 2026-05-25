@@ -122,7 +122,7 @@ export function NotificationBell({ guildId }: Props) {
                 </button>
               )}
               <Link
-                href={`/dashboard/${guildId}/settings?tab=notifications`}
+                href={`/dashboard/${guildId}/notification-settings`}
                 onClick={() => setOpen(false)}
                 title="Notification preferences"
                 className="rounded-md p-1.5 transition"

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Sparkles } from 'lucide-react'
+import { Settings } from 'lucide-react'
 import { createClient } from '@/lib/supabase-server'
 import { fetchGuild, fetchGuildChannels, fetchGuildRoles } from '@/lib/discord'
 import { PageHeader } from '@/components/ui/page-header'
@@ -36,12 +36,12 @@ export default async function AutomationsPage({
         description="Configure automated actions for your server. Changes take effect immediately via the Pulse bot."
         action={
           <Link
-            href={`/dashboard/${guildId}/Pulse?tab=assistant`}
+            href={`/dashboard/${guildId}/automations-settings`}
             className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors"
             style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
           >
-            <Sparkles size={12} />
-            Pulse Settings
+            <Settings size={12} />
+            Automations Settings
           </Link>
         }
       />

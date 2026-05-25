@@ -95,7 +95,7 @@ export function TicketsContent({
               style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
             >
               <Settings size={12} />
-              Tickets settings
+              Ticket Settings
             </Link>
             <RefreshButton onClick={refresh} refreshing={pending} />
           </div>

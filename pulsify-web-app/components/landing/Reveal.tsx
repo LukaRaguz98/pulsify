@@ -42,20 +42,50 @@ export function Reveal({
       return () => cancelAnimationFrame(id)
     }
 
+    let done = false
     const obs = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) {
-            setVisible(true)
-            obs.disconnect()
+            reveal()
             break
           }
         }
       },
       { threshold: 0.12, rootMargin: '0px 0px -8% 0px' },
     )
+
+    function reveal() {
+      if (done) return
+      done = true
+      setVisible(true)
+      obs.disconnect()
+    }
+
+    // Anything already in OR above the viewport must be shown immediately.
+    // This is the fix for the "section goes black after navigating away and
+    // back": on a re-mount the scroll position is restored mid-page, so the
+    // section the user was on (and everything above it) is already on screen
+    // and should never wait for an intersection that won't fire.
+    const inOrAboveViewport = () => el.getBoundingClientRect().top < window.innerHeight
+
     obs.observe(el)
-    return () => obs.disconnect()
+    if (inOrAboveViewport()) reveal()
+    // Re-check next frame to catch scroll restoration that lands just after mount.
+    const raf = requestAnimationFrame(() => {
+      if (inOrAboveViewport()) reveal()
+    })
+    // bfcache restore (browser back/forward): re-assert visibility.
+    const onPageShow = () => {
+      if (inOrAboveViewport()) reveal()
+    }
+    window.addEventListener('pageshow', onPageShow)
+
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('pageshow', onPageShow)
+      obs.disconnect()
+    }
   }, [])
 
   const transition = motion

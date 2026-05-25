@@ -63,6 +63,10 @@ function CornerDeco({ pos }: { pos: 'tr' | 'bl' }) {
       aria-hidden="true"
       data-cd="true"
       data-cd-pos={pos}
+      // Decorative HUD brackets are anchored to the sidebar edge; hidden below
+      // lg where the sidebar is an off-canvas overlay so they don't float
+      // mid-screen.
+      className="max-lg:hidden"
       style={{
         position: 'fixed',
         ...(isTR
