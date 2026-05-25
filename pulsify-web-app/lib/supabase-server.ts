@@ -13,9 +13,20 @@ export async function createClient() {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          );
+          // `cookies().set()` throws when called during a Server Component
+          // render (it's only allowed in Server Actions / Route Handlers).
+          // Supabase calls this on token refresh; swallowing the error is the
+          // canonical SSR pattern — the proxy middleware refreshes the session
+          // on every request, so a missed write here is harmless. Without this
+          // guard, a refresh firing mid-render would crash the page (and is the
+          // likely cause of "logged-in users get bounced off pages" reports).
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {
+            // Ignore — running in a context where cookies can't be set.
+          }
         },
       },
     }

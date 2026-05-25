@@ -2,9 +2,13 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { fetchGuildChannels, fetchGuildRoles } from '@/lib/discord'
 import { normaliseSettings } from '@/lib/ai-moderation'
-import { PulseContent } from '@/components/dashboard/Pulse/PulseContent'
+import { AIModerationSettingsContent } from '@/components/dashboard/ai-moderation/AIModerationSettingsContent'
 
-export default async function PulsePage({
+// Pulse Guard configuration lives on its own page, reached from the "Settings"
+// button on the Pulse Guard view (Safety nav) — the same pattern as Tickets ↔
+// /ticket-settings. Sits at a sibling path so the Pulse Guard nav item stays
+// highlighted (it prefix-matches /ai-moderation).
+export default async function AIModerationSettingsPage({
   params,
 }: {
   params: Promise<{ guildId: string }>
@@ -27,7 +31,7 @@ export default async function PulsePage({
   ])
 
   const rawSettings = (row?.settings as Record<string, unknown> | undefined) ?? {}
-  const moderationSettings = normaliseSettings({
+  const initialSettings = normaliseSettings({
     ...rawSettings,
     enabled: row?.enabled,
     sensitivity: row?.sensitivity as 'low' | 'medium' | 'aggressive' | undefined,
@@ -37,11 +41,11 @@ export default async function PulsePage({
   const visibleRoles = roles.filter((r) => r.name !== '@everyone')
 
   return (
-    <PulseContent
+    <AIModerationSettingsContent
       guildId={guildId}
       channels={textChannels}
       roles={visibleRoles}
-      moderationSettings={moderationSettings}
+      initialSettings={initialSettings}
     />
   )
 }
