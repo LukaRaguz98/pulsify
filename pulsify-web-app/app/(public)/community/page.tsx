@@ -1,5 +1,10 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
+import { promises as fs } from 'fs'
+import path from 'path'
 import { CheckCircle2, Loader2, Circle, Sparkles, MessageCircle, Heart, ArrowRight } from 'lucide-react'
+import { createClient } from '@/lib/supabase-server'
+import { guildIconUrl } from '@/lib/discord'
 import { Eyebrow, SectionHeading } from '@/components/landing/landing-ui'
 import { Reveal } from '@/components/landing/Reveal'
 import { InvitePulseButton } from '@/components/landing/LandingCtas'
@@ -101,7 +106,61 @@ const SOCIALS = [
   { label: 'GitHub', href: SITE.github, glyph: <GithubGlyph /> },
 ]
 
-export default function CommunityPage() {
+function cmpVer(a: string, b: string) {
+  const pa = a.split('.').map(Number)
+  const pb = b.split('.').map(Number)
+  for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0)
+  return 0
+}
+
+// Pull the most recent release notes (resources/notes/vX.Y.Z.txt). Each file
+// starts with `**Pulsify vX.Y.Z — Title**` then a one-line description; the date
+// comes from the file's modified time. Falls back to the static lists below if
+// the directory can't be read (e.g. a deploy that doesn't ship resources/).
+async function loadReleases(limit = 4) {
+  try {
+    const dir = path.join(process.cwd(), '..', 'resources', 'notes')
+    const files = (await fs.readdir(dir)).filter((f) => /^v\d/.test(f) && f.endsWith('.txt'))
+    const parsed = await Promise.all(
+      files.map(async (f) => {
+        const full = path.join(dir, f)
+        const [content, stat] = await Promise.all([fs.readFile(full, 'utf8'), fs.stat(full)])
+        const lines = content.split('\n').map((l) => l.trim()).filter(Boolean)
+        const m = lines[0]?.match(/v([\d.]+)\s*[—-]\s*(.+?)\*\*$/)
+        return {
+          version: m?.[1] ?? f.replace(/^v|\.txt$/g, ''),
+          title: m?.[2] ?? '',
+          description: lines[1] ?? '',
+          date: stat.mtime.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        }
+      }),
+    )
+    return parsed.sort((a, b) => cmpVer(b.version, a.version)).slice(0, limit)
+  } catch {
+    return []
+  }
+}
+
+export default async function CommunityPage() {
+  const releases = await loadReleases()
+  const changelog = releases.length
+    ? releases.map((r) => ({ version: `v${r.version}`, date: r.date, title: r.title, items: [r.description] }))
+    : CHANGELOG
+  const roadmap = ROADMAP.map((col) =>
+    col.status === 'shipped' && releases.length
+      ? { ...col, items: releases.map((r) => `v${r.version} — ${r.title}`) }
+      : col,
+  )
+
+  // Real servers running Pulsify, from the bot's synced_guilds table.
+  const supabase = await createClient()
+  const { data: communityRows } = await supabase
+    .from('synced_guilds')
+    .select('guild_id, name, icon, member_count')
+    .order('member_count', { ascending: false, nullsFirst: false })
+    .limit(12)
+  const communities = communityRows ?? []
+
   return (
     <div className="mx-auto max-w-6xl px-6 pb-14 pt-10 sm:pb-20 sm:pt-14">
       {/* Hero */}
@@ -122,41 +181,12 @@ export default function CommunityPage() {
         </div>
       </header>
 
-      {/* Discord invite banner */}
-      <Reveal className="mt-20">
-        <div
-          className="relative overflow-hidden rounded-3xl border px-6 py-12 text-center sm:px-12"
-          style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
-        >
-          <div
-            aria-hidden
-            className="lp-blob pointer-events-none absolute -top-24 left-1/2 h-[360px] w-[360px] -translate-x-1/2 rounded-full opacity-50 blur-[120px]"
-            style={{ background: 'radial-gradient(circle, var(--p-glow), transparent 70%)' }}
-          />
-          <div className="relative mx-auto max-w-2xl">
-            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: 'var(--p-soft)', color: 'var(--p-1)' }}>
-              <DiscordGlyph size={26} />
-            </span>
-            <h2 className="mt-5 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">The Pulsify Discord</h2>
-            <p className="mt-3 text-base" style={{ color: 'var(--text-2)' }}>
-              Get support, request features, preview betas and meet other community builders. It’s the heart of everything we do.
-            </p>
-            <div className="mt-7 flex justify-center">
-              <a href={SITE.discordInvite} target="_blank" rel="noopener noreferrer" className={PRIMARY_BTN} style={primaryStyle}>
-                <DiscordGlyph size={16} />
-                Join now
-              </a>
-            </div>
-          </div>
-        </div>
-      </Reveal>
-
       {/* Updates / changelog */}
       <Reveal className="mt-20">
-        <SectionHeading eyebrow="Updates" title="What’s new" subtitle="Recent improvements shipped to Pulsify." />
+        <SectionHeading eyebrow="Updates" title="What’s new?" subtitle="Recent improvements shipped to Pulsify." />
         <div className="mx-auto mt-10 max-w-3xl">
           <ol className="relative space-y-8 border-l pl-8" style={{ borderColor: 'var(--line-strong)' }}>
-            {CHANGELOG.map((entry) => (
+            {changelog.map((entry) => (
               <li key={entry.version} className="relative">
                 <span
                   className="absolute -left-[2.75rem] flex h-6 w-6 items-center justify-center rounded-full"
@@ -189,7 +219,7 @@ export default function CommunityPage() {
       <Reveal className="mt-20">
         <SectionHeading eyebrow="Roadmap" title="Where we’re headed" subtitle="A preview of what’s shipped, in progress and planned. Indicative and subject to change." />
         <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {ROADMAP.map((col) => {
+          {roadmap.map((col) => {
             const meta = ROADMAP_STYLE[col.status]
             const Icon = meta.icon
             return (
@@ -214,29 +244,59 @@ export default function CommunityPage() {
 
       {/* Community showcase */}
       <Reveal className="mt-20">
-        <SectionHeading eyebrow="Showcase" title="Communities on Pulsify" subtitle="Featured servers will appear here. Want to be one of them?" />
+        <SectionHeading eyebrow="Showcase" title="Communities on Pulsify" subtitle={communities.length ? 'Servers running Pulsify right now.' : 'Featured servers will appear here. Want to be one of them?'} />
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {SHOWCASE.map((initial) => (
-            <div
-              key={initial}
-              className="flex items-center gap-4 rounded-2xl border border-dashed p-5"
-              style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
-            >
-              <div
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-lg font-bold text-white opacity-70"
-                style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}
-              >
-                {initial}
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold" style={{ color: 'var(--text-2)' }}>Your community here</p>
-                <p className="text-xs" style={{ color: 'var(--text-3)' }}>Featured soon</p>
-              </div>
-            </div>
-          ))}
+          {communities.length
+            ? communities.map((g) => {
+                const iconUrl = guildIconUrl(g.guild_id, g.icon, 64)
+                return (
+                  <div
+                    key={g.guild_id}
+                    className="flex items-center gap-4 rounded-2xl border p-5"
+                    style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
+                  >
+                    {iconUrl ? (
+                      <Image src={iconUrl} alt={g.name ?? 'Server'} width={48} height={48} className="h-12 w-12 shrink-0 rounded-xl" unoptimized />
+                    ) : (
+                      <div
+                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-lg font-bold text-white"
+                        style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}
+                      >
+                        {(g.name ?? '?').charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground">{g.name ?? 'A Pulsify server'}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-3)' }}>
+                        {g.member_count ? `${Number(g.member_count).toLocaleString()} members` : 'On Pulsify'}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })
+            : SHOWCASE.map((initial) => (
+                <div
+                  key={initial}
+                  className="flex items-center gap-4 rounded-2xl border border-dashed p-5"
+                  style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
+                >
+                  <div
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-lg font-bold text-white opacity-70"
+                    style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}
+                  >
+                    {initial}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold" style={{ color: 'var(--text-2)' }}>Your community here</p>
+                    <p className="text-xs" style={{ color: 'var(--text-3)' }}>Featured soon</p>
+                  </div>
+                </div>
+              ))}
         </div>
         <p className="mt-6 text-center text-xs" style={{ color: 'var(--text-3)' }}>
-          Showcase placeholders shown during early access — apply to be featured in our Discord.
+          {communities.length
+            ? 'Servers using Pulsify, ordered by member count.'
+            : 'Showcase placeholders shown during early access — apply to be featured in our Discord.'}
         </p>
       </Reveal>
 
@@ -270,28 +330,6 @@ export default function CommunityPage() {
               </li>
             ))}
           </ul>
-        </div>
-      </Reveal>
-
-      {/* Social links */}
-      <Reveal className="mt-16">
-        <div className="flex flex-col items-center gap-5">
-          <p className="text-sm font-semibold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Find us online</p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {SOCIALS.map((s) => (
-              <a
-                key={s.label}
-                href={s.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2.5 rounded-xl border px-5 py-3 text-sm font-medium transition-colors"
-                style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
-              >
-                <span style={{ color: 'var(--p-1)' }}>{s.glyph}</span>
-                {s.label}
-              </a>
-            ))}
-          </div>
         </div>
       </Reveal>
     </div>

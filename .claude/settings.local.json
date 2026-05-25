@@ -80,7 +80,16 @@
       "Bash(echo \"EXIT=$?\")",
       "Bash(grep -iE \"insights|RecommendationCard|TrendStat|InsightIcon|insights\\\\\\\\\\\\\\\\icons\" lint.out)",
       "Bash(node *)",
-      "Bash(node_modules/.bin/tsc --noEmit)"
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(curl -s -o /dev/null -w '%{http_code}' -L --max-redirs 0 http://localhost:3000/__TRACKED_VAR__)",
+      "Bash(curl -s -o /dev/null -w '%{redirect_url}' http://localhost:3000/__TRACKED_VAR__)",
+      "Bash(curl -s -o /dev/null -w \"/privacy: %{http_code}\\\\n\" http://localhost:3000/privacy)",
+      "Bash(curl -s -o /dev/null -w \"/dashboard/123: %{http_code} redirect:%{redirect_url}\\\\n\" http://localhost:3000/dashboard/123)",
+      "Bash(curl -s -o /dev/null -w \"/dashboard/123: %{http_code}\\\\n\" http://localhost:3000/dashboard/123)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(curl -s -o /dev/null -w \"/privacy:%{http_code} /dashboard/123:\" http://localhost:3000/privacy)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/dashboard/123)",
+      "Bash(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/dashboard/123/__TRACKED_VAR__)"
     ]
   }
 }

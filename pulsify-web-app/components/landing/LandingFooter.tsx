@@ -1,15 +1,18 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { TRUST_BADGES } from './landing-data'
+import { FooterDashboardLink } from './FooterDashboardLink'
 
-const COLUMNS: { title: string; links: { label: string; href: string; external?: boolean }[] }[] = [
+// `dashboard: true` swaps the plain link for the auth-aware FooterDashboardLink.
+const COLUMNS: { title: string; links: { label: string; href: string; external?: boolean; dashboard?: boolean }[] }[] = [
   {
+    // Features, How it works, Why Pulsify, Pricing and FAQ all live on the one
+    // landing page, so a single "Overview" link to the top stands in for them
+    // all. Dashboard stays as the app entry point.
     title: 'Product',
     links: [
-      { label: 'Features', href: '#features' },
-      { label: 'Pricing', href: '#pricing' },
-      { label: 'How it works', href: '#how' },
-      { label: 'Dashboard', href: '/dashboard' },
+      { label: 'Overview', href: '#top' },
+      { label: 'Dashboard', href: '/dashboard', dashboard: true },
     ],
   },
   {
@@ -77,7 +80,16 @@ export function LandingFooter() {
               </h3>
               <ul className="mt-4 space-y-2.5">
                 {col.links.map((l) =>
-                  l.external ? (
+                  l.dashboard ? (
+                    <li key={l.label}>
+                      <FooterDashboardLink
+                        className="text-sm transition-colors hover:text-[var(--p-1)]"
+                        style={{ color: 'var(--text-2)' }}
+                      >
+                        {l.label}
+                      </FooterDashboardLink>
+                    </li>
+                  ) : l.external ? (
                     <li key={l.label}>
                       <a
                         href={l.href}

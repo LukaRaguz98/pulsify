@@ -28,6 +28,8 @@ import {
   UserRound,
   Lightbulb,
   LifeBuoy,
+  Menu,
+  X,
 } from 'lucide-react'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
 import { SearchTrigger } from '@/components/dashboard/search/SearchTrigger'
@@ -37,6 +39,12 @@ type NavItem = {
   href: string
   icon: React.ReactNode
   badge?: string
+  /**
+   * Extra path prefixes that should also mark this item active. Used when a
+   * feature's settings live at a sibling route (e.g. Tickets ↔ /ticket-settings)
+   * so the sidebar stays in context instead of de-highlighting everything.
+   */
+  matchPrefixes?: string[]
 }
 
 type NavGroup = {
@@ -69,17 +77,37 @@ type Props = {
 
 export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Props) {
   const [collapsed, setCollapsed] = useState(false)
+  // Mobile-only: the sidebar is an off-canvas drawer below `lg`. `mobileOpen`
+  // drives the slide (via the `.guild-sidebar[data-mobile-open]` CSS) and the
+  // backdrop; it has no effect on desktop where the aside is in-flow.
+  const [mobileOpen, setMobileOpen] = useState(false)
   const pathname = usePathname()
 
   useEffect(() => {
     document.documentElement.style.setProperty('--sidebar-w', collapsed ? '68px' : '230px')
   }, [collapsed])
+
+  // While the drawer is open, lock body scroll so the page behind it doesn't
+  // scroll under the overlay on touch.
+  useEffect(() => {
+    if (!mobileOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [mobileOpen])
+
   const base = `/dashboard/${guildId}`
 
   // Overview lives at the bare `base` path, so it matches only on equality;
   // other items use prefix matching so nested routes still highlight.
   const isItemActive = (href: string) =>
     href === base ? pathname === base : pathname.startsWith(href)
+
+  // Item-aware variant: also honours `matchPrefixes` so a feature's sibling
+  // settings route (e.g. /ticket-settings) keeps its module highlighted.
+  const isNavItemActive = (item: NavItem): boolean =>
+    isItemActive(item.href) ||
+    (item.matchPrefixes?.some((p) => pathname.startsWith(`${base}${p}`)) ?? false)
 
   // Nav is grouped by what the admin is *trying to do*, top-down:
   //   1. Analytics  — observe what's happening (passive views)
@@ -135,16 +163,19 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
       items: [
         { label: 'Moderation', href: `${base}/moderation`, icon: <Shield size={16} /> },
         { label: 'Pulse Guard', href: `${base}/ai-moderation`, icon: <ShieldAlert size={16} /> },
-        { label: 'Tickets', href: `${base}/tickets`, icon: <LifeBuoy size={16} /> },
+        // Ticket configuration lives at /ticket-settings (reached from the
+        // Tickets module's own "Settings" button) — match it here so the nav
+        // stays on Tickets while you're editing its config.
+        { label: 'Tickets', href: `${base}/tickets`, icon: <LifeBuoy size={16} />, matchPrefixes: ['/ticket-settings'] },
       ],
     },
     {
+      // Dashboard-level personalisation only. Feature settings live with their
+      // features (Pulse → Pulse Bot, Ticket settings → Tickets module, etc.).
       title: 'Settings',
       icon: <Settings size={16} />,
       items: [
         { label: 'Preferences', href: `${base}/settings`, icon: <SlidersHorizontal size={16} /> },
-        { label: 'Ticket settings', href: `${base}/ticket-settings`, icon: <LifeBuoy size={16} /> },
-        { label: 'Pulse', href: `${base}/Pulse`, icon: <Sparkles size={16} /> },
       ],
     },
   ]
@@ -155,17 +186,19 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
     const set = new Set<string>()
     for (const g of groups) {
-      if (g.items.some((item) => isItemActive(item.href))) set.add(g.title)
+      if (g.items.some((item) => isNavItemActive(item))) set.add(g.title)
     }
     return set
   })
 
-  // On route change, additively expand the group containing the new active
-  // item. We only *add* — never auto-collapse — so the user's manual
+  // On route change: dismiss the mobile drawer (a nav tap should navigate AND
+  // close the overlay) and additively expand the group containing the new
+  // active item. We only *add* — never auto-collapse — so the user's manual
   // expansions on other groups stick around.
   useEffect(() => {
+    setMobileOpen(false)
     const activeGroup = groups.find((g) =>
-      g.items.some((item) => isItemActive(item.href)),
+      g.items.some((item) => isNavItemActive(item)),
     )
     if (!activeGroup) return
     setExpandedGroups((prev) =>
@@ -199,15 +232,48 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
   const memberCount = guild.approximate_member_count ?? guild.member_count
 
   return (
-    <aside
-      className="flex h-full shrink-0 flex-col border-r overflow-hidden"
-      style={{
-        width: collapsed ? '68px' : '230px',
-        transition: 'width 0.2s ease',
-        background: 'linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 100%)',
-        borderColor: 'var(--line-strong)',
-      }}
-    >
+    <>
+      {/* Mobile top bar (< lg only). The sidebar slides off-canvas on small
+          screens, so this fixed bar holds the drawer toggle + brand. Desktop
+          never sees it. */}
+      <div
+        className="lg:hidden fixed top-0 inset-x-0 z-30 flex h-12 items-center gap-2 border-b px-3"
+        style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)', backdropFilter: 'blur(12px)' }}
+      >
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          aria-label="Open navigation"
+          className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+          style={{ color: 'var(--text-2)' }}
+        >
+          <Menu size={18} />
+        </button>
+        <Image src="/logo.png" alt="Pulsify" width={22} height={22} className="shrink-0" />
+        <span className="font-bold text-sm tracking-tight text-foreground">Pulsify</span>
+      </div>
+
+      {/* Backdrop — tap to dismiss the drawer. */}
+      {mobileOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          onClick={() => setMobileOpen(false)}
+          className="lg:hidden fixed inset-0 z-40 animate-in fade-in"
+          style={{ background: 'rgba(0,0,0,0.55)' }}
+        />
+      )}
+
+      <aside
+        className="guild-sidebar flex h-full shrink-0 flex-col border-r overflow-hidden"
+        data-mobile-open={mobileOpen}
+        style={{
+          width: collapsed ? '68px' : '230px',
+          transition: 'width 0.2s ease, transform 0.25s ease',
+          background: 'linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 100%)',
+          borderColor: 'var(--line-strong)',
+        }}
+      >
       {/* Brand */}
       <div
         className="flex items-center border-b px-3 py-4"
@@ -248,12 +314,22 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
             <button
               onClick={() => setCollapsed(true)}
               title="Collapse sidebar"
-              className="shrink-0 flex items-center justify-center rounded-md p-0.5 transition-colors"
+              className="max-lg:hidden shrink-0 flex items-center justify-center rounded-md p-0.5 transition-colors"
               style={{ color: 'var(--text-3)' }}
               onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)' }}
               onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-3)' }}
             >
               <ChevronLeft size={14} />
+            </button>
+            {/* Mobile-only: close the drawer (the collapse affordance is
+                desktop-only — on mobile the sidebar slides away entirely). */}
+            <button
+              onClick={() => setMobileOpen(false)}
+              aria-label="Close navigation"
+              className="lg:hidden shrink-0 flex items-center justify-center rounded-md p-0.5 transition-colors"
+              style={{ color: 'var(--text-3)' }}
+            >
+              <X size={16} />
             </button>
           </>
         )}
@@ -325,7 +401,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
       <nav className="flex-1 overflow-y-auto px-2 pb-2 space-y-1">
         {groups.map((group) => {
           const isExpanded = expandedGroups.has(group.title)
-          const hasActiveChild = group.items.some((item) => isItemActive(item.href))
+          const hasActiveChild = group.items.some((item) => isNavItemActive(item))
           const showChildren = !collapsed && isExpanded
 
           return (
@@ -405,7 +481,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
                 <div style={{ overflow: 'hidden', minHeight: 0 }}>
                   <div className="mt-0.5 space-y-0.5 pl-1">
                   {group.items.map((item) => {
-                    const isActive = isItemActive(item.href)
+                    const isActive = isNavItemActive(item)
                     return (
                       <Link
                         key={item.href}
@@ -494,5 +570,6 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
         />
       </div>
     </aside>
+    </>
   )
 }

@@ -1341,3 +1341,86 @@ Acceptance Criteria
 	Support staff notifications work properly
 	Ticket analytics display correctly
 	UI remains responsive and visually polished
+	
+PULSIFY-23 Bug Fixes, Settings Refactor & UI/Embed Polish (v.0.23.0)
+	
+Description
+	Implement a large quality and stability update focused on fixing existing issues, improving usability, simplifying settings management, and polishing the overall Pulsify user experience.
+	This update should improve application consistency, accessibility, navigation flow, and Discord embed quality across Pulse slash commands.
+
+Goals
+	Fix existing routing/authentication bugs
+	Simplify application settings structure
+	Improve dashboard usability and UX
+	Modernize and polish Pulse embeds
+	Improve overall application quality and consistency
+
+Tasks
+	Bug Fixes
+		Fix issue where public pages require authentication:
+			Privacy Policy
+			Terms of Service
+			FAQ
+			Support
+			Community
+		Ensure public pages are accessible without login
+		Fix invalid redirect/authentication handling
+		Fix broken navigation states/routes
+		Fix inconsistent loading states
+
+	Settings Refactor
+		Move settings into their appropriate feature sections/pages
+		Reduce centralized settings clutter
+		Reorganize:
+			moderation settings
+			Pulse Guard settings
+			analytics settings
+			events settings
+			ticket settings
+			role/channel settings
+		Add contextual settings inside relevant modules
+		Improve settings discoverability and structure
+		Add section descriptions/tooltips
+
+	UI/UX Polish
+		Improve dashboard spacing/alignment consistency
+		Improve responsive layouts
+		Add smoother transitions/animations
+		Improve loading skeletons/states
+		Improve empty states/placeholders
+		Improve toast notifications/feedback
+		Standardize card/component styling
+		Improve sidebar/navigation consistency
+		Improve mobile responsiveness
+
+	Slash Command Embed Improvements
+		Redesign Pulse slash command embeds
+		Convert outdated embeds to v2 embed styling
+		Standardize:
+			colors
+			typography
+			spacing
+			icons
+			footers
+			timestamps
+		Improve /sync embed styling
+		Improve moderation embeds
+		Improve error/success embeds
+		Add richer visuals and cleaner layouts
+		Reuse Pulse Guard embed design language
+
+	Additional Polish
+		Improve accessibility/readability
+		Add better hover/focus states
+		Improve form validation messages
+		Improve dashboard performance and rendering consistency
+
+Acceptance Criteria
+	Public pages are accessible without authentication
+	Settings are reorganized into appropriate modules
+	Navigation and routing bugs are resolved
+	Dashboard UI feels more polished and consistent
+	Slash command embeds use improved v2 styling
+	Mobile responsiveness works correctly
+	Loading/error/empty states behave properly
+	Overall UX feels smoother and production-ready

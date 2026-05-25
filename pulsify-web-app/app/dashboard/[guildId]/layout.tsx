@@ -56,7 +56,9 @@ export default async function GuildLayout({
           <NotificationBell guildId={guildId} />
           <PingIndicator />
           <main className="flex-1 overflow-y-auto flex flex-col">
-            <div className="flex-1">{children}</div>
+            {/* max-lg:pt-12 clears the fixed mobile top bar (h-12) rendered by
+                GuildSidebar on small screens; desktop has no offset. */}
+            <div className="flex-1 max-lg:pt-12">{children}</div>
             <Footer />
           </main>
           <Toaster />
