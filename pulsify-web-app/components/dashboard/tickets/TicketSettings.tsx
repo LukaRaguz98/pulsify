@@ -1,8 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
-  Save,
   Send,
   Plus,
   Trash2,
@@ -31,6 +30,7 @@ import { THEMES } from '@/lib/themes'
 import { usePreferences } from '@/components/ThemeProvider'
 import type { ActionResult } from '@/app/dashboard/[guildId]/tickets/actions'
 import { saveTicketConfig, postTicketPanel } from '@/app/dashboard/[guildId]/tickets/actions'
+import { SaveBar } from '@/components/ui/save-bar'
 import { ColorPicker } from './ColorPicker'
 
 type RunAction = <T>(fn: () => Promise<ActionResult<T>>, successMsg?: string) => Promise<ActionResult<T>>
@@ -50,14 +50,37 @@ export function TicketSettings({ guildId, config, channels, categories, roles, r
   // The accent the admin picked in App Design (custom override → preset theme).
   const { theme, themeCustomColor } = usePreferences()
   const appAccent = themeCustomColor ?? THEMES.find((t) => t.id === theme)?.accent ?? '#8b5cf6'
-  const [draft, setDraft] = useState<TicketConfig>(() =>
-    // First-time setup (no saved row yet): seed the panel colour from the app
-    // accent so tickets match the rest of the dashboard out of the box.
-    config.updated_at ? config : { ...config, panel: { ...config.panel, color: appAccent } },
-  )
+  // First-time setup (no saved row yet): seed the panel colour from the app
+  // accent so tickets match the rest of the dashboard out of the box.
+  const makeInitial = (): TicketConfig =>
+    config.updated_at ? config : { ...config, panel: { ...config.panel, color: appAccent } }
+  const [draft, setDraft] = useState<TicketConfig>(makeInitial)
+  // Baseline of the last-saved state — drives the SaveBar's dirty tracking,
+  // same as the Pulse Guard settings tab.
+  const [snapshot, setSnapshot] = useState<TicketConfig>(makeInitial)
   const [saving, setSaving] = useState(false)
   const [posting, setPosting] = useState(false)
   const [openType, setOpenType] = useState<string | null>(null)
+
+  const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(snapshot), [draft, snapshot])
+  const changedCount = useMemo(() => {
+    if (!dirty) return 0
+    const cmp = (a: unknown, b: unknown) => JSON.stringify(a) !== JSON.stringify(b)
+    let n = 0
+    if (draft.enabled !== snapshot.enabled) n++
+    if (cmp(draft.panel, snapshot.panel)) n++
+    if (cmp(draft.ticket_types, snapshot.ticket_types)) n++
+    if (draft.category_id !== snapshot.category_id) n++
+    if (cmp(draft.support_role_ids, snapshot.support_role_ids)) n++
+    if (draft.transcript_channel_id !== snapshot.transcript_channel_id) n++
+    if (draft.log_channel_id !== snapshot.log_channel_id) n++
+    if (draft.naming_format !== snapshot.naming_format) n++
+    if ((draft.opening_message ?? '') !== (snapshot.opening_message ?? '')) n++
+    if (cmp(draft.auto_close, snapshot.auto_close)) n++
+    if (draft.per_user_limit !== snapshot.per_user_limit) n++
+    if (draft.ping_support !== snapshot.ping_support) n++
+    return n
+  }, [draft, snapshot, dirty])
 
   const patch = (p: Partial<TicketConfig>) => setDraft((d) => ({ ...d, ...p }))
   const patchPanel = (p: Partial<TicketConfig['panel']>) => setDraft((d) => ({ ...d, panel: { ...d.panel, ...p } }))
@@ -112,16 +135,24 @@ export function TicketSettings({ guildId, config, channels, categories, roles, r
     }))
   }
 
-  async function save() {
+  function handleReset() {
+    setDraft(snapshot)
+  }
+  async function handleSave() {
     setSaving(true)
-    await runAction(() => saveTicketConfig(guildId, draft), 'Ticket settings saved')
+    const res = await runAction(() => saveTicketConfig(guildId, draft), 'Ticket settings saved')
+    // Re-baseline on success so the SaveBar returns to its clean state.
+    if (res.ok) setSnapshot(draft)
     setSaving(false)
   }
   async function postPanel() {
     setPosting(true)
     // Save first so the panel reflects the latest types/channel.
     const saved = await runAction(() => saveTicketConfig(guildId, draft))
-    if (saved.ok) await runAction(() => postTicketPanel(guildId), 'Panel posted to Discord')
+    if (saved.ok) {
+      setSnapshot(draft)
+      await runAction(() => postTicketPanel(guildId), 'Panel posted to Discord')
+    }
     setPosting(false)
   }
 
@@ -132,7 +163,7 @@ export function TicketSettings({ guildId, config, channels, categories, roles, r
   })
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6">
       {/* Master switch */}
       <Card icon={<ShieldCheck size={16} />} title="Ticket system" description="Turn Discord-native support tickets on for this server.">
         <Toggle
@@ -351,14 +382,18 @@ export function TicketSettings({ guildId, config, channels, categories, roles, r
         </div>
       </Card>
 
-      {/* Sticky save bar */}
-      <div
-        className="fixed bottom-0 right-0 z-40 flex items-center justify-end gap-3 border-t px-6 py-3"
-        style={{ left: 'var(--sidebar-w, 230px)', background: 'var(--bg-2)', borderColor: 'var(--line-strong)' }}
-      >
-        <span className="text-xs" style={{ color: 'var(--text-3)' }}>Changes apply to the bot the moment you save.</span>
-        <BusyButton onClick={save} busy={saving} icon={<Save size={14} />} label="Save settings" tone="primary" />
-      </div>
+      <SaveBar
+        dirty={dirty}
+        changedCount={changedCount}
+        saving={saving}
+        saveLabel="Save settings"
+        cleanText="All ticket settings saved."
+        dirtyHintText="Changes apply to the bot the moment you save."
+        confirmTitle="Save ticket settings?"
+        confirmDescription="These settings drive the live ticket panel and the bot's behaviour. Changes take effect immediately."
+        onReset={handleReset}
+        onSave={handleSave}
+      />
     </div>
   )
 }

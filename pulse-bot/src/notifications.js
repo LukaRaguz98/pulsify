@@ -25,6 +25,9 @@ const TYPE_TO_CATEGORY = {
   ticket_opened: 'tickets',
   ticket_updated: 'tickets',
   ticket_closed: 'tickets',
+  giveaway_started: 'giveaways',
+  giveaway_ended: 'giveaways',
+  giveaway_rerolled: 'giveaways',
   bot_warning: 'bot',
   bot_error: 'bot',
 };
@@ -48,6 +51,9 @@ const TYPE_TO_SEVERITY = {
   ticket_opened: 'info',
   ticket_updated: 'info',
   ticket_closed: 'info',
+  giveaway_started: 'success',
+  giveaway_ended: 'success',
+  giveaway_rerolled: 'info',
   bot_warning: 'warning',
   bot_error: 'error',
 };
