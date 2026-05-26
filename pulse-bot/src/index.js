@@ -25,6 +25,7 @@ const {
 } = require("./command-center");
 const { createScheduler } = require("./scheduler");
 const { createTickets } = require("./tickets");
+const { createGiveaways } = require("./giveaways");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -55,6 +56,11 @@ const scheduler = createScheduler(client, supabase);
 // (it only handles `tkt:` component/modal interactions, never chat-input, so it
 // never collides with the slash-command handler below).
 const tickets = createTickets(client, supabase);
+
+// The giveaway system likewise registers its own interaction listener (only
+// `gw:` buttons) plus a once-a-minute lifecycle tick that starts scheduled
+// giveaways and draws winners when they end.
+const giveaways = createGiveaways(client, supabase);
 
 /**
  * Shared helper for Discord-side activity → notifications row.
@@ -265,6 +271,10 @@ client.once(Events.ClientReady, async (readyClient) => {
   // Ticket system: load per-guild config + open tickets, subscribe to realtime,
   // wire up panel/control interactions and the inactivity auto-close scan.
   await tickets.start();
+
+  // Giveaway system: load live giveaways, subscribe to realtime (Join button +
+  // dashboard draw/reroll requests), and run the start/end lifecycle tick.
+  await giveaways.start();
 });
 
 client.on(Events.GuildCreate, async (guild) => {

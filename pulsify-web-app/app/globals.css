@@ -388,6 +388,44 @@ body:has([role="dialog"]) [data-pulsify-ping] {
   animation: ticket-drawer-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* ── Giveaways view ────────────────────────────────────────────
+   Cards cascade in (same per-position stagger as Insights); the create
+   modal pops, the detail drawer slides from the right. All auto-neutralised
+   by the [data-animations="false"] reduced-motion rule above. */
+@keyframes giveaway-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.giveaway-card {
+  animation: giveaway-in 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.giveaway-grid > .giveaway-card:nth-child(1) { animation-delay: 0.02s; }
+.giveaway-grid > .giveaway-card:nth-child(2) { animation-delay: 0.06s; }
+.giveaway-grid > .giveaway-card:nth-child(3) { animation-delay: 0.10s; }
+.giveaway-grid > .giveaway-card:nth-child(4) { animation-delay: 0.14s; }
+.giveaway-grid > .giveaway-card:nth-child(5) { animation-delay: 0.18s; }
+.giveaway-grid > .giveaway-card:nth-child(n+6) { animation-delay: 0.22s; }
+
+.gw-drawer {
+  animation: ticket-drawer-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Shared input styling for the giveaway create/edit form so every field
+   matches the dashboard's panelled controls without repeating inline styles. */
+.gw-input {
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  color: var(--text);
+  padding: 0.5rem 0.625rem;
+  font-size: 0.875rem;
+}
+.gw-input:focus {
+  outline: none;
+  border-color: var(--p-1);
+}
+
 /* ── Button hover effects ──────────────────────────────────────
    Most primary/secondary buttons in the app are inline-styled
    (var(--p-1) gradients for primary, var(--line-strong) borders for

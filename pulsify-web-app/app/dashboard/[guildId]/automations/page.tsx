@@ -41,7 +41,7 @@ export default async function AutomationsPage({
             style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
           >
             <Settings size={12} />
-            Automations Settings
+            Automations settings
           </Link>
         }
       />
