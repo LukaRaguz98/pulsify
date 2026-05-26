@@ -1382,6 +1382,59 @@ export async function postChannelComponents(
 }
 
 /**
+ * Edit an existing Components V2 message. The message must already carry the
+ * IS_COMPONENTS_V2 flag (we re-assert it — Discord accepts an already-set flag);
+ * V2 messages can only hold `components`, never `content`/`embeds`. Used by the
+ * giveaway dashboard to flip a live giveaway message to its ended/cancelled
+ * state. Best-effort — returns the Discord error string on failure.
+ */
+export async function editChannelComponents(
+  channelId: string,
+  messageId: string,
+  components: V2TopLevelComponent[],
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages/${messageId}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ flags: IS_COMPONENTS_V2_FLAG, components }),
+  })
+  if (res.ok) return { ok: true }
+  const errBody = (await res.json().catch(() => ({}))) as { message?: string }
+  return { ok: false, error: errBody.message ?? `Discord API error ${res.status}` }
+}
+
+/**
+ * Post a Components V2 message and return the created message id (or null on
+ * failure). Like postChannelComponents but surfaces the id so callers can store
+ * it for later edits — used when the dashboard posts a giveaway it needs to
+ * update (entry count, winners) afterwards.
+ */
+export async function postChannelComponentsReturningId(
+  channelId: string,
+  components: V2TopLevelComponent[],
+): Promise<{ ok: true; messageId: string } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ flags: IS_COMPONENTS_V2_FLAG, components }),
+  })
+  if (!res.ok) {
+    const errBody = (await res.json().catch(() => ({}))) as { message?: string }
+    return { ok: false, error: errBody.message ?? `Discord API error ${res.status}` }
+  }
+  const msg = (await res.json()) as { id: string }
+  return { ok: true, messageId: msg.id }
+}
+
+/**
  * Open (or fetch) the DM channel with a user and return its id. Discord
  * dedupes — repeated calls return the same channel. Returns null when the bot
  * token is missing or Discord refuses to open the channel. Note: a successful

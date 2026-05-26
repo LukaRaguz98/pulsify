@@ -38,6 +38,10 @@ export const NOTIFICATION_TYPES = [
   'ticket_opened',
   'ticket_updated',
   'ticket_closed',
+  // giveaways
+  'giveaway_started',
+  'giveaway_ended',
+  'giveaway_rerolled',
   // bot
   'bot_warning',
   'bot_error',
@@ -54,6 +58,7 @@ export type NotificationCategory =
   | 'settings'
   | 'automations'
   | 'tickets'
+  | 'giveaways'
   | 'bot'
 
 export type NotificationSeverity = 'info' | 'success' | 'warning' | 'error'
@@ -78,6 +83,9 @@ export const TYPE_TO_CATEGORY: Record<NotificationType, NotificationCategory> = 
   ticket_opened: 'tickets',
   ticket_updated: 'tickets',
   ticket_closed: 'tickets',
+  giveaway_started: 'giveaways',
+  giveaway_ended: 'giveaways',
+  giveaway_rerolled: 'giveaways',
   bot_warning: 'bot',
   bot_error: 'bot',
 }
@@ -102,6 +110,9 @@ export const TYPE_TO_SEVERITY: Record<NotificationType, NotificationSeverity> = 
   ticket_opened: 'info',
   ticket_updated: 'info',
   ticket_closed: 'info',
+  giveaway_started: 'success',
+  giveaway_ended: 'success',
+  giveaway_rerolled: 'info',
   bot_warning: 'warning',
   bot_error: 'error',
 }
@@ -115,6 +126,7 @@ export const CATEGORY_LABELS: Record<NotificationCategory, string> = {
   settings: 'Settings',
   automations: 'Automations',
   tickets: 'Tickets',
+  giveaways: 'Giveaways',
   bot: 'Bot Status',
 }
 
@@ -137,6 +149,9 @@ export const TYPE_LABELS: Record<NotificationType, string> = {
   ticket_opened: 'Ticket opened',
   ticket_updated: 'Ticket updated',
   ticket_closed: 'Ticket closed',
+  giveaway_started: 'Giveaway started',
+  giveaway_ended: 'Giveaway ended',
+  giveaway_rerolled: 'Giveaway rerolled',
   bot_warning: 'Bot warnings',
   bot_error: 'Bot errors',
 }
@@ -161,6 +176,9 @@ export const TYPE_DESCRIPTIONS: Record<NotificationType, string> = {
   ticket_opened: 'A member opens a support ticket.',
   ticket_updated: 'A ticket is claimed, assigned, or changed.',
   ticket_closed: 'A support ticket is closed.',
+  giveaway_started: 'A giveaway goes live in the server.',
+  giveaway_ended: 'A giveaway ends and winners are drawn.',
+  giveaway_rerolled: 'New winners are drawn for a giveaway.',
   bot_warning: 'Recoverable issues like failed welcome messages.',
   bot_error: 'Critical bot failures that need attention.',
 }
