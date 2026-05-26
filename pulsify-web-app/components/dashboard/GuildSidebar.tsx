@@ -28,6 +28,7 @@ import {
   UserRound,
   Lightbulb,
   LifeBuoy,
+  Gift,
   Menu,
   X,
 } from 'lucide-react'
@@ -155,6 +156,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
       items: [
         { label: 'Automations', href: `${base}/automations`, icon: <Zap size={16} /> },
         { label: 'Scheduled', href: `${base}/scheduled`, icon: <CalendarClock size={16} /> },
+        { label: 'Giveaways', href: `${base}/giveaways`, icon: <Gift size={16} /> },
       ],
     },
     {

@@ -84,6 +84,7 @@ const NAV_CATALOG: NavDef[] = [
   { id: 'nav-moderation', label: 'Moderation', icon: 'Shield', path: '/moderation', keywords: 'mod bans kicks warnings timeouts logs' },
   { id: 'nav-pulse-guard', label: 'Pulse Guard', icon: 'ShieldAlert', path: '/ai-moderation', keywords: 'ai moderation automod' },
   { id: 'nav-tickets', label: 'Tickets', icon: 'LifeBuoy', path: '/tickets', keywords: 'support tickets help desk panel transcripts' },
+  { id: 'nav-giveaways', label: 'Giveaways', icon: 'Gift', path: '/giveaways', keywords: 'giveaway contest raffle prize draw winners engagement' },
   { id: 'nav-notifications', label: 'Notifications', icon: 'Bell', path: '/notifications', keywords: 'alerts activity feed' },
   { id: 'nav-server-profile', label: 'Server Profile', icon: 'Server', path: '/server-settings', keywords: 'server settings branding' },
   { id: 'nav-preferences', label: 'Preferences', icon: 'SlidersHorizontal', path: '/settings', keywords: 'theme appearance density settings' },
@@ -111,6 +112,7 @@ const ACTION_CATALOG: ActionDef[] = [
   { id: 'act-open-insights', label: 'Open insights', subtitle: 'Server health & recommendations', icon: 'Lightbulb', keywords: 'insights recommendations health suggestions', action: { kind: 'navigate', href: '/insights' } },
   { id: 'act-open-moderation', label: 'Open moderation', subtitle: 'Jump to moderation tools', icon: 'Shield', keywords: 'mod moderation bans', action: { kind: 'navigate', href: '/moderation' } },
   { id: 'act-open-tickets', label: 'Open tickets', subtitle: 'Manage support tickets', icon: 'LifeBuoy', keywords: 'support tickets help desk', action: { kind: 'navigate', href: '/tickets' } },
+  { id: 'act-create-giveaway', label: 'Create giveaway', subtitle: 'Launch a new Discord giveaway', icon: 'Gift', keywords: 'new giveaway contest raffle prize draw', action: { kind: 'navigate', href: '/giveaways?new=1' } },
   { id: 'act-trigger-sync', label: 'Trigger server sync', subtitle: 'Refresh dashboard data from Discord', icon: 'RefreshCw', keywords: 'sync refresh resync update reload', action: { kind: 'command', commandId: 'sync' } },
 ]
 

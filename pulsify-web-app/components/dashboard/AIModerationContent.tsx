@@ -159,7 +159,7 @@ export function AIModerationContent({ guildId, channels, initialSettings }: Prop
               style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
             >
               <Settings size={12} />
-              Pulse Guard Settings
+              Pulse Guard settings
             </Link>
             <button
               onClick={() => fetchEvents()}
