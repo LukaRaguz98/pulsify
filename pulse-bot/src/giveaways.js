@@ -185,7 +185,7 @@ function pickWinners(entrantIds, count, exclude = []) {
   return pool.slice(0, Math.max(0, count));
 }
 
-function createGiveaways(client, supabase) {
+function createGiveaways(client, supabase, leveling = null) {
   // id -> giveaway row (scheduled + active only; ended ones drop out of cache)
   const cache = new Map();
   // id -> last-seen draw_requested_at (so each dashboard request fires once)
@@ -399,6 +399,12 @@ function createGiveaways(client, supabase) {
     row.entry_count = entryCount;
     cache.set(giveawayId, row);
     await editGiveawayMessage(row, activeContainer(row));
+
+    // Entering a giveaway is community engagement — award XP (no-op if leveling
+    // is disabled for the guild; fire-and-forget so it never blocks the reply).
+    if (leveling && interaction.member) {
+      void leveling.awardGiveawayEntry(interaction.guild, interaction.member, interaction.channel);
+    }
 
     await interaction.reply({ content: "🎉 You're in! Good luck.", flags: MessageFlags.Ephemeral });
   }

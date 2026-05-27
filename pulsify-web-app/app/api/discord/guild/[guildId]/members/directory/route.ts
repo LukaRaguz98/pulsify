@@ -8,7 +8,9 @@ import {
   type DirectoryResponse,
   type MemberActivityStats,
   type MemberInfractions,
+  type MemberLevel,
 } from '@/lib/member-profile'
+import { normaliseLevelingSettings } from '@/lib/leveling'
 
 // Permission bits that mark a role (and therefore its holders) as "staff".
 const STAFF_PERM_BITS = [
@@ -46,13 +48,24 @@ export async function GET(
   const url = new URL(req.url)
   const limit = Math.min(Math.max(Number(url.searchParams.get('limit') ?? 1000), 1), 1000)
 
-  const [members, roles, guild, statsRes, infrRes] = await Promise.all([
+  const [members, roles, guild, statsRes, infrRes, levelsRes, settingsRes] = await Promise.all([
     fetchGuildMembers(guildId, limit),
     fetchGuildRoles(guildId),
     fetchGuild(guildId),
     supabase.rpc('get_guild_members_stats', { p_guild_id: guildId, p_since: null }),
     supabase.rpc('get_guild_members_infractions', { p_guild_id: guildId }),
+    supabase.from('member_levels').select('user_id, xp, level').eq('guild_id', guildId),
+    supabase.from('leveling_settings').select('enabled, settings').eq('guild_id', guildId).maybeSingle(),
   ])
+
+  const levelsByUser = new Map<string, MemberLevel>()
+  for (const r of (levelsRes.data ?? []) as Record<string, unknown>[]) {
+    levelsByUser.set(String(r.user_id), {
+      xp: Number(r.xp ?? 0),
+      level: Number(r.level ?? 0),
+    })
+  }
+  const curve = normaliseLevelingSettings(settingsRes.data ?? null).curve
 
   const statsByUser = new Map<string, MemberActivityStats>()
   for (const r of (statsRes.data ?? []) as Record<string, unknown>[]) {
@@ -92,6 +105,7 @@ export async function GET(
       member: m,
       activity: statsByUser.get(m.user.id) ?? EMPTY_ACTIVITY,
       infractions: infrByUser.get(m.user.id) ?? EMPTY_INFRACTIONS,
+      level: levelsByUser.get(m.user.id) ?? null,
       topRolePosition,
       isStaff,
     }
@@ -101,6 +115,7 @@ export async function GET(
     members: directory,
     roles,
     approximateMemberCount: guild?.approximate_member_count ?? null,
+    curve,
   }
   return NextResponse.json(response)
 }

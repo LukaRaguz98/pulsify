@@ -42,6 +42,8 @@ export const NOTIFICATION_TYPES = [
   'giveaway_started',
   'giveaway_ended',
   'giveaway_rerolled',
+  // leveling
+  'level_up',
   // bot
   'bot_warning',
   'bot_error',
@@ -59,6 +61,7 @@ export type NotificationCategory =
   | 'automations'
   | 'tickets'
   | 'giveaways'
+  | 'leveling'
   | 'bot'
 
 export type NotificationSeverity = 'info' | 'success' | 'warning' | 'error'
@@ -86,6 +89,7 @@ export const TYPE_TO_CATEGORY: Record<NotificationType, NotificationCategory> = 
   giveaway_started: 'giveaways',
   giveaway_ended: 'giveaways',
   giveaway_rerolled: 'giveaways',
+  level_up: 'leveling',
   bot_warning: 'bot',
   bot_error: 'bot',
 }
@@ -113,6 +117,7 @@ export const TYPE_TO_SEVERITY: Record<NotificationType, NotificationSeverity> = 
   giveaway_started: 'success',
   giveaway_ended: 'success',
   giveaway_rerolled: 'info',
+  level_up: 'success',
   bot_warning: 'warning',
   bot_error: 'error',
 }
@@ -127,6 +132,7 @@ export const CATEGORY_LABELS: Record<NotificationCategory, string> = {
   automations: 'Automations',
   tickets: 'Tickets',
   giveaways: 'Giveaways',
+  leveling: 'Levels & XP',
   bot: 'Bot Status',
 }
 
@@ -152,6 +158,7 @@ export const TYPE_LABELS: Record<NotificationType, string> = {
   giveaway_started: 'Giveaway started',
   giveaway_ended: 'Giveaway ended',
   giveaway_rerolled: 'Giveaway rerolled',
+  level_up: 'Member level-up',
   bot_warning: 'Bot warnings',
   bot_error: 'Bot errors',
 }
@@ -179,6 +186,7 @@ export const TYPE_DESCRIPTIONS: Record<NotificationType, string> = {
   giveaway_started: 'A giveaway goes live in the server.',
   giveaway_ended: 'A giveaway ends and winners are drawn.',
   giveaway_rerolled: 'New winners are drawn for a giveaway.',
+  level_up: 'A member reaches a new level.',
   bot_warning: 'Recoverable issues like failed welcome messages.',
   bot_error: 'Critical bot failures that need attention.',
 }

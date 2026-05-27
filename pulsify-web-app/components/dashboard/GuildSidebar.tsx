@@ -138,7 +138,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
       icon: <Server size={16} />,
       items: [
         { label: 'Channels', href: `${base}/channels`, icon: <Hash size={16} /> },
-        { label: 'Members', href: `${base}/members`, icon: <UserRound size={16} /> },
+        { label: 'Members', href: `${base}/members`, icon: <UserRound size={16} />, matchPrefixes: ['/leveling-settings'] },
         { label: 'Roles', href: `${base}/roles`, icon: <Users size={16} /> },
         { label: 'Events', href: `${base}/events`, icon: <CalendarDays size={16} /> },
       ],

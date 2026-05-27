@@ -14,7 +14,6 @@ import {
   AlertCircle,
   Bot,
 } from 'lucide-react'
-import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CategorySection } from '@/components/ui/category-section'
@@ -28,9 +27,10 @@ import { formatDuration } from '@/lib/analytics'
 import { memberReputation, memberRisk } from '@/lib/member-metrics'
 import type { Reputation, RiskAssessment } from '@/lib/reputation'
 import type { DirectoryMember, DirectoryResponse } from '@/lib/member-profile'
-import { ReputationBadge, RiskBadge } from '@/components/dashboard/members/badges'
+import { ReputationBadge, RiskBadge, LevelBadge } from '@/components/dashboard/members/badges'
 
-type Props = { guildId: string; guildName: string }
+// Body-only — the PageHeader + Directory/Leaderboard tabs live in MembersContent.
+type Props = { guildId: string }
 
 type FilterKey = 'all' | 'active' | 'inactive' | 'at_risk' | 'new' | 'staff' | 'bots'
 
@@ -87,7 +87,7 @@ function relativeTime(iso: string | null): string {
   return `${Math.floor(months / 12)}y ago`
 }
 
-export function MembersDirectory({ guildId, guildName }: Props) {
+export function MembersDirectory({ guildId }: Props) {
   const router = useRouter()
   const [data, setData] = useState<DirectoryResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -155,6 +155,8 @@ export function MembersDirectory({ guildId, guildName }: Props) {
         // message/command activity only nudges reputation, so debounce hard.
         schedule(evt.event_type === 'member_join' || evt.event_type === 'member_leave' ? 1500 : 15000)
       })
+      // XP changes (level/xp columns) are high-volume — debounce hard like activity.
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'member_levels', filter: `guild_id=eq.${guildId}` }, () => schedule(15000))
       .subscribe()
     return () => {
       if (timer) clearTimeout(timer)
@@ -241,6 +243,13 @@ export function MembersDirectory({ guildId, guildName }: Props) {
         case 'reputation':
           cmp = a.reputation.score - b.reputation.score
           break
+        case 'level':
+          cmp = (a.dm.level?.level ?? 0) - (b.dm.level?.level ?? 0)
+          if (cmp === 0) cmp = (a.dm.level?.xp ?? 0) - (b.dm.level?.xp ?? 0)
+          break
+        case 'xp':
+          cmp = (a.dm.level?.xp ?? 0) - (b.dm.level?.xp ?? 0)
+          break
         case 'messages':
           cmp = a.dm.activity.message_count - b.dm.activity.message_count
           break
@@ -277,23 +286,9 @@ export function MembersDirectory({ guildId, guildName }: Props) {
     router.push(`/dashboard/${guildId}/members/${userId}`)
   }
 
-  const header = (
-    <PageHeader
-      title="Members"
-      description={
-        <>
-          Profiles, reputation and activity for members of{' '}
-          <span className="font-medium text-foreground">{guildName}</span>
-        </>
-      }
-      action={<RefreshButton onClick={() => load(true)} refreshing={refreshing} />}
-    />
-  )
-
   if (loading) {
     return (
-      <div className="page-content">
-        {header}
+      <div>
         <div className="mb-8 grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-[116px]" />
@@ -306,15 +301,12 @@ export function MembersDirectory({ guildId, guildName }: Props) {
 
   if (error || !data) {
     return (
-      <div className="page-content">
-        {header}
-        <div
-          className="flex items-center gap-3 rounded-xl border p-5"
-          style={{ background: 'var(--panel)', borderColor: 'rgba(239,68,68,0.35)' }}
-        >
-          <AlertCircle size={18} style={{ color: '#f87171' }} />
-          <p className="text-sm text-muted-foreground">{error ?? 'Members are unavailable right now.'}</p>
-        </div>
+      <div
+        className="flex items-center gap-3 rounded-xl border p-5"
+        style={{ background: 'var(--panel)', borderColor: 'rgba(239,68,68,0.35)' }}
+      >
+        <AlertCircle size={18} style={{ color: '#f87171' }} />
+        <p className="text-sm text-muted-foreground">{error ?? 'Members are unavailable right now.'}</p>
       </div>
     )
   }
@@ -323,9 +315,7 @@ export function MembersDirectory({ guildId, guildName }: Props) {
     data.approximateMemberCount === null || data.members.length >= data.approximateMemberCount
 
   return (
-    <div className="page-content">
-      {header}
-
+    <div>
       <div className="space-y-8">
         <CategorySection
           icon={<Users size={14} />}
@@ -385,23 +375,26 @@ export function MembersDirectory({ guildId, guildName }: Props) {
               </select>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1 rounded-lg border p-1" style={{ borderColor: 'var(--line-strong)' }}>
-              {FILTERS.map((f) => (
-                <button
-                  key={f.key}
-                  onClick={() => {
-                    setFilter(f.key)
-                    setPage(1)
-                  }}
-                  className="rounded-md px-2.5 py-1 text-xs font-medium transition"
-                  style={{
-                    background: filter === f.key ? 'var(--p-soft)' : 'transparent',
-                    color: filter === f.key ? 'var(--p-1)' : 'var(--text-3)',
-                  }}
-                >
-                  {f.label}
-                </button>
-              ))}
+            <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1 rounded-lg border p-1" style={{ borderColor: 'var(--line-strong)' }}>
+                {FILTERS.map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => {
+                      setFilter(f.key)
+                      setPage(1)
+                    }}
+                    className="rounded-md px-2.5 py-1 text-xs font-medium transition"
+                    style={{
+                      background: filter === f.key ? 'var(--p-soft)' : 'transparent',
+                      color: filter === f.key ? 'var(--p-1)' : 'var(--text-3)',
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+              <RefreshButton onClick={() => load(true)} refreshing={refreshing} />
             </div>
           </div>
 
@@ -417,6 +410,8 @@ export function MembersDirectory({ guildId, guildName }: Props) {
                 <thead>
                   <tr className="border-b" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
                     <th className="text-left"><SortableHeader label="Member" columnKey="name" activeKey={sort.key} direction={sort.dir} onSort={handleSort} /></th>
+                    <th className="text-left"><SortableHeader label="Level" columnKey="level" activeKey={sort.key} direction={sort.dir} onSort={handleSort} /></th>
+                    <th className="text-left"><SortableHeader label="XP" columnKey="xp" activeKey={sort.key} direction={sort.dir} onSort={handleSort} /></th>
                     <th className="text-left"><SortableHeader label="Reputation" columnKey="reputation" activeKey={sort.key} direction={sort.dir} onSort={handleSort} /></th>
                     <th className="text-left"><SortableHeader label="Messages" columnKey="messages" activeKey={sort.key} direction={sort.dir} onSort={handleSort} /></th>
                     <th className="text-left"><SortableHeader label="Voice" columnKey="voice" activeKey={sort.key} direction={sort.dir} onSort={handleSort} /></th>
@@ -459,6 +454,8 @@ export function MembersDirectory({ guildId, guildName }: Props) {
                             </div>
                           </div>
                         </td>
+                        <td className="px-4 py-3"><LevelBadge level={r.dm.level?.level ?? 0} size="sm" /></td>
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{(r.dm.level?.xp ?? 0).toLocaleString()}</td>
                         <td className="px-4 py-3"><ReputationBadge reputation={r.reputation} size="sm" /></td>
                         <td className="px-4 py-3">
                           <span className="font-mono text-xs text-foreground">{r.dm.activity.message_count.toLocaleString()}</span>

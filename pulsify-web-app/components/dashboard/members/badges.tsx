@@ -1,5 +1,6 @@
-import { ShieldAlert, ShieldCheck, ShieldQuestion } from 'lucide-react'
+import { ShieldAlert, ShieldCheck, ShieldQuestion, Sparkles } from 'lucide-react'
 import type { Reputation, RiskAssessment, RiskLevel } from '@/lib/reputation'
+import { levelBadge, progressInLevel, type LevelCurve } from '@/lib/leveling'
 
 function tint(color: string, pct: number): string {
   return `color-mix(in srgb, ${color} ${pct}%, transparent)`
@@ -60,5 +61,64 @@ export function RiskBadge({
       {RISK_ICON[risk.level]}
       {risk.label}
     </span>
+  )
+}
+
+/** Coloured level pill — "Lvl N", tinted by the level tier. */
+export function LevelBadge({
+  level,
+  size = 'md',
+  showTier = false,
+}: {
+  level: number
+  size?: 'sm' | 'md'
+  showTier?: boolean
+}) {
+  const { label, color } = levelBadge(level)
+  const pad = size === 'sm' ? 'px-1.5 py-0.5 text-xs' : 'px-2 py-1 text-sm'
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-md font-medium ${pad}`}
+      style={{ background: tint(color, 14), color }}
+      title={`Level ${level} — ${label}`}
+    >
+      <Sparkles size={size === 'sm' ? 10 : 12} />
+      <span className="font-mono font-bold tabular-nums">Lvl {level}</span>
+      {showTier && <span className="opacity-90">{label}</span>}
+    </span>
+  )
+}
+
+/**
+ * Animated XP progress bar to the next level. `xp` is the member's total XP;
+ * `curve` comes from the directory/profile response. The `.xp-bar` fill is
+ * animated in globals.css (auto-neutralised under [data-animations="false"]).
+ */
+export function XpProgress({
+  xp,
+  curve,
+  showLabel = true,
+  className,
+}: {
+  xp: number
+  curve: LevelCurve
+  showLabel?: boolean
+  className?: string
+}) {
+  const p = progressInLevel(xp, curve)
+  return (
+    <div className={className}>
+      {showLabel && (
+        <div className="mb-1 flex items-center justify-between text-[10px] text-subtle">
+          <span>Lvl {p.level}</span>
+          <span className="font-mono">
+            {p.intoLevel.toLocaleString()} / {p.span.toLocaleString()} XP
+          </span>
+        </div>
+      )}
+      <div className="h-1.5 w-full overflow-hidden rounded-full" style={{ background: 'var(--bg-2)' }}>
+        <div className="xp-bar h-1.5 rounded-full" style={{ width: `${p.pct}%`, background: 'var(--p-1)' }} />
+      </div>
+    </div>
   )
 }
