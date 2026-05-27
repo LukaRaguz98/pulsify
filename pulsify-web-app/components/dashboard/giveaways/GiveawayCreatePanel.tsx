@@ -2,7 +2,18 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { X, Gift, Users, AlertCircle, Eye, Sparkles, Plus } from 'lucide-react'
+import {
+  X,
+  Gift,
+  Users,
+  AlertCircle,
+  Eye,
+  Sparkles,
+  Loader2,
+  Clock,
+  Shield,
+  Ban,
+} from 'lucide-react'
 import {
   GIVEAWAY_PRESETS,
   defaultDraft,
@@ -27,6 +38,19 @@ type Props = {
   editing: Giveaway | null
   onClose: () => void
 }
+
+// Shared field look — matches the dashboard's other editors (AutomationEditPanel):
+// a darker var(--bg-2) inset sitting on the var(--panel) drawer, so fields read
+// clearly in both light and dark themes (the old var(--panel)-on-var(--bg) layout
+// made fields blend into the drawer).
+const FIELD_CLASS =
+  'w-full rounded-lg border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-1'
+const fieldStyle: React.CSSProperties = {
+  background: 'var(--bg-2)',
+  borderColor: 'var(--line-strong)',
+  color: 'var(--text)',
+}
+const errorFieldStyle: React.CSSProperties = { ...fieldStyle, borderColor: 'rgba(239,68,68,0.6)' }
 
 // Minutes presets for the duration picker. `short` is the abbreviation shown as
 // a hint so it's obvious the dropdown on the right picks the time unit (m/h/d).
@@ -64,6 +88,7 @@ export function GiveawayCreatePanel({ guildId, channels, roles, editing, onClose
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
 
   const isEdit = editing !== null
 
@@ -104,6 +129,12 @@ export function GiveawayCreatePanel({ guildId, channels, roles, editing, onClose
   const [startValue, setStartValue] = useState(1)
   const [startUnit, setStartUnit] = useState(60)
   const [blacklistText, setBlacklistText] = useState(() => editing?.blacklist_user_ids.join('\n') ?? '')
+
+  const roleNameById = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const r of roles) m.set(r.id, r.name)
+    return m
+  }, [roles])
 
   const set = <K extends keyof GiveawayDraft>(key: K, value: GiveawayDraft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }))
@@ -153,8 +184,25 @@ export function GiveawayCreatePanel({ guildId, channels, roles, editing, onClose
   const durationMinutes = Math.max(1, Math.round(durValue * durUnit))
   const startDelayMinutes = scheduleStart ? Math.max(0, Math.round(startValue * startUnit)) : 0
 
+  // Per-field validation, surfaced inline once a field is touched / on submit.
+  const fieldErrors = useMemo(() => {
+    const e: Record<string, string> = {}
+    if (!draft.title.trim()) e.title = 'Give your giveaway a title.'
+    if (!draft.prize.trim()) e.prize = 'Describe the prize.'
+    if (!isEdit && !draft.channel_id) e.channel_id = 'Pick a channel to post in.'
+    return e
+  }, [draft.title, draft.prize, draft.channel_id, isEdit])
+
+  const markTouched = (key: string) => setTouched((t) => (t[key] ? t : { ...t, [key]: true }))
+  const showError = (key: string) => touched[key] && fieldErrors[key]
+
   async function submit() {
     setError(null)
+    if (Object.keys(fieldErrors).length > 0) {
+      setTouched({ title: true, prize: true, channel_id: true })
+      setError('Fix the highlighted fields before publishing.')
+      return
+    }
     setSaving(true)
     const blacklist = blacklistText
       .split(/[\s,]+/)
@@ -199,59 +247,77 @@ export function GiveawayCreatePanel({ guildId, channels, roles, editing, onClose
       <aside
         role="dialog"
         aria-modal="true"
-        className="gw-drawer fixed inset-y-0 right-0 z-[70] flex w-full max-w-[560px] flex-col border-l shadow-2xl"
-        style={{ background: 'var(--bg)', borderColor: 'var(--line-strong)' }}
+        aria-label={isEdit ? 'Edit giveaway' : 'New giveaway'}
+        className="gw-drawer fixed inset-y-0 right-0 z-[70] flex w-full max-w-[640px] flex-col border-l shadow-2xl"
+        style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b px-5 py-3.5" style={{ borderColor: 'var(--line-strong)' }}>
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: 'var(--p-soft)', color: 'var(--p-1)' }}>
-              <Gift size={16} />
+        <header className="flex items-center justify-between gap-3 border-b px-5 py-4" style={{ borderColor: 'var(--line-strong)' }}>
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: 'var(--p-soft)', color: 'var(--p-1)' }}>
+              <Gift size={17} />
             </div>
-            <h2 className="font-semibold text-foreground">{isEdit ? 'Edit giveaway' : 'New giveaway'}</h2>
+            <div className="min-w-0">
+              <h2 className="truncate font-semibold text-foreground">{isEdit ? 'Edit giveaway' : 'New giveaway'}</h2>
+              <p className="truncate text-xs text-subtle">
+                {isEdit ? 'Update the details — channel and timing stay as set.' : 'Set it up, preview the embed, and publish to Discord.'}
+              </p>
+            </div>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 transition-colors" style={{ color: 'var(--text-3)' }}>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+            aria-label="Close"
+            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+          >
             <X size={18} />
           </button>
-        </div>
+        </header>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
-            {!isEdit && (
-              <div>
-                <Label icon={<Sparkles size={13} />}>Start from a template</Label>
-                <div className="flex flex-wrap gap-2">
-                  {GIVEAWAY_PRESETS.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => applyPreset(p.id)}
-                      className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors"
-                      style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
-                    >
-                      <GiveawayIcon name={p.icon} size={13} />
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          {/* Templates */}
+          {!isEdit && (
+            <Section icon={<Sparkles size={13} />} label="Start from a template" description="Pre-fill the form for a common giveaway, then tweak it.">
+              <div className="flex flex-wrap gap-2">
+                {GIVEAWAY_PRESETS.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => applyPreset(p.id)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors"
+                    style={{ borderColor: 'var(--line-strong)', background: 'var(--bg-2)', color: 'var(--text-2)' }}
+                  >
+                    <GiveawayIcon name={p.icon} size={13} />
+                    {p.label}
+                  </button>
+                ))}
               </div>
-            )}
+            </Section>
+          )}
 
-            <Field label="Title">
+          {/* Details */}
+          <Section icon={<Gift size={13} />} label="Details" description="What members are entering for.">
+            <Field label="Title" error={showError('title') ? fieldErrors.title : undefined}>
               <input
                 value={draft.title}
                 maxLength={100}
                 onChange={(e) => set('title', e.target.value)}
-                className="gw-input"
+                onBlur={() => markTouched('title')}
+                className={FIELD_CLASS}
+                style={showError('title') ? errorFieldStyle : fieldStyle}
                 placeholder="🎉 Giveaway"
               />
             </Field>
 
-            <Field label="Prize">
+            <Field label="Prize" error={showError('prize') ? fieldErrors.prize : undefined}>
               <input
                 value={draft.prize}
                 maxLength={200}
                 onChange={(e) => set('prize', e.target.value)}
-                className="gw-input"
+                onBlur={() => markTouched('prize')}
+                className={FIELD_CLASS}
+                style={showError('prize') ? errorFieldStyle : fieldStyle}
                 placeholder="Discord Nitro (1 month)"
               />
             </Field>
@@ -262,18 +328,21 @@ export function GiveawayCreatePanel({ guildId, channels, roles, editing, onClose
                 maxLength={1500}
                 rows={3}
                 onChange={(e) => set('description', e.target.value)}
-                className="gw-input resize-none"
+                className={`${FIELD_CLASS} resize-none`}
+                style={fieldStyle}
                 placeholder="Tell members what this is about…"
               />
             </Field>
 
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Channel">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Channel" error={showError('channel_id') ? fieldErrors.channel_id : undefined}>
                 <select
                   value={draft.channel_id}
                   disabled={isEdit}
                   onChange={(e) => set('channel_id', e.target.value)}
-                  className="gw-input disabled:opacity-60"
+                  onBlur={() => markTouched('channel_id')}
+                  className={`${FIELD_CLASS} disabled:opacity-60`}
+                  style={showError('channel_id') ? errorFieldStyle : fieldStyle}
                 >
                   {channels.length === 0 && <option value="">No channels</option>}
                   {channels.map((c) => (
@@ -290,30 +359,65 @@ export function GiveawayCreatePanel({ guildId, channels, roles, editing, onClose
                   max={50}
                   value={draft.winner_count}
                   onChange={(e) => set('winner_count', Math.max(1, Number(e.target.value) || 1))}
-                  className="gw-input"
+                  className={FIELD_CLASS}
+                  style={fieldStyle}
                 />
               </Field>
             </div>
+          </Section>
 
-            {!isEdit && (
-              <>
-                <Field label="Duration">
+          {/* Timing (create only) */}
+          {!isEdit && (
+            <Section icon={<Clock size={13} />} label="Timing" description="How long it runs, and when it starts.">
+              <Field label="Duration">
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    value={durValue}
+                    onChange={(e) => setDurValue(Math.max(1, Number(e.target.value) || 1))}
+                    className={`${FIELD_CLASS} flex-1`}
+                    style={{ ...fieldStyle, minWidth: 0 }}
+                    aria-label="Duration amount"
+                  />
+                  <select
+                    value={durUnit}
+                    onChange={(e) => setDurUnit(Number(e.target.value))}
+                    className={`${FIELD_CLASS} flex-1`}
+                    style={{ ...fieldStyle, minWidth: 0 }}
+                    aria-label="Duration time unit"
+                  >
+                    {DURATION_UNITS.map((u) => (
+                      <option key={u.label} value={u.minutes}>
+                        {u.label} ({u.short})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </Field>
+
+              <label className="flex items-center gap-2.5 text-sm" style={{ color: 'var(--text-2)' }}>
+                <input type="checkbox" className="accent-[var(--p-1)]" checked={scheduleStart} onChange={(e) => setScheduleStart(e.target.checked)} />
+                Schedule the start for later
+              </label>
+              {scheduleStart && (
+                <Field label="Starts in">
                   <div className="flex gap-2">
                     <input
                       type="number"
                       min={1}
-                      value={durValue}
-                      onChange={(e) => setDurValue(Math.max(1, Number(e.target.value) || 1))}
-                      className="gw-input flex-1"
-                      style={{ minWidth: 0 }}
-                      aria-label="Duration amount"
+                      value={startValue}
+                      onChange={(e) => setStartValue(Math.max(1, Number(e.target.value) || 1))}
+                      className={`${FIELD_CLASS} flex-1`}
+                      style={{ ...fieldStyle, minWidth: 0 }}
+                      aria-label="Start delay amount"
                     />
                     <select
-                      value={durUnit}
-                      onChange={(e) => setDurUnit(Number(e.target.value))}
-                      className="gw-input flex-1"
-                      style={{ minWidth: 0 }}
-                      aria-label="Duration time unit"
+                      value={startUnit}
+                      onChange={(e) => setStartUnit(Number(e.target.value))}
+                      className={`${FIELD_CLASS} flex-1`}
+                      style={{ ...fieldStyle, minWidth: 0 }}
+                      aria-label="Start delay time unit"
                     >
                       {DURATION_UNITS.map((u) => (
                         <option key={u.label} value={u.minutes}>
@@ -323,185 +427,161 @@ export function GiveawayCreatePanel({ guildId, channels, roles, editing, onClose
                     </select>
                   </div>
                 </Field>
+              )}
+            </Section>
+          )}
 
-                <label className="flex items-center gap-2.5 text-sm" style={{ color: 'var(--text-2)' }}>
-                  <input type="checkbox" checked={scheduleStart} onChange={(e) => setScheduleStart(e.target.checked)} />
-                  Schedule the start for later
-                </label>
-                {scheduleStart && (
-                  <Field label="Starts in">
-                    <div className="flex gap-2">
-                      <input
-                        type="number"
-                        min={1}
-                        value={startValue}
-                        onChange={(e) => setStartValue(Math.max(1, Number(e.target.value) || 1))}
-                        className="gw-input flex-1"
-                        style={{ minWidth: 0 }}
-                        aria-label="Start delay amount"
-                      />
-                      <select
-                        value={startUnit}
-                        onChange={(e) => setStartUnit(Number(e.target.value))}
-                        className="gw-input flex-1"
-                        style={{ minWidth: 0 }}
-                        aria-label="Start delay time unit"
-                      >
-                        {DURATION_UNITS.map((u) => (
-                          <option key={u.label} value={u.minutes}>
-                            {u.label} ({u.short})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </Field>
-                )}
-              </>
+          {/* Requirements */}
+          <Section icon={<Shield size={13} />} label="Entry requirements" description="Optional gates an entrant must pass to join.">
+            <Field label="Required roles" hint="leave empty for everyone">
+              <div
+                className="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto rounded-lg border p-2"
+                style={{ borderColor: 'var(--line-strong)', background: 'var(--bg-2)' }}
+              >
+                {roles.length === 0 && <span className="text-xs" style={{ color: 'var(--text-3)' }}>No roles</span>}
+                {roles.map((r) => {
+                  const on = draft.requirements.required_role_ids.includes(r.id)
+                  const color = r.color ? `#${r.color.toString(16).padStart(6, '0')}` : 'var(--text-2)'
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => toggleRole(r.id)}
+                      className="rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors"
+                      style={{
+                        borderColor: on ? color : 'var(--line-strong)',
+                        background: on ? `${r.color ? color : 'var(--p-1)'}22` : 'transparent',
+                        color: on ? color : 'var(--text-3)',
+                      }}
+                    >
+                      {r.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </Field>
+
+            {draft.requirements.required_role_ids.length > 1 && (
+              <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-2)' }}>
+                <span className="shrink-0">Member must have</span>
+                <select
+                  value={draft.requirements.required_role_mode}
+                  onChange={(e) => setReq('required_role_mode', e.target.value === 'all' ? 'all' : 'any')}
+                  className={`${FIELD_CLASS} flex-1 px-2 py-1 text-xs`}
+                  style={fieldStyle}
+                >
+                  <option value="any">any of these roles</option>
+                  <option value="all">all of these roles</option>
+                </select>
+              </label>
             )}
 
-            {/* Requirements */}
-            <div className="rounded-xl border p-3.5" style={{ borderColor: 'var(--line-strong)' }}>
-              <p className="mb-3 text-sm font-semibold text-foreground">Entry requirements</p>
-
-              <Field label="Required roles" hint="leave empty for everyone">
-                <div
-                  className="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto rounded-lg border p-2"
-                  style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}
-                >
-                  {roles.length === 0 && <span className="text-xs" style={{ color: 'var(--text-3)' }}>No roles</span>}
-                  {roles.map((r) => {
-                    const on = draft.requirements.required_role_ids.includes(r.id)
-                    const color = r.color ? `#${r.color.toString(16).padStart(6, '0')}` : 'var(--text-2)'
-                    return (
-                      <button
-                        key={r.id}
-                        type="button"
-                        onClick={() => toggleRole(r.id)}
-                        className="rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors"
-                        style={{
-                          borderColor: on ? color : 'var(--line-strong)',
-                          background: on ? `${r.color ? color : 'var(--p-1)'}22` : 'transparent',
-                          color: on ? color : 'var(--text-3)',
-                        }}
-                      >
-                        {r.name}
-                      </button>
-                    )
-                  })}
-                </div>
-              </Field>
-
-              {draft.requirements.required_role_ids.length > 1 && (
-                <label className="mb-3 mt-3 flex items-center gap-2 text-xs" style={{ color: 'var(--text-2)' }}>
-                  <span className="shrink-0">Member must have</span>
-                  <select
-                    value={draft.requirements.required_role_mode}
-                    onChange={(e) => setReq('required_role_mode', e.target.value === 'all' ? 'all' : 'any')}
-                    className="gw-input flex-1 px-2 py-1 text-xs"
-                  >
-                    <option value="any">any of these roles</option>
-                    <option value="all">all of these roles</option>
-                  </select>
-                </label>
-              )}
-
-              <div className="mt-3 space-y-3">
-                <Field label="Min account age">
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      min={0}
-                      value={acctAge.value}
-                      onChange={(e) => changeAcctAge(Math.max(0, Number(e.target.value) || 0), acctAge.unit)}
-                      className="gw-input flex-1"
-                      style={{ minWidth: 0 }}
-                      aria-label="Minimum account age"
-                    />
-                    <select
-                      value={acctAge.unit}
-                      onChange={(e) => changeAcctAge(acctAge.value, Number(e.target.value))}
-                      className="gw-input flex-1"
-                      style={{ minWidth: 0 }}
-                      aria-label="Account age unit"
-                    >
-                      {DAY_UNITS.map((u) => (
-                        <option key={u.label} value={u.days}>
-                          {u.label} ({u.short})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </Field>
-                <Field label="Min in server">
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      min={0}
-                      value={serverAge.value}
-                      onChange={(e) => changeServerAge(Math.max(0, Number(e.target.value) || 0), serverAge.unit)}
-                      className="gw-input flex-1"
-                      style={{ minWidth: 0 }}
-                      aria-label="Minimum time in server"
-                    />
-                    <select
-                      value={serverAge.unit}
-                      onChange={(e) => changeServerAge(serverAge.value, Number(e.target.value))}
-                      className="gw-input flex-1"
-                      style={{ minWidth: 0 }}
-                      aria-label="Time in server unit"
-                    >
-                      {DAY_UNITS.map((u) => (
-                        <option key={u.label} value={u.days}>
-                          {u.label} ({u.short})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </Field>
-                <Field label="Min messages">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Min account age">
+                <div className="flex gap-2">
                   <input
                     type="number"
                     min={0}
-                    value={draft.requirements.min_messages}
-                    onChange={(e) => setReq('min_messages', Math.max(0, Number(e.target.value) || 0))}
-                    className="gw-input"
+                    value={acctAge.value}
+                    onChange={(e) => changeAcctAge(Math.max(0, Number(e.target.value) || 0), acctAge.unit)}
+                    className={`${FIELD_CLASS} flex-1`}
+                    style={{ ...fieldStyle, minWidth: 0 }}
+                    aria-label="Minimum account age"
                   />
-                </Field>
-              </div>
-
-              <label className="mt-3 flex items-center gap-2.5 text-sm" style={{ color: 'var(--text-2)' }}>
-                <input
-                  type="checkbox"
-                  checked={draft.requirements.anti_alt}
-                  onChange={(e) => setReq('anti_alt', e.target.checked)}
-                />
-                Anti-alt protection
-                <span className="text-xs" style={{ color: 'var(--text-3)' }}>(account &gt; 30 days unless a stricter age is set)</span>
-              </label>
+                  <select
+                    value={acctAge.unit}
+                    onChange={(e) => changeAcctAge(acctAge.value, Number(e.target.value))}
+                    className={`${FIELD_CLASS} flex-1`}
+                    style={{ ...fieldStyle, minWidth: 0 }}
+                    aria-label="Account age unit"
+                  >
+                    {DAY_UNITS.map((u) => (
+                      <option key={u.label} value={u.days}>
+                        {u.label} ({u.short})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </Field>
+              <Field label="Min in server">
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    value={serverAge.value}
+                    onChange={(e) => changeServerAge(Math.max(0, Number(e.target.value) || 0), serverAge.unit)}
+                    className={`${FIELD_CLASS} flex-1`}
+                    style={{ ...fieldStyle, minWidth: 0 }}
+                    aria-label="Minimum time in server"
+                  />
+                  <select
+                    value={serverAge.unit}
+                    onChange={(e) => changeServerAge(serverAge.value, Number(e.target.value))}
+                    className={`${FIELD_CLASS} flex-1`}
+                    style={{ ...fieldStyle, minWidth: 0 }}
+                    aria-label="Time in server unit"
+                  >
+                    {DAY_UNITS.map((u) => (
+                      <option key={u.label} value={u.days}>
+                        {u.label} ({u.short})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </Field>
             </div>
 
-            {/* Blacklist */}
-            <Field label="Blacklist" hint="user IDs, one per line — barred from entering">
-              <textarea
-                value={blacklistText}
-                rows={2}
-                onChange={(e) => setBlacklistText(e.target.value)}
-                className="gw-input resize-none font-mono text-xs"
-                placeholder="123456789012345678"
+            <Field label="Min messages" hint="tracked messages sent in this server">
+              <input
+                type="number"
+                min={0}
+                value={draft.requirements.min_messages}
+                onChange={(e) => setReq('min_messages', Math.max(0, Number(e.target.value) || 0))}
+                className={FIELD_CLASS}
+                style={fieldStyle}
               />
             </Field>
-          {/* ── Live preview ──────────────────────────────────────── */}
-          <div className="rounded-xl border p-4" style={{ borderColor: 'var(--line-strong)', background: 'var(--bg-2)' }}>
-            <Label icon={<Eye size={13} />}>Preview</Label>
-            <GiveawayPreview draft={draft} durationMinutes={durationMinutes} />
-          </div>
+
+            <label className="flex items-center gap-2.5 rounded-lg border px-3 py-2 text-sm" style={{ borderColor: 'var(--line-strong)', background: 'var(--bg-2)', color: 'var(--text-2)' }}>
+              <input
+                type="checkbox"
+                className="accent-[var(--p-1)]"
+                checked={draft.requirements.anti_alt}
+                onChange={(e) => setReq('anti_alt', e.target.checked)}
+              />
+              <span className="min-w-0">
+                Anti-alt protection
+                <span className="ml-1 text-xs" style={{ color: 'var(--text-3)' }}>(account 30+ days unless a stricter age is set)</span>
+              </span>
+            </label>
+          </Section>
+
+          {/* Blacklist */}
+          <Section icon={<Ban size={13} />} label="Blacklist" description="User IDs barred from entering — one per line.">
+            <textarea
+              value={blacklistText}
+              rows={2}
+              onChange={(e) => setBlacklistText(e.target.value)}
+              className={`${FIELD_CLASS} resize-none font-mono text-xs`}
+              style={fieldStyle}
+              placeholder="123456789012345678"
+            />
+          </Section>
+
+          {/* Live preview */}
+          <Section icon={<Eye size={13} />} label="Preview" description="How the giveaway appears in Discord.">
+            <GiveawayPreview draft={draft} durationMinutes={durationMinutes} roleNameById={roleNameById} />
+          </Section>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between gap-3 border-t px-5 py-3.5" style={{ borderColor: 'var(--line-strong)' }}>
+        <footer
+          className="flex items-center justify-between gap-3 border-t px-5 py-3.5"
+          style={{ borderColor: 'var(--line-strong)', background: 'var(--bg-2)' }}
+        >
           {error ? (
             <span className="flex items-center gap-1.5 text-sm" style={{ color: '#f87171' }}>
-              <AlertCircle size={14} />
+              <AlertCircle size={14} className="shrink-0" />
               {error}
             </span>
           ) : (
@@ -509,45 +589,71 @@ export function GiveawayCreatePanel({ guildId, channels, roles, editing, onClose
               {isEdit ? 'Channel and timing stay as set.' : scheduleStart ? 'Posts when the start time arrives.' : 'Posts to Discord immediately.'}
             </span>
           )}
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <button
+              type="button"
               onClick={onClose}
-              className="rounded-lg border px-3.5 py-2 text-sm font-medium"
+              disabled={busy}
+              className="rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-50"
               style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
             >
               Cancel
             </button>
             <button
+              type="button"
               onClick={submit}
               disabled={busy}
-              className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-              style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}
+              className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-all disabled:opacity-60"
+              style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))', boxShadow: '0 4px 14px -4px var(--p-glow)' }}
             >
-              {isEdit ? <Plus size={15} /> : <Gift size={15} />}
+              {busy ? <Loader2 size={15} className="animate-spin" /> : <Gift size={15} />}
               {busy ? 'Saving…' : isEdit ? 'Save changes' : scheduleStart ? 'Schedule giveaway' : 'Launch giveaway'}
             </button>
           </div>
-        </div>
+        </footer>
       </aside>
     </>
   )
 }
 
 // ── Live preview (a Discord-style mock of the giveaway message) ───────────────
+// Kept in lock-step with the embed built in actions.ts / giveaways.js: badge +
+// title, description, Prize / Winners / Ends block, a single compact
+// requirements line, the Join button, and the Pulse footer.
 
-function GiveawayPreview({ draft, durationMinutes }: { draft: GiveawayDraft; durationMinutes: number }) {
+function GiveawayPreview({
+  draft,
+  durationMinutes,
+  roleNameById,
+}: {
+  draft: GiveawayDraft
+  durationMinutes: number
+  roleNameById: Map<string, string>
+}) {
   const req = draft.requirements
   const endLabel = useMemo(() => formatDuration(durationMinutes * 60_000), [durationMinutes])
+  const reqText = useMemo(
+    () => describeRequirements(req, (id) => roleNameById.get(id) ?? 'a role').join(' · '),
+    [req, roleNameById],
+  )
 
   return (
-    <div className="rounded-xl border-l-4 p-3.5" style={{ borderColor: 'var(--p-1)', background: 'var(--panel)' }}>
-      <p className="font-bold text-foreground">🎉 {draft.title || 'Giveaway'}</p>
-      {draft.description && (
-        <p className="mt-1 whitespace-pre-wrap text-sm" style={{ color: 'var(--text-2)' }}>
-          {draft.description}
-        </p>
-      )}
-      <div className="mt-2 space-y-0.5 text-sm" style={{ color: 'var(--text-2)' }}>
+    <div className="rounded-xl border-l-4 p-4" style={{ borderColor: 'var(--p-1)', background: 'var(--bg-2)' }}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="break-words font-bold text-foreground">{draft.title || 'Giveaway'}</p>
+          {/* Subtitle sits beside the badge — description, or a fallback blurb
+              when empty — matching the posted embed so the header isn't bare. */}
+          <p className="mt-1 whitespace-pre-wrap text-sm" style={{ color: 'var(--text-2)' }}>
+            {draft.description || 'Click Join Giveaway below for your chance to win!'}
+          </p>
+        </div>
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: 'var(--p-soft)', color: 'var(--p-1)' }}>
+          <Gift size={16} />
+        </span>
+      </div>
+
+      <div className="mt-2.5 space-y-0.5 text-sm" style={{ color: 'var(--text-2)' }}>
         <p>
           <span className="font-semibold text-foreground">Prize:</span> {draft.prize || '—'}
         </p>
@@ -558,56 +664,84 @@ function GiveawayPreview({ draft, durationMinutes }: { draft: GiveawayDraft; dur
           <span className="font-semibold text-foreground">Ends:</span> in {endLabel}
         </p>
       </div>
+
       {hasRequirements(req) && (
-        <div className="mt-2 text-[11px]" style={{ color: 'var(--text-3)' }}>
-          <p>🔒 Requirements:</p>
-          <ul className="mt-0.5 space-y-0.5">
-            {describeRequirements(req).map((r, i) => (
-              <li key={i}>• {r}</li>
-            ))}
-          </ul>
-        </div>
+        <p className="mt-2 text-[11px] leading-relaxed" style={{ color: 'var(--text-3)' }}>
+          🔒 <span className="font-semibold">Requirements:</span> {reqText}
+        </p>
       )}
+
       <div className="mt-3 flex items-center gap-2">
         <span
           className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white"
           style={{ background: '#5865f2' }}
         >
-          <Gift size={13} /> Join Giveaway
+          🎉 Join Giveaway
         </span>
-        <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs" style={{ background: 'var(--bg-2)', color: 'var(--text-3)' }}>
+        <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs" style={{ background: 'var(--panel)', color: 'var(--text-3)' }}>
           <Users size={12} /> 0 entries
         </span>
       </div>
+
+      <p className="mt-2.5 text-[10px]" style={{ color: 'var(--text-3)' }}>Pulse · Giveaway</p>
     </div>
   )
 }
 
 // ── Small form primitives ─────────────────────────────────────────────────────
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Section({
+  icon,
+  label,
+  description,
+  children,
+}: {
+  icon: React.ReactNode
+  label: string
+  description?: string
+  children: React.ReactNode
+}) {
   return (
-    <div>
-      <div className="mb-1 flex items-baseline justify-between">
-        <label className="text-xs font-semibold" style={{ color: 'var(--text-2)' }}>
-          {label}
-        </label>
-        {hint && (
-          <span className="text-[10px]" style={{ color: 'var(--text-3)' }}>
-            {hint}
-          </span>
-        )}
+    <section className="mb-6 last:mb-0">
+      <div className="mb-3 flex items-center gap-2.5">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ background: 'var(--bg-2)', color: 'var(--text-3)', border: '1px solid var(--line-strong)' }}>
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-2)' }}>{label}</h3>
+          {description && <p className="text-xs text-subtle">{description}</p>}
+        </div>
+        <div className="ml-1 h-px flex-1" style={{ background: 'var(--line-strong)' }} />
       </div>
-      {children}
-    </div>
+      <div className="space-y-3">{children}</div>
+    </section>
   )
 }
 
-function Label({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+function Field({
+  label,
+  hint,
+  error,
+  children,
+}: {
+  label: string
+  hint?: string
+  error?: string
+  children: React.ReactNode
+}) {
   return (
-    <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
-      {icon}
+    <div>
+      <div className="mb-1.5 flex items-baseline justify-between">
+        <label className="text-xs font-medium text-muted-foreground">{label}</label>
+        {hint && <span className="text-[10px]" style={{ color: 'var(--text-3)' }}>{hint}</span>}
+      </div>
       {children}
-    </p>
+      {error && (
+        <p className="mt-1 flex items-center gap-1 text-[11px]" style={{ color: '#f87171' }}>
+          <AlertCircle size={11} />
+          {error}
+        </p>
+      )}
+    </div>
   )
 }

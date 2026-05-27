@@ -18,17 +18,61 @@
 // tickets.js ↔ lib/tickets.ts and scheduler.js ↔ lib/automations.ts).
 
 const { Events, MessageFlags } = require("discord.js");
+const fs = require("node:fs");
+const path = require("node:path");
 const { recordNotification } = require("./notifications");
 
 const GW = "gw";
 const TICK_MS = 30 * 1000; // lifecycle scan every 30s
 const BRAND = 0x8b5cf6; // Pulsify violet — the giveaway accent
+const GREY = 0x94a3b8; // cancelled
+const ENDED = 0xa855f7; // settled / winner announcement
 const ANTI_ALT_DEFAULT_DAYS = 30;
 const DISCORD_EPOCH = 1420070400000n;
+
+// ── Brand icon ────────────────────────────────────────────────────────────────
+// The giveaway embeds carry the Pulse giveaway badge as a header thumbnail, the
+// same way /serverinfo and the ticket opener do. Loaded once at startup; if the
+// asset is missing the embeds fall back to a plain heading (no broken ref). The
+// buffer is re-attached on every FRESH post — message edits (the entry-count
+// bump, the settled state) preserve attachments as long as we don't send a
+// `files`/`attachments` field, so the thumbnail survives without re-uploading.
+const ICON_NAME = "pulse-giveaway.png";
+let ICON_BUFFER = null;
+try {
+  ICON_BUFFER = fs.readFileSync(path.join(__dirname, "..", "resources", ICON_NAME));
+} catch {
+  ICON_BUFFER = null;
+}
+const HAS_ICON = ICON_BUFFER !== null;
+/** discord.js `files` array for a fresh post (empty when the asset is absent). */
+const iconFiles = () => (HAS_ICON ? [{ attachment: ICON_BUFFER, name: ICON_NAME }] : []);
 
 // ── Components V2 shorthands (raw objects — match what the dashboard posts) ───
 const td = (content) => ({ type: 10, content });
 const divider = () => ({ type: 14, divider: true, spacing: 1 });
+
+// Flavour line shown under the title when the host wrote no description, so the
+// header never looks empty next to the badge.
+const JOIN_BLURB = "Click **Join Giveaway** below for your chance to win!";
+
+// Header block(s): the title heading plus a short subtitle (description or
+// fallback) sitting beside the giveaway badge thumbnail (type-9 Section). Two
+// lines of text roughly match the thumbnail's height, so the space next to it
+// doesn't read as an empty gap. Returns an ARRAY so callers spread it into the
+// body; falls back to plain text components when the icon is unavailable.
+function headerBlocks(title, subtitle) {
+  const lines = [td(`# ${title}`)];
+  if (subtitle) lines.push(td(subtitle));
+  if (!HAS_ICON) return lines;
+  return [
+    {
+      type: 9,
+      components: lines,
+      accessory: { type: 11, media: { url: `attachment://${ICON_NAME}` }, description: "Pulse giveaway" },
+    },
+  ];
+}
 
 function snowflakeToDate(id) {
   try {
@@ -104,16 +148,28 @@ function checkEligibility(req, facts, now = new Date()) {
   return { ok: true };
 }
 
-function describeRequirements(req) {
+// Mirror of describeRequirements in lib/giveaways.ts — keep the wording in sync.
+// `resolveRole` defaults to a Discord role mention so the embed renders names.
+function describeRequirements(req, resolveRole = (id) => `<@&${id}>`) {
   const out = [];
+
   if (req.required_role_ids.length > 0) {
-    const verb = req.required_role_mode === "all" ? "all of" : "one of";
-    out.push(`${verb} ${req.required_role_ids.map((r) => `<@&${r}>`).join(", ")}`);
+    const mode = req.required_role_mode === "all" ? "all" : "any";
+    const names = req.required_role_ids.map(resolveRole);
+    out.push(
+      names.length === 1
+        ? `Required role: ${names[0]}`
+        : `Required roles (${mode}): ${names.join(", ")}`,
+    );
   }
+
   const acct = effectiveAccountAgeDays(req);
-  if (acct > 0) out.push(`account > ${acct}d old`);
-  if (req.min_server_age_days > 0) out.push(`member > ${req.min_server_age_days}d`);
-  if (req.min_messages > 0) out.push(`> ${req.min_messages} messages`);
+  if (acct > 0) out.push(`Account age: ${acct}+ ${acct === 1 ? "day" : "days"}`);
+  if (req.min_server_age_days > 0) {
+    out.push(`In server: ${req.min_server_age_days}+ ${req.min_server_age_days === 1 ? "day" : "days"}`);
+  }
+  if (req.min_messages > 0) out.push(`Minimum messages: ${req.min_messages}`);
+
   return out;
 }
 
@@ -156,8 +212,12 @@ function createGiveaways(client, supabase) {
   function activeContainer(g) {
     const req = normaliseRequirements(g.requirements);
     const endUnix = Math.floor(new Date(g.ends_at).getTime() / 1000);
-    const body = [td(`# 🎉 ${g.title}`)];
-    if (g.description) body.push(td(String(g.description).slice(0, 1500)));
+    // No literal 🎉 prefix — preset titles already carry one, and the badge +
+    // accent bar brand the embed (matches the no-emoji-heading convention). The
+    // description (or a fallback blurb) sits in the header beside the badge so
+    // the top of the embed isn't left half-empty.
+    const subtitle = g.description ? String(g.description).slice(0, 1500) : JOIN_BLURB;
+    const body = [...headerBlocks(g.title, subtitle)];
     body.push(
       td(
         `**Prize:** ${g.prize}\n` +
@@ -165,36 +225,40 @@ function createGiveaways(client, supabase) {
           `**Ends:** <t:${endUnix}:R> (<t:${endUnix}:f>)`,
       ),
     );
+    // Requirements on a single compact subtext line (· separated) rather than a
+    // stacked bullet list — readable even with several conditions enabled.
     if (hasRequirements(req)) {
-      const lines = describeRequirements(req).map((r) => `-# • ${r}`).join("\n");
-      body.push(td(`-# 🔒 Requirements:\n${lines}`));
+      body.push(td(`-# 🔒 **Requirements:** ${describeRequirements(req).join(" · ")}`));
     }
     if (g.host_name || g.host_id) {
       body.push(td(`-# Hosted by ${g.host_id ? `<@${g.host_id}>` : g.host_name}`));
     }
     body.push(divider());
     body.push(joinRow(g.id, g.entry_count ?? 0));
+    body.push(td("-# Pulse · Giveaway"));
     return { type: 17, accent_color: BRAND, components: body };
   }
 
   /** The settled container (ended / cancelled) — no Join button. */
   function endedContainer(g, winners) {
-    const body = [td(`# 🎉 ${g.title}`)];
+    // Prize rides in the header beside the badge so the top stays filled; the
+    // description (if any) follows underneath.
+    const body = [...headerBlocks(g.title, `**Prize:** ${g.prize}`)];
     if (g.description) body.push(td(String(g.description).slice(0, 1500)));
-    body.push(td(`**Prize:** ${g.prize}`));
-    if (g.status === "cancelled") {
-      body.push(divider());
-      body.push(td("❌ This giveaway was cancelled."));
-      return { type: 17, accent_color: 0x94a3b8, components: body };
-    }
     body.push(divider());
+    if (g.status === "cancelled") {
+      body.push(td("❌ This giveaway was cancelled."));
+      body.push(td("-# Pulse · Giveaway cancelled"));
+      return { type: 17, accent_color: GREY, components: body };
+    }
     if (winners && winners.length > 0) {
       body.push(td(`🏆 **Winner${winners.length === 1 ? "" : "s"}:** ${winners.map((w) => `<@${w.id}>`).join(", ")}`));
     } else {
       body.push(td("😔 No eligible entries — no winner could be drawn."));
     }
-    body.push(td(`-# ${g.entry_count ?? 0} entr${(g.entry_count ?? 0) === 1 ? "y" : "ies"} · Giveaway ended`));
-    return { type: 17, accent_color: 0xa855f7, components: body };
+    const n = g.entry_count ?? 0;
+    body.push(td(`-# Pulse · Giveaway ended · ${n} entr${n === 1 ? "y" : "ies"}`));
+    return { type: 17, accent_color: ENDED, components: body };
   }
 
   async function editGiveawayMessage(g, container) {
@@ -348,7 +412,7 @@ function createGiveaways(client, supabase) {
       return null;
     }
     const sent = await channel
-      .send({ flags: MessageFlags.IsComponentsV2, components: [activeContainer(g)] })
+      .send({ flags: MessageFlags.IsComponentsV2, components: [activeContainer(g)], files: iconFiles() })
       .catch((e) => {
         console.warn(`[Pulse] Giveaway ${g.id} post failed:`, e.message);
         return null;
@@ -431,19 +495,23 @@ function createGiveaways(client, supabase) {
         const lines =
           winners.length > 0
             ? [
-                td(`# 🎉 ${reroll ? "New winner" : "Giveaway winner"}${winners.length === 1 ? "" : "s"} drawn!`),
-                td(`Congratulations ${winners.map((w) => `<@${w.id}>`).join(", ")} — you won **${fresh.prize}**!`),
+                ...headerBlocks(
+                  `${reroll ? "New winner" : "Giveaway winner"}${winners.length === 1 ? "" : "s"} drawn!`,
+                  `Congratulations ${winners.map((w) => `<@${w.id}>`).join(", ")} — you won **${fresh.prize}**!`,
+                ),
                 link ? td(`-# [Jump to the giveaway](${link})`) : null,
+                td("-# Pulse · Giveaway"),
               ].filter(Boolean)
             : [
-                td(`# 🎉 ${fresh.title}`),
-                td(`No eligible entries — no winner could be drawn for **${fresh.prize}**.`),
+                ...headerBlocks(fresh.title, `No eligible entries — no winner could be drawn for **${fresh.prize}**.`),
+                td("-# Pulse · Giveaway"),
               ];
         await channel
           .send({
             flags: MessageFlags.IsComponentsV2,
-            components: [{ type: 17, accent_color: 0xa855f7, components: lines }],
+            components: [{ type: 17, accent_color: ENDED, components: lines }],
             allowedMentions: { users: winnerIds },
+            files: iconFiles(),
           })
           .catch(() => {});
       }
@@ -516,4 +584,12 @@ function createGiveaways(client, supabase) {
   return { start, reload };
 }
 
-module.exports = { createGiveaways, pickWinners, checkEligibility };
+module.exports = {
+  createGiveaways,
+  pickWinners,
+  checkEligibility,
+  describeRequirements,
+  hasRequirements,
+  effectiveAccountAgeDays,
+  normaliseRequirements,
+};

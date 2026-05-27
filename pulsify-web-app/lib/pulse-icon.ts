@@ -32,6 +32,8 @@ export const PULSE_ICONS = {
   recap: 'pulse-recap.png',
   /** Ticket glyph — the opening embed of a freshly-created support ticket. */
   ticket: 'pulse-ticket.png',
+  /** Gift glyph — the giveaway embed posted/edited in Discord. */
+  giveaway: 'pulse-giveaway.png',
 } as const
 
 export type PulseIconName = keyof typeof PULSE_ICONS

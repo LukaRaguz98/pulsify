@@ -410,22 +410,6 @@ body:has([role="dialog"]) [data-pulsify-ping] {
   animation: ticket-drawer-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Shared input styling for the giveaway create/edit form so every field
-   matches the dashboard's panelled controls without repeating inline styles. */
-.gw-input {
-  width: 100%;
-  border-radius: 0.5rem;
-  border: 1px solid var(--line-strong);
-  background: var(--panel);
-  color: var(--text);
-  padding: 0.5rem 0.625rem;
-  font-size: 0.875rem;
-}
-.gw-input:focus {
-  outline: none;
-  border-color: var(--p-1);
-}
-
 /* ── Button hover effects ──────────────────────────────────────
    Most primary/secondary buttons in the app are inline-styled
    (var(--p-1) gradients for primary, var(--line-strong) borders for
