@@ -1,5 +1,7 @@
 'use server'
 
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
@@ -9,6 +11,7 @@ import {
   editChannelComponents,
   deleteChannelMessage,
   type V2TopLevelComponent,
+  type V2Attachment,
 } from '@/lib/discord'
 import {
   validateDraft,
@@ -25,6 +28,22 @@ export type ActionResult<T = undefined> =
   | { ok: false; error: string }
 
 const BRAND = 0x8b5cf6
+const GREY = 0x94a3b8
+
+// Pulse giveaway badge — attached as a header thumbnail on the embed the
+// dashboard posts, identical bytes to the copy the bot ships so a giveaway
+// looks the same whoever posted it. Edits (entry count, settled state) omit the
+// attachments field and so preserve it. Loaded once; absent ⇒ plain heading.
+const ICON_NAME = 'pulse-giveaway.png'
+let ICON_BUFFER: Buffer | null = null
+try {
+  ICON_BUFFER = readFileSync(path.join(process.cwd(), 'public', ICON_NAME))
+} catch {
+  ICON_BUFFER = null
+}
+const HAS_ICON = ICON_BUFFER !== null
+const iconAttachments = (): V2Attachment[] | undefined =>
+  HAS_ICON ? [{ filename: ICON_NAME, data: ICON_BUFFER!, contentType: 'image/png' }] : undefined
 
 function revalidate(guildId: string) {
   revalidatePath(`/dashboard/${guildId}/giveaways`)
@@ -63,9 +82,29 @@ async function loadGiveaway(
   return (data as GiveawayRow | null) ?? null
 }
 
-// ── Discord embed (matches pulse-bot/src/giveaways.js activeContainer) ────────
+// ── Discord embed (MUST match pulse-bot/src/giveaways.js activeContainer) ─────
 
 const td = (content: string) => ({ type: 10, content })
+
+// Flavour line under the title when no description is set — keeps the header
+// from looking empty beside the badge. Mirror of JOIN_BLURB in giveaways.js.
+const JOIN_BLURB = 'Click **Join Giveaway** below for your chance to win!'
+
+// Header block(s): title heading + a short subtitle sitting beside the giveaway
+// badge thumbnail (type-9 Section), so the top of the embed stays filled.
+// Returns an array (callers spread it). Mirror of headerBlocks() in giveaways.js.
+function headerBlocks(title: string, subtitle?: string | null): Record<string, unknown>[] {
+  const lines: Record<string, unknown>[] = [td(`# ${title}`)]
+  if (subtitle) lines.push(td(subtitle))
+  if (!HAS_ICON) return lines
+  return [
+    {
+      type: 9,
+      components: lines,
+      accessory: { type: 11, media: { url: `attachment://${ICON_NAME}` }, description: 'Pulse giveaway' },
+    },
+  ]
+}
 
 function activeContainer(g: {
   id: string
@@ -81,8 +120,11 @@ function activeContainer(g: {
 }): V2TopLevelComponent {
   const req = g.requirements
   const endUnix = Math.floor(new Date(g.ends_at).getTime() / 1000)
-  const body: Record<string, unknown>[] = [td(`# 🎉 ${g.title}`)]
-  if (g.description) body.push(td(g.description.slice(0, 1500)))
+  // No literal 🎉 prefix — preset titles already carry one and the badge brands
+  // the embed. Description (or a fallback blurb) rides in the header beside the
+  // badge so the top isn't half-empty; requirements collapse to one · line.
+  const subtitle = g.description ? g.description.slice(0, 1500) : JOIN_BLURB
+  const body: Record<string, unknown>[] = [...headerBlocks(g.title, subtitle)]
   body.push(
     td(
       `**Prize:** ${g.prize}\n` +
@@ -91,14 +133,9 @@ function activeContainer(g: {
     ),
   )
   if (hasRequirements(req)) {
-    const parts = req.required_role_ids.length
-      ? [
-          `${req.required_role_mode === 'all' ? 'all of' : 'one of'} ${req.required_role_ids.map((r) => `<@&${r}>`).join(', ')}`,
-          ...describeRequirements(req).slice(1),
-        ]
-      : describeRequirements(req)
-    const lines = parts.map((p) => `-# • ${p}`).join('\n')
-    body.push(td(`-# 🔒 Requirements:\n${lines}`))
+    // Role mentions (<@&id>) so Discord renders names — matches the bot's embed.
+    const summary = describeRequirements(req, (id) => `<@&${id}>`).join(' · ')
+    body.push(td(`-# 🔒 **Requirements:** ${summary}`))
   }
   if (g.host_id || g.host_name) body.push(td(`-# Hosted by ${g.host_id ? `<@${g.host_id}>` : g.host_name}`))
   body.push({ type: 14, divider: true, spacing: 1 })
@@ -115,16 +152,19 @@ function activeContainer(g: {
       },
     ],
   })
+  body.push(td('-# Pulse · Giveaway'))
   return { type: 17, accent_color: BRAND, components: body } as unknown as V2TopLevelComponent
 }
 
 function cancelledContainer(g: { title: string; description: string | null; prize: string }): V2TopLevelComponent {
-  const body: Record<string, unknown>[] = [td(`# 🎉 ${g.title}`)]
+  // Mirrors giveaways.js endedContainer (cancelled branch): prize in the header
+  // beside the badge, description below, then the cancelled notice.
+  const body: Record<string, unknown>[] = [...headerBlocks(g.title, `**Prize:** ${g.prize}`)]
   if (g.description) body.push(td(g.description.slice(0, 1500)))
-  body.push(td(`**Prize:** ${g.prize}`))
   body.push({ type: 14, divider: true, spacing: 1 })
   body.push(td('❌ This giveaway was cancelled.'))
-  return { type: 17, accent_color: 0x94a3b8, components: body } as unknown as V2TopLevelComponent
+  body.push(td('-# Pulse · Giveaway cancelled'))
+  return { type: 17, accent_color: GREY, components: body } as unknown as V2TopLevelComponent
 }
 
 // ── Create ────────────────────────────────────────────────────────────────────
@@ -179,9 +219,11 @@ export async function createGiveaway(
   // Post the message right away for immediate giveaways. Scheduled ones are
   // posted by the bot when their start time arrives.
   if (!scheduled) {
-    const res = await postChannelComponentsReturningId(draft.channel_id, [
-      activeContainer({ ...insert, id, host_name: hostName }),
-    ])
+    const res = await postChannelComponentsReturningId(
+      draft.channel_id,
+      [activeContainer({ ...insert, id, host_name: hostName })],
+      iconAttachments(),
+    )
     if (res.ok) {
       await supabase.from('giveaways').update({ message_id: res.messageId }).eq('id', id)
     } else {

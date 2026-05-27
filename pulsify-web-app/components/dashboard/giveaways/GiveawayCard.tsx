@@ -13,14 +13,17 @@ import { Countdown } from './Countdown'
 
 export function GiveawayCard({
   giveaway,
+  roleNames,
   onSelect,
 }: {
   giveaway: Giveaway
+  roleNames?: Map<string, string>
   onSelect: () => void
 }) {
   const meta = STATUS_META[giveaway.status]
   const req = giveaway.requirements
   const gated = hasRequirements(req)
+  const reqText = describeRequirements(req, (id) => roleNames?.get(id) ?? 'a role').join(' · ')
 
   return (
     <button
@@ -98,8 +101,8 @@ export function GiveawayCard({
       </div>
 
       {gated && (
-        <p className="mt-2 truncate text-[11px]" style={{ color: 'var(--text-3)' }}>
-          🔒 {describeRequirements(req).join(' · ')}
+        <p className="mt-2 truncate text-[11px]" style={{ color: 'var(--text-3)' }} title={reqText}>
+          🔒 {reqText}
         </p>
       )}
     </button>
