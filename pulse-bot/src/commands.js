@@ -548,6 +548,41 @@ const COMMANDS = [
       await tickets.handleTicketCommand(interaction);
     },
   },
+  {
+    name: "rank",
+    category: "information",
+    defaultPermission: PERMISSION.EVERYONE,
+    data: new SlashCommandBuilder()
+      .setName("rank")
+      .setDescription("Show your level, XP and server rank")
+      .addUserOption((o) =>
+        o.setName("user").setDescription("The member to look up (defaults to you)").setRequired(false),
+      ),
+    // Delegates to the leveling module (injected via the execute context from
+    // index.js), which builds the themed rank embed. See pulse-bot/src/leveling.js.
+    async execute({ interaction, guild, leveling, ephemeral }) {
+      if (!leveling) {
+        await interaction.reply({ content: "The leveling system is unavailable right now.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+      await leveling.handleRankCommand({ interaction, guild, ephemeral });
+    },
+  },
+  {
+    name: "leaderboard",
+    category: "information",
+    defaultPermission: PERMISSION.EVERYONE,
+    data: new SlashCommandBuilder()
+      .setName("leaderboard")
+      .setDescription("Show the top members by XP"),
+    async execute({ interaction, guild, leveling, ephemeral }) {
+      if (!leveling) {
+        await interaction.reply({ content: "The leveling system is unavailable right now.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+      await leveling.handleLeaderboardCommand({ interaction, guild, ephemeral });
+    },
+  },
 ];
 
 const COMMANDS_BY_NAME = new Map(COMMANDS.map((c) => [c.name, c]));
@@ -569,4 +604,12 @@ module.exports = {
   COMMANDS,
   COMMANDS_BY_NAME,
   defaultMemberPermissionsFor,
+  // Shared embed helpers — reused by other modules (e.g. leveling.js for the
+  // /rank + /leaderboard replies) so every Pulse embed shares one look.
+  buildPulseContainer,
+  getPulseColor,
+  loadPulseIcon,
+  replyContainer,
+  text,
+  divider,
 };

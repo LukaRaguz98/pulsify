@@ -24,6 +24,7 @@ import {
   CheckCircle2,
   StickyNote,
   History,
+  Sparkles,
 } from 'lucide-react'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -40,9 +41,10 @@ import {
 import { formatDuration, formatHourLabel } from '@/lib/analytics'
 import { createClient as createSupabase } from '@/lib/supabase'
 import { computeReputation, daysSince, type Reputation } from '@/lib/reputation'
+import { progressInLevel } from '@/lib/leveling'
 import { assignableRoleCount, memberRisk } from '@/lib/member-metrics'
 import type { MemberProfileBundle } from '@/lib/member-profile'
-import { ReputationBadge, RiskBadge } from '@/components/dashboard/members/badges'
+import { ReputationBadge, RiskBadge, LevelBadge, XpProgress } from '@/components/dashboard/members/badges'
 import { ReputationPanel } from '@/components/dashboard/members/ReputationPanel'
 import { ActivityHeatmap } from '@/components/dashboard/members/ActivityHeatmap'
 import { ModerationHistory } from '@/components/dashboard/members/ModerationHistory'
@@ -205,6 +207,8 @@ export function MemberProfile({ guildId, userId }: Props) {
 
   const { member, roles, stats, infractions } = bundle
   const risk = memberRisk(infractions)
+  const levelData = bundle.level ?? { xp: 0, level: 0 }
+  const levelProgress = progressInLevel(levelData.xp, bundle.curve)
   const displayName = member.nick ?? member.user.global_name ?? member.user.username
   const av = member.avatar
     ? guildMemberAvatarUrl(guildId, member.user.id, member.avatar, 128)
@@ -354,14 +358,38 @@ export function MemberProfile({ guildId, userId }: Props) {
       <div className="mt-8 space-y-8">
         {/* Overview cards */}
         <CategorySection icon={<Activity size={14} />} title="Overview" description="Lifetime activity and standing for this member.">
-          <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
             <StatsCard label="Messages" value={stats.message_count} sub={`Last active ${relativeTime(stats.last_active)}`} icon={<MessageSquare size={16} />} accent="var(--p-1)" />
             <StatsCard label="Voice Time" value={formatDuration(stats.voice_seconds)} sub={`${stats.voice_sessions.toLocaleString()} sessions`} icon={<Mic size={16} />} accent="var(--cyan)" />
             <StatsCard label="Commands" value={stats.command_count} sub="Bot commands used" icon={<Terminal size={16} />} accent="var(--amber)" />
             <StatsCard label="Channels" value={stats.active_channels} sub="Channels posted in" icon={<Hash size={16} />} accent="#8b5cf6" />
+            <StatsCard label="Level" value={levelProgress.level} sub={`${levelData.xp.toLocaleString()} XP total`} icon={<Sparkles size={16} />} accent="var(--p-1)" />
             <StatsCard label="Reputation" value={reputation.score} sub={reputation.label} icon={<Award size={16} />} accent={reputation.color} />
             <StatsCard label="Infractions" value={infractions.total_infractions} sub={`${infractions.active_warnings} active warning${infractions.active_warnings === 1 ? '' : 's'}`} icon={<ShieldAlert size={16} />} accent="var(--red)" />
           </div>
+        </CategorySection>
+
+        {/* Progression — level + XP earned from activity */}
+        <CategorySection icon={<Sparkles size={14} />} title="Progression" description="Level and XP earned from this member's activity in the server.">
+          <ChartCard title="Level & XP" subtitle="Earned from messages, voice, commands, giveaways and events" icon={<Sparkles size={15} />}>
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+              <div className="flex items-center gap-4">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl" style={{ background: 'var(--p-soft)', color: 'var(--p-1)' }}>
+                  <span className="font-mono text-2xl font-bold tabular-nums">{levelProgress.level}</span>
+                </div>
+                <div>
+                  <LevelBadge level={levelProgress.level} showTier />
+                  <p className="mt-1.5 text-sm text-subtle">{levelData.xp.toLocaleString()} XP total</p>
+                </div>
+              </div>
+              <div className="flex-1">
+                <XpProgress xp={levelData.xp} curve={bundle.curve} />
+                <p className="mt-2 text-xs text-subtle">
+                  {levelProgress.toNext.toLocaleString()} XP to level {levelProgress.level + 1}
+                </p>
+              </div>
+            </div>
+          </ChartCard>
         </CategorySection>
 
         {/* Reputation & roles */}

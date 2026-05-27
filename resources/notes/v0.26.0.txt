@@ -1,0 +1,22 @@
+**Pulsify v0.26.0 — Levels & XP**
+Your members now level up. Pulsify tracks activity as XP, turns it into levels, and rewards your most active and trusted community members — built right into the Members view alongside the reputation system you already know.
+
+**Earning XP**
+- **Activity earns XP** — members gain XP for sending messages, hanging out in voice, using commands, entering giveaways, and showing interest in events.
+- **Fair by default** — a per-message cooldown and anti-spam protection keep things honest, and you can ignore specific channels or roles.
+- **Your curve, your pace** — tune exactly how much XP each activity gives and how steep the climb to the next level is.
+
+**Rewards & level-ups**
+- **Reward roles** — automatically grant a role when a member hits a level. Keep every role earned, or only the highest.
+- **Level-up messages** — celebrate level-ups in the channel they were active in, a dedicated channel, or a private DM, with a customizable message.
+
+**See who's on top**
+- **Levels in the directory** — every member now shows their level and XP, and you can sort by either.
+- **Leaderboards** — a new Leaderboard tab ranks members by level, XP, reputation and recent activity, with timeframe filtering and level analytics.
+- **Profile progression** — each profile gets a Level & XP card with an animated progress bar to the next level.
+
+**In Discord**
+- **/rank** — check your level, XP, progress and server rank (or look up another member).
+- **/leaderboard** — show the top members by XP, with your own standing.
+
+Find it all under **Members**, and tune it from **Level settings**.
