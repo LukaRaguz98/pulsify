@@ -26,6 +26,7 @@ const {
 const { createScheduler } = require("./scheduler");
 const { createTickets } = require("./tickets");
 const { createGiveaways } = require("./giveaways");
+const { createLeveling } = require("./leveling");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -57,10 +58,18 @@ const scheduler = createScheduler(client, supabase);
 // never collides with the slash-command handler below).
 const tickets = createTickets(client, supabase);
 
+// The leveling system awards XP for member activity, detects level-ups, assigns
+// reward roles and announces them. Constructed BEFORE giveaways so it can be
+// handed in — a giveaway entry awards XP too. It registers no interaction
+// listener (the /rank + /leaderboard slash commands are routed through the
+// command handler below); it only runs a once-a-minute voice-XP tick.
+const leveling = createLeveling(client, supabase);
+
 // The giveaway system likewise registers its own interaction listener (only
 // `gw:` buttons) plus a once-a-minute lifecycle tick that starts scheduled
-// giveaways and draws winners when they end.
-const giveaways = createGiveaways(client, supabase);
+// giveaways and draws winners when they end. `leveling` is passed so a Join
+// awards engagement XP.
+const giveaways = createGiveaways(client, supabase, leveling);
 
 /**
  * Shared helper for Discord-side activity → notifications row.
@@ -275,6 +284,10 @@ client.once(Events.ClientReady, async (readyClient) => {
   // Giveaway system: load live giveaways, subscribe to realtime (Join button +
   // dashboard draw/reroll requests), and run the start/end lifecycle tick.
   await giveaways.start();
+
+  // Leveling system: load per-guild XP config, subscribe to settings changes,
+  // and start the voice-XP tick.
+  await leveling.start();
 });
 
 client.on(Events.GuildCreate, async (guild) => {
@@ -601,6 +614,10 @@ client.on(Events.MessageCreate, (message) => {
     channelName: message.channel?.name,
   });
 
+  // Award XP for the message (anti-spam cooldown + ignored channels/roles are
+  // enforced inside the module). Fire-and-forget — never blocks tracking.
+  void leveling.awardMessage(message);
+
   // Fire-and-forget — Pulse Guard runs the analysis + auto-action on the web
   // app side. Failures are logged inside the helper, never thrown, so a web
   // app outage can't break message tracking.
@@ -812,6 +829,15 @@ client.on(Events.GuildScheduledEventDelete, async (event) => {
   });
 });
 
+// A member marking interest in a scheduled event = event participation → XP.
+client.on(Events.GuildScheduledEventUserAdd, async (scheduledEvent, user) => {
+  if (user?.bot) return;
+  const guild = scheduledEvent.guild ?? client.guilds.cache.get(scheduledEvent.guildId);
+  if (!guild) return;
+  const member = await guild.members.fetch(user.id).catch(() => null);
+  if (member) void leveling.awardEventInterest(guild, member);
+});
+
 // ── Server settings ─────────────────────────────────────────────────────────
 
 client.on(Events.GuildUpdate, async (oldGuild, newGuild) => {
@@ -864,6 +890,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
     metadata: { command: commandName },
   });
 
+  // Award command-usage XP (its own cooldown + ignore rules live in the module).
+  void leveling.awardCommand(interaction);
+
   const logBase = {
     guildId: guild.id,
     commandName,
@@ -904,6 +933,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       syncGuild,
       getAllowedCommands,
       tickets,
+      leveling,
       ephemeral: verdict.ephemeral,
     });
     verdict.commit();

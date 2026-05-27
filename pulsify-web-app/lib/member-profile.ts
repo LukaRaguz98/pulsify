@@ -3,6 +3,7 @@
 // the Supabase aggregation RPCs (activity + infractions).
 
 import type { DiscordMember, DiscordRole } from '@/lib/discord'
+import type { LevelCurve } from '@/lib/leveling'
 
 /** Per-member infraction tallies (mirrors get_guild_members_infractions). */
 export type MemberInfractions = {
@@ -40,6 +41,16 @@ export const EMPTY_ACTIVITY: MemberActivityStats = {
   last_active: null,
 }
 
+/** A member's stored XP + level (from member_levels). */
+export type MemberLevel = {
+  /** Cumulative XP earned in this guild. */
+  xp: number
+  /** Level derived from xp + the guild curve (denormalised by the bot). */
+  level: number
+}
+
+export const EMPTY_LEVEL: MemberLevel = { xp: 0, level: 0 }
+
 /**
  * One row in the member directory — the live Discord member plus the activity
  * and infraction aggregates needed to render reputation + risk inline.
@@ -48,6 +59,8 @@ export type DirectoryMember = {
   member: DiscordMember
   activity: MemberActivityStats
   infractions: MemberInfractions
+  /** Stored XP + level, or null when the member has earned no XP yet. */
+  level: MemberLevel | null
   /** Highest assignable-role position; drives the role/staff sort + filter. */
   topRolePosition: number
   isStaff: boolean
@@ -58,6 +71,8 @@ export type DirectoryResponse = {
   roles: DiscordRole[]
   /** Total guild member count from Discord (may exceed fetched members). */
   approximateMemberCount: number | null
+  /** The guild's XP curve, so the UI can render level progress bars. */
+  curve: LevelCurve
 }
 
 // ── Profile bundle ────────────────────────────────────────────────────────
@@ -142,4 +157,39 @@ export type MemberProfileBundle = {
   modLogs: ModLogEntry[]
   notes: ModerationNote[]
   ban: BanInfo
+  /** Stored XP + level for this member, or null when none earned yet. */
+  level: MemberLevel | null
+  /** The guild's XP curve, for the level-progress card. */
+  curve: LevelCurve
+}
+
+// ── Leaderboard bundle ──────────────────────────────────────────────────────
+// The leaderboard route computes the four boards server-side (no new RPC) and
+// returns top-N entries per board plus a level distribution + headline totals.
+
+export type LeaderboardEntry = {
+  userId: string
+  name: string
+  /** Full avatar CDN URL. */
+  avatar: string
+  level: number
+  xp: number
+  /** 0–100 reputation (all-time). */
+  reputation: number
+  /** Messages in the selected timeframe (drives the "Most active" board). */
+  messages: number
+  /** Voice seconds in the selected timeframe. */
+  voiceSeconds: number
+}
+
+export type LeaderboardKey = 'level' | 'xp' | 'reputation' | 'active'
+
+export type LeaderboardResponse = {
+  boards: Record<LeaderboardKey, LeaderboardEntry[]>
+  /** Members grouped into level brackets, for the distribution chart. */
+  distribution: { label: string; count: number }[]
+  totals: { tracked: number; totalXp: number; avgLevel: number; topLevel: number }
+  /** Echoes the requested timeframe ('24h' | '7d' | '30d' | 'all'). */
+  window: string
+  curve: LevelCurve
 }

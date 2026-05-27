@@ -1576,3 +1576,89 @@ Acceptance Criteria
 	Bot-generated embeds are visually consistent across Pulse features
 	pulse-giveaway.png is used where appropriate
 	UI works correctly in responsive layouts
+
+PULSIFY-26 Levels & XP System Integration (v0.26.0)
+
+Description
+	Expand the existing Members reputation system by implementing a complete XP and Leveling system integrated with member activity, moderation history, and community engagement.
+	The current reputation system already calculates a reputation score from 0–100 based on moderation history and user activity. This task should extend the member progression system by adding XP, levels, progression rewards, and engagement tracking directly inside the existing Members experience.
+
+Goals
+	Expand the current member reputation system
+	Increase community engagement and retention
+	Add progression mechanics to the existing Members view
+	Improve visibility of active and trusted members
+
+Tasks
+	XP System
+		Implement XP tracking system
+		Award XP for:
+			messages
+			voice activity
+			event participation
+			giveaways participation
+			command usage
+		Add configurable XP cooldowns and anti-spam protection
+		Add ignored channels/roles configuration
+
+	Levels System
+		Add level progression system
+		Add configurable XP curve/formula
+		Add member level badges/indicators
+		Add next-level progress tracking
+		Add level progression cards/components
+
+	Members View Integration
+		Integrate Levels & XP into existing Members view
+		Display:
+			current level
+			XP progress
+			total XP
+			reputation score
+			activity statistics
+		Add sorting/filtering by:
+			level
+			XP
+			reputation
+			activity
+		Add combined reputation/activity insights
+
+	Rewards & Automation
+		Add automatic level reward roles
+		Add configurable level milestones
+		Add customizable level-up messages
+		Add Discord level-up embeds/messages
+		Add level-up notification channel configuration
+
+	Analytics & Leaderboards
+		Add XP/Level analytics
+		Add engagement charts
+		Add server leaderboards:
+			highest level
+			most XP
+			best reputation
+			most active users
+		Add timeframe filtering
+
+	Discord Integration
+		Add /rank slash command
+		Add /leaderboard slash command
+		Add rank/profile embeds/cards
+		Ensure embed styling matches Pulse design language
+
+	UX Improvements
+		Add animated XP progress bars
+		Add responsive leaderboard layouts
+		Add loading/error/success states
+		Add profile hover cards/tooltips
+
+Acceptance Criteria
+	XP is tracked correctly
+	Levels increase properly
+	Existing reputation system remains functional
+	Members view displays XP/level data correctly
+	Reward roles are assigned automatically
+	Leaderboards display correctly
+	Slash commands work correctly
+	Embeds remain visually consistent with Pulse
+	UI remains responsive and polished
