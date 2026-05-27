@@ -92,6 +92,7 @@ const NAV_CATALOG: NavDef[] = [
   { id: 'nav-guard-settings', label: 'Pulse Guard settings', icon: 'ShieldAlert', path: '/ai-moderation-settings', keywords: 'pulse guard ai moderation sensitivity detectors auto-action exclusions config' },
   { id: 'nav-pulse-assistant', label: 'Pulse assistant', icon: 'Sparkles', path: '/automations-settings', keywords: 'assistant ai chat generation content tone language embed automations' },
   { id: 'nav-notification-settings', label: 'Notification settings', icon: 'Bell', path: '/notification-settings', keywords: 'notifications alerts toasts events preferences' },
+  { id: 'nav-leveling-settings', label: 'Level settings', icon: 'Trophy', path: '/leveling-settings', keywords: 'levels xp leveling rewards roles curve cooldown progression rank' },
 ]
 
 type ActionDef = {
@@ -113,6 +114,7 @@ const ACTION_CATALOG: ActionDef[] = [
   { id: 'act-open-moderation', label: 'Open moderation', subtitle: 'Jump to moderation tools', icon: 'Shield', keywords: 'mod moderation bans', action: { kind: 'navigate', href: '/moderation' } },
   { id: 'act-open-tickets', label: 'Open tickets', subtitle: 'Manage support tickets', icon: 'LifeBuoy', keywords: 'support tickets help desk', action: { kind: 'navigate', href: '/tickets' } },
   { id: 'act-create-giveaway', label: 'Create giveaway', subtitle: 'Launch a new Discord giveaway', icon: 'Gift', keywords: 'new giveaway contest raffle prize draw', action: { kind: 'navigate', href: '/giveaways?new=1' } },
+  { id: 'act-open-leaderboard', label: 'Open leaderboard', subtitle: 'Top members by level, XP & reputation', icon: 'Trophy', keywords: 'leaderboard ranking levels xp top members rank progression', action: { kind: 'navigate', href: '/members?tab=leaderboard' } },
   { id: 'act-trigger-sync', label: 'Trigger server sync', subtitle: 'Refresh dashboard data from Discord', icon: 'RefreshCw', keywords: 'sync refresh resync update reload', action: { kind: 'command', commandId: 'sync' } },
 ]
 

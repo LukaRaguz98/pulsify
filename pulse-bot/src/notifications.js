@@ -28,6 +28,7 @@ const TYPE_TO_CATEGORY = {
   giveaway_started: 'giveaways',
   giveaway_ended: 'giveaways',
   giveaway_rerolled: 'giveaways',
+  level_up: 'leveling',
   bot_warning: 'bot',
   bot_error: 'bot',
 };
@@ -54,6 +55,7 @@ const TYPE_TO_SEVERITY = {
   giveaway_started: 'success',
   giveaway_ended: 'success',
   giveaway_rerolled: 'info',
+  level_up: 'success',
   bot_warning: 'warning',
   bot_error: 'error',
 };

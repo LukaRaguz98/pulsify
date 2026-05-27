@@ -97,6 +97,27 @@ export const COMMAND_CATALOG: CommandDefinition[] = [
     detail:
       'Opens a private support ticket. Pick a category, optionally answer a short form, and a dedicated channel is created for you and the support team. Configure ticket types and the panel from the Tickets page.',
   },
+  {
+    name: 'rank',
+    description: 'Show your level, XP and server rank',
+    category: 'information',
+    defaultPermission: 'everyone',
+    options: [
+      { name: 'user', description: 'The member to look up (defaults to you)', type: 'user' },
+    ],
+    examples: ['/rank', '/rank user:@username'],
+    detail:
+      'Your current level, total XP, progress to the next level, and your position on the server leaderboard. Pick a user to view theirs. Configure XP rates and rewards on the Members page.',
+  },
+  {
+    name: 'leaderboard',
+    description: 'Show the top members by XP',
+    category: 'information',
+    defaultPermission: 'everyone',
+    examples: ['/leaderboard'],
+    detail:
+      'The top 10 members ranked by XP, each with their level and total XP, plus your own standing if you’re not in the top 10.',
+  },
 ]
 
 export const CATALOG_BY_NAME: Record<string, CommandDefinition> = Object.fromEntries(

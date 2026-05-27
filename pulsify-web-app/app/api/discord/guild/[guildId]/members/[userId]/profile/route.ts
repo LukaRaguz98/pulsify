@@ -20,7 +20,9 @@ import {
   type ModLogEntry,
   type ModerationNote,
   type MemberInfractions,
+  type MemberLevel,
 } from '@/lib/member-profile'
+import { normaliseLevelingSettings } from '@/lib/leveling'
 
 // Window for the contribution heatmap + activity timeline.
 const HEATMAP_DAYS = 119
@@ -62,6 +64,8 @@ export async function GET(
     modLogsRes,
     infrRes,
     notesRes,
+    levelRes,
+    levelSettingsRes,
   ] = await Promise.all([
     fetchGuildMember(guildId, userId),
     fetchGuildRoles(guildId),
@@ -104,6 +108,13 @@ export async function GET(
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(100),
+    supabase
+      .from('member_levels')
+      .select('xp, level')
+      .eq('guild_id', guildId)
+      .eq('user_id', userId)
+      .maybeSingle(),
+    supabase.from('leveling_settings').select('enabled, settings').eq('guild_id', guildId).maybeSingle(),
   ])
 
   if (!member) {
@@ -167,6 +178,12 @@ export async function GET(
 
   const accountCreated = snowflakeToDate(userId)
 
+  const levelRow = (levelRes.data ?? null) as Record<string, unknown> | null
+  const level: MemberLevel | null = levelRow
+    ? { xp: Number(levelRow.xp ?? 0), level: Number(levelRow.level ?? 0) }
+    : null
+  const curve = normaliseLevelingSettings(levelSettingsRes.data ?? null).curve
+
   const bundle: MemberProfileBundle = {
     guildId,
     member,
@@ -184,6 +201,8 @@ export async function GET(
     modLogs,
     notes,
     ban: { banned: ban !== null, reason: ban?.reason ?? null },
+    level,
+    curve,
   }
 
   return NextResponse.json(bundle)

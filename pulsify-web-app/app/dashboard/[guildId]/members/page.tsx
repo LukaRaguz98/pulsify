@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { fetchGuild } from '@/lib/discord'
-import { MembersDirectory } from '@/components/dashboard/members/MembersDirectory'
+import { MembersContent } from '@/components/dashboard/members/MembersContent'
 
 export default async function MembersPage({
   params,
@@ -18,5 +18,5 @@ export default async function MembersPage({
   const guild = await fetchGuild(guildId)
   if (!guild) redirect('/dashboard')
 
-  return <MembersDirectory guildId={guildId} guildName={guild.name} />
+  return <MembersContent guildId={guildId} guildName={guild.name} />
 }
