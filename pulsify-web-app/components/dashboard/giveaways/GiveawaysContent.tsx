@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Gift, Plus, BarChart3, CheckCircle2, AlertCircle, X, ListChecks, Radio, CalendarClock, Users } from 'lucide-react'
+import { Gift, Plus, BarChart3, CheckCircle2, AlertCircle, X, ListChecks, Radio, CalendarClock, Users, Search } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { CategorySection } from '@/components/ui/category-section'
 import { RefreshButton } from '@/components/dashboard/RefreshButton'
@@ -42,7 +42,14 @@ export function GiveawaysContent({ guildId, guildName, initialGiveaways, channel
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<Giveaway | null>(null)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | GiveawayStatus>('all')
   const [pending, startTransition] = useTransition()
+
+  // Resolve role + channel ids to names so requirement chips and the detail
+  // drawer read like the rest of the dashboard rather than showing raw snowflakes.
+  const roleNames = useMemo(() => new Map(roles.map((r) => [r.id, r.name])), [roles])
+  const channelNames = useMemo(() => new Map(channels.map((c) => [c.id, c.name])), [channels])
 
   // Quick-action deep link (?new=1) opens the create panel once on mount.
   useEffect(() => {
@@ -61,15 +68,24 @@ export function GiveawaysContent({ guildId, guildName, initialGiveaways, channel
   )
   const stats = useMemo(() => computeGiveawayStats(initialGiveaways), [initialGiveaways])
 
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return initialGiveaways.filter((g) => {
+      if (statusFilter !== 'all' && g.status !== statusFilter) return false
+      if (!q) return true
+      return g.title.toLowerCase().includes(q) || g.prize.toLowerCase().includes(q)
+    })
+  }, [initialGiveaways, search, statusFilter])
+
   const grouped = useMemo(() => {
     const map = new Map<GiveawayStatus, Giveaway[]>()
-    for (const g of initialGiveaways) {
+    for (const g of filtered) {
       const arr = map.get(g.status)
       if (arr) arr.push(g)
       else map.set(g.status, [g])
     }
     return map
-  }, [initialGiveaways])
+  }, [filtered])
 
   const runAction = useCallback(
     async <T,>(fn: () => Promise<ActionResult<T>>, successMsg?: string): Promise<ActionResult<T>> => {
@@ -196,31 +212,75 @@ export function GiveawaysContent({ guildId, guildName, initialGiveaways, channel
                 <p className="mt-2 max-w-sm text-sm" style={{ color: 'var(--text-3)' }}>
                   Create your first giveaway — pick a prize, set a duration, and Pulse will post it, track entries and draw winners automatically.
                 </p>
-                <button onClick={() => setCreating(true)} className="mt-4 inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium text-white" style={{ background: 'var(--p-1)' }}>
+                <button onClick={() => setCreating(true)} className="mt-4 inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white" style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))', boxShadow: '0 4px 14px -4px var(--p-glow)' }}>
                   <Plus size={15} /> Create a giveaway
                 </button>
               </div>
             ) : (
-              <div className="space-y-7">
-                {SECTIONS.map((status) => {
-                  const items = grouped.get(status)
-                  if (!items || items.length === 0) return null
-                  const meta = STATUS_META[status]
-                  return (
-                    <section key={status}>
-                      <div className="mb-3 flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full" style={{ background: meta.color }} />
-                        <h2 className="text-sm font-semibold text-foreground">{meta.label}</h2>
-                        <span className="text-xs" style={{ color: 'var(--text-3)' }}>{items.length}</span>
-                      </div>
-                      <div className="giveaway-grid grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {items.map((g) => (
-                          <GiveawayCard key={g.id} giveaway={g} onSelect={() => setSelectedId(g.id)} />
-                        ))}
-                      </div>
-                    </section>
-                  )
-                })}
+              <div className="space-y-5">
+                {/* Search + status filter — same row layout as the Scheduled view */}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="relative flex-1 sm:max-w-xs">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search giveaways…"
+                      className="w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1"
+                      style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
+                    />
+                  </div>
+                  <div className="inline-flex flex-wrap rounded-lg border p-0.5" style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}>
+                    {(['all', ...SECTIONS] as const).map((f) => {
+                      const active = statusFilter === f
+                      const label = f === 'all' ? 'All' : STATUS_META[f].label
+                      return (
+                        <button
+                          key={f}
+                          type="button"
+                          onClick={() => setStatusFilter(f)}
+                          className="rounded-md px-3 py-1 text-xs font-medium transition"
+                          style={{ background: active ? 'var(--p-soft)' : 'transparent', color: active ? 'var(--p-1)' : 'var(--text-3)' }}
+                        >
+                          {label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {filtered.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center rounded-xl border py-14 text-center" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
+                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl" style={{ background: 'var(--bg-2)', color: 'var(--text-3)' }}>
+                      <Search size={22} />
+                    </div>
+                    <p className="font-semibold text-foreground">No matching giveaways</p>
+                    <p className="mt-1.5 text-sm" style={{ color: 'var(--text-3)' }}>Try a different search or filter.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-7">
+                    {SECTIONS.map((status) => {
+                      const items = grouped.get(status)
+                      if (!items || items.length === 0) return null
+                      const meta = STATUS_META[status]
+                      return (
+                        <section key={status}>
+                          <div className="mb-3 flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full" style={{ background: meta.color }} />
+                            <h2 className="text-sm font-semibold text-foreground">{meta.label}</h2>
+                            <span className="text-xs" style={{ color: 'var(--text-3)' }}>{items.length}</span>
+                          </div>
+                          <div className="giveaway-grid grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            {items.map((g) => (
+                              <GiveawayCard key={g.id} giveaway={g} roleNames={roleNames} onSelect={() => setSelectedId(g.id)} />
+                            ))}
+                          </div>
+                        </section>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             ))}
 
@@ -232,6 +292,8 @@ export function GiveawaysContent({ guildId, guildName, initialGiveaways, channel
         <GiveawayDetail
           guildId={guildId}
           giveaway={selected}
+          roleNames={roleNames}
+          channelName={channelNames.get(selected.channel_id)}
           runAction={runAction}
           onClose={() => setSelectedId(null)}
           onEdit={() => {

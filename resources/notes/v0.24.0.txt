@@ -1,4 +1,4 @@
-# Pulsify v0.24.0 — Giveaways & Community Engagement
+**Pulsify v0.24.0 — Giveaways & Community Engagement**
 Keep your community buzzing with built-in giveaways — create them on the dashboard, run them in Discord, and let Pulse handle entries and winners for you.
 
 ** What's new**

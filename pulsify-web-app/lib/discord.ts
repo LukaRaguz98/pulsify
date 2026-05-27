@@ -1416,15 +1416,37 @@ export async function editChannelComponents(
 export async function postChannelComponentsReturningId(
   channelId: string,
   components: V2TopLevelComponent[],
+  attachments?: V2Attachment[],
 ): Promise<{ ok: true; messageId: string } | { ok: false; error: string }> {
   if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+
+  const hasFiles = attachments && attachments.length > 0
+  const payload: Record<string, unknown> = { flags: IS_COMPONENTS_V2_FLAG, components }
+  if (hasFiles) {
+    // Manifest pairing each file id with its filename so the API resolves the
+    // `attachment://filename` URLs referenced in component media fields.
+    payload.attachments = attachments!.map((a, i) => ({ id: i, filename: a.filename }))
+  }
+
+  const headers: Record<string, string> = { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` }
+  let body: string | FormData
+  if (hasFiles) {
+    const form = new FormData()
+    form.append('payload_json', JSON.stringify(payload))
+    attachments!.forEach((a, i) => {
+      const blob = new Blob([new Uint8Array(a.data)], { type: a.contentType ?? 'application/octet-stream' })
+      form.append(`files[${i}]`, blob, a.filename)
+    })
+    body = form // FormData sets its own multipart Content-Type + boundary
+  } else {
+    body = JSON.stringify(payload)
+    headers['Content-Type'] = 'application/json'
+  }
+
   const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ flags: IS_COMPONENTS_V2_FLAG, components }),
+    headers,
+    body,
   })
   if (!res.ok) {
     const errBody = (await res.json().catch(() => ({}))) as { message?: string }
