@@ -147,17 +147,43 @@ export function checkEligibility(
   return { ok: true }
 }
 
-/** Short human list of a giveaway's requirements, for the card / preview. */
-export function describeRequirements(req: GiveawayRequirements): string[] {
+/**
+ * Human-readable list of a giveaway's entry requirements — one clear, labelled
+ * phrase per active gate ("Account age: 7+ days", "Minimum messages: 5"),
+ * instead of the old terse "> 5 messages" shorthand. Pass `resolveRole` to turn
+ * role ids into display names (dashboard) or mentions (`<@&id>`, the bot); with
+ * no resolver, role gates collapse to a count so the line stays sensible where
+ * names aren't loaded. MIRRORED in pulse-bot/src/giveaways.js so the wording is
+ * identical on the card, the create-form preview and the live Discord embed.
+ */
+export function describeRequirements(
+  req: GiveawayRequirements,
+  resolveRole?: (id: string) => string,
+): string[] {
   const out: string[] = []
+
   if (req.required_role_ids.length > 0) {
-    const verb = req.required_role_mode === 'all' ? 'all of' : 'one of'
-    out.push(`Have ${verb} ${req.required_role_ids.length} role${req.required_role_ids.length === 1 ? '' : 's'}`)
+    const mode = req.required_role_mode === 'all' ? 'all' : 'any'
+    if (resolveRole) {
+      const names = req.required_role_ids.map(resolveRole)
+      out.push(
+        names.length === 1
+          ? `Required role: ${names[0]}`
+          : `Required roles (${mode}): ${names.join(', ')}`,
+      )
+    } else {
+      const n = req.required_role_ids.length
+      out.push(n === 1 ? 'Required role' : `Required roles: ${mode} of ${n}`)
+    }
   }
+
   const acctFloor = effectiveAccountAgeDays(req)
-  if (acctFloor > 0) out.push(`Account > ${acctFloor}d old`)
-  if (req.min_server_age_days > 0) out.push(`Member > ${req.min_server_age_days}d`)
-  if (req.min_messages > 0) out.push(`> ${req.min_messages} messages`)
+  if (acctFloor > 0) out.push(`Account age: ${acctFloor}+ ${acctFloor === 1 ? 'day' : 'days'}`)
+  if (req.min_server_age_days > 0) {
+    out.push(`In server: ${req.min_server_age_days}+ ${req.min_server_age_days === 1 ? 'day' : 'days'}`)
+  }
+  if (req.min_messages > 0) out.push(`Minimum messages: ${req.min_messages}`)
+
   return out
 }
 

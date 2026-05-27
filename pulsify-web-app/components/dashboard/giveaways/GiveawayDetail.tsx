@@ -28,6 +28,8 @@ type Entry = { user_id: string; user_name: string | null; entered_at: string; is
 type Props = {
   guildId: string
   giveaway: Giveaway
+  roleNames?: Map<string, string>
+  channelName?: string
   onEdit: () => void
   onClose: () => void
   runAction: <T>(fn: () => Promise<ActionResult<T>>, successMsg?: string) => Promise<ActionResult<T>>
@@ -35,7 +37,7 @@ type Props = {
 
 type ConfirmKind = 'end' | 'reroll' | 'cancel' | 'delete' | null
 
-export function GiveawayDetail({ guildId, giveaway, onEdit, onClose, runAction }: Props) {
+export function GiveawayDetail({ guildId, giveaway, roleNames, channelName, onEdit, onClose, runAction }: Props) {
   const meta = STATUS_META[giveaway.status]
   const [entries, setEntries] = useState<Entry[] | null>(null)
   const [confirm, setConfirm] = useState<ConfirmKind>(null)
@@ -157,7 +159,7 @@ export function GiveawayDetail({ guildId, giveaway, onEdit, onClose, runAction }
           )}
 
           <p className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-3)' }}>
-            <Hash size={12} /> Posted in <span style={{ color: 'var(--text-2)' }}>#{giveaway.channel_id}</span>
+            <Hash size={12} /> Posted in <span style={{ color: 'var(--text-2)' }}>#{channelName ?? giveaway.channel_id}</span>
           </p>
 
           {/* Requirements */}
@@ -167,7 +169,7 @@ export function GiveawayDetail({ guildId, giveaway, onEdit, onClose, runAction }
                 <Shield size={13} /> Requirements
               </p>
               <ul className="space-y-0.5 text-sm" style={{ color: 'var(--text-3)' }}>
-                {describeRequirements(giveaway.requirements).map((r, i) => (
+                {describeRequirements(giveaway.requirements, (id) => roleNames?.get(id) ?? 'a role').map((r, i) => (
                   <li key={i}>• {r}</li>
                 ))}
               </ul>
