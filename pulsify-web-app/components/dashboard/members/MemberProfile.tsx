@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useSearchParams } from 'next/navigation'
 import {
-  ChevronLeft,
+  ArrowLeft,
   Crown,
   Bot,
   Ban,
@@ -173,13 +174,23 @@ export function MemberProfile({ guildId, userId }: Props) {
     })
   }, [bundle])
 
-  const backLink = `/dashboard/${guildId}/members`
+  const searchParams = useSearchParams()
+  const from = searchParams.get('from')
+  const backLink = from === 'moderation'
+    ? `/dashboard/${guildId}/moderation`
+    : `/dashboard/${guildId}/members`
+  const backLabel = from === 'moderation' ? 'Back to Moderation' : 'Back to Members'
 
   if (loading) {
     return (
       <div className="page-content">
-        <Link href={backLink} className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-          <ChevronLeft size={16} /> Back to members
+        <Link
+          href={backLink}
+          className="mb-4 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors"
+          style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
+        >
+          <ArrowLeft size={12} />
+          {backLabel}
         </Link>
         <Skeleton className="mb-6 h-[180px]" />
         <div className="mb-6 grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
@@ -193,8 +204,13 @@ export function MemberProfile({ guildId, userId }: Props) {
   if (error || !bundle || !reputation) {
     return (
       <div className="page-content">
-        <Link href={backLink} className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-          <ChevronLeft size={16} /> Back to members
+        <Link
+          href={backLink}
+          className="mb-4 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors"
+          style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
+        >
+          <ArrowLeft size={12} />
+          {backLabel}
         </Link>
         <EmptyState
           icon={<AlertCircle size={36} />}
@@ -246,8 +262,13 @@ export function MemberProfile({ guildId, userId }: Props) {
 
   return (
     <div className="page-content">
-      <Link href={backLink} className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground transition hover:text-foreground">
-        <ChevronLeft size={16} /> Back to members
+      <Link
+        href={backLink}
+        className="mb-4 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors"
+        style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
+      >
+        <ArrowLeft size={12} />
+        {backLabel}
       </Link>
 
       {toast && (

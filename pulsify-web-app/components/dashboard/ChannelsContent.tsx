@@ -237,35 +237,15 @@ export function ChannelsContent({ guildId }: Props) {
         title="Channels"
         description="Browse, organize, and configure every channel on this server."
         action={
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => fetchAll()}
-              disabled={refreshing}
-              className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
-              style={{ borderColor: 'var(--line-strong)', color: 'var(--text-3)' }}
-            >
-              <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
-              Refresh
-            </button>
-            <button
-              onClick={() => openCreate(CHANNEL_TYPES.CATEGORY)}
-              disabled={!canManage}
-              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition disabled:opacity-50"
-              style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
-            >
-              <Folder size={14} />
-              New category
-            </button>
-            <button
-              onClick={() => openCreate(CHANNEL_TYPES.TEXT)}
-              disabled={!canManage}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition disabled:opacity-50"
-              style={{ background: 'var(--p-1)', color: '#fff' }}
-            >
-              <Plus size={14} />
-              New channel
-            </button>
-          </div>
+          <button
+            onClick={() => fetchAll()}
+            disabled={refreshing}
+            className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+            style={{ borderColor: 'var(--line-strong)', color: 'var(--text-3)' }}
+          >
+            <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+            Refresh
+          </button>
         }
       />
 
@@ -336,6 +316,11 @@ export function ChannelsContent({ guildId }: Props) {
                 style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
               />
             </div>
+            {reordering && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-subtle">
+                <Loader2 size={11} className="animate-spin" /> Saving order…
+              </span>
+            )}
             <div className="ml-auto inline-flex rounded-lg border p-1" style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}>
               {(['all', 'text', 'voice', 'forum', 'stage'] as const).map((f) => (
                 <button
@@ -352,11 +337,24 @@ export function ChannelsContent({ guildId }: Props) {
                 </button>
               ))}
             </div>
-            {reordering && (
-              <span className="inline-flex items-center gap-1.5 text-xs text-subtle">
-                <Loader2 size={11} className="animate-spin" /> Saving order…
-              </span>
-            )}
+            <button
+              onClick={() => openCreate(CHANNEL_TYPES.CATEGORY)}
+              disabled={!canManage}
+              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition disabled:opacity-50"
+              style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
+            >
+              <Folder size={14} />
+              New category
+            </button>
+            <button
+              onClick={() => openCreate(CHANNEL_TYPES.TEXT)}
+              disabled={!canManage}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition disabled:opacity-50"
+              style={{ background: 'var(--p-1)', color: '#fff' }}
+            >
+              <Plus size={14} />
+              New channel
+            </button>
           </div>
 
           {tree.categories.length === 0 && tree.uncategorized.length === 0 ? (

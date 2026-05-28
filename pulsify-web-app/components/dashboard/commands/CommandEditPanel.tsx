@@ -113,18 +113,17 @@ export function CommandEditPanel({
   }))
 
   return (
-    <>
-      <div
-        className="fixed inset-0 z-[60]"
-        style={{ background: 'rgba(0,0,0,0.4)' }}
-        onClick={() => !busy && onClose()}
-      />
-
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
+      onClick={() => !busy && onClose()}
+    >
       <aside
         role="dialog"
         aria-label={`Configure /${definition.name}`}
-        className="fixed inset-y-0 right-0 z-[70] flex w-full max-w-[640px] flex-col border-l shadow-2xl"
+        className="relative flex w-full max-w-2xl max-h-[90vh] flex-col rounded-2xl border shadow-2xl overflow-hidden"
         style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
+        onClick={(e) => e.stopPropagation()}
       >
         <header
           className="flex items-center justify-between border-b px-5 py-4"
@@ -371,7 +370,7 @@ export function CommandEditPanel({
           </button>
         </footer>
       </aside>
-    </>
+    </div>
   )
 }
 

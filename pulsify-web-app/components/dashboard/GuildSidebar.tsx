@@ -17,18 +17,17 @@ import {
   Hash,
   ChevronLeft,
   ChevronRight,
-  Settings,
   LineChart,
   Server,
   Sparkles,
   ShieldCheck,
-  SlidersHorizontal,
   TerminalSquare,
   Command,
   UserRound,
   Lightbulb,
   LifeBuoy,
   Gift,
+  Building2,
   Menu,
   X,
 } from 'lucide-react'
@@ -123,12 +122,15 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
   //   • Integrations / Billing / Account            → Settings
   //   • New server entity (Members deep-dive, etc.) → Server
   //   • New chart / report                          → Analytics
+  // Overview is the dashboard's "home" — it sits standalone at the top of the
+  // nav, above any collapsible groups, so it's always one click away.
+  const overview: NavItem = { label: 'Overview', href: base, icon: <BarChart2 size={16} /> }
+
   const groups: NavGroup[] = [
     {
       title: 'Analytics',
       icon: <LineChart size={16} />,
       items: [
-        { label: 'Overview', href: base, icon: <BarChart2 size={16} /> },
         { label: 'Statistics', href: `${base}/statistics`, icon: <Activity size={16} /> },
         { label: 'Insights', href: `${base}/insights`, icon: <Lightbulb size={16} /> },
       ],
@@ -171,15 +173,10 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
         { label: 'Tickets', href: `${base}/tickets`, icon: <LifeBuoy size={16} />, matchPrefixes: ['/ticket-settings'] },
       ],
     },
-    {
-      // Dashboard-level personalisation only. Feature settings live with their
-      // features (Pulse → Pulse Bot, Ticket settings → Tickets module, etc.).
-      title: 'Settings',
-      icon: <Settings size={16} />,
-      items: [
-        { label: 'Preferences', href: `${base}/settings`, icon: <SlidersHorizontal size={16} /> },
-      ],
-    },
+    // Dashboard-level Preferences moved to the global /preferences route
+    // (reached from the choose-server view's top-right corner). Feature
+    // settings still live with their features (Pulse → Pulse Bot, Tickets →
+    // Tickets, …) inside their respective groups above.
   ]
 
   // Default: expand any group containing the currently-active route, so the
@@ -399,8 +396,63 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
 
       {/* Nav — categories are the primary level. Click a category header to
           toggle its sub-items. In collapsed-sidebar mode each category is a
-          single icon; clicking expands the sidebar *and* opens that category. */}
+          single icon; clicking expands the sidebar *and* opens that category.
+          Overview is special-cased above the groups so it's a one-click
+          target rather than living inside Analytics. */}
       <nav className="flex-1 overflow-y-auto px-2 pb-2 space-y-1">
+        {(() => {
+          const active = isNavItemActive(overview)
+          return (
+            <Link
+              key={overview.href}
+              href={overview.href}
+              title={collapsed ? overview.label : undefined}
+              className="relative flex items-center rounded-lg py-2 text-sm font-semibold transition-all"
+              style={{
+                justifyContent: collapsed ? 'center' : 'flex-start',
+                gap: collapsed ? '0' : '0.625rem',
+                paddingLeft: collapsed ? '0.5rem' : '0.625rem',
+                paddingRight: collapsed ? '0.5rem' : '0.625rem',
+                ...(active
+                  ? {
+                      background: 'linear-gradient(90deg, var(--p-soft), transparent)',
+                      color: 'var(--text)',
+                      boxShadow: 'inset 0 0 0 1px var(--p-soft)',
+                    }
+                  : { color: 'var(--text-2)' }),
+              }}
+              onMouseEnter={(e) => {
+                if (!active) {
+                  e.currentTarget.style.background = 'var(--panel)'
+                  e.currentTarget.style.color = 'var(--text)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!active) {
+                  e.currentTarget.style.background = ''
+                  e.currentTarget.style.color = 'var(--text-2)'
+                }
+              }}
+            >
+              {active && !collapsed && (
+                <span
+                  className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r"
+                  style={{ background: 'var(--p-1)', boxShadow: '0 0 10px var(--p-glow)' }}
+                />
+              )}
+              <span style={active ? { color: 'var(--p-1)' } : { color: 'var(--text-3)' }}>{overview.icon}</span>
+              {!collapsed && <span className="flex-1">{overview.label}</span>}
+              {/* Collapsed-mode active dot, matching the group headers. */}
+              {collapsed && active && (
+                <span
+                  className="absolute mt-[-18px] ml-[18px] h-1.5 w-1.5 rounded-full"
+                  style={{ background: 'var(--p-1)', boxShadow: '0 0 6px var(--p-glow)' }}
+                />
+              )}
+            </Link>
+          )
+        })()}
+
         {groups.map((group) => {
           const isExpanded = expandedGroups.has(group.title)
           const hasActiveChild = group.items.some((item) => isNavItemActive(item))
@@ -556,6 +608,18 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
         >
           <ChevronLeft size={16} />
           {!collapsed && 'All Servers'}
+        </Link>
+
+        <Link
+          href="/workspace"
+          title={collapsed ? 'Workspaces' : undefined}
+          className="flex items-center rounded-lg px-2.5 py-2 text-sm text-muted-foreground hover:text-foreground transition"
+          style={{ justifyContent: collapsed ? 'center' : 'flex-start', gap: collapsed ? '0' : '0.625rem' }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--panel)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = '' }}
+        >
+          <Building2 size={16} />
+          {!collapsed && 'Workspaces'}
         </Link>
 
         <UserProfileButton
