@@ -302,6 +302,18 @@ body.slide-over-open [data-app-footer="true"] {
   .guild-sidebar[data-mobile-open="true"] {
     transform: translateX(0);
   }
+  /* The workspace area reuses the same off-canvas drawer behaviour. */
+  .workspace-sidebar {
+    position: fixed;
+    inset-block: 0;
+    left: 0;
+    z-index: 50;
+    transform: translateX(-100%);
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.55);
+  }
+  .workspace-sidebar[data-mobile-open="true"] {
+    transform: translateX(0);
+  }
 }
 
 /* ── Page layout helpers ───────────────────── */
@@ -377,20 +389,8 @@ body:has([role="dialog"]) [data-pulsify-ping] {
 .insight-grid > .insight-card:nth-child(6) { animation-delay: 0.22s; }
 .insight-grid > .insight-card:nth-child(n+7) { animation-delay: 0.26s; }
 
-/* ── Tickets view ──────────────────────────────────────────────
-   The ticket detail drawer slides in from the right; ticket rows fade in.
-   Auto-neutralised by the [data-animations="false"] reduced-motion rule. */
-@keyframes ticket-drawer-in {
-  from { opacity: 0; transform: translateX(24px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-.ticket-drawer {
-  animation: ticket-drawer-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
 /* ── Giveaways view ────────────────────────────────────────────
-   Cards cascade in (same per-position stagger as Insights); the create
-   modal pops, the detail drawer slides from the right. All auto-neutralised
+   Cards cascade in (same per-position stagger as Insights). Auto-neutralised
    by the [data-animations="false"] reduced-motion rule above. */
 @keyframes giveaway-in {
   from { opacity: 0; transform: translateY(10px); }
@@ -405,10 +405,6 @@ body:has([role="dialog"]) [data-pulsify-ping] {
 .giveaway-grid > .giveaway-card:nth-child(4) { animation-delay: 0.14s; }
 .giveaway-grid > .giveaway-card:nth-child(5) { animation-delay: 0.18s; }
 .giveaway-grid > .giveaway-card:nth-child(n+6) { animation-delay: 0.22s; }
-
-.gw-drawer {
-  animation: ticket-drawer-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
 
 /* ── Levels & XP (PULSIFY-26) ──────────────────────────────────
    The XP progress bar (badges.tsx XpProgress) eases its fill to the current

@@ -237,19 +237,18 @@ export function GiveawayCreatePanel({ guildId, channels, roles, editing, onClose
   const busy = saving || pending
 
   return (
-    <>
-      <div
-        className="fixed inset-0 z-[60]"
-        style={{ background: 'rgba(0,0,0,0.5)' }}
-        onClick={() => !busy && onClose()}
-      />
-
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
+      onClick={() => !busy && onClose()}
+    >
       <aside
         role="dialog"
         aria-modal="true"
         aria-label={isEdit ? 'Edit giveaway' : 'New giveaway'}
-        className="gw-drawer fixed inset-y-0 right-0 z-[70] flex w-full max-w-[640px] flex-col border-l shadow-2xl"
+        className="relative flex w-full max-w-2xl max-h-[90vh] flex-col rounded-2xl border shadow-2xl overflow-hidden"
         style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <header className="flex items-center justify-between gap-3 border-b px-5 py-4" style={{ borderColor: 'var(--line-strong)' }}>
@@ -612,7 +611,7 @@ export function GiveawayCreatePanel({ guildId, channels, roles, editing, onClose
           </div>
         </footer>
       </aside>
-    </>
+    </div>
   )
 }
 

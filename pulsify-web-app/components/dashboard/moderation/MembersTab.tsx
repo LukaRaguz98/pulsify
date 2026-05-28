@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import {
   Search,
@@ -108,6 +109,7 @@ type OpenMenu = {
 }
 
 export function MembersTab({ guildId, members, roles, onActionComplete }: Props) {
+  const router = useRouter()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'no_bots'>('all')
   const [openMenu, setOpenMenu] = useState<OpenMenu | null>(null)
@@ -618,7 +620,8 @@ export function MembersTab({ guildId, members, roles, onActionComplete }: Props)
                 return (
                   <tr
                     key={m.user.id}
-                    className="border-b"
+                    onClick={() => router.push(`/dashboard/${guildId}/members/${m.user.id}?from=moderation`)}
+                    className="cursor-pointer border-b transition-colors"
                     style={{
                       borderColor: 'var(--line-strong)',
                       background: 'color-mix(in srgb, var(--panel) 50%, transparent)',
@@ -682,9 +685,10 @@ export function MembersTab({ guildId, members, roles, onActionComplete }: Props)
                         <span className="text-xs text-subtle">Active</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={(e) => {
+                          e.stopPropagation()
                           if (openMenu?.userId === m.user.id) {
                             setOpenMenu(null)
                             return

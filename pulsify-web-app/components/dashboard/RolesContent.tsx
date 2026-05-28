@@ -263,17 +263,6 @@ export function RolesContent({ guildId }: Props) {
       <PageHeader
         title="Roles"
         description="View and manage the roles configured on your server."
-        action={
-          <button
-            type="button"
-            onClick={openCreate}
-            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition"
-            style={{ background: 'var(--p-1)', color: '#fff' }}
-          >
-            <Plus size={14} />
-            Create role
-          </button>
-        }
       />
 
       {error && (
@@ -324,11 +313,22 @@ export function RolesContent({ guildId }: Props) {
           title="Hierarchy"
           description="Drag rows to reorder roles top-down. Click any row to edit name, color, and permissions."
         >
-          {reordering && (
-            <div className="inline-flex items-center gap-1.5 text-xs text-subtle">
-              <Loader2 size={11} className="animate-spin" /> Saving order…
-            </div>
-          )}
+          <div className="flex flex-wrap items-center gap-3">
+            {reordering && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-subtle">
+                <Loader2 size={11} className="animate-spin" /> Saving order…
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={openCreate}
+              className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition"
+              style={{ background: 'var(--p-1)', color: '#fff' }}
+            >
+              <Plus size={14} />
+              Create role
+            </button>
+          </div>
 
           {sortedRoles.length === 0 ? (
             <EmptyState

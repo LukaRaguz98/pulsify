@@ -138,12 +138,12 @@ export function TicketDetail({ guildId, ticket, onClose, runAction }: Props) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[55] flex justify-end"
-      style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)' }}
+      className="fixed inset-0 z-[55] flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
       onClick={() => !dialog && onClose()}
     >
       <aside
-        className="ticket-drawer flex h-full w-full max-w-xl flex-col border-l shadow-2xl"
+        className="relative flex w-full max-w-2xl max-h-[90vh] flex-col rounded-2xl border shadow-2xl overflow-hidden"
         style={{ background: 'var(--bg)', borderColor: 'var(--line-strong)' }}
         onClick={(e) => e.stopPropagation()}
       >

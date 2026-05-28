@@ -195,25 +195,15 @@ export function EventsContent({ guildId }: Props) {
         title="Events"
         description="Manage Discord scheduled events for this server."
         action={
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => fetchAll()}
-              disabled={refreshing}
-              className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
-              style={{ borderColor: 'var(--line-strong)', color: 'var(--text-3)' }}
-            >
-              <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
-              Refresh
-            </button>
-            <button
-              onClick={openCreate}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition"
-              style={{ background: 'var(--p-1)', color: '#fff' }}
-            >
-              <Plus size={14} />
-              Create event
-            </button>
-          </div>
+          <button
+            onClick={() => fetchAll()}
+            disabled={refreshing}
+            className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+            style={{ borderColor: 'var(--line-strong)', color: 'var(--text-3)' }}
+          >
+            <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+            Refresh
+          </button>
         }
       />
 
@@ -326,6 +316,14 @@ export function EventsContent({ guildId }: Props) {
                 </button>
               ))}
             </div>
+            <button
+              onClick={openCreate}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition"
+              style={{ background: 'var(--p-1)', color: '#fff' }}
+            >
+              <Plus size={14} />
+              Create event
+            </button>
           </div>
 
           {view === 'calendar' ? (
