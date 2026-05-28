@@ -1748,3 +1748,85 @@ Acceptance Criteria
 	Internal collaboration features work reliably
 	UI remains responsive and visually polished
 	Permission boundaries are enforced correctly
+	
+PULSIFY-28 — Release Notes Page & Community Roadmap Synchronization (v0.28.0)
+
+Description
+	Implement a dedicated Release Notes page for the public Pulsify website and improve the Community page by dynamically organizing tasks/features into Shipped, In 	Progress, and Planned sections.
+	The goal is to improve transparency, communicate development progress, and create a more professional SaaS/community experience for users following Pulsify 	development.
+
+Goals
+	Create centralized release/update visibility
+	Improve communication with the community
+	Showcase active development progress
+	Increase professionalism and transparency
+
+Tasks
+	Release Notes Page
+		Create new “Release Notes” public page
+		Add footer link integration
+		Design modern changelog/release timeline UI
+		Add version-based release sections:
+			v0.1.0
+			v0.2.0
+			etc.
+		Display:
+			release title
+			release date
+			added features
+			improvements
+			fixes
+		Add categorized release sections:
+			Features
+			Improvements
+			Fixes
+			UI/UX
+			Performance
+		Add expandable/collapsible release entries
+		Add search/filter support for releases
+		Add responsive mobile layout
+		Add loading/empty states
+
+	Community Page Improvements
+		Update Community page structure
+		Add roadmap/progress sections:
+			Shipped
+			In Progress
+			Planned
+		Populate sections using existing Pulsify tasks/features
+		Add task/feature cards
+		Display:
+			task title
+			short description
+			progress status
+			category/tag
+		Add status badges:
+			Completed
+			Active Development
+			Planned
+		Add animated roadmap timeline/cards
+
+	Synchronization & Consistency
+		Ensure Release Notes and Community roadmap use consistent design language
+		Add shared status/tag styling
+		Add reusable roadmap/release card components
+		Prepare structure for future automatic task syncing
+
+	UX Improvements
+		Add smooth transitions/animations
+		Add responsive layouts
+		Add hover interactions
+		Add clean empty states/placeholders
+		Improve typography and spacing consistency
+
+Acceptance Criteria
+	Release Notes page is accessible from footer
+	Release history is displayed clearly
+	Community page contains:
+		Shipped
+		In Progress
+		Planned sections
+	Roadmap/task cards display correctly
+	Release Notes UI feels polished and production-ready
+	Community page visually matches Pulsify branding
+	Responsive/mobile layouts work correctly
