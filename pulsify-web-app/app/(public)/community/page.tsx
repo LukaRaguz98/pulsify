@@ -1,14 +1,19 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
-import { promises as fs } from 'fs'
-import path from 'path'
-import { CheckCircle2, Loader2, Circle, Sparkles, MessageCircle, Heart, ArrowRight } from 'lucide-react'
+import Link from 'next/link'
+import { Sparkles, MessageCircle, Heart, ArrowRight, CheckCircle2, Loader2, Circle } from 'lucide-react'
 import { createClient } from '@/lib/supabase-server'
 import { guildIconUrl } from '@/lib/discord'
 import { Eyebrow, SectionHeading } from '@/components/landing/landing-ui'
 import { Reveal } from '@/components/landing/Reveal'
 import { InvitePulseButton } from '@/components/landing/LandingCtas'
 import { SITE } from '@/lib/site'
+import { getReleases } from '@/lib/release-notes'
+import {
+  getRoadmap, ROADMAP_COLUMN_LABEL, ROADMAP_STATUS_COLOR, type RoadmapStatus,
+} from '@/lib/roadmap'
+import { RoadmapTaskCard } from '@/components/public/RoadmapTaskCard'
+import { renderInline } from '@/components/public/inline-format'
 
 export const metadata: Metadata = {
   title: 'Community · Pulsify',
@@ -17,52 +22,14 @@ export const metadata: Metadata = {
   alternates: { canonical: '/community' },
 }
 
-const CHANGELOG = [
-  {
-    version: 'v1.4',
-    date: 'May 2026',
-    title: 'Global search & command palette',
-    items: ['⌘K command palette across the whole dashboard', 'Fuzzy global search for members, roles, channels, events and more'],
-  },
-  {
-    version: 'v1.3',
-    date: 'Apr 2026',
-    title: 'Scheduled automations',
-    items: ['Time-based workflows: announcements, role sync, channel locks and digests', 'Run history and per-workflow analytics'],
-  },
-  {
-    version: 'v1.2',
-    date: 'Apr 2026',
-    title: 'Member profiles & reputation',
-    items: ['Rich member profiles with activity heatmaps', 'Reputation scores and full moderation history'],
-  },
-  {
-    version: 'v1.1',
-    date: 'Mar 2026',
-    title: 'Pulse Guard AI moderation',
-    items: ['AI screening for spam, scams, toxicity and NSFW', 'Per-category actions and a review queue'],
-  },
-]
-
-const ROADMAP: { status: 'shipped' | 'progress' | 'planned'; label: string; items: string[] }[] = [
-  {
-    status: 'shipped',
-    label: 'Shipped',
-    items: ['Command palette & global search', 'Scheduled automations', 'Pulse Guard AI moderation', 'Member profiles & reputation'],
-  },
-  {
-    status: 'progress',
-    label: 'In progress',
-    items: ['Multi-server management', 'Deeper analytics insights', 'Custom bot branding'],
-  },
-  {
-    status: 'planned',
-    label: 'Planned',
-    items: ['Public API & webhooks', 'Backup & restore', 'More automation actions', 'Mobile companion'],
-  },
-]
-
 const SHOWCASE = ['A', 'B', 'C', 'D', 'E', 'F']
+
+const ROADMAP_ORDER: RoadmapStatus[] = ['shipped', 'progress', 'planned']
+const ROADMAP_ICON: Record<RoadmapStatus, typeof CheckCircle2> = {
+  shipped: CheckCircle2,
+  progress: Loader2,
+  planned: Circle,
+}
 
 const PRIMARY_BTN =
   'inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all active:translate-y-px'
@@ -71,12 +38,6 @@ const primaryStyle: React.CSSProperties = {
   color: '#fff',
   boxShadow: '0 6px 20px -6px var(--p-glow), inset 0 1px 0 rgba(255,255,255,0.2)',
 }
-
-const ROADMAP_STYLE = {
-  shipped: { icon: CheckCircle2, color: 'var(--green)' },
-  progress: { icon: Loader2, color: 'var(--amber)' },
-  planned: { icon: Circle, color: 'var(--text-3)' },
-} as const
 
 function DiscordGlyph({ size = 18 }: { size?: number }) {
   return (
@@ -106,51 +67,16 @@ const SOCIALS = [
   { label: 'GitHub', href: SITE.github, glyph: <GithubGlyph /> },
 ]
 
-function cmpVer(a: string, b: string) {
-  const pa = a.split('.').map(Number)
-  const pb = b.split('.').map(Number)
-  for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0)
-  return 0
-}
-
-// Pull the most recent release notes (resources/notes/vX.Y.Z.txt). Each file
-// starts with `**Pulsify vX.Y.Z — Title**` then a one-line description; the date
-// comes from the file's modified time. Falls back to the static lists below if
-// the directory can't be read (e.g. a deploy that doesn't ship resources/).
-async function loadReleases(limit = 4) {
-  try {
-    const dir = path.join(process.cwd(), '..', 'resources', 'notes')
-    const files = (await fs.readdir(dir)).filter((f) => /^v\d/.test(f) && f.endsWith('.txt'))
-    const parsed = await Promise.all(
-      files.map(async (f) => {
-        const full = path.join(dir, f)
-        const [content, stat] = await Promise.all([fs.readFile(full, 'utf8'), fs.stat(full)])
-        const lines = content.split('\n').map((l) => l.trim()).filter(Boolean)
-        const m = lines[0]?.match(/v([\d.]+)\s*[—-]\s*(.+?)\*\*$/)
-        return {
-          version: m?.[1] ?? f.replace(/^v|\.txt$/g, ''),
-          title: m?.[2] ?? '',
-          description: lines[1] ?? '',
-          date: stat.mtime.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-        }
-      }),
-    )
-    return parsed.sort((a, b) => cmpVer(b.version, a.version)).slice(0, limit)
-  } catch {
-    return []
-  }
-}
-
 export default async function CommunityPage() {
-  const releases = await loadReleases()
-  const changelog = releases.length
-    ? releases.map((r) => ({ version: `v${r.version}`, date: r.date, title: r.title, items: [r.description] }))
-    : CHANGELOG
-  const roadmap = ROADMAP.map((col) =>
-    col.status === 'shipped' && releases.length
-      ? { ...col, items: releases.map((r) => `v${r.version} — ${r.title}`) }
-      : col,
-  )
+  // Recent releases for the changelog teaser at the top, and the full roadmap
+  // (shipped / in progress / planned) sourced from the same tasks files the
+  // Release Notes page reads. Falls back to empty arrays — the empty states
+  // below take over when the resources directory isn't shipped.
+  const [releases, roadmap] = await Promise.all([
+    getReleases(),
+    getRoadmap(),
+  ])
+  const recentChangelog = releases.slice(0, 4)
 
   // Real servers running Pulsify, from the bot's synced_guilds table.
   const supabase = await createClient()
@@ -181,65 +107,117 @@ export default async function CommunityPage() {
         </div>
       </header>
 
-      {/* Updates / changelog */}
+      {/* Updates / changelog teaser */}
       <Reveal className="mt-20">
         <SectionHeading eyebrow="Updates" title="What’s new?" subtitle="Recent improvements shipped to Pulsify." />
         <div className="mx-auto mt-10 max-w-3xl">
-          <ol className="relative space-y-8 border-l pl-8" style={{ borderColor: 'var(--line-strong)' }}>
-            {changelog.map((entry) => (
-              <li key={entry.version} className="relative">
-                <span
-                  className="absolute -left-[2.75rem] flex h-6 w-6 items-center justify-center rounded-full"
-                  style={{ background: 'var(--p-1)', color: '#fff', boxShadow: '0 0 0 4px var(--bg)' }}
-                >
-                  <Sparkles size={12} />
-                </span>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span className="rounded-md px-2 py-0.5 font-mono text-xs font-semibold" style={{ background: 'var(--p-soft)', color: 'var(--p-1)' }}>
-                    {entry.version}
+          {recentChangelog.length === 0 ? (
+            <div
+              className="rounded-2xl border p-8 text-center"
+              style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
+            >
+              <p className="text-sm font-semibold text-foreground">Release history coming soon</p>
+              <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>Updates ship here as Pulsify evolves.</p>
+            </div>
+          ) : (
+            <ol className="relative space-y-8 border-l pl-8" style={{ borderColor: 'var(--line-strong)' }}>
+              {recentChangelog.map((entry) => (
+                <li key={entry.versionKey} className="relative">
+                  <span
+                    className="absolute -left-[2.75rem] flex h-6 w-6 items-center justify-center rounded-full"
+                    style={{ background: 'var(--p-1)', color: '#fff', boxShadow: '0 0 0 4px var(--bg)' }}
+                  >
+                    <Sparkles size={12} />
                   </span>
-                  <h3 className="text-base font-semibold text-foreground">{entry.title}</h3>
-                  <span className="text-xs" style={{ color: 'var(--text-3)' }}>{entry.date}</span>
-                </div>
-                <ul className="mt-3 space-y-1.5">
-                  {entry.items.map((it) => (
-                    <li key={it} className="flex gap-2.5 text-sm leading-relaxed" style={{ color: 'var(--text-2)' }}>
-                      <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: 'var(--p-1)' }} />
-                      {it}
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ol>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className="rounded-md px-2 py-0.5 font-mono text-xs font-semibold" style={{ background: 'var(--p-soft)', color: 'var(--p-1)' }}>
+                      v{entry.version}
+                    </span>
+                    <h3 className="text-base font-semibold text-foreground">{entry.title}</h3>
+                    <span className="text-xs" style={{ color: 'var(--text-3)' }}>{entry.date}</span>
+                  </div>
+                  {entry.description && (
+                    <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--text-2)' }}>{renderInline(entry.description)}</p>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
+          <div className="mt-8 flex justify-center">
+            <Link
+              href="/release-notes"
+              className="inline-flex items-center gap-1.5 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors"
+              style={{ borderColor: 'var(--line-strong)', color: 'var(--text)' }}
+            >
+              See all release notes
+              <ArrowRight size={14} />
+            </Link>
+          </div>
         </div>
       </Reveal>
 
       {/* Roadmap */}
       <Reveal className="mt-20">
-        <SectionHeading eyebrow="Roadmap" title="Where we’re headed" subtitle="A preview of what’s shipped, in progress and planned. Indicative and subject to change." />
+        <SectionHeading
+          eyebrow="Roadmap"
+          title="Where we’re headed"
+          subtitle="A live look at what’s shipped, what's in active development and what's planned next. Sourced from the same task list we build against."
+        />
         <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {roadmap.map((col) => {
-            const meta = ROADMAP_STYLE[col.status]
-            const Icon = meta.icon
+          {ROADMAP_ORDER.map((status) => {
+            const items = roadmap[status]
+            const color = ROADMAP_STATUS_COLOR[status]
+            const Icon = ROADMAP_ICON[status]
             return (
-              <div key={col.label} className="rounded-2xl border p-6" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
-                <div className="flex items-center gap-2">
-                  <Icon size={16} style={{ color: meta.color }} />
-                  <h3 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--text-2)' }}>{col.label}</h3>
-                </div>
-                <ul className="mt-4 space-y-2.5">
-                  {col.items.map((it) => (
-                    <li key={it} className="flex gap-2.5 text-sm leading-relaxed" style={{ color: 'var(--text-2)' }}>
-                      <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: meta.color }} />
-                      {it}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <section
+                key={status}
+                className="flex flex-col gap-4 rounded-2xl border p-5"
+                style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
+              >
+                <header className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="flex h-7 w-7 items-center justify-center rounded-lg"
+                      style={{
+                        background: `${color}1f`,
+                        color,
+                        border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`,
+                      }}
+                    >
+                      <Icon size={14} className={status === 'progress' ? 'animate-spin' : undefined} />
+                    </span>
+                    <h3 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--text-2)' }}>
+                      {ROADMAP_COLUMN_LABEL[status]}
+                    </h3>
+                  </div>
+                  <span className="font-mono text-xs" style={{ color: 'var(--text-3)' }}>{items.length}</span>
+                </header>
+                {items.length === 0 ? (
+                  <p
+                    className="rounded-xl border border-dashed p-5 text-center text-xs"
+                    style={{ borderColor: 'var(--line-strong)', color: 'var(--text-3)' }}
+                  >
+                    {status === 'progress' ? 'Nothing in flight right now.' : status === 'planned' ? 'No upcoming work logged yet.' : 'Releases will land here as they ship.'}
+                  </p>
+                ) : (
+                  <ul className="grid gap-3">
+                    {/* Shipped only shows the latest release here — the rest
+                        lives on the Release Notes page so this column doesn't
+                        duplicate that timeline. */}
+                    {items.slice(0, status === 'shipped' ? 1 : 8).map((item) => (
+                      <li key={`${item.status}-${item.id ?? item.title}`}>
+                        <RoadmapTaskCard item={item} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
             )
           })}
         </div>
+        <p className="mt-6 text-center text-xs" style={{ color: 'var(--text-3)' }}>
+          Roadmap is updated as task statuses change. Order and timing are indicative and subject to change.
+        </p>
       </Reveal>
 
       {/* Community showcase */}

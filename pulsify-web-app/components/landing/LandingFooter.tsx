@@ -8,11 +8,15 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
   {
     // Features, How it works, Why Pulsify, Pricing and FAQ all live on the one
     // landing page, so a single "Overview" link to the top stands in for them
-    // all. Dashboard stays as the app entry point.
+    // all. Dashboard stays as the app entry point. The Overview href is the
+    // fully-qualified `/#top` (not the bare `#top`) so clicking it from another
+    // page (e.g. /release-notes) routes to the landing page first instead of
+    // scrolling within the current view.
     title: 'Product',
     links: [
-      { label: 'Overview', href: '#top' },
+      { label: 'Overview', href: '/#top' },
       { label: 'Dashboard', href: '/dashboard', dashboard: true },
+      { label: 'Release Notes', href: '/release-notes' },
     ],
   },
   {
