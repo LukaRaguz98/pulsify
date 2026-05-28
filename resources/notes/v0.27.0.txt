@@ -1,0 +1,27 @@
+**Pulsify v0.27.0 — Workspaces & Team Collaboration**
+Pulsify grows up from a single-server dashboard into a multi-community platform. Create a workspace, bring all your servers together, invite your team with real roles, and run moderation and support side by side — everything in one place.
+
+**Workspaces**
+- **One home for every server** — group the Discord servers you manage into a workspace, with its own name, logo and accent.
+- **Switch in a click** — jump between workspaces from anywhere, and see an at-a-glance overview of servers, members, staff roles and recent activity.
+- **Server tags** — label and filter your servers (Main, Partner, Staging…) and jump straight to any server's tools with cross-server quick actions.
+
+**Your team, your rules**
+- **Staff roles** — invite teammates as Owner, Admin, Moderator, Analyst or Support Staff, each with the right permissions baked in.
+- **Invite links** — share a link, pick the role, set an expiry or use limit. Teammates sign in with Discord and they're in.
+- **Per-staff activity** — see exactly what each team member has been doing.
+
+**Work together**
+- **Shared notes** — keep a team record and tag teammates with @mentions.
+- **Task board** — a shared to-do list with priorities, assignees and due dates.
+- **Incidents** — open an incident, set severity and status, assign it, and discuss it in a live comment thread.
+
+**Across every server**
+- **Cross-server moderation** — one feed of recent moderation across all your servers.
+- **Global watchlist** — shared watch, scam and banned-user lists that follow your whole community.
+- **Analytics overview** — compare engagement across servers at a glance.
+- **Activity feed** — everything happening in your workspace and servers in one stream, with notification filters you control.
+
+Built with care: roles are enforced everywhere, and actions that touch Discord still respect each server's own permissions.
+
+Open **Workspaces** from your server list to get started. 💜

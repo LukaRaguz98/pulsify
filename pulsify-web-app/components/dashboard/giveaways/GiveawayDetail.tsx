@@ -100,12 +100,17 @@ export function GiveawayDetail({ guildId, giveaway, roleNames, channelName, onEd
 
   return (
     <>
-      <button aria-label="Close" onClick={onClose} className="fixed inset-0 z-[60]" style={{ background: 'rgba(0,0,0,0.5)' }} />
+      <div
+        className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+        style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
+        onClick={onClose}
+      >
       <aside
         role="dialog"
         aria-modal="true"
-        className="gw-drawer fixed right-0 top-0 z-[70] flex h-full w-full max-w-md flex-col border-l shadow-2xl"
+        className="relative flex w-full max-w-lg max-h-[90vh] flex-col rounded-2xl border shadow-2xl overflow-hidden"
         style={{ background: 'var(--bg)', borderColor: 'var(--line-strong)' }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-3 border-b px-5 py-4" style={{ borderColor: 'var(--line-strong)' }}>
@@ -249,6 +254,7 @@ export function GiveawayDetail({ guildId, giveaway, roleNames, channelName, onEd
           <ActionBtn onClick={() => setConfirm('delete')} icon={<Trash2 size={14} />} label="Delete" danger />
         </div>
       </aside>
+      </div>
 
       {confirm === 'end' && (
         <ConfirmDialog
