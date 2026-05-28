@@ -5,6 +5,9 @@ import { createClient } from '@/lib/supabase-server'
 import { getCurrentDiscordUser } from '@/lib/workspace-auth'
 import { recordWorkspaceActivity } from '@/lib/workspace-activity'
 import { slugify, isWorkspaceRole } from '@/lib/workspace'
+import { getUserPlan } from '@/lib/billing-server'
+import { PLAN_LIMITS } from '@/lib/billing'
+import { listUserWorkspaces } from '@/lib/workspace-data'
 
 export type ActionResult<T = undefined> =
   | (T extends undefined ? { ok: true } : { ok: true; data: T })
@@ -42,6 +45,31 @@ export async function createWorkspace(input: {
 
   const name = input.name.trim().slice(0, NAME_MAX)
   if (!name) return { ok: false, error: 'Workspace name is required.' }
+
+  // Per-plan workspace cap. Owned (not just member-of) workspaces count
+  // toward the limit so Business teams can collaborate without each member
+  // tripping the gate. The picker UI mirrors this — see WorkspacePicker.
+  const plan = await getUserPlan(actor.userId)
+  const limit = PLAN_LIMITS[plan].maxWorkspaces
+  const owned = await listUserWorkspaces(actor.userId)
+  const ownedCount = owned.filter((w) => w.owner_id === actor.userId).length
+  if (ownedCount >= limit) {
+    return {
+      ok: false,
+      error: `Your plan allows ${limit} workspace${limit === 1 ? '' : 's'}. Upgrade to create more.`,
+    }
+  }
+
+  // Per-plan server cap on the FIRST seed. Adding more servers later is
+  // gated separately in addServer.
+  const seedCount = (input.guildIds ?? []).length
+  const serverLimit = PLAN_LIMITS[plan].maxServersPerWorkspace
+  if (seedCount > serverLimit) {
+    return {
+      ok: false,
+      error: `Your plan allows ${serverLimit} server${serverLimit === 1 ? '' : 's'} per workspace.`,
+    }
+  }
 
   const supabase = await createClient()
   const slug = await uniqueSlug(supabase, name)

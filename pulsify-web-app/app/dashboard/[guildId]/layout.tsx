@@ -11,6 +11,12 @@ import { NotificationBell } from '@/components/dashboard/notifications/Notificat
 import { Toaster } from '@/components/dashboard/notifications/Toaster'
 import { PingIndicator } from '@/components/dashboard/PingIndicator'
 import { CommandPaletteProvider } from '@/components/dashboard/search/CommandPaletteProvider'
+import { PlanProvider } from '@/components/billing/PlanProvider'
+import {
+  getSubscriptionRow,
+  toClientSubscription,
+} from '@/lib/billing-server'
+import { effectivePlan } from '@/lib/billing'
 
 export default async function GuildLayout({
   children,
@@ -40,29 +46,39 @@ export default async function GuildLayout({
   const discordId = session.user.user_metadata?.provider_id ?? session.user.id
   const bannerUrl = selfUser?.banner ? userBannerUrl(selfUser.id ?? discordId, selfUser.banner) : undefined
 
+  // Resolve the user's effective plan once at layout level so every client
+  // component below can render plan-aware UI without a network round-trip.
+  // Server routes still re-verify (lib/billing-server.requirePlan) — this
+  // provider is a UX hint, not a security boundary.
+  const subscriptionRow = await getSubscriptionRow(discordId)
+  const subscription = toClientSubscription(subscriptionRow)
+  const plan = effectivePlan(subscriptionRow?.plan, subscriptionRow?.status)
+
   return (
     <NotificationsProvider guildId={guildId}>
       <CommandPaletteProvider guildId={guildId}>
-        <div className="flex h-screen overflow-hidden bg-background text-foreground">
-          <GuildSidebar
-            guild={guild}
-            guildId={guildId}
-            user={session.user}
-            selfUser={selfUser ?? undefined}
-            bannerUrl={bannerUrl}
-          />
-          <CornerDecorations />
-          <DiscordCornerIcon guildId={guildId} />
-          <NotificationBell guildId={guildId} />
-          <PingIndicator />
-          <main className="flex-1 overflow-y-auto flex flex-col">
-            {/* max-lg:pt-12 clears the fixed mobile top bar (h-12) rendered by
-                GuildSidebar on small screens; desktop has no offset. */}
-            <div className="flex-1 max-lg:pt-12">{children}</div>
-            <Footer />
-          </main>
-          <Toaster />
-        </div>
+        <PlanProvider plan={plan} subscription={subscription}>
+          <div className="flex h-screen overflow-hidden bg-background text-foreground">
+            <GuildSidebar
+              guild={guild}
+              guildId={guildId}
+              user={session.user}
+              selfUser={selfUser ?? undefined}
+              bannerUrl={bannerUrl}
+            />
+            <CornerDecorations />
+            <DiscordCornerIcon guildId={guildId} />
+            <NotificationBell guildId={guildId} />
+            <PingIndicator />
+            <main className="flex-1 overflow-y-auto flex flex-col">
+              {/* max-lg:pt-12 clears the fixed mobile top bar (h-12) rendered by
+                  GuildSidebar on small screens; desktop has no offset. */}
+              <div className="flex-1 max-lg:pt-12">{children}</div>
+              <Footer />
+            </main>
+            <Toaster />
+          </div>
+        </PlanProvider>
       </CommandPaletteProvider>
     </NotificationsProvider>
   )
