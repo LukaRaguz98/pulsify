@@ -1,98 +1,79 @@
-PULSIFY-29 — Pricing Plans, Feature Gating & Payment System (v0.29.0)
+PULSIFY-30 — Custom Bot Status & Presence Management (v0.30.0)
 
 Description
-	Implement the complete Pricing and Subscription system inside Pulsify, including pricing plan management, feature access restrictions, subscription handling, and payment integration.
-	The system should connect existing Pulsify functionality with subscription tiers and dynamically enable/disable features depending on the active user/server plan.
+	Implement a complete Bot Status and Presence Management system that allows administrators to customize Pulse presence, activities, rotating statuses, and dynamic server-based bot information directly from the Pulsify dashboard.
+	The system should improve branding, engagement, and create a more alive/interactive Discord bot experience.
 
 Goals
-	Introduce functional subscription plans
-	Monetize existing Pulsify systems/features
-	Restrict features based on active plan
-	Implement payment and billing infrastructure
-	Prepare Pulsify for public SaaS launch
+	Improve Pulse branding and personality
+	Allow dynamic/custom bot statuses
+	Increase server engagement visibility
+	Expand server customization capabilities
 
 Tasks
-	Pricing Plans System
-		Implement pricing plan infrastructure
-		Add supported plans:
-			Free
-			Pro
-			Business
-			Enterprise
-		Add plan metadata/configuration system
-		Add monthly/yearly billing support
-
-	Feature Gating
-		Connect existing Pulsify features to plans
-		Restrict/enable features dynamically based on active subscription
-		Add feature limitations such as:
-			number of servers
-			analytics retention
-			AI moderation access
-			ticket system limits
-			automations limits
-			giveaways limits
-			advanced moderation tools
-			custom branding
-			multi-server management
-			advanced analytics
-			backup/restore access
-			API access
-		Add plan validation middleware/backend checks
-		Prevent unauthorized access to premium features
-
-	Dashboard Integration
-		Add current subscription display
-		Add plan usage/progress indicators
+	Presence Management Dashboard
+		Create new “Presence” navigation view
+		Build bot status management UI
 		Display:
-			active plan
-			renewal date
-			billing cycle
-			feature usage
-			feature limits
-		Add upgrade/downgrade flows
-		Add “locked feature” states inside the dashboard
+			current status
+			current activity
+			rotation state
+			active presets
+		Add enable/disable controls
 
-	Payment System
-		Implement payment provider integration
-		Add secure checkout flow
-		Add subscription creation/cancellation
-		Add recurring billing support
-		Add payment success/failure handling
-		Add invoice/payment history
-		Add webhook handling for subscription updates
-		Add trial support/free trial handling
+	Custom Status System
+		Allow custom:
+			Playing
+			Watching
+			Listening
+			Competing
+			Streaming statuses
+		Add emoji/icon support
+		Add dynamic placeholders:
+			server count
+			member count
+			active tickets
+			active giveaways
+			moderation actions
+			uptime
 
-	Billing Management
-		Create Billing settings page
-		Add:
-			payment method management
-			invoice history
-			billing details
-			subscription management
-			cancel/reactivate subscription
-		Add usage-based warnings/notifications
+	Rotating Statuses
+		Add rotating presence system
+		Allow multiple statuses in rotation
+		Add configurable rotation intervals
+		Add schedule-based statuses
+
+	Server-Specific Branding
+		Allow custom statuses per server
+		Add premium-only branding features
+		Add Pulse Guard presence presets
+		Add event-based temporary statuses
+
+	Automation & Smart Presence
+		Add automatic status updates based on:
+			active events
+			giveaways
+			maintenance
+			incidents
+			server milestones
+		Add “maintenance mode” presence
 
 	UX Improvements
-		Add modern pricing UI/cards
-		Add responsive billing pages
-		Add animated upgrade prompts/modals
+		Add live presence preview
+		Add responsive dashboard
 		Add loading/error/success states
-		Add upgrade recommendations based on feature usage
+		Add quick preset buttons
+		Add animated preview cards
 
-	Security & Reliability
-		Validate subscription state server-side
-		Prevent client-side bypassing of premium features
-		Add secure webhook verification
-		Add billing audit logs/history
-		Add fallback handling for failed payments
+	Future-Proofing
+		Prepare support for AI-generated statuses
+		Add presence analytics/tracking
+		Add future custom rich presence support
 
 Acceptance Criteria
-	Pricing plans function correctly
-	Existing features are properly gated by plan
-	Users only access features included in their plan
-	Payment system processes subscriptions successfully
-	Billing page displays correct subscription data
-	Upgrade/downgrade flows work properly
-	Premium feature restrictions are enforced securely
-	UI remains responsive and visually polished
+	Bot statuses update correctly
+	Rotating statuses function properly
+	Dynamic placeholders update live
+	Server-specific branding works correctly
+	Dashboard UI remains responsive and polished
+	Presence system integrates cleanly with Pulse branding

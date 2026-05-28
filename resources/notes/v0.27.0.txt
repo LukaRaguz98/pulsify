@@ -24,4 +24,4 @@ Pulsify grows up from a single-server dashboard into a multi-community platform.
 
 Built with care: roles are enforced everywhere, and actions that touch Discord still respect each server's own permissions.
 
-Open **Workspaces** from your server list to get started. 💜
+Open **Workspaces** from your server list to get started.

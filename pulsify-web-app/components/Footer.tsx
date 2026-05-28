@@ -34,6 +34,9 @@ export function Footer() {
           <Link href="/community" className="transition-colors hover:text-[var(--p-1)]">
             Community
           </Link>
+          <Link href="/release-notes" className="transition-colors hover:text-[var(--p-1)]">
+            Release Notes
+          </Link>
         </nav>
       </div>
     </footer>
