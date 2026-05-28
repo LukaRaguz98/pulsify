@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
-import { LogOut, Copy, Check, X } from 'lucide-react'
+import Link from 'next/link'
+import { LogOut, Copy, Check, X, CreditCard } from 'lucide-react'
 
 type Props = {
   displayName: string
@@ -269,7 +270,19 @@ export function UserProfileButton({
               )}
             </div>
 
-            <form action="/auth/logout" method="POST" className="mt-2">
+            <Link
+              href="/billing"
+              onClick={closePopup}
+              className="mt-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors"
+              style={{ color: 'var(--text-2)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-2)'; e.currentTarget.style.color = 'var(--text)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'var(--text-2)' }}
+            >
+              <CreditCard size={13} />
+              Billing &amp; plan
+            </Link>
+
+            <form action="/auth/logout" method="POST">
               <button
                 type="submit"
                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-subtle transition-colors"

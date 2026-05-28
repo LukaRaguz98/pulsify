@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
 import { recordNotification } from '@/lib/notifications-server'
+import { requireFeature } from '@/lib/billing-server'
 import {
   analyzeContent,
   chooseAction,
@@ -42,6 +43,11 @@ export async function saveAIModerationSettings(
   guildId: string,
   settings: AIModerationSettings,
 ): Promise<ActionResult> {
+  // Plan gate first — Pulse Guard is Pro+. Server-side enforcement; the page
+  // already hides the surface from free users but we don't trust the client.
+  const featureGate = await requireFeature('aiModeration')
+  if (!featureGate.ok) return { ok: false, error: featureGate.error }
+
   const auth = await authorizeGuildModerator(guildId)
   if (!auth.ok) return { ok: false, error: auth.error }
 

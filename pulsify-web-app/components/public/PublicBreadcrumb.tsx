@@ -10,6 +10,7 @@ const PAGES = [
   { href: '/faq', label: 'FAQ' },
   { href: '/support', label: 'Support' },
   { href: '/community', label: 'Community' },
+  { href: '/release-notes', label: 'Release Notes' },
   { href: '/privacy', label: 'Privacy' },
   { href: '/terms', label: 'Terms' },
 ]
