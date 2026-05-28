@@ -1,8 +1,20 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useSyncExternalStore } from 'react'
 import { Search } from 'lucide-react'
 import { useCommandPalette } from './CommandPaletteProvider'
+
+// Client-only platform check via useSyncExternalStore: returns false during SSR
+// and the first client render (so hydration matches), then settles to the real
+// value — no hydration mismatch and no setState-in-effect.
+const noopSubscribe = () => () => {}
+function useIsMac(): boolean {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent),
+    () => false,
+  )
+}
 
 /**
  * The "universal search bar" in the sidebar.
@@ -17,6 +29,7 @@ import { useCommandPalette } from './CommandPaletteProvider'
  */
 export function SearchTrigger({ collapsed }: { collapsed: boolean }) {
   const { openPalette, openWith } = useCommandPalette()
+  const isMac = useIsMac()
   const [value, setValue] = useState('')
   const [focused, setFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -81,6 +94,12 @@ export function SearchTrigger({ collapsed }: { collapsed: boolean }) {
         className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--text-3)]"
         style={{ color: 'var(--text)' }}
       />
+      <kbd
+        className="shrink-0 rounded border px-1.5 py-0.5 font-mono text-[10px] leading-none"
+        style={{ borderColor: 'var(--line-strong)', background: 'var(--bg-2)', color: 'var(--text-3)' }}
+      >
+        {isMac ? '⌘' : 'Ctrl'} K
+      </kbd>
     </div>
   )
 }
