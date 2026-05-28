@@ -51,7 +51,6 @@ type CardDef = {
   iconColor: string
   title: string
   description: string
-  pulseBadge: boolean
   enabled: boolean
   onToggle: (v: boolean) => void
   extra: ReactNode
@@ -418,9 +417,8 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     iconColor:   '#3b82f6',
     title:       'Welcome Message',
     description: isEmbed
-      ? 'Sends an Pulse generated embed card when a new member joins.'
+      ? 'Sends an AI-generated embed card when a new member joins.'
       : 'Send a message when a new member joins.',
-    pulseBadge:  isEmbed,
     enabled:  welcome.enabled,
     onToggle: (v: boolean) => { setWelcome({ ...welcome, enabled: v }); clearFeedback() },
     extra: welcome.enabled && (
@@ -444,9 +442,8 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     iconColor:   '#fb7185',
     title:       'Goodbye Message',
     description: isGoodbyeEmbed
-      ? 'Sends an Pulse generated embed card when a member leaves.'
+      ? 'Sends an AI-generated embed card when a member leaves.'
       : 'Send a message when a member leaves the server.',
-    pulseBadge:  isGoodbyeEmbed,
     enabled:  goodbye.enabled,
     onToggle: (v: boolean) => { setGoodbye({ ...goodbye, enabled: v }); clearFeedback() },
     extra: goodbye.enabled && (
@@ -469,8 +466,7 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     iconBg:      'rgba(245,158,11,0.12)',
     iconColor:   '#f59e0b',
     title:       'Server Rules',
-    description: 'Post an Pulse generated rules embed to a channel.',
-    pulseBadge:  true,
+    description: 'Post an AI-generated rules embed to a channel.',
     enabled:  rulesVisible,
     onToggle: (v: boolean) => { setRulesVisible(v); clearFeedback() },
     extra: rulesVisible && (
@@ -503,8 +499,7 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     iconBg:      'rgba(16,185,129,0.12)',
     iconColor:   '#10b981',
     title:       'Onboarding Guide',
-    description: 'Post an Pulse generated onboarding guide to a channel.',
-    pulseBadge:  true,
+    description: 'Post an AI-generated onboarding guide to a channel.',
     enabled:  onboardVisible,
     onToggle: (v: boolean) => { setOnboardVisible(v); clearFeedback() },
     extra: onboardVisible && (
@@ -538,7 +533,6 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     iconColor:   '#10b981',
     title:       'Auto-Role',
     description: 'Automatically assign a role to new members.',
-    pulseBadge:  false,
     enabled:  autoRole.enabled,
     onToggle: (v: boolean) => { setAutoRole({ ...autoRole, enabled: v }); clearFeedback() },
     extra: autoRole.enabled && (
@@ -564,7 +558,6 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     iconColor:   '#f59e0b',
     title:       'Moderation Alerts',
     description: 'Get notified when moderation actions occur.',
-    pulseBadge:  false,
     enabled:  modAlerts.enabled,
     onToggle: (v: boolean) => { setModAlerts({ ...modAlerts, enabled: v }); clearFeedback() },
     extra: modAlerts.enabled && (
@@ -626,10 +619,7 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
                   <LayoutGrid size={16} />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="font-semibold text-foreground">Suggested Channels</h2>
-                    <span className="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide leading-none" style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))', color: '#fff' }}>Pulse</span>
-                  </div>
+                  <h2 className="font-semibold text-foreground">Suggested Channels</h2>
                   <p className="text-sm text-subtle">
                     {chRefVisible ? 'Channels created on your server via Pulse.' : 'Rename, add or remove channels, then create them on Discord.'}
                   </p>
@@ -821,17 +811,7 @@ function CardItem({ card }: { card: CardDef }) {
             {card.icon}
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="font-semibold text-foreground">{card.title}</h2>
-              {card.pulseBadge && (
-                <span
-                  className="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide leading-none"
-                  style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))', color: '#fff' }}
-                >
-                  Pulse
-                </span>
-              )}
-            </div>
+            <h2 className="font-semibold text-foreground">{card.title}</h2>
             <p className="text-sm text-subtle">{card.description}</p>
           </div>
         </div>
@@ -1129,10 +1109,7 @@ function PulseEmptyState({
             {icon}
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="font-semibold text-foreground">{title}</h2>
-              <span className="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide leading-none" style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))', color: '#fff' }}>Pulse</span>
-            </div>
+            <h2 className="font-semibold text-foreground">{title}</h2>
             <p className="text-sm text-subtle">{description}</p>
           </div>
         </div>

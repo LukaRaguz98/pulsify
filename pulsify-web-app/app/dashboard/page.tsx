@@ -1,6 +1,7 @@
 import Image from 'next/image'
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Activity, Unplug } from 'lucide-react'
+import { Activity, Unplug, Building2, SlidersHorizontal } from 'lucide-react'
 import { createClient } from '@/lib/supabase-server'
 import { getValidDiscordToken } from '@/lib/discord-session'
 import { fetchUserGuilds, fetchSelfUser, hasManageGuild, userBannerUrl, type DiscordGuild } from '@/lib/discord'
@@ -93,18 +94,36 @@ export default async function DashboardPage() {
             <span className="font-bold text-base tracking-tight" style={{ color: 'var(--p-1)' }}>Pulsify</span>
           </div>
 
-          <UserProfileButton
-            displayName={displayName}
-            username={username}
-            discriminator={discriminator}
-            discordId={discordId}
-            email={user.email}
-            avatarUrl={userAvatar}
-            bannerUrl={bannerUrl || undefined}
-            bannerColor={bannerColor}
-            avatarSize={30}
-            popupDirection="down"
-          />
+          <div className="flex items-center gap-3">
+            <Link
+              href="/workspace"
+              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition hover:text-foreground"
+              style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
+            >
+              <Building2 size={15} /> Workspaces
+            </Link>
+            <Link
+              href="/preferences"
+              title="Preferences"
+              aria-label="Preferences"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border transition hover:text-foreground"
+              style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
+            >
+              <SlidersHorizontal size={15} />
+            </Link>
+            <UserProfileButton
+              displayName={displayName}
+              username={username}
+              discriminator={discriminator}
+              discordId={discordId}
+              email={user.email}
+              avatarUrl={userAvatar}
+              bannerUrl={bannerUrl || undefined}
+              bannerColor={bannerColor}
+              avatarSize={30}
+              popupDirection="down"
+            />
+          </div>
         </div>
       </header>
 

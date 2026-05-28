@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   Sparkles,
-  ChevronLeft,
+  ArrowLeft,
   AlertCircle,
   MessageSquare,
   Mic,
@@ -111,13 +111,6 @@ export function LevelingSettingsContent({ guildId, guildName, initialConfig, cha
 
   return (
     <div className="page-content">
-      <Link
-        href={`/dashboard/${guildId}/members`}
-        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground transition hover:text-foreground"
-      >
-        <ChevronLeft size={16} /> Back to Members
-      </Link>
-
       <PageHeader
         title="Level settings"
         description={
@@ -125,6 +118,16 @@ export function LevelingSettingsContent({ guildId, guildName, initialConfig, cha
             Configure XP, levels and rewards for{' '}
             <span className="font-medium text-foreground">{guildName}</span>
           </>
+        }
+        action={
+          <Link
+            href={`/dashboard/${guildId}/members`}
+            className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors"
+            style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
+          >
+            <ArrowLeft size={12} />
+            Back to Members
+          </Link>
         }
       />
 
