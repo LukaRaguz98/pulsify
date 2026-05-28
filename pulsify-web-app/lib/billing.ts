@@ -25,10 +25,13 @@ export const PLAN_RANK: Record<Plan, number> = {
   enterprise: 3,
 }
 
+// Display labels are decoupled from the internal plan keys so we can rename
+// tiers without a DB/Stripe migration. Internal `pro` ships as "Plus" and
+// internal `business` ships as "Pro".
 export const PLAN_LABELS: Record<Plan, string> = {
   free: 'Free',
-  pro: 'Pro',
-  business: 'Business',
+  pro: 'Plus',
+  business: 'Pro',
   enterprise: 'Enterprise',
 }
 
@@ -42,8 +45,8 @@ export const PLAN_TAGLINES: Record<Plan, string> = {
 /** USD monthly prices. Yearly is the per-month equivalent when billed yearly. */
 export const PLAN_PRICES: Record<Plan, { monthly: number | null; yearly: number | null }> = {
   free: { monthly: 0, yearly: 0 },
-  pro: { monthly: 9, yearly: 7 },
-  business: { monthly: 29, yearly: 24 },
+  pro: { monthly: 10, yearly: 8 }, // "Plus" — 20% off when billed yearly
+  business: { monthly: 20, yearly: 16 }, // "Pro" — 20% off when billed yearly
   enterprise: { monthly: null, yearly: null }, // "Contact sales"
 }
 
@@ -206,7 +209,7 @@ export const PLAN_FEATURES: Record<Plan, string[]> = {
     'Priority support',
   ],
   business: [
-    'Everything in Pro',
+    'Everything in Plus',
     `Workspaces: up to ${PLAN_LIMITS.business.maxServersPerWorkspace} servers`,
     'Advanced AI moderation categories',
     `${PLAN_LIMITS.business.analyticsRetentionDays}-day analytics retention`,
@@ -215,7 +218,7 @@ export const PLAN_FEATURES: Record<Plan, string[]> = {
     'Team & admin management',
   ],
   enterprise: [
-    'Everything in Business',
+    'Everything in Pro',
     'Unlimited servers & workspaces',
     'REST API + webhook access',
     'Dedicated support',
@@ -267,8 +270,8 @@ export const PLAN_RECOMMENDED: Plan = 'pro'
 
 export const PLAN_CTA: Record<Plan, string> = {
   free: 'Start free',
-  pro: 'Upgrade to Pro',
-  business: 'Choose Business',
+  pro: 'Upgrade to Plus',
+  business: 'Choose Pro',
   enterprise: 'Contact sales',
 }
 

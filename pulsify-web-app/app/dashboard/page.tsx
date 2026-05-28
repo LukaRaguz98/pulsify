@@ -82,7 +82,7 @@ export default async function DashboardPage() {
       {/* Header */}
       <header className="border-b sticky top-0 z-10" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)', backdropFilter: 'blur(12px)' }}>
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
-          <div className="flex items-center gap-2.5">
+          <Link href="/" className="flex items-center gap-2.5" aria-label="Pulsify home">
             <Image
               src="/logo.png"
               alt="Pulsify"
@@ -92,7 +92,7 @@ export default async function DashboardPage() {
               style={{ filter: 'drop-shadow(0 4px 10px var(--p-glow))' }}
             />
             <span className="font-bold text-base tracking-tight" style={{ color: 'var(--p-1)' }}>Pulsify</span>
-          </div>
+          </Link>
 
           <div className="flex items-center gap-3">
             <Link

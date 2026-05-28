@@ -1,79 +1,64 @@
-PULSIFY-30 — Custom Bot Status & Presence Management (v0.30.0)
+PULSIFY-31 — Discord Bot Update & Release Visibility System (v0.31.0)
 
 Description
-	Implement a complete Bot Status and Presence Management system that allows administrators to customize Pulse presence, activities, rotating statuses, and dynamic server-based bot information directly from the Pulsify dashboard.
-	The system should improve branding, engagement, and create a more alive/interactive Discord bot experience.
+	Implement a Discord bot update and version visibility system for Pulse that allows users and administrators to easily see the current bot version, latest changes, 	release notes, and update status directly from Discord.
+	The system should improve transparency, make Pulse feel more polished, and connect Discord bot updates with the public Pulsify Release Notes page.
 
 Goals
-	Improve Pulse branding and personality
-	Allow dynamic/custom bot statuses
-	Increase server engagement visibility
-	Expand server customization capabilities
+	Improve Pulse bot update communication
+	Add version visibility inside Discord
+	Connect bot updates with Pulsify release notes
+	Improve user trust and product polish
 
 Tasks
-	Presence Management Dashboard
-		Create new “Presence” navigation view
-		Build bot status management UI
+	Version Commands
+		Add /version slash command
+		Add /changelog slash command
+		Add /release-notes slash command
 		Display:
-			current status
-			current activity
-			rotation state
-			active presets
-		Add enable/disable controls
+			current Pulse version
+			latest release title
+			release date
+			short changelog
+			link to full release notes
 
-	Custom Status System
-		Allow custom:
-			Playing
-			Watching
-			Listening
-			Competing
-			Streaming statuses
-		Add emoji/icon support
-		Add dynamic placeholders:
-			server count
-			member count
-			active tickets
-			active giveaways
-			moderation actions
-			uptime
+	Bot Update Embeds
+		Create polished v2 embeds for version/changelog responses
+		Use Pulse branding and consistent embed styling
+		Add buttons:
+			View Release Notes
+			Open Dashboard
+			Invite Pulse
+		Add fallback/error embeds if release data is unavailable
 
-	Rotating Statuses
-		Add rotating presence system
-		Allow multiple statuses in rotation
-		Add configurable rotation intervals
-		Add schedule-based statuses
+	Release Notes Integration
+		Connect bot release commands with Pulsify release notes data
+		Allow latest release info to be fetched dynamically
+		Add support for manual/static fallback release data
+		Ensure release notes link points to public website
 
-	Server-Specific Branding
-		Allow custom statuses per server
-		Add premium-only branding features
-		Add Pulse Guard presence presets
-		Add event-based temporary statuses
+	Startup Version Logging
+		Log Pulse version on bot startup
+		Log connected guild count on startup
+		Log loaded commands count
+		Add clear startup success/failure output
 
-	Automation & Smart Presence
-		Add automatic status updates based on:
-			active events
-			giveaways
-			maintenance
-			incidents
-			server milestones
-		Add “maintenance mode” presence
+	Admin Update Notification
+		Add optional update announcement command for admins
+		Allow posting latest update embed into configured announcements channel
+		Add permission checks for update announcement usage
 
-	UX Improvements
-		Add live presence preview
-		Add responsive dashboard
-		Add loading/error/success states
-		Add quick preset buttons
-		Add animated preview cards
-
-	Future-Proofing
-		Prepare support for AI-generated statuses
-		Add presence analytics/tracking
-		Add future custom rich presence support
+	UX & Consistency
+		Ensure all update/version embeds match Pulse design language
+		Add clear wording for MVP/early access status
+		Add loading/error/success handling
+		Add command cooldowns to prevent spam
 
 Acceptance Criteria
-	Bot statuses update correctly
-	Rotating statuses function properly
-	Dynamic placeholders update live
-	Server-specific branding works correctly
-	Dashboard UI remains responsive and polished
-	Presence system integrates cleanly with Pulse branding
+	/version displays current Pulse version correctly
+	/changelog displays latest update summary
+	/release-notes links to the public release notes page
+	Bot update embeds are visually consistent with Pulse branding
+	Startup logs show version, guild count, and command count
+	Admins can optionally post update announcements to Discord
+	Commands handle errors gracefully

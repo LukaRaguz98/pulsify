@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, Sparkles } from 'lucide-react'
+import { createClient } from '@/lib/supabase'
 import {
   PLANS,
   PLAN_LABELS,
@@ -28,44 +29,56 @@ import {
  * out to /api/billing/checkout directly so the landing page can reuse it.
  */
 
-type Currency = 'usd' | 'eur'
-const CURRENCY_SYMBOL: Record<Currency, string> = { usd: '$', eur: '€' }
-const FX_RATE: Record<Currency, number> = { usd: 1, eur: 0.92 }
-
+// Prices are USD-only. The previous EUR toggle was removed — every surface
+// quotes a single currency so checkout (always USD in Stripe) matches what the
+// user sees.
 export function PricingCards({
   currentPlan,
   initialCycle = 'yearly',
-  showCurrencyToggle = true,
-  defaultCurrency = 'usd',
   enterpriseContactEmail = 'hello@pulsify.app',
 }: {
   currentPlan?: Plan
   initialCycle?: BillingCycle
-  showCurrencyToggle?: boolean
-  defaultCurrency?: Currency
   enterpriseContactEmail?: string
 }) {
   const router = useRouter()
   const [cycle, setCycle] = useState<BillingCycle>(initialCycle)
-  const [currency, setCurrency] = useState<Currency>(defaultCurrency)
   const [loading, setLoading] = useState<Plan | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  async function startCheckout(plan: Plan) {
+  // Kick off Discord OAuth and return the user straight back to checkout for
+  // this plan once authenticated. The `?checkout=` param on the resume URL is
+  // picked up by the effect below when /pricing reloads after the callback.
+  async function signInThenCheckout(plan: Plan, forCycle: BillingCycle) {
+    const supabase = createClient()
+    const resume = `/pricing?checkout=${plan}&cycle=${forCycle}`
+    await supabase.auth.signInWithOAuth({
+      provider: 'discord',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(resume)}`,
+        scopes: 'identify email guilds',
+        queryParams: { prompt: 'consent' },
+      },
+    })
+  }
+
+  async function startCheckout(plan: Plan, overrideCycle?: BillingCycle) {
+    const forCycle = overrideCycle ?? cycle
     setLoading(plan)
     setError(null)
     try {
       const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan, cycle }),
+        body: JSON.stringify({ plan, cycle: forCycle }),
       })
       const data: { url?: string; error?: string } = await res.json()
       if (!res.ok || !data.url) {
-        // 401 means "log in first" — bounce to the home page where the
-        // Discord sign-in lives, and bring them back here after.
+        // 401 means "log in first" — send the user through Discord sign-in and
+        // resume this exact checkout the moment they return, so a not-yet-logged-in
+        // visitor still lands on Stripe instead of a dead button.
         if (res.status === 401) {
-          router.push('/?signin=1&next=/pricing')
+          await signInThenCheckout(plan, forCycle)
           return
         }
         setError(data.error ?? 'Could not start checkout. Try again in a moment.')
@@ -79,10 +92,27 @@ export function PricingCards({
     }
   }
 
+  // After the sign-in bounce, /pricing reloads with `?checkout=<plan>`. Pick the
+  // plan back up and head straight to Stripe so the user doesn't have to click
+  // Upgrade a second time. Reads location directly (not useSearchParams) to keep
+  // the statically-rendered landing page from needing a Suspense boundary.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const requested = params.get('checkout')
+    if (!requested || !BILLABLE_PLANS.includes(requested as Plan)) return
+    const rawCycle = params.get('cycle')
+    const resumeCycle: BillingCycle = rawCycle === 'monthly' || rawCycle === 'yearly' ? rawCycle : cycle
+    // Defer past the effect body so the resume doesn't fire setState
+    // synchronously during commit.
+    const id = setTimeout(() => { void startCheckout(requested as Plan, resumeCycle) }, 0)
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
     <div>
-      {/* Controls — billing period + currency, side by side. */}
-      <div className="mt-2 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
+      {/* Controls — billing period toggle (USD-only, no currency switch). */}
+      <div className="mt-2 flex items-center justify-center">
         <div
           className="inline-flex items-center gap-1 rounded-full border p-1"
           style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
@@ -116,33 +146,6 @@ export function PricingCards({
             )
           })}
         </div>
-
-        {showCurrencyToggle && (
-          <div
-            className="inline-flex items-center gap-1 rounded-full border p-1"
-            style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
-          >
-            {(['usd', 'eur'] as Currency[]).map((c) => {
-              const active = currency === c
-              return (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setCurrency(c)}
-                  aria-pressed={active}
-                  aria-label={c === 'usd' ? 'Show prices in US dollars' : 'Show prices in euros'}
-                  className="flex h-7 w-9 items-center justify-center rounded-full text-sm font-semibold transition-colors"
-                  style={{
-                    background: active ? 'var(--p-1)' : 'transparent',
-                    color: active ? '#fff' : 'var(--text-2)',
-                  }}
-                >
-                  {CURRENCY_SYMBOL[c]}
-                </button>
-              )
-            })}
-          </div>
-        )}
       </div>
 
       {error && (
@@ -166,8 +169,8 @@ export function PricingCards({
           const valueLabel = base === null
             ? 'Custom'
             : base === 0
-              ? `${CURRENCY_SYMBOL[currency]}0`
-              : `${CURRENCY_SYMBOL[currency]}${Math.round(base * FX_RATE[currency])}`
+              ? '$0'
+              : `$${base}`
           const suffix = base === null ? '' : base === 0 ? 'forever' : '/ mo'
 
           const cta = isCurrent
@@ -282,8 +285,7 @@ export function PricingCards({
       </div>
 
       <p className="mt-8 text-center text-sm" style={{ color: 'var(--text-3)' }}>
-        All plans include the Pulse bot, the full dashboard and free updates. Cancel any time.
-        {currency === 'eur' && ' EUR prices are converted from USD at an approximate rate.'}
+        All plans include the Pulse bot, the full dashboard and free updates. Cancel any time. Prices in USD.
       </p>
     </div>
   )

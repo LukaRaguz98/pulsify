@@ -56,7 +56,7 @@ const GROUPS: Group[] = [
       },
       {
         q: 'Can I manage more than one server?',
-        a: 'Absolutely. Every server you have Manage Server or Administrator on appears automatically. Multi-server management tools are part of the Business plan.',
+        a: 'Absolutely. Every server you have Manage Server or Administrator on appears automatically. Multi-server management tools are part of the Pro plan.',
       },
     ],
   },

@@ -92,7 +92,11 @@
       "Bash(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/dashboard/123/__TRACKED_VAR__)",
       "Bash(xargs grep -l \"EventEditor\\\\|ScheduledContent\\\\|scheduled\")",
       "Bash(git log *)",
-      "Bash(echo \"EXIT: $?  \\(no output above = clean\\)\")"
+      "Bash(echo \"EXIT: $?  \\(no output above = clean\\)\")",
+      "Bash(ls public *)",
+      "Bash(ls app/*.tsx app/*.ts app/icon* app/favicon*)",
+      "Bash(file app/favicon.ico)",
+      "Bash(grep -l \"next/link\" components/dashboard/GuildSidebar.tsx components/workspace/WorkspaceSidebar.tsx app/dashboard/page.tsx app/workspace/page.tsx app/preferences/page.tsx)"
     ]
   }
 }

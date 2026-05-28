@@ -294,7 +294,9 @@ export function WorkspaceSidebar({ workspace, role, workspaces, user }: Props) {
         <button type="button" onClick={() => setMobileOpen(true)} aria-label="Open navigation" className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ color: 'var(--text-2)' }}>
           <Menu size={18} />
         </button>
-        <Image src="/logo.png" alt="Pulsify" width={22} height={22} className="shrink-0" />
+        <Link href="/" aria-label="Pulsify home" className="flex shrink-0">
+          <Image src="/logo.png" alt="Pulsify" width={22} height={22} className="shrink-0" />
+        </Link>
         <span className="truncate font-bold text-sm tracking-tight text-foreground">{workspace.name}</span>
       </div>
 
@@ -308,10 +310,10 @@ export function WorkspaceSidebar({ workspace, role, workspaces, user }: Props) {
         style={{ transition: 'transform 0.25s ease', background: 'linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 100%)', borderColor: 'var(--line-strong)' }}
       >
         <div className="flex items-center justify-between border-b px-3 py-3.5" style={{ borderColor: 'var(--line-strong)', minHeight: 65 }}>
-          <div className="flex items-center gap-2">
+          <Link href="/" aria-label="Pulsify home" className="flex items-center gap-2">
             <Image src="/logo.png" alt="Pulsify" width={26} height={26} className="shrink-0" />
             <span className="font-bold text-sm tracking-tight" style={{ color: 'var(--p-1)' }}>Pulsify</span>
-          </div>
+          </Link>
           <button onClick={() => setMobileOpen(false)} aria-label="Close navigation" className="lg:hidden rounded-md p-0.5" style={{ color: 'var(--text-3)' }}>
             <X size={16} />
           </button>

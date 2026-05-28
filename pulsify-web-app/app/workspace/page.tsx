@@ -54,10 +54,10 @@ export default async function WorkspaceHomePage() {
         style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)', backdropFilter: 'blur(12px)' }}
       >
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3.5">
-          <div className="flex items-center gap-2.5">
+          <Link href="/" className="flex items-center gap-2.5" aria-label="Pulsify home">
             <Image src="/logo.png" alt="Pulsify" width={34} height={34} className="shrink-0" style={{ filter: 'drop-shadow(0 4px 10px var(--p-glow))' }} />
             <span className="font-bold text-base tracking-tight" style={{ color: 'var(--p-1)' }}>Pulsify</span>
-          </div>
+          </Link>
           <div className="flex items-center gap-3">
             <Link
               href="/preferences"

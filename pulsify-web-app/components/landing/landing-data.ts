@@ -175,13 +175,13 @@ export const PLANS: Plan[] = [
     ],
   },
   {
-    name: 'Pro',
-    monthly: 9,
-    yearly: 7,
+    name: 'Plus',
+    monthly: 10,
+    yearly: 8,
     tagline: 'For growing communities that mean business.',
     icon: Zap,
     recommended: true,
-    cta: 'Upgrade to Pro',
+    cta: 'Upgrade to Plus',
     features: [
       'Advanced moderation',
       'Full analytics',
@@ -192,14 +192,14 @@ export const PLANS: Plan[] = [
     ],
   },
   {
-    name: 'Business',
-    monthly: 29,
-    yearly: 24,
+    name: 'Pro',
+    monthly: 20,
+    yearly: 16,
     tagline: 'Manage multiple servers like a team.',
     icon: BarChart3,
-    cta: 'Choose Business',
+    cta: 'Choose Pro',
     features: [
-      'Everything in Pro',
+      'Everything in Plus',
       'Multi-server management',
       'Advanced audit logs',
       'Team & admin management',
@@ -216,7 +216,7 @@ export const PLANS: Plan[] = [
     icon: Crown,
     cta: 'Contact sales',
     features: [
-      'Everything in Business',
+      'Everything in Pro',
       'Unlimited scaling',
       'Dedicated support',
       'Custom integrations',
@@ -248,7 +248,7 @@ export const FAQS: Faq[] = [
   },
   {
     q: 'Can I manage more than one server?',
-    a: 'Absolutely. Every server you have Manage Server or Administrator on shows up automatically. Multi-server management tools are part of the Business plan.',
+    a: 'Absolutely. Every server you have Manage Server or Administrator on shows up automatically. Multi-server management tools are part of the Pro plan.',
   },
   {
     q: 'Can I change plans or cancel any time?',

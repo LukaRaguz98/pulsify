@@ -248,8 +248,10 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
         >
           <Menu size={18} />
         </button>
-        <Image src="/logo.png" alt="Pulsify" width={22} height={22} className="shrink-0" />
-        <span className="font-bold text-sm tracking-tight text-foreground">Pulsify</span>
+        <Link href="/" className="flex items-center gap-2" aria-label="Pulsify home">
+          <Image src="/logo.png" alt="Pulsify" width={22} height={22} className="shrink-0" />
+          <span className="font-bold text-sm tracking-tight text-foreground">Pulsify</span>
+        </Link>
       </div>
 
       {/* Backdrop — tap to dismiss the drawer. */}
@@ -280,13 +282,15 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
       >
         {collapsed ? (
           <div className="flex flex-col items-center w-full gap-2">
-            <Image
-              src="/logo.png"
-              alt="Pulsify"
-              width={30}
-              height={30}
-              className="shrink-0"
-            />
+            <Link href="/" aria-label="Pulsify home" className="flex shrink-0">
+              <Image
+                src="/logo.png"
+                alt="Pulsify"
+                width={30}
+                height={30}
+                className="shrink-0"
+              />
+            </Link>
             <button
               onClick={() => setCollapsed(false)}
               title="Expand sidebar"
@@ -300,16 +304,18 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
           </div>
         ) : (
           <>
-            <Image
-              src="/logo.png"
-              alt="Pulsify"
-              width={30}
-              height={30}
-              className="shrink-0"
-            />
-            <span className="ml-2.5 flex-1 font-bold text-base tracking-tight text-foreground">
-              Pulsify
-            </span>
+            <Link href="/" aria-label="Pulsify home" className="flex flex-1 items-center">
+              <Image
+                src="/logo.png"
+                alt="Pulsify"
+                width={30}
+                height={30}
+                className="shrink-0"
+              />
+              <span className="ml-2.5 font-bold text-base tracking-tight text-foreground">
+                Pulsify
+              </span>
+            </Link>
             <button
               onClick={() => setCollapsed(true)}
               title="Collapse sidebar"

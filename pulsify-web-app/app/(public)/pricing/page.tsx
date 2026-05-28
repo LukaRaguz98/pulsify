@@ -7,7 +7,7 @@ import { effectivePlan } from '@/lib/billing'
 export const metadata: Metadata = {
   title: 'Pricing · Pulsify',
   description:
-    'Simple, transparent pricing for Pulsify — Free, Pro, Business and Enterprise plans with monthly or yearly billing.',
+    'Simple, transparent pricing for Pulsify — Free, Plus, Pro and Enterprise plans with monthly or yearly billing.',
   alternates: { canonical: '/pricing' },
 }
 

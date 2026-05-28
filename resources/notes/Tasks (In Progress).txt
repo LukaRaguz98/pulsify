@@ -1,0 +1,79 @@
+PULSIFY-30 — Custom Bot Status & Presence Management (v0.30.0)
+
+Description
+	Implement a complete Bot Status and Presence Management system that allows administrators to customize Pulse presence, activities, rotating statuses, and dynamic server-based bot information directly from the Pulsify dashboard.
+	The system should improve branding, engagement, and create a more alive/interactive Discord bot experience.
+
+Goals
+	Improve Pulse branding and personality
+	Allow dynamic/custom bot statuses
+	Increase server engagement visibility
+	Expand server customization capabilities
+
+Tasks
+	Presence Management Dashboard
+		Create new “Presence” navigation view
+		Build bot status management UI
+		Display:
+			current status
+			current activity
+			rotation state
+			active presets
+		Add enable/disable controls
+
+	Custom Status System
+		Allow custom:
+			Playing
+			Watching
+			Listening
+			Competing
+			Streaming statuses
+		Add emoji/icon support
+		Add dynamic placeholders:
+			server count
+			member count
+			active tickets
+			active giveaways
+			moderation actions
+			uptime
+
+	Rotating Statuses
+		Add rotating presence system
+		Allow multiple statuses in rotation
+		Add configurable rotation intervals
+		Add schedule-based statuses
+
+	Server-Specific Branding
+		Allow custom statuses per server
+		Add premium-only branding features
+		Add Pulse Guard presence presets
+		Add event-based temporary statuses
+
+	Automation & Smart Presence
+		Add automatic status updates based on:
+			active events
+			giveaways
+			maintenance
+			incidents
+			server milestones
+		Add “maintenance mode” presence
+
+	UX Improvements
+		Add live presence preview
+		Add responsive dashboard
+		Add loading/error/success states
+		Add quick preset buttons
+		Add animated preview cards
+
+	Future-Proofing
+		Prepare support for AI-generated statuses
+		Add presence analytics/tracking
+		Add future custom rich presence support
+
+Acceptance Criteria
+	Bot statuses update correctly
+	Rotating statuses function properly
+	Dynamic placeholders update live
+	Server-specific branding works correctly
+	Dashboard UI remains responsive and polished
+	Presence system integrates cleanly with Pulse branding
