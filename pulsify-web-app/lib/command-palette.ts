@@ -79,6 +79,7 @@ const NAV_CATALOG: NavDef[] = [
   { id: 'nav-roles', label: 'Roles', icon: 'Users', path: '/roles', keywords: 'permissions ranks' },
   { id: 'nav-events', label: 'Events', icon: 'CalendarDays', path: '/events', keywords: 'scheduled events calendar' },
   { id: 'nav-commands', label: 'Commands', icon: 'Command', path: '/commands', keywords: 'slash bot command center' },
+  { id: 'nav-presence', label: 'Presence', icon: 'Radio', path: '/presence', keywords: 'status activity rotation playing watching listening streaming maintenance bot presence' },
   { id: 'nav-automations', label: 'Automations', icon: 'Zap', path: '/automations', keywords: 'engagement welcome auto-role triggers' },
   { id: 'nav-scheduled', label: 'Scheduled', icon: 'CalendarClock', path: '/scheduled', keywords: 'workflows recurring tasks' },
   { id: 'nav-moderation', label: 'Moderation', icon: 'Shield', path: '/moderation', keywords: 'mod bans kicks warnings timeouts logs' },
