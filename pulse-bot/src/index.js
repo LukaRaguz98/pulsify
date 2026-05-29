@@ -27,6 +27,7 @@ const { createScheduler } = require("./scheduler");
 const { createTickets } = require("./tickets");
 const { createGiveaways } = require("./giveaways");
 const { createLeveling } = require("./leveling");
+const { createPresence } = require("./presence");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -70,6 +71,13 @@ const leveling = createLeveling(client, supabase);
 // giveaways and draws winners when they end. `leveling` is passed so a Join
 // awards engagement XP.
 const giveaways = createGiveaways(client, supabase, leveling);
+
+// The presence system owns the bot's global Discord status. It reads the
+// "active" guild's presence config (bot_presence_state → guild_presence),
+// rotates through that server's activities (resolving dynamic placeholders like
+// {servers}/{members}), and honours maintenance mode. Registers no interaction
+// listener — just a rotation timer + a realtime watch on both tables.
+const presence = createPresence(client, supabase);
 
 /**
  * Shared helper for Discord-side activity → notifications row.
@@ -201,6 +209,9 @@ async function registerGuildCommands(rest, appId, guild) {
 client.once(Events.ClientReady, async (readyClient) => {
   console.log(`[Pulse] Logged in as ${readyClient.user.tag}`);
 
+  // Immediate default presence — shown until the presence system (started at
+  // the end of this handler) loads the active guild's config and takes over.
+  // Also the steady-state presence whenever no guild is driving it.
   readyClient.user.setPresence({
     activities: [{ name: "Powered by Pulsify" }],
     status: "online",
@@ -288,6 +299,11 @@ client.once(Events.ClientReady, async (readyClient) => {
   // Leveling system: load per-guild XP config, subscribe to settings changes,
   // and start the voice-XP tick.
   await leveling.start();
+
+  // Presence system: take over the bot's global status from the static default
+  // set above. Loads the active guild's config and starts the rotation; if no
+  // guild is active it leaves the default "Powered by Pulsify" in place.
+  await presence.start();
 });
 
 client.on(Events.GuildCreate, async (guild) => {

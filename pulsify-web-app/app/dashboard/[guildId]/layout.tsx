@@ -17,6 +17,7 @@ import {
   toClientSubscription,
 } from '@/lib/billing-server'
 import { effectivePlan, isEarlyAccess, EARLY_ACCESS_PLAN } from '@/lib/billing'
+import { isCurrentUserOperator } from '@/lib/operator'
 
 export default async function GuildLayout({
   children,
@@ -52,6 +53,9 @@ export default async function GuildLayout({
   // provider is a UX hint, not a security boundary.
   const subscriptionRow = await getSubscriptionRow(discordId)
   const subscription = toClientSubscription(subscriptionRow)
+  // Bot-wide surfaces (e.g. Presence) are operator-only, so the nav item is
+  // hidden from everyone else. Resolved server-side; the page re-checks too.
+  const isOperator = await isCurrentUserOperator()
   // During early access everyone is the top tier so the whole dashboard UI is
   // unlocked; the `earlyAccess` flag lets client components soften plan-specific
   // copy (no upsells, "free during early access").
@@ -69,6 +73,7 @@ export default async function GuildLayout({
               user={session.user}
               selfUser={selfUser ?? undefined}
               bannerUrl={bannerUrl}
+              isOperator={isOperator}
             />
             <CornerDecorations />
             <DiscordCornerIcon guildId={guildId} />

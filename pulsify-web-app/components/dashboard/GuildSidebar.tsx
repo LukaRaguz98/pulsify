@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   TerminalSquare,
   Command,
+  Radio,
   UserRound,
   Lightbulb,
   LifeBuoy,
@@ -73,9 +74,11 @@ type Props = {
   }
   selfUser?: DiscordSelfUser
   bannerUrl?: string
+  /** Bot operators see operator-only nav items (e.g. Presence). */
+  isOperator?: boolean
 }
 
-export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Props) {
+export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOperator }: Props) {
   const [collapsed, setCollapsed] = useState(false)
   // Mobile-only: the sidebar is an off-canvas drawer below `lg`. `mobileOpen`
   // drives the slide (via the `.guild-sidebar[data-mobile-open]` CSS) and the
@@ -150,6 +153,11 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl }: Prop
       icon: <TerminalSquare size={16} />,
       items: [
         { label: 'Commands', href: `${base}/commands`, icon: <Command size={16} /> },
+        // Presence is a bot-wide, operator-only surface — hide it from everyone
+        // else (the page itself re-checks operator status server-side).
+        ...(isOperator
+          ? [{ label: 'Presence', href: `${base}/presence`, icon: <Radio size={16} /> }]
+          : []),
       ],
     },
     {
