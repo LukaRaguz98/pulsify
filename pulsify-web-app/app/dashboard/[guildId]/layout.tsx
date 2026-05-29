@@ -16,7 +16,7 @@ import {
   getSubscriptionRow,
   toClientSubscription,
 } from '@/lib/billing-server'
-import { effectivePlan } from '@/lib/billing'
+import { effectivePlan, isEarlyAccess, EARLY_ACCESS_PLAN } from '@/lib/billing'
 
 export default async function GuildLayout({
   children,
@@ -52,12 +52,16 @@ export default async function GuildLayout({
   // provider is a UX hint, not a security boundary.
   const subscriptionRow = await getSubscriptionRow(discordId)
   const subscription = toClientSubscription(subscriptionRow)
-  const plan = effectivePlan(subscriptionRow?.plan, subscriptionRow?.status)
+  // During early access everyone is the top tier so the whole dashboard UI is
+  // unlocked; the `earlyAccess` flag lets client components soften plan-specific
+  // copy (no upsells, "free during early access").
+  const earlyAccess = isEarlyAccess()
+  const plan = earlyAccess ? EARLY_ACCESS_PLAN : effectivePlan(subscriptionRow?.plan, subscriptionRow?.status)
 
   return (
     <NotificationsProvider guildId={guildId}>
       <CommandPaletteProvider guildId={guildId}>
-        <PlanProvider plan={plan} subscription={subscription}>
+        <PlanProvider plan={plan} subscription={subscription} earlyAccess={earlyAccess}>
           <div className="flex h-screen overflow-hidden bg-background text-foreground">
             <GuildSidebar
               guild={guild}

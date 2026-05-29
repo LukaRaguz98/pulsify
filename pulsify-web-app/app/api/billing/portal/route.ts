@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { stripe, isStripeConfigured } from '@/lib/stripe'
 import { getCurrentDiscordUser } from '@/lib/workspace-auth'
 import { getSubscriptionRow } from '@/lib/billing-server'
+import { isEarlyAccess } from '@/lib/billing'
 
 /**
  * POST /api/billing/portal
@@ -13,6 +14,14 @@ import { getSubscriptionRow } from '@/lib/billing-server'
  * us via the webhook handler.
  */
 export async function POST(req: Request) {
+  // Billing management is off during early access (no subscriptions exist).
+  if (isEarlyAccess()) {
+    return NextResponse.json(
+      { error: 'Billing is paused during early access — Pulsify is free for now.' },
+      { status: 403 },
+    )
+  }
+
   if (!isStripeConfigured()) {
     return NextResponse.json(
       { error: 'Billing is not configured for this environment.' },

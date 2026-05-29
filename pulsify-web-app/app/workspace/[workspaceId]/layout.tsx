@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase-server'
 import { authorizeWorkspaceMember } from '@/lib/workspace-auth'
 import { getWorkspace, getWorkspaceMembers, getWorkspaceServers, listUserWorkspaces } from '@/lib/workspace-data'
 import { WorkspaceProvider } from '@/components/workspace/WorkspaceProvider'
+import { WorkspaceCommandPaletteProvider } from '@/components/workspace/search/WorkspaceCommandPaletteProvider'
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar'
 import { WorkspaceNotificationBell } from '@/components/workspace/WorkspaceNotificationBell'
 import { WorkspaceDiscordCornerIcon } from '@/components/workspace/WorkspaceDiscordCornerIcon'
@@ -46,6 +47,7 @@ export default async function WorkspaceLayout({
       members={members}
       servers={servers}
     >
+      <WorkspaceCommandPaletteProvider workspaceId={workspaceId} role={auth.role}>
       <div className="flex h-screen overflow-hidden bg-background text-foreground">
         <WorkspaceSidebar
           workspace={workspace}
@@ -68,6 +70,7 @@ export default async function WorkspaceLayout({
           <Footer />
         </main>
       </div>
+      </WorkspaceCommandPaletteProvider>
     </WorkspaceProvider>
   )
 }

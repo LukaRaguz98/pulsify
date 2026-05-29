@@ -1,0 +1,13 @@
+**Pulsify v0.29.1 — Workspace Search & Polish**
+Search just landed in Workspaces, plus a few small touches that make the dashboard feel cleaner across the board.
+
+**What's new**
+- **Search in Workspaces** — the same instant search and command palette you already have in the server dashboard now lives in every workspace. Hit the search bar (or press Ctrl/⌘ K) to jump to servers, teammates, notes, tasks, incidents and any section in one keystroke.
+- **Smart, capability-aware results** — you only ever see destinations you're allowed to open, and a quick-actions list helps you add a server, invite a teammate or start a note/task/incident in a click.
+- **Lightning fast** — results are matched locally as you type, so it stays snappy even on busy workspaces.
+
+**Also**
+- **Cleaner search bar** — dropped the "Ctrl K" tag from inside the search field on both dashboards. The shortcut still works exactly the same — it's just less cluttered now.
+- **Tidier roadmap cards** — removed the stray counter in the corner of the "Where we're headed" cards on the Community page.
+
+Nothing to set up — open any workspace and start searching.

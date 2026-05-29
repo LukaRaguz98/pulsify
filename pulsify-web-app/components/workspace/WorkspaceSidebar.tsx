@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
 import { WorkspaceSwitcher } from '@/components/workspace/WorkspaceSwitcher'
+import { WorkspaceSearchTrigger } from '@/components/workspace/search/WorkspaceSearchTrigger'
 import { can, type Capability, type Workspace, type WorkspaceRole, type WorkspaceSummary } from '@/lib/workspace'
 
 type NavItem = { label: string; href: string; icon: React.ReactNode; cap?: Capability }
@@ -321,6 +322,11 @@ export function WorkspaceSidebar({ workspace, role, workspaces, user }: Props) {
 
         <div className="relative z-50 px-2 pt-3">
           <WorkspaceSwitcher current={workspace} workspaces={workspaces} />
+        </div>
+
+        {/* Global search / command palette launcher. */}
+        <div className="px-2 pt-2">
+          <WorkspaceSearchTrigger />
         </div>
 
         {nav}

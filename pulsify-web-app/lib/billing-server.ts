@@ -4,6 +4,8 @@ import {
   PLANS,
   SUBSCRIPTION_STATUSES,
   effectivePlan,
+  isEarlyAccess,
+  EARLY_ACCESS_PLAN,
   type Plan,
   type SubscriptionStatus,
   type BillingCycle,
@@ -51,6 +53,11 @@ export async function getSubscriptionRow(userId: string): Promise<SubscriptionRo
 
 /** Resolve the effective plan for a user id (treats demoted statuses as free). */
 export async function getUserPlan(userId: string): Promise<Plan> {
+  // Early access: everyone is treated as the top tier, so every downstream gate
+  // (requirePlan / requireFeature / getCurrentUserLimits / page-level checks)
+  // passes and all limits read as unlimited — no per-call special-casing needed.
+  // Flip EARLY_ACCESS off and this returns to the real subscription plan.
+  if (isEarlyAccess()) return EARLY_ACCESS_PLAN
   const row = await getSubscriptionRow(userId)
   return effectivePlan(row?.plan, row?.status)
 }

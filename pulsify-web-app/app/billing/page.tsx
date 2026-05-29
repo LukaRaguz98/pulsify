@@ -8,7 +8,7 @@ import {
   listSubscriptionEvents,
 } from '@/lib/billing-server'
 import { getCurrentDiscordUser } from '@/lib/workspace-auth'
-import { effectivePlan } from '@/lib/billing'
+import { effectivePlan, isEarlyAccess, EARLY_ACCESS_PLAN } from '@/lib/billing'
 import { BillingOverview } from '@/components/billing/BillingOverview'
 
 export const metadata: Metadata = {
@@ -30,7 +30,9 @@ export default async function BillingPage({
 
   const row = await getSubscriptionRow(actor.userId)
   const subscription = toClientSubscription(row)
-  const plan = effectivePlan(row?.plan, row?.status)
+  const earlyAccess = isEarlyAccess()
+  // Early access unlocks everything, so show the top-tier limits table.
+  const plan = earlyAccess ? EARLY_ACCESS_PLAN : effectivePlan(row?.plan, row?.status)
   const events = row ? await listSubscriptionEvents(actor.userId, 20) : []
 
   const { status } = await searchParams
@@ -57,6 +59,7 @@ export default async function BillingPage({
         plan={plan}
         events={events}
         flash={flash}
+        earlyAccess={earlyAccess}
       />
     </main>
   )

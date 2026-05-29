@@ -228,6 +228,25 @@ export const PLAN_FEATURES: Record<Plan, string[]> = {
   ],
 }
 
+// ── Early access (everything-free kill switch) ───────────────────────────
+// During early access ALL plans behave as the top tier (everything unlocked,
+// limits unlimited) and Stripe checkout/portal are turned off — Pulsify ships
+// free until the operator flips `EARLY_ACCESS` off, at which point the normal
+// plan/limit gating resumes with no other code change.
+//
+// The flag is read from `EARLY_ACCESS` (server) and falls back to
+// `NEXT_PUBLIC_EARLY_ACCESS` so the value can optionally be inlined into client
+// bundles too. In practice the server resolves it and threads the boolean to
+// the client via PlanProvider / page props, so the public mirror is optional.
+export const EARLY_ACCESS_PLAN: Plan = 'enterprise'
+
+export function isEarlyAccess(): boolean {
+  const raw = process.env.EARLY_ACCESS ?? process.env.NEXT_PUBLIC_EARLY_ACCESS
+  if (!raw) return false
+  const v = raw.trim().toLowerCase()
+  return v === 'yes' || v === 'true' || v === '1' || v === 'on'
+}
+
 // ── Capability checks (the single gate used everywhere) ──────────────────
 /** True if `current` plan is at least `required`. */
 export function hasPlan(current: Plan, required: Plan): boolean {

@@ -131,7 +131,7 @@ export default function PrivacyPage() {
       eyebrow="Privacy"
       title="Privacy Policy"
       updated={SITE.legalLastUpdated}
-      contactEmail={SITE.privacyEmail}
+      contactEmail={SITE.privateEmail}
       intro="This Privacy Policy explains what information Pulsify collects when you use the dashboard and the Pulse bot, how we use it, and the choices you have. By using Pulsify you agree to the practices described here."
       sections={SECTIONS}
     />

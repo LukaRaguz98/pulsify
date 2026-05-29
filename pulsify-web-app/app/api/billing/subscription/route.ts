@@ -5,7 +5,7 @@ import {
   toClientSubscription,
   listSubscriptionEvents,
 } from '@/lib/billing-server'
-import { effectivePlan } from '@/lib/billing'
+import { effectivePlan, isEarlyAccess, EARLY_ACCESS_PLAN } from '@/lib/billing'
 
 /**
  * GET /api/billing/subscription
@@ -23,7 +23,7 @@ export async function GET() {
 
   const row = await getSubscriptionRow(actor.userId)
   const subscription = toClientSubscription(row)
-  const plan = effectivePlan(row?.plan, row?.status)
+  const plan = isEarlyAccess() ? EARLY_ACCESS_PLAN : effectivePlan(row?.plan, row?.status)
   const events = row ? await listSubscriptionEvents(actor.userId, 20) : []
 
   return NextResponse.json({ subscription, plan, events })

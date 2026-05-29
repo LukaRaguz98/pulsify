@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Crown, ExternalLink, RotateCcw, XCircle, Receipt, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { Crown, ExternalLink, RotateCcw, XCircle, Receipt, AlertTriangle, CheckCircle2, Sparkles } from 'lucide-react'
 import {
   PLAN_LABELS,
   PLAN_LIMITS,
@@ -58,11 +58,14 @@ export function BillingOverview({
   plan,
   events,
   flash,
+  earlyAccess = false,
 }: {
   subscription: ClientSubscription | null
   plan: Plan
   events: EventRow[]
   flash?: 'success' | 'cancelled' | null
+  /** When true, billing is paused and everything is free (see lib/billing). */
+  earlyAccess?: boolean
 }) {
   const router = useRouter()
   const [openingPortal, setOpeningPortal] = useState(false)
@@ -87,8 +90,13 @@ export function BillingOverview({
   }
 
   const status = subscription?.status ?? (plan === 'free' ? 'active' : 'canceled')
-  const statusInfo = STATUS_LABELS[status] ?? { label: status, tone: 'info' as const }
+  const statusInfo = earlyAccess
+    ? { label: 'Free', tone: 'good' as const }
+    : STATUS_LABELS[status] ?? { label: status, tone: 'info' as const }
   const statusStyle = TONE_STYLES[statusInfo.tone]
+  // During early access the "plan" we render is the unlocked top tier; show a
+  // friendlier label than the internal tier name.
+  const planLabel = earlyAccess ? 'Early access' : PLAN_LABELS[plan]
 
   const renewal = subscription?.renewal_date
     ? new Date(subscription.renewal_date).toLocaleDateString(undefined, {
@@ -100,6 +108,12 @@ export function BillingOverview({
 
   return (
     <div className="space-y-8">
+      {earlyAccess && (
+        <FlashBanner tone="info" icon={<Sparkles size={16} />}>
+          Pulsify is free during early access — every feature is unlocked at no cost and billing
+          is paused. Paid plans resume once early access ends.
+        </FlashBanner>
+      )}
       {/* Flash messages — checkout success / cancellation feedback from the
           URL query string. Animated in so it feels like a notification, not a
           static banner that's been there since page load. */}
@@ -139,7 +153,7 @@ export function BillingOverview({
                 <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
                   Active plan
                 </p>
-                <h2 className="text-2xl font-bold text-foreground">{PLAN_LABELS[plan]}</h2>
+                <h2 className="text-2xl font-bold text-foreground">{planLabel}</h2>
               </div>
               <span
                 className="ml-2 rounded-full border px-2.5 py-0.5 text-xs font-semibold"
@@ -170,30 +184,32 @@ export function BillingOverview({
           </div>
 
           <div className="flex flex-col gap-2 sm:items-end">
-            <button
-              type="button"
-              onClick={openPortal}
-              disabled={openingPortal || !subscription}
-              className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all"
-              style={{
-                background: 'linear-gradient(180deg, var(--p-1), var(--p-2))',
-                color: '#fff',
-                opacity: openingPortal || !subscription ? 0.6 : 1,
-                cursor: openingPortal || !subscription ? 'not-allowed' : 'pointer',
-              }}
-            >
-              <ExternalLink size={15} />
-              {openingPortal ? 'Opening…' : 'Manage billing'}
-            </button>
+            {!earlyAccess && (
+              <button
+                type="button"
+                onClick={openPortal}
+                disabled={openingPortal || !subscription}
+                className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all"
+                style={{
+                  background: 'linear-gradient(180deg, var(--p-1), var(--p-2))',
+                  color: '#fff',
+                  opacity: openingPortal || !subscription ? 0.6 : 1,
+                  cursor: openingPortal || !subscription ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <ExternalLink size={15} />
+                {openingPortal ? 'Opening…' : 'Manage billing'}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => router.push('/pricing')}
               className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-colors"
               style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
             >
-              Change plan
+              {earlyAccess ? 'View plans' : 'Change plan'}
             </button>
-            {!subscription && (
+            {!earlyAccess && !subscription && (
               <p className="max-w-[220px] text-right text-xs" style={{ color: 'var(--text-3)' }}>
                 You&apos;ll be able to manage billing here after your first checkout.
               </p>

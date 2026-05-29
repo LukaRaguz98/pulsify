@@ -3,8 +3,8 @@
 // place. Swap these placeholders for the real addresses before public launch.
 export const SITE = {
   name: 'Pulsify',
-  supportEmail: 'Govadroth@hotmail.com',
-  privacyEmail: 'Govadroth@hotmail.com',
+  infoEmail: 'info@discordpulsify.com',
+  privateEmail: 'govadroth@discordpulsify.com',
   /** Public Discord community invite (permanent — never expires). */
   discordInvite: 'https://discord.gg/JqWyEmepTc',
   twitter: 'https://x.com/pulsifyapp',

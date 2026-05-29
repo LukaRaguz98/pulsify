@@ -96,7 +96,11 @@
       "Bash(ls public *)",
       "Bash(ls app/*.tsx app/*.ts app/icon* app/favicon*)",
       "Bash(file app/favicon.ico)",
-      "Bash(grep -l \"next/link\" components/dashboard/GuildSidebar.tsx components/workspace/WorkspaceSidebar.tsx app/dashboard/page.tsx app/workspace/page.tsx app/preferences/page.tsx)"
+      "Bash(grep -l \"next/link\" components/dashboard/GuildSidebar.tsx components/workspace/WorkspaceSidebar.tsx app/dashboard/page.tsx app/workspace/page.tsx app/preferences/page.tsx)",
+      "PowerShell(npx tsc --noEmit -p pulsify-web-app/tsconfig.json)",
+      "PowerShell(& \"E:\\\\projects\\\\pulsify\\\\pulsify-web-app\\\\node_modules\\\\.bin\\\\tsc.cmd\" --noEmit -p \"E:\\\\projects\\\\pulsify\\\\pulsify-web-app\\\\tsconfig.json\")",
+      "PowerShell(& \"E:\\\\projects\\\\pulsify\\\\pulsify-web-app\\\\node_modules\\\\.bin\\\\eslint.cmd\" \"lib/workspace-command-palette.ts\" \"app/api/workspaces/[workspaceId]/search/route.ts\" \"components/workspace/search/WorkspaceCommandPaletteProvider.tsx\" \"components/workspace/search/WorkspaceCommandPalette.tsx\" \"components/workspace/search/WorkspaceSearchTrigger.tsx\" \"components/workspace/WorkspaceSidebar.tsx\" \"components/dashboard/search/SearchTrigger.tsx\" \"app/workspace/[workspaceId]/layout.tsx\")",
+      "PowerShell($env:ESLINT_USE_FLAT_CONFIG=$null; Push-Location \"E:\\\\projects\\\\pulsify\\\\pulsify-web-app\"; & \".\\\\node_modules\\\\.bin\\\\eslint.cmd\" \"lib/workspace-command-palette.ts\" \"app/api/workspaces/[workspaceId]/search/route.ts\" \"components/workspace/search/WorkspaceCommandPaletteProvider.tsx\" \"components/workspace/search/WorkspaceCommandPalette.tsx\" \"components/workspace/search/WorkspaceSearchTrigger.tsx\" \"components/workspace/WorkspaceSidebar.tsx\" \"components/dashboard/search/SearchTrigger.tsx\" \"app/workspace/[workspaceId]/layout.tsx\"; Pop-Location)"
     ]
   }
 }

@@ -190,7 +190,6 @@ export default async function CommunityPage() {
                       {ROADMAP_COLUMN_LABEL[status]}
                     </h3>
                   </div>
-                  <span className="font-mono text-xs" style={{ color: 'var(--text-3)' }}>{items.length}</span>
                 </header>
                 {items.length === 0 ? (
                   <p

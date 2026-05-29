@@ -116,7 +116,7 @@ export default function TermsPage() {
       eyebrow="Legal"
       title="Terms of Service"
       updated={SITE.legalLastUpdated}
-      contactEmail={SITE.supportEmail}
+      contactEmail={SITE.infoEmail}
       intro="These Terms of Service govern your access to and use of Pulsify, including the dashboard and the Pulse bot. By inviting the Pulse bot or signing in to the dashboard, you agree to these Terms. If you do not agree, please do not use the service."
       sections={SECTIONS}
     />

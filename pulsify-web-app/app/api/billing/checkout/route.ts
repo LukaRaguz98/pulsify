@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { stripe, priceIdFor, isStripeConfigured } from '@/lib/stripe'
 import { getCurrentDiscordUser } from '@/lib/workspace-auth'
 import { getSubscriptionRow } from '@/lib/billing-server'
-import { PLANS, BILLABLE_PLANS, type BillingCycle, type Plan } from '@/lib/billing'
+import { PLANS, BILLABLE_PLANS, isEarlyAccess, type BillingCycle, type Plan } from '@/lib/billing'
 
 /**
  * POST /api/billing/checkout
@@ -18,6 +18,16 @@ import { PLANS, BILLABLE_PLANS, type BillingCycle, type Plan } from '@/lib/billi
  * with Stripe and lets us inherit their UI for card / Apple Pay / etc.
  */
 export async function POST(req: Request) {
+  // Payments are off during early access — everything is free, so there's
+  // nothing to charge for. Returns 403 so the pricing UI can show the
+  // early-access state instead of bouncing the user to Stripe.
+  if (isEarlyAccess()) {
+    return NextResponse.json(
+      { error: 'Pulsify is free during early access — no payment needed.' },
+      { status: 403 },
+    )
+  }
+
   if (!isStripeConfigured()) {
     return NextResponse.json(
       { error: 'Billing is not configured for this environment.' },

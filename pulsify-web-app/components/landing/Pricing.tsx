@@ -1,5 +1,6 @@
 import { SectionHeading } from './landing-ui'
 import { PricingCards } from '@/components/billing/PricingCards'
+import { isEarlyAccess } from '@/lib/billing'
 
 export function Pricing() {
   return (
@@ -12,7 +13,7 @@ export function Pricing() {
       {/* PricingCards is shared with /pricing and the in-dashboard upgrade
           modal so plan metadata and the checkout flow stay identical
           everywhere. Cycle defaults to yearly to nudge the better deal. */}
-      <PricingCards />
+      <PricingCards earlyAccess={isEarlyAccess()} />
     </section>
   )
 }

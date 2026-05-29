@@ -28,6 +28,8 @@ type PlanContext = {
   plan: Plan
   limits: FeatureLimits
   subscription: ClientSubscription | null
+  /** True while the everything-free early-access flag is on (see lib/billing). */
+  earlyAccess: boolean
   /** `hasPlan(plan, required)` — convenience curried here so callers stay one-liner. */
   atLeast: (required: Plan) => boolean
   /** Boolean-or-positive-limit check on the limits matrix. */
@@ -39,10 +41,12 @@ const Ctx = createContext<PlanContext | null>(null)
 export function PlanProvider({
   plan,
   subscription,
+  earlyAccess = false,
   children,
 }: {
   plan: Plan
   subscription: ClientSubscription | null
+  earlyAccess?: boolean
   children: ReactNode
 }) {
   const limits = PLAN_LIMITS[plan]
@@ -50,8 +54,12 @@ export function PlanProvider({
     plan,
     limits,
     subscription,
-    atLeast: (required) => hasPlan(plan, required),
+    earlyAccess,
+    // Early access unlocks everything regardless of the resolved plan — the
+    // layout already feeds the top tier, but gate defensively here too.
+    atLeast: (required) => earlyAccess || hasPlan(plan, required),
     has: (feature) => {
+      if (earlyAccess) return true
       const v = limits[feature]
       return typeof v === 'boolean' ? v : v > 0
     },
@@ -71,6 +79,7 @@ export function usePlan(): PlanContext {
     plan: 'free',
     limits,
     subscription: null,
+    earlyAccess: false,
     atLeast: (required) => hasPlan('free', required),
     has: (feature) => {
       const v = limits[feature]

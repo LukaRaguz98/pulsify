@@ -36,10 +36,14 @@ export function PricingCards({
   currentPlan,
   initialCycle = 'yearly',
   enterpriseContactEmail = 'hello@pulsify.app',
+  earlyAccess = false,
 }: {
   currentPlan?: Plan
   initialCycle?: BillingCycle
   enterpriseContactEmail?: string
+  /** While true, every plan is free: checkout is replaced by a "start free" CTA
+   * and a banner explains the early-access state (see lib/billing.isEarlyAccess). */
+  earlyAccess?: boolean
 }) {
   const router = useRouter()
   const [cycle, setCycle] = useState<BillingCycle>(initialCycle)
@@ -97,6 +101,8 @@ export function PricingCards({
   // Upgrade a second time. Reads location directly (not useSearchParams) to keep
   // the statically-rendered landing page from needing a Suspense boundary.
   useEffect(() => {
+    // No checkout to resume while billing is off.
+    if (earlyAccess) return
     const params = new URLSearchParams(window.location.search)
     const requested = params.get('checkout')
     if (!requested || !BILLABLE_PLANS.includes(requested as Plan)) return
@@ -111,6 +117,16 @@ export function PricingCards({
 
   return (
     <div>
+      {earlyAccess && (
+        <div
+          className="mx-auto mb-8 flex max-w-2xl items-center justify-center gap-2 rounded-xl border px-4 py-3 text-center text-sm font-medium"
+          style={{ background: 'var(--p-soft)', borderColor: 'color-mix(in srgb, var(--p-1) 35%, transparent)', color: 'var(--p-1)' }}
+        >
+          <Sparkles size={15} className="shrink-0" />
+          Pulsify is free during early access — every plan below is unlocked at no cost. Prices apply once early access ends.
+        </div>
+      )}
+
       {/* Controls — billing period toggle (USD-only, no currency switch). */}
       <div className="mt-2 flex items-center justify-center">
         <div
@@ -223,13 +239,31 @@ export function PricingCards({
               </p>
 
               <div className="mt-6">
-                {plan === 'enterprise' ? (
+                {earlyAccess && plan !== 'enterprise' ? (
+                  // Billing is off — every tier is free, so the CTA just sends
+                  // the user into the dashboard instead of Stripe checkout.
+                  <button
+                    type="button"
+                    disabled={isCurrent}
+                    onClick={() => router.push('/dashboard')}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all"
+                    style={{
+                      background: recommended ? 'linear-gradient(180deg, var(--p-1), var(--p-2))' : 'var(--p-soft)',
+                      color: recommended ? '#fff' : 'var(--p-1)',
+                      border: recommended ? 'none' : '1px solid color-mix(in srgb, var(--p-1) 35%, transparent)',
+                      opacity: isCurrent ? 0.7 : 1,
+                      cursor: isCurrent ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {isCurrent ? 'Current plan' : 'Free in early access'}
+                  </button>
+                ) : plan === 'enterprise' ? (
                   <a
                     href={`mailto:${enterpriseContactEmail}?subject=Pulsify%20Enterprise`}
                     className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all"
                     style={{ background: 'var(--panel)', color: 'var(--text)', border: '1px solid var(--line-strong)' }}
                   >
-                    {cta}
+                    {earlyAccess ? 'Contact sales' : cta}
                   </a>
                 ) : plan === 'free' ? (
                   <button

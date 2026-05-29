@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Eyebrow } from '@/components/landing/landing-ui'
 import { PricingCards } from '@/components/billing/PricingCards'
 import { getCurrentClientSubscription } from '@/lib/billing-server'
-import { effectivePlan } from '@/lib/billing'
+import { effectivePlan, isEarlyAccess } from '@/lib/billing'
 
 export const metadata: Metadata = {
   title: 'Pricing · Pulsify',
@@ -14,6 +14,7 @@ export const metadata: Metadata = {
 export default async function PricingPage() {
   const subscription = await getCurrentClientSubscription()
   const currentPlan = effectivePlan(subscription?.plan, subscription?.status)
+  const earlyAccess = isEarlyAccess()
 
   return (
     <div className="mx-auto max-w-6xl px-6 pb-14 pt-10 sm:pb-20 sm:pt-14">
@@ -27,7 +28,7 @@ export default async function PricingPage() {
         </p>
       </header>
 
-      <PricingCards currentPlan={currentPlan} />
+      <PricingCards currentPlan={currentPlan} earlyAccess={earlyAccess} />
     </div>
   )
 }

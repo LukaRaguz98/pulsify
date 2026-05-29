@@ -79,7 +79,7 @@ export default function SupportPage() {
             <MessageCircle size={16} />
             Ask the community
           </a>
-          <a href={`mailto:${SITE.supportEmail}`} className={SECONDARY_BTN} style={secondaryStyle}>
+          <a href={`mailto:${SITE.infoEmail}`} className={SECONDARY_BTN} style={secondaryStyle}>
             <Mail size={16} />
             Email support
           </a>
@@ -102,8 +102,8 @@ export default function SupportPage() {
             icon={<Mail size={20} />}
             title="Email support"
             desc="For account, billing and privacy questions that need a private channel."
-            actionLabel={SITE.supportEmail}
-            href={`mailto:${SITE.supportEmail}`}
+            actionLabel={SITE.infoEmail}
+            href={`mailto:${SITE.infoEmail}`}
             accent="var(--cyan)"
           />
           <ContactCard
@@ -182,7 +182,7 @@ export default function SupportPage() {
             tips={['What you did and what you expected', 'The server and feature affected', 'Screenshots or error messages, if any']}
             actions={[
               { label: 'Report in Discord', href: SITE.discordInvite, external: true, primary: true },
-              { label: 'Email a report', href: `mailto:${SITE.supportEmail}?subject=Bug%20report` },
+              { label: 'Email a report', href: `mailto:${SITE.infoEmail}?subject=Bug%20report` },
             ]}
           />
           <RequestPanel
@@ -193,7 +193,7 @@ export default function SupportPage() {
             tips={['The problem you’re trying to solve', 'How you’d expect it to work', 'How often it would help you']}
             actions={[
               { label: 'Suggest in Discord', href: SITE.discordInvite, external: true, primary: true },
-              { label: 'Email an idea', href: `mailto:${SITE.supportEmail}?subject=Feature%20request` },
+              { label: 'Email an idea', href: `mailto:${SITE.infoEmail}?subject=Feature%20request` },
             ]}
           />
         </div>
@@ -223,7 +223,7 @@ export default function SupportPage() {
                 <MessageCircle size={16} />
                 Join the community
               </a>
-              <a href={`mailto:${SITE.supportEmail}`} className={SECONDARY_BTN} style={secondaryStyle}>
+              <a href={`mailto:${SITE.infoEmail}`} className={SECONDARY_BTN} style={secondaryStyle}>
                 <Mail size={16} />
                 Email us
               </a>
