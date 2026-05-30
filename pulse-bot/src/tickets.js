@@ -145,9 +145,15 @@ function createTickets(client, supabase) {
     return hexToInt(cfg?.panel?.color);
   }
 
-  /** A plain text notice container tinted with the guild accent. */
-  function noticeContainer(accent, lines) {
-    return { type: 17, accent_color: accent, components: lines.map((l) => td(l)) };
+  /** A Pulse-styled notice container tinted with the guild accent. */
+  function noticeContainer(accent, lines, footer = "Ticket update") {
+    const clean = (lines || []).filter(Boolean);
+    const [first, ...rest] = clean;
+    const components = [td("**Pulse**")];
+    if (first) components.push(td(first.startsWith("# ") ? first : `### ${first}`));
+    for (const line of rest) components.push(td(line));
+    components.push(divider(), td(`-# Pulse · ${footer}`));
+    return { type: 17, accent_color: accent, components };
   }
 
   /** Send a V2 notice to a channel (best-effort), tinted with the guild accent. */
@@ -258,7 +264,7 @@ function createTickets(client, supabase) {
       .replace(/\{user\}/g, `<@${ticket.opener_id}>`)
       .replace(/\{type\}/g, type?.label || "ticket");
 
-    const headerLines = [td(`# ${type?.label || "Support ticket"} · #${ticket.number}`), td(opening)];
+    const headerLines = [td("**Pulse**"), td(`# ${type?.label || "Support ticket"} · #${ticket.number}`), td(`-# ${opening}`)];
     const body = [];
     if (hasIcon) {
       body.push({
@@ -285,6 +291,7 @@ function createTickets(client, supabase) {
         button(4, "Close", `${TKT}:close:${ticket.id}`),
       ],
     });
+    body.push(td("-# Pulse · Support ticket"));
     return { type: 17, accent_color: accent, components: body };
   }
 
@@ -504,7 +511,7 @@ function createTickets(client, supabase) {
         })
         .catch((e) => console.warn("[Pulse] ticket panel send failed:", e.message));
 
-      await mirrorToLog(guild, config, `🎫 Ticket #${number} (${type.label}) opened by ${opener.tag} → <#${channel.id}>`);
+      await mirrorToLog(guild, config, `Ticket #${number} (${type.label}) opened by ${opener.tag} → <#${channel.id}>`);
       await recordNotification(supabase, {
         guildId: guild.id,
         type: "ticket_opened",
@@ -544,7 +551,7 @@ function createTickets(client, supabase) {
       .update({ claimed_by: interaction.user.id, claimed_by_name: name, status: "claimed", updated_at: new Date().toISOString() })
       .eq("id", ticketId);
     await logEvent(ticketId, ticket.guild_id, "claimed", interaction.member ?? interaction.user);
-    await replyNotice(interaction, ticket.guild_id, [`🙌 **${name}** claimed this ticket.`]);
+    await replyNotice(interaction, ticket.guild_id, [`**${name}** claimed this ticket.`]);
   }
 
   async function promptClose(interaction, ticketId) {
@@ -606,10 +613,12 @@ function createTickets(client, supabase) {
               type: 17,
               accent_color: accentFor(ticket.guild_id),
               components: [
-                td(`# 🔒 Ticket closed`),
-                td(`Closed by **${closerName}**${reason ? ` — ${reason}` : ""}.`),
+                td("**Pulse**"),
+                td("# Ticket closed"),
+                td(`-# Closed by **${closerName}**${reason ? ` — ${reason}` : ""}.`),
                 divider(),
                 closedRow(ticketId),
+                td("-# Pulse · Ticket"),
               ],
             },
           ],
@@ -626,7 +635,7 @@ function createTickets(client, supabase) {
               flags: MessageFlags.IsComponentsV2,
               components: [
                 noticeContainer(accentFor(ticket.guild_id), [
-                  `📄 **Transcript — Ticket #${ticket.number}** (${ticket.type_label ?? "ticket"})`,
+                  `**Transcript — Ticket #${ticket.number}** (${ticket.type_label ?? "ticket"})`,
                   `Closed by ${closerName}.`,
                 ]),
               ],
@@ -636,7 +645,7 @@ function createTickets(client, supabase) {
             .catch(() => {});
         }
       }
-      await mirrorToLog(guild, config, `🔒 Ticket #${ticket.number} closed by ${interaction.user.tag}${reason ? ` — ${reason}` : ""}.`);
+      await mirrorToLog(guild, config, `Ticket #${ticket.number} closed by ${interaction.user.tag}${reason ? ` — ${reason}` : ""}.`);
     }
 
     await recordNotification(supabase, {
@@ -669,7 +678,7 @@ function createTickets(client, supabase) {
     }
     await logEvent(ticketId, ticket.guild_id, "reopened", interaction.member ?? interaction.user);
     await replyNotice(interaction, ticket.guild_id, [
-      `🔓 Ticket reopened by ${interaction.member?.displayName ?? interaction.user.username}.`,
+      `Ticket reopened by ${interaction.member?.displayName ?? interaction.user.username}.`,
     ]);
   }
 
@@ -697,7 +706,7 @@ function createTickets(client, supabase) {
     if (!transcript) return interaction.reply({ content: "No transcript is available yet.", flags: MessageFlags.Ephemeral });
     await interaction.reply({
       flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-      components: [noticeContainer(accentFor(ticket.guild_id), [`📄 **Transcript — Ticket #${ticket.number}**`])],
+      components: [noticeContainer(accentFor(ticket.guild_id), [`**Transcript — Ticket #${ticket.number}**`])],
       files: [{ attachment: Buffer.from(transcript, "utf8"), name: `ticket-${ticket.number}.txt` }],
     });
   }
@@ -741,7 +750,14 @@ function createTickets(client, supabase) {
         {
           type: 17,
           accent_color: hexToInt(config.panel.color),
-          components: [td("**Open a ticket**"), td("Pick what you need help with:"), ...pickerComponents(config)],
+          components: [
+            td("**Pulse**"),
+            td("# Open a ticket"),
+            td("-# Pick what you need help with."),
+            divider(),
+            ...pickerComponents(config),
+            td("-# Pulse · Ticket panel"),
+          ],
         },
       ],
     });
@@ -868,7 +884,14 @@ function createTickets(client, supabase) {
             {
               type: 17,
               accent_color: accentFor(ticket.guild_id),
-              components: [td(`# 🔒 Ticket auto-closed`), td("This ticket was closed automatically after a period of inactivity."), divider(), closedRow(ticket.id)],
+              components: [
+                td("**Pulse**"),
+                td("# Ticket auto-closed"),
+                td("-# This ticket was closed automatically after a period of inactivity."),
+                divider(),
+                closedRow(ticket.id),
+                td("-# Pulse · Ticket"),
+              ],
             },
           ],
         })
@@ -880,14 +903,14 @@ function createTickets(client, supabase) {
         await tch
           .send({
             flags: MessageFlags.IsComponentsV2,
-            components: [noticeContainer(accentFor(ticket.guild_id), [`📄 **Transcript — Ticket #${ticket.number}** (auto-closed)`])],
+            components: [noticeContainer(accentFor(ticket.guild_id), [`**Transcript — Ticket #${ticket.number}** (auto-closed)`])],
             files: [{ attachment: Buffer.from(transcript, "utf8"), name: `ticket-${ticket.number}.txt` }],
             allowedMentions: { parse: [] },
           })
           .catch(() => {});
       }
     }
-    await mirrorToLog(guild, config, `🔒 Ticket #${ticket.number} auto-closed after inactivity.`);
+    await mirrorToLog(guild, config, `Ticket #${ticket.number} auto-closed after inactivity.`);
   }
 
   // ── Lifecycle ────────────────────────────────────────────────────────────────

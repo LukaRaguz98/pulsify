@@ -100,7 +100,22 @@
       "PowerShell(npx tsc --noEmit -p pulsify-web-app/tsconfig.json)",
       "PowerShell(& \"E:\\\\projects\\\\pulsify\\\\pulsify-web-app\\\\node_modules\\\\.bin\\\\tsc.cmd\" --noEmit -p \"E:\\\\projects\\\\pulsify\\\\pulsify-web-app\\\\tsconfig.json\")",
       "PowerShell(& \"E:\\\\projects\\\\pulsify\\\\pulsify-web-app\\\\node_modules\\\\.bin\\\\eslint.cmd\" \"lib/workspace-command-palette.ts\" \"app/api/workspaces/[workspaceId]/search/route.ts\" \"components/workspace/search/WorkspaceCommandPaletteProvider.tsx\" \"components/workspace/search/WorkspaceCommandPalette.tsx\" \"components/workspace/search/WorkspaceSearchTrigger.tsx\" \"components/workspace/WorkspaceSidebar.tsx\" \"components/dashboard/search/SearchTrigger.tsx\" \"app/workspace/[workspaceId]/layout.tsx\")",
-      "PowerShell($env:ESLINT_USE_FLAT_CONFIG=$null; Push-Location \"E:\\\\projects\\\\pulsify\\\\pulsify-web-app\"; & \".\\\\node_modules\\\\.bin\\\\eslint.cmd\" \"lib/workspace-command-palette.ts\" \"app/api/workspaces/[workspaceId]/search/route.ts\" \"components/workspace/search/WorkspaceCommandPaletteProvider.tsx\" \"components/workspace/search/WorkspaceCommandPalette.tsx\" \"components/workspace/search/WorkspaceSearchTrigger.tsx\" \"components/workspace/WorkspaceSidebar.tsx\" \"components/dashboard/search/SearchTrigger.tsx\" \"app/workspace/[workspaceId]/layout.tsx\"; Pop-Location)"
+      "PowerShell($env:ESLINT_USE_FLAT_CONFIG=$null; Push-Location \"E:\\\\projects\\\\pulsify\\\\pulsify-web-app\"; & \".\\\\node_modules\\\\.bin\\\\eslint.cmd\" \"lib/workspace-command-palette.ts\" \"app/api/workspaces/[workspaceId]/search/route.ts\" \"components/workspace/search/WorkspaceCommandPaletteProvider.tsx\" \"components/workspace/search/WorkspaceCommandPalette.tsx\" \"components/workspace/search/WorkspaceSearchTrigger.tsx\" \"components/workspace/WorkspaceSidebar.tsx\" \"components/dashboard/search/SearchTrigger.tsx\" \"app/workspace/[workspaceId]/layout.tsx\"; Pop-Location)",
+      "Bash(xargs grep -l \"objectFit\\\\|object-fit\")",
+      "Bash(grep -o \"objectFit === \\\\\"cover\\\\\".\\\\{0,400\\\\}\" node_modules/next/dist/compiled/@vercel/og/index.edge.js)",
+      "Bash(break)",
+      "PowerShell(Get-NetTCPConnection *)",
+      "PowerShell(foreach \\($port in 3000,3001\\) { Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { try { Stop-Process -Id $_ -Force -ErrorAction Stop; \"killed $_ on $port\" } catch {} } })",
+      "Bash(grep -o \"fallbackFont\\\\|defaultFont\\\\|weight[^,;]\\\\{0,12\\\\}\\\\|fetchFont\\\\|typeface[^,;]*\" node_modules/next/dist/compiled/@vercel/og/index.edge.js)",
+      "PowerShell(Get-Process *)",
+      "PowerShell(foreach \\($port in 3000,3001\\) { Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { try { Stop-Process -Id $_ -Force -ErrorAction Stop; \"killed $_ on $port\" } catch {} } }; \"done\")",
+      "Bash(grep -iv \"//\")",
+      "Bash(awk NR>=218 && NR<=262 *)",
+      "Bash(awk NR>=262 && NR<=312 *)",
+      "Bash(awk NR>=218 && NR<=256 *)",
+      "Bash(awk NR>=262 && NR<=300 *)",
+      "Bash(awk NR>=218 && NR<=300 *)",
+      "Bash(awk NR>=218 && NR<=295 *)"
     ]
   }
 }

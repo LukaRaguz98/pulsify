@@ -80,7 +80,7 @@ export type LevelProgress = {
   pct: number
 }
 
-/** Full progress breakdown for a member — drives progress bars and /rank. */
+/** Full progress breakdown for a member — drives the dashboard progress bars. */
 export function progressInLevel(totalXp: number, curve: LevelCurve = DEFAULT_CURVE): LevelProgress {
   const xp = Math.max(0, Math.floor(totalXp))
   const level = levelForXp(xp, curve)

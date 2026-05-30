@@ -94,8 +94,8 @@ const JOIN_BLURB = 'Click **Join Giveaway** below for your chance to win!'
 // badge thumbnail (type-9 Section), so the top of the embed stays filled.
 // Returns an array (callers spread it). Mirror of headerBlocks() in giveaways.js.
 function headerBlocks(title: string, subtitle?: string | null): Record<string, unknown>[] {
-  const lines: Record<string, unknown>[] = [td(`# ${title}`)]
-  if (subtitle) lines.push(td(subtitle))
+  const lines: Record<string, unknown>[] = [td('**Pulse**'), td(`# ${title}`)]
+  if (subtitle) lines.push(td(`-# ${subtitle}`))
   if (!HAS_ICON) return lines
   return [
     {
@@ -135,7 +135,7 @@ function activeContainer(g: {
   if (hasRequirements(req)) {
     // Role mentions (<@&id>) so Discord renders names — matches the bot's embed.
     const summary = describeRequirements(req, (id) => `<@&${id}>`).join(' · ')
-    body.push(td(`-# 🔒 **Requirements:** ${summary}`))
+    body.push(td(`-# **Requirements:** ${summary}`))
   }
   if (g.host_id || g.host_name) body.push(td(`-# Hosted by ${g.host_id ? `<@${g.host_id}>` : g.host_name}`))
   body.push({ type: 14, divider: true, spacing: 1 })
@@ -162,7 +162,7 @@ function cancelledContainer(g: { title: string; description: string | null; priz
   const body: Record<string, unknown>[] = [...headerBlocks(g.title, `**Prize:** ${g.prize}`)]
   if (g.description) body.push(td(g.description.slice(0, 1500)))
   body.push({ type: 14, divider: true, spacing: 1 })
-  body.push(td('❌ This giveaway was cancelled.'))
+  body.push(td('This giveaway was cancelled.'))
   body.push(td('-# Pulse · Giveaway cancelled'))
   return { type: 17, accent_color: GREY, components: body } as unknown as V2TopLevelComponent
 }

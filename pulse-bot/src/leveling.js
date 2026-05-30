@@ -510,45 +510,7 @@ function createLeveling(client, supabase) {
       .select("user_id", { count: "exact", head: true })
       .eq("guild_id", guild.id);
 
-    return { xp, prog, rank, tracked: tracked ?? 0, userName };
-  }
-
-  async function handleRankCommand({ interaction, guild, ephemeral }) {
-    const target = interaction.options.getUser("user") ?? interaction.user;
-    const member = await guild.members.fetch(target.id).catch(() => null);
-    const displayName = member?.displayName ?? target.globalName ?? target.username;
-    const colorHex = await getPulseColor(supabase, guild.id);
-    const info = await rankInfo(guild, target.id, displayName);
-    const { prog, rank, tracked } = info;
-
-    const rankLine = rank ? `**Rank:** #${rank}${tracked ? ` of ${tracked.toLocaleString()}` : ""}` : "**Rank:** Unranked — earn some XP first!";
-    const body = [
-      text(
-        `**Level:** ${prog.level}\n` +
-          `**Total XP:** ${prog.totalXp.toLocaleString()}\n` +
-          rankLine,
-      ),
-      divider(),
-      text(
-        `**Progress to level ${prog.level + 1}**\n` +
-          `\`${progressBar(prog.pct)}\` ${prog.pct}%\n` +
-          `-# ${prog.intoLevel.toLocaleString()} / ${prog.span.toLocaleString()} XP · ${prog.toNext.toLocaleString()} to go`,
-      ),
-    ];
-
-    await interaction.reply({
-      flags: MessageFlags.IsComponentsV2 | (ephemeral ? MessageFlags.Ephemeral : 0),
-      components: [
-        buildPulseContainer({
-          iconUrl: (member ?? target).displayAvatarURL({ size: 256 }),
-          colorHex,
-          title: "Rank",
-          subtitle: displayName,
-          body,
-          footer: "Pulse · Levels & XP",
-        }),
-      ],
-    });
+    return { xp, prog, rank, tracked: tracked ?? 0, enabled: cfg.enabled, userName };
   }
 
   async function handleLeaderboardCommand({ interaction, guild, ephemeral }) {
@@ -649,7 +611,7 @@ function createLeveling(client, supabase) {
     awardCommand,
     awardGiveawayEntry,
     awardEventInterest,
-    handleRankCommand,
+    getLevelInfo: rankInfo,
     handleLeaderboardCommand,
   };
 }

@@ -49,9 +49,9 @@ function buildRecapContainer(args: {
   const components: V2Container['components'] = []
 
   const headerLines = [
-    { type: 10 as const, content: `**Pulsify Insights**` },
+    { type: 10 as const, content: `**Pulse**` },
     { type: 10 as const, content: `# Server recap` },
-    { type: 10 as const, content: `-# ${guildName} · last ${windowDays} days` },
+    { type: 10 as const, content: `-# Pulsify Insights · ${guildName} · last ${windowDays} days` },
   ]
   if (hasIcon) {
     components.push({
@@ -66,7 +66,7 @@ function buildRecapContainer(args: {
   // A short lead-in before the numbers so the post reads as a message, not a dump.
   components.push({
     type: 10,
-    content: `Here's how **${guildName}** has been doing over the past ${windowDays} days.`,
+    content: `### Here's how **${guildName}** has been doing over the past ${windowDays} days.`,
   })
   components.push({ type: 14, divider: true, spacing: 1 })
 
@@ -75,7 +75,7 @@ function buildRecapContainer(args: {
 
   components.push({ type: 14, divider: true, spacing: 1 })
   const unix = Math.floor(Date.now() / 1000)
-  components.push({ type: 10, content: `-# Pulsify Insights · <t:${unix}:f>` })
+  components.push({ type: 10, content: `-# Pulse · Insights · <t:${unix}:f>` })
 
   return { type: 17, accent_color: accentColor, components }
 }

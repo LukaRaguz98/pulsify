@@ -29,6 +29,12 @@ export type CommandDefinition = {
   category: CommandCategory
   defaultPermission: CommandPermissionLevel
   options?: CommandOption[]
+  /**
+   * Whether the reply is hidden to just the invoker (ephemeral) when no
+   * per-guild override exists. Defaults to `true`; set `false` for commands
+   * that should post publicly out of the box (e.g. /changelog).
+   */
+  defaultEphemeral?: boolean
   /** Example invocations rendered in the preview + copyable as quick tests. */
   examples: string[]
   /** Longer help text shown in the command preview. */
@@ -37,8 +43,7 @@ export type CommandDefinition = {
 
 // ── Catalog ──────────────────────────────────────────────────────────────────
 // A small, deliberately useful set. Everything here is OPT-IN per server via
-// the Command Center — admins can disable any of it. `/sync` is the dashboard
-// bridge and ships admin-only to match its historic behaviour.
+// the Command Center — admins can disable, restrict or re-permission any of it.
 export const COMMAND_CATALOG: CommandDefinition[] = [
   {
     name: 'help',
@@ -50,73 +55,33 @@ export const COMMAND_CATALOG: CommandDefinition[] = [
       'Lists every command the member is allowed to run, grouped by category. Disabled and hidden commands are omitted automatically.',
   },
   {
-    name: 'serverinfo',
-    description: 'Show stats and details about this server',
-    category: 'information',
-    defaultPermission: 'everyone',
-    examples: ['/serverinfo'],
-    detail:
-      'Member count, creation date, boost tier, and channel + role counts for the current server.',
-  },
-  {
-    name: 'userinfo',
-    description: 'Show information about a member',
+    name: 'profile',
+    description: "Show a member's profile — reputation, level and standing",
     category: 'information',
     defaultPermission: 'everyone',
     options: [
       { name: 'user', description: 'The member to look up (defaults to you)', type: 'user' },
     ],
-    examples: ['/userinfo', '/userinfo user:@username'],
+    examples: ['/profile', '/profile user:@username'],
     detail:
-      'Account creation + server join dates, role count, and the highest role for the chosen member (or yourself).',
+      "A member's reputation and level shown as accent-tinted bars, plus account + join dates, their most significant roles, and quick links to their avatar and banner. Defaults to your own profile.",
   },
   {
-    name: 'stats',
-    description: "Show this server's recent activity summary",
-    category: 'insights',
-    defaultPermission: 'moderator',
-    examples: ['/stats'],
-    detail:
-      'A snapshot of messages, joins and active members over the last 24 hours, with a link to the full dashboard analytics.',
-  },
-  {
-    name: 'sync',
-    description: "Sync this server's data to the Pulse dashboard",
+    name: 'changelog',
+    description: "Shows detailed release notes for a specific Pulsify version.",
     category: 'utility',
     defaultPermission: 'admin',
-    examples: ['/sync'],
-    detail:
-      'Refreshes the dashboard with the latest member count and server metadata. Runs automatically when Pulse joins a server; use this if something looks out of date.',
-  },
-  {
-    name: 'ticket',
-    description: 'Open a support ticket',
-    category: 'utility',
-    defaultPermission: 'everyone',
-    examples: ['/ticket'],
-    detail:
-      'Opens a private support ticket. Pick a category, optionally answer a short form, and a dedicated channel is created for you and the support team. Configure ticket types and the panel from the Tickets page.',
-  },
-  {
-    name: 'rank',
-    description: 'Show your level, XP and server rank',
-    category: 'information',
-    defaultPermission: 'everyone',
+    defaultEphemeral: false,
     options: [
-      { name: 'user', description: 'The member to look up (defaults to you)', type: 'user' },
+      {
+        name: 'version',
+        description: 'A version to look up.',
+        type: 'string',
+      },
     ],
-    examples: ['/rank', '/rank user:@username'],
+    examples: ['/changelog', '/changelog version:0.30.0'],
     detail:
-      'Your current level, total XP, progress to the next level, and your position on the server leaderboard. Pick a user to view theirs. Configure XP rates and rewards on the Members page.',
-  },
-  {
-    name: 'leaderboard',
-    description: 'Show the top members by XP',
-    category: 'information',
-    defaultPermission: 'everyone',
-    examples: ['/leaderboard'],
-    detail:
-      'The top 10 members ranked by XP, each with their level and total XP, plus your own standing if you’re not in the top 10.',
+      'A polished summary of a Pulse release — the headline changes and highlights — with a link to the complete release notes. Defaults to the latest release; pass a version to view any past release. Admins only by default.',
   },
 ]
 
@@ -161,6 +126,17 @@ export function defaultConfig(): CommandConfig {
     maintenance: false,
     ephemeral: true,
   }
+}
+
+/**
+ * The out-of-the-box config for a specific command — `defaultConfig()` plus any
+ * catalog-level overrides (currently just `defaultEphemeral`). Use this instead
+ * of `defaultConfig()` whenever you have the command definition so per-command
+ * defaults (e.g. /changelog being public) are respected before an admin saves
+ * an override.
+ */
+export function defaultConfigFor(def: CommandDefinition): CommandConfig {
+  return { ...defaultConfig(), ephemeral: def.defaultEphemeral ?? defaultConfig().ephemeral }
 }
 
 const VALID_CATEGORIES: CommandCategory[] = ['utility', 'information', 'insights', 'moderation']

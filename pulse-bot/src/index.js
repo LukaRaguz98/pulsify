@@ -15,6 +15,7 @@ const { createAnalytics } = require("./analytics");
 const { recordNotification, fetchActor } = require("./notifications");
 const { forwardMessageToPulseGuard } = require("./ai-moderation");
 const { COMMANDS_BY_NAME } = require("./commands");
+const { getCurrentVersion } = require("./version");
 const {
   loadConfigs,
   invalidateConfigs,
@@ -122,7 +123,7 @@ async function notifyIfNotBot(opts) {
  */
 function buildMemberV2Container(cfg, resolve, hasBanner) {
   const colorInt = parseInt((cfg.color ?? "#6366f1").replace("#", ""), 16);
-  const components = [];
+  const components = [{ type: 10, content: "**Pulse**" }];
 
   const title = resolve(cfg.title ?? "");
   if (title) components.push({ type: 10, content: `# ${title}` });
@@ -131,6 +132,7 @@ function buildMemberV2Container(cfg, resolve, hasBanner) {
   if (description) components.push({ type: 10, content: description });
 
   if (Array.isArray(cfg.fields) && cfg.fields.length > 0) {
+    if (description) components.push({ type: 14, divider: true, spacing: 1 });
     const fieldText = cfg.fields
       .filter((f) => f && (f.name || f.value))
       .map((f) => `**${resolve(f.name ?? "")}**\n${resolve(f.value ?? "")}`)
@@ -171,10 +173,12 @@ function buildModAlertContainer({ colorInt, title, lines, footerLabel }) {
     type: 17,
     accent_color: colorInt,
     components: [
+      { type: 10, content: "**Pulse**" },
       { type: 10, content: `# ${title}` },
+      { type: 10, content: "-# Moderation alert" },
       { type: 10, content: lines.filter(Boolean).join("\n") },
       { type: 14, divider: true, spacing: 1 },
-      { type: 10, content: `-# Pulse · ${footerLabel} <t:${unix}:R>` },
+      { type: 10, content: `-# Pulse · ${footerLabel} · <t:${unix}:R>` },
     ],
   };
 }
@@ -207,7 +211,8 @@ async function registerGuildCommands(rest, appId, guild) {
 }
 
 client.once(Events.ClientReady, async (readyClient) => {
-  console.log(`[Pulse] Logged in as ${readyClient.user.tag}`);
+  const version = await getCurrentVersion();
+  console.log(`[Pulse] Pulse v${version} starting up — logged in as ${readyClient.user.tag}`);
 
   // Immediate default presence — shown until the presence system (started at
   // the end of this handler) loads the active guild's config and takes over.
@@ -304,6 +309,17 @@ client.once(Events.ClientReady, async (readyClient) => {
   // set above. Loads the active guild's config and starts the rotation; if no
   // guild is active it leaves the default "Powered by Pulsify" in place.
   await presence.start();
+
+  // Startup banner — a clear, scannable success summary so an operator can
+  // confirm at a glance which version is live, how many servers it serves, and
+  // that every command loaded. Mirrors the data /version reports.
+  const guildCount = readyClient.guilds.cache.size;
+  const commandCount = COMMANDS_BY_NAME.size;
+  console.log("[Pulse] ──────────────────────────────────────────");
+  console.log(`[Pulse] ✓ Pulse v${version} is ready`);
+  console.log(`[Pulse] ✓ Serving ${guildCount} guild${guildCount === 1 ? "" : "s"}`);
+  console.log(`[Pulse] ✓ Loaded ${commandCount} command${commandCount === 1 ? "" : "s"}`);
+  console.log("[Pulse] ──────────────────────────────────────────");
 });
 
 client.on(Events.GuildCreate, async (guild) => {
@@ -946,9 +962,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       guild,
       client,
       supabase,
-      syncGuild,
       getAllowedCommands,
-      tickets,
       leveling,
       ephemeral: verdict.ephemeral,
     });
@@ -1023,4 +1037,15 @@ async function shutdown() {
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 
-client.login(process.env.DISCORD_BOT_TOKEN);
+// Surface gateway-level errors clearly rather than letting them pass silently.
+client.on(Events.Error, (err) => {
+  console.error("[Pulse] Client error:", err.message);
+});
+
+// Clear startup failure output — a bad token / missing env / network issue
+// during login is the most common "bot won't start" cause, so name it plainly.
+client.login(process.env.DISCORD_BOT_TOKEN).catch((err) => {
+  console.error("[Pulse] ✗ Startup failed — could not log in to Discord:", err.message);
+  console.error("[Pulse]   Check DISCORD_BOT_TOKEN and the bot's network access.");
+  process.exit(1);
+});

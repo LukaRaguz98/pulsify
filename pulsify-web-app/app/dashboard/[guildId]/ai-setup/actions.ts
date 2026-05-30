@@ -106,10 +106,12 @@ function hexToInt(hex: string): number {
  * TextDisplay, both wrapped in an accent-coloured Container.
  */
 function buildContentContainer(title: string, content: string, accentHex: string): V2Container {
-  const components: V2Container['components'] = []
+  const components: V2Container['components'] = [{ type: 10, content: '**Pulse**' }]
   const trimmedTitle = title.trim()
   if (trimmedTitle) components.push({ type: 10, content: `# ${trimmedTitle}` })
   components.push({ type: 10, content: content.slice(0, 3900) })
+  components.push({ type: 14, divider: true, spacing: 1 })
+  components.push({ type: 10, content: '-# Pulse · Server guide' })
   return {
     type: 17,
     accent_color: hexToInt(accentHex),

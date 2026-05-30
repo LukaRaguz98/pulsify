@@ -240,10 +240,18 @@ async function evaluate(supabase, interaction) {
     return { kind: "blocked", def, status: "rate_limited", reason: "This command has hit its daily usage limit for the server." };
   }
 
+  // Ephemeral resolution: an explicit per-guild override (a saved row) always
+  // wins; absent one, fall back to the command's catalog default
+  // (def.defaultEphemeral) rather than the global default. This is how
+  // /changelog ships public-by-default while everything else stays ephemeral.
+  const row = configMap.get(name);
+  const ephemeral =
+    row && typeof row.ephemeral === "boolean" ? row.ephemeral : def.defaultEphemeral !== false;
+
   return {
     kind: "allowed",
     def,
-    ephemeral: config.ephemeral !== false,
+    ephemeral,
     commit: () => markCooldown(guildId, name, interaction.user.id, config.cooldown_seconds),
   };
 }

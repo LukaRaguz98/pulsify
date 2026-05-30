@@ -6,6 +6,7 @@ import { recordNotification } from '@/lib/notifications-server'
 import {
   CATALOG_BY_NAME,
   defaultConfig,
+  defaultConfigFor,
   normaliseConfig,
   commandStatus,
   type CommandConfig,
@@ -94,7 +95,11 @@ export async function bulkSetCommandsEnabled(
   const rows = names.map((name) => ({
     guild_id: guildId,
     command_name: name,
-    ...normaliseConfig({ ...defaultConfig(), ...byName.get(name), enabled }),
+    ...normaliseConfig({
+      ...(CATALOG_BY_NAME[name] ? defaultConfigFor(CATALOG_BY_NAME[name]) : defaultConfig()),
+      ...byName.get(name),
+      enabled,
+    }),
     updated_by: auth.moderator.userId,
     updated_at: now,
   }))

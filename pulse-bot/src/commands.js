@@ -13,42 +13,42 @@ const {
 } = require("discord.js");
 const { readFile } = require("node:fs/promises");
 const path = require("node:path");
+const {
+  getLatestRelease,
+  getReleaseByVersion,
+  getReleaseNotesUrl,
+  getDashboardUrl,
+  getInviteUrl,
+} = require("./version");
+const { computeReputation, daysSince } = require("./reputation");
 
-const PERMISSION = { EVERYONE: "everyone", MODERATOR: "moderator", ADMIN: "admin" };
+const PERMISSION = {
+  EVERYONE: "everyone",
+  MODERATOR: "moderator",
+  ADMIN: "admin",
+};
 const ACCENT = 0x8b5cf6;
 const DEFAULT_PULSE_COLOR = "#8b5cf6";
 
 // ── Themed Components V2 helpers ─────────────────────────────────────────────
-// Every command reply uses the same look as /sync: a header Section carrying a
+// Every command reply shares one look: a header Section carrying a
 // thumbnail (the Pulse badge, or — for server/user info — the server icon /
 // member avatar), the body, and a subtle `-# Pulse · …` footer. The Pulse
 // badge is fetched from the web app's tint endpoint (one shared recolour
 // pipeline) and falls back to the bundled PNG so a reply always renders. Keep
 // emoji out — the accent bar + glyph carry the branding.
 
-const SYNC_ICON_NAME = "pulse-sync.png";
 const ICON_FILES = {
-  sync: "pulse-sync.png",
-  stats: "pulse-stats.png",
-  info: "pulse-info.png",
   help: "pulse-help.png",
+  announcement: "pulse-annoucement.png",
 };
 const localIconCache = {};
 
 const VERIFICATION_LABELS = ["None", "Low", "Medium", "High", "Highest"];
-const EXPLICIT_FILTER_LABELS = ["Disabled", "Members without roles", "All members"];
-
-// Notable permissions surfaced by /userinfo, in priority order.
-const KEY_PERMISSIONS = [
-  [PermissionFlagsBits.Administrator, "Administrator"],
-  [PermissionFlagsBits.ManageGuild, "Manage Server"],
-  [PermissionFlagsBits.ManageRoles, "Manage Roles"],
-  [PermissionFlagsBits.ManageChannels, "Manage Channels"],
-  [PermissionFlagsBits.BanMembers, "Ban Members"],
-  [PermissionFlagsBits.KickMembers, "Kick Members"],
-  [PermissionFlagsBits.ModerateMembers, "Timeout Members"],
-  [PermissionFlagsBits.ManageMessages, "Manage Messages"],
-  [PermissionFlagsBits.MentionEveryone, "Mention Everyone"],
+const EXPLICIT_FILTER_LABELS = [
+  "Disabled",
+  "Members without roles",
+  "All members",
 ];
 
 const text = (content) => ({ type: 10, content });
@@ -104,9 +104,12 @@ async function loadPulseIcon(iconKey, colorHex) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 2000);
   try {
-    const res = await fetch(`${appUrl}/api/pulse-icon?icon=${iconKey}&color=${hex}`, {
-      signal: controller.signal,
-    });
+    const res = await fetch(
+      `${appUrl}/api/pulse-icon?icon=${iconKey}&color=${hex}`,
+      {
+        signal: controller.signal,
+      },
+    );
     if (res.ok) {
       const buf = Buffer.from(await res.arrayBuffer());
       return { attachment: buf, name };
@@ -118,7 +121,9 @@ async function loadPulseIcon(iconKey, colorHex) {
   }
   try {
     if (!localIconCache[iconKey]) {
-      localIconCache[iconKey] = await readFile(path.join(__dirname, "..", "resources", name));
+      localIconCache[iconKey] = await readFile(
+        path.join(__dirname, "..", "resources", name),
+      );
     }
     return { attachment: localIconCache[iconKey], name };
   } catch {
@@ -132,7 +137,15 @@ async function loadPulseIcon(iconKey, colorHex) {
  * an `attachment://<name>` reference or an external https URL (server icon /
  * avatar). When omitted the header renders without a thumbnail.
  */
-function buildPulseContainer({ iconUrl, colorHex, title, subtitle, body = [], footer }) {
+function buildPulseContainer({
+  iconUrl,
+  colorHex,
+  title,
+  subtitle,
+  body = [],
+  footer,
+  noSpacer = false,
+}) {
   const colorInt = parseInt(colorHex.replace("#", ""), 16);
   const components = [];
 
@@ -148,8 +161,10 @@ function buildPulseContainer({ iconUrl, colorHex, title, subtitle, body = [], fo
     components.push(...headerLines);
   }
 
-  // Pin all embeds to a consistent, comfortable width.
-  components.push(widthSpacer());
+  // Pin most embeds to a consistent, comfortable width. Skipped for embeds that
+  // carry a full-width image (e.g. /profile's banner) so the image alone defines
+  // the width instead of an artificial minimum.
+  if (!noSpacer) components.push(widthSpacer());
 
   for (const c of body) components.push(c);
   if (footer) components.push(text(`-# ${footer}`));
@@ -161,30 +176,6 @@ function buildPulseContainer({ iconUrl, colorHex, title, subtitle, body = [], fo
   };
 }
 
-/** /sync keeps its own body (members + status + sync blurb) but the same shell. */
-function buildSyncContainer(guild, colorHex, hasIcon) {
-  const unix = Math.floor(Date.now() / 1000);
-  return buildPulseContainer({
-    iconUrl: hasIcon ? `attachment://${SYNC_ICON_NAME}` : null,
-    colorHex,
-    title: "Server synced",
-    subtitle: guild.name,
-    body: [
-      text(
-        `**Members:** ${guild.memberCount.toLocaleString()}\n` +
-          `**Channels:** ${guild.channels.cache.size}\n` +
-          `**Roles:** ${guild.roles.cache.size}\n` +
-          `**Status:** Up to date`,
-      ),
-      divider(),
-      text(
-        "This server's data is now available on the Pulse dashboard. Analytics, moderation, and automations stay in sync from here.",
-      ),
-    ],
-    footer: `Pulse · Synced <t:${unix}:R>`,
-  });
-}
-
 /**
  * Reply with a themed V2 container + its (optional) icon attachment.
  * `ephemeral` (default true) decides whether only the invoker sees the reply
@@ -193,10 +184,372 @@ function buildSyncContainer(guild, colorHex, hasIcon) {
  */
 async function replyContainer(interaction, container, file, ephemeral = true) {
   await interaction.reply({
-    flags: MessageFlags.IsComponentsV2 | (ephemeral ? MessageFlags.Ephemeral : 0),
+    flags:
+      MessageFlags.IsComponentsV2 | (ephemeral ? MessageFlags.Ephemeral : 0),
     components: [container],
     files: file ? [file] : [],
   });
+}
+
+// ── Version / update embed helpers ───────────────────────────────────────────
+// Shared by /version, /changelog, /release-notes and /announce-update so every
+// update surface carries the same branding + the same quick links.
+
+// Show the FULL changelog — every highlight, in full. The caps below only guard
+// against pathological releases bumping into Discord's component limits; real
+// releases sit comfortably under them, so nothing gets trimmed in practice.
+const HIGHLIGHT_MAX = 25; // hard safety cap on bullet count
+const HIGHLIGHT_LINE_MAX = 320; // per-bullet character cap (generous — full text)
+
+/** Truncate to `max` chars on a word boundary, adding an ellipsis when cut. */
+function truncate(str, max) {
+  if (!str || str.length <= max) return str ?? "";
+  return `${str.slice(0, max - 1).trimEnd()}…`;
+}
+
+/**
+ * Lead paragraph rendered a notch larger than body text (a Discord `###`
+ * subheading) so the description under the title stands out and the embed reads
+ * better. Kept smaller than the `#` title so the hierarchy holds.
+ */
+const lead = (content) => text(`### ${content}`);
+
+/**
+ * The three link buttons every update embed carries. Link buttons (style 5)
+ * need no interaction handler — Discord opens the URL directly. Added to a
+ * container's `body` so they render above the `-#` footer (the giveaway
+ * pattern).
+ */
+function linkButtonRow(guildId) {
+  return {
+    type: 1,
+    components: [
+      {
+        type: 2,
+        style: 5,
+        label: "View Release Notes",
+        url: getReleaseNotesUrl(),
+      },
+      {
+        type: 2,
+        style: 5,
+        label: "Open Dashboard",
+        url: getDashboardUrl(guildId),
+      },
+      { type: 2, style: 5, label: "Invite Pulse", url: getInviteUrl(guildId) },
+    ],
+  };
+}
+
+function helpLinkButtonRow(guildId, member) {
+  const links = [
+    { type: 2, style: 5, label: "Invite Pulse", url: getInviteUrl(guildId) },
+  ];
+
+  if (memberIsAdmin(member)) {
+    links.push(
+      {
+        type: 2,
+        style: 5,
+        label: "Open Dashboard",
+        url: getDashboardUrl(guildId),
+      },
+      {
+        type: 2,
+        style: 5,
+        label: "Manage Commands",
+        url: `${getDashboardUrl(guildId)}/commands`,
+      },
+    );
+  }
+
+  return { type: 1, components: links };
+}
+
+/** Render a release's highlights as a bulleted text block (trimmed + capped). */
+function highlightsBlock(highlights) {
+  const shown = (highlights ?? []).slice(0, HIGHLIGHT_MAX);
+  if (shown.length === 0) return null;
+  const lines = shown.map((h) => `- ${truncate(h, HIGHLIGHT_LINE_MAX)}`);
+  const extra = (highlights?.length ?? 0) - shown.length;
+  if (extra > 0)
+    lines.push(`-# …and ${extra} more — see the full release notes`);
+  return text(lines.join("\n"));
+}
+
+/**
+ * Build the "what's new" container for a /changelog reply. The release title is
+ * the heading, the version sits in a monospace badge next to the date, the
+ * description leads in a larger size, and the highlights sit under a bold
+ * "What's new" label — a tidy, professional layout with no emoji. Returns just
+ * the container; the caller supplies the icon file + reply.
+ */
+function buildChangelogContainer(release, { colorHex, icon, guildId } = {}) {
+  const body = [];
+  if (release.description) body.push(lead(release.description));
+
+  const hl = highlightsBlock(release.highlights);
+  if (hl) {
+    body.push(divider());
+    body.push(text("**What's new**"));
+    body.push(hl);
+  }
+
+  if (release.outro) {
+    body.push(divider());
+    body.push(text(`-# ${truncate(release.outro, 240)}`));
+  }
+
+  body.push(linkButtonRow(guildId));
+
+  return buildPulseContainer({
+    iconUrl: icon ? `attachment://${icon.name}` : null,
+    colorHex,
+    title: release.title,
+    // Version as a monospace badge alongside the release date — a subtle,
+    // professional accent under the title.
+    subtitle: `Pulse \`v${release.version}\` · Released ${release.date}`,
+    body,
+    footer: "Pulse · Change Log",
+  });
+}
+
+/**
+ * Fallback container shown when release data can't be loaded — keeps the
+ * branding + the release-notes link so the reply is still useful.
+ */
+function buildUnavailableContainer(colorHex, guildId, icon, message) {
+  return buildPulseContainer({
+    iconUrl: icon ? `attachment://${icon.name}` : null,
+    colorHex,
+    title: "Changelog",
+    body: [
+      text(
+        message ??
+          "Release details aren't available right now. You can still browse everything that's shipped on the release notes page.",
+      ),
+      linkButtonRow(guildId),
+    ],
+    footer: "Pulse · Try again shortly",
+  });
+}
+
+// ── Profile helpers ───────────────────────────────────────────────────────────
+// /profile is built from three transparent images, all generated by the web app
+// (next/og) and fetched + attached here (same thin-client pattern as the Pulse
+// icons): the reputation/level bars, the identity+activity field cards, and the
+// framed banner. Each has a graceful fallback so the embed always renders.
+
+/**
+ * Fetch the combined reputation + level bars as a single transparent PNG
+ * (reputation left, level right) for /profile, or null on failure. One image so
+ * it blends into the embed and nothing is cropped. `level` is optional (omitted
+ * when leveling is off for the guild).
+ */
+async function loadProfileBars({ colorHex, rep, level }) {
+  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+  const qs = new URLSearchParams({
+    color: colorHex.replace("#", ""),
+    repPct: String(Math.max(0, Math.min(100, Math.round(rep.pct || 0)))),
+    repLabel: rep.label,
+    repDetail: rep.detail,
+  });
+  if (level) {
+    qs.set("lvl", "1");
+    qs.set(
+      "lvlPct",
+      String(Math.max(0, Math.min(100, Math.round(level.pct || 0)))),
+    );
+    qs.set("lvlLabel", level.label);
+    qs.set("lvlDetail", level.detail);
+  }
+  const controller = new AbortController();
+  // Generous timeout: /profile defers its reply, so we're no longer racing the
+  // 3s interaction window — let the image actually generate instead of falling
+  // back (e.g. the normalised banner frame, which is what makes it fill width).
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${appUrl}/api/profile-bars?${qs.toString()}`, {
+      signal: controller.signal,
+    });
+    if (res.ok) {
+      const buf = Buffer.from(await res.arrayBuffer());
+      return { attachment: buf, name: "profile-bars.png" };
+    }
+  } catch {
+    // fall through to the unicode fallback
+  } finally {
+    clearTimeout(timer);
+  }
+  return null;
+}
+
+/**
+ * Fetch the member's profile fields rendered as a grid of little cards (via
+ * /api/profile-cards) as an attachment, or null on failure. `cards` is an array
+ * of { l: label, v: value }.
+ */
+async function loadProfileCards(colorHex, cards) {
+  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+  const qs = new URLSearchParams({
+    color: colorHex.replace("#", ""),
+    cards: JSON.stringify(cards),
+  });
+  const controller = new AbortController();
+  // Generous timeout: /profile defers its reply, so we're no longer racing the
+  // 3s interaction window — let the image actually generate instead of falling
+  // back (e.g. the normalised banner frame, which is what makes it fill width).
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${appUrl}/api/profile-cards?${qs.toString()}`, {
+      signal: controller.signal,
+    });
+    if (res.ok) {
+      const buf = Buffer.from(await res.arrayBuffer());
+      return { attachment: buf, name: "profile-cards.png" };
+    }
+  } catch {
+    // fall through to the text fallback
+  } finally {
+    clearTimeout(timer);
+  }
+  return null;
+}
+
+/**
+ * Human-readable "time ago" for the profile cards, spelled out in full so it
+ * reads naturally on the card: "9 years ago" / "5 months ago" / "17 days ago".
+ */
+function relAge(ms) {
+  const d = daysSince(ms);
+  if (d >= 365) {
+    const y = Math.floor(d / 365);
+    return `${y} year${y === 1 ? "" : "s"} ago`;
+  }
+  if (d >= 30) {
+    const mo = Math.floor(d / 30);
+    return `${mo} month${mo === 1 ? "" : "s"} ago`;
+  }
+  if (d >= 1) return `${d} day${d === 1 ? "" : "s"} ago`;
+  return "today";
+}
+
+/**
+ * Human-readable duration spelled out in full for the profile cards:
+ * "25 minutes" / "3 hours 12 minutes" / "45 seconds". Distinct from
+ * formatDuration (the compact "3h 12m" form used elsewhere).
+ */
+function formatDurationWords(totalSeconds) {
+  const s = Math.max(0, Math.round(Number(totalSeconds) || 0));
+  if (s < 60) {
+    if (s === 0) return "0 minutes";
+    return `${s} second${s === 1 ? "" : "s"}`;
+  }
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} minute${m === 1 ? "" : "s"}`;
+  const h = Math.floor(m / 60);
+  const rm = m % 60;
+  const hPart = `${h} hour${h === 1 ? "" : "s"}`;
+  return rm > 0 ? `${hPart} ${rm} minute${rm === 1 ? "" : "s"}` : hPart;
+}
+
+/**
+ * Fetch the member's banner normalised onto a fixed, centred canvas (via
+ * /api/banner-frame) as an attachment, so it always renders at a consistent
+ * size. Returns null on failure — the caller then falls back to the raw CDN URL.
+ */
+async function loadBanner(bannerUrl) {
+  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+  const controller = new AbortController();
+  // Generous timeout: /profile defers its reply, so we're no longer racing the
+  // 3s interaction window — let the image actually generate instead of falling
+  // back (e.g. the normalised banner frame, which is what makes it fill width).
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(
+      `${appUrl}/api/banner-frame?url=${encodeURIComponent(bannerUrl)}`,
+      {
+        signal: controller.signal,
+      },
+    );
+    if (res.ok) {
+      const buf = Buffer.from(await res.arrayBuffer());
+      return { attachment: buf, name: "banner.png" };
+    }
+  } catch {
+    // fall through to the raw CDN URL
+  } finally {
+    clearTimeout(timer);
+  }
+  return null;
+}
+
+/** Monospace fallback bar for when the generated image is unavailable. */
+function unicodeBar(pct, width = 18) {
+  const filled = Math.max(
+    0,
+    Math.min(width, Math.round(((Number(pct) || 0) / 100) * width)),
+  );
+  return "█".repeat(filled) + "░".repeat(width - filled);
+}
+
+/**
+ * Gather the participation + moderation inputs a reputation score needs for one
+ * member. Best-effort: any query that fails (or is blocked by RLS for the bot's
+ * anon role) degrades to 0 rather than throwing, so /profile always renders.
+ */
+async function fetchMemberMetrics(supabase, guildId, userId) {
+  const empty = {
+    messages: 0,
+    commands: 0,
+    voiceSeconds: 0,
+    activeChannels: 0,
+    warnings: 0,
+    timeouts: 0,
+    kicks: 0,
+    bans: 0,
+  };
+  try {
+    const [statsRes, warnRes, modRes] = await Promise.all([
+      supabase.rpc("get_member_profile_stats", {
+        p_guild_id: guildId,
+        p_user_id: userId,
+        p_since: null,
+      }),
+      supabase
+        .from("guild_warnings")
+        .select("id", { count: "exact", head: true })
+        .eq("guild_id", guildId)
+        .eq("user_id", userId)
+        .eq("active", true),
+      supabase
+        .from("moderation_logs")
+        .select("action")
+        .eq("guild_id", guildId)
+        .eq("target_user_id", userId)
+        .neq("action", "warn")
+        .limit(200),
+    ]);
+    const s = statsRes.data?.[0] ?? {};
+    const mod = modRes.data ?? [];
+    const tally = (a) => mod.filter((r) => r.action === a).length;
+    return {
+      messages: Number(s.message_count ?? 0),
+      commands: Number(s.command_count ?? 0),
+      voiceSeconds: Number(s.voice_seconds ?? 0),
+      activeChannels: Number(s.active_channels ?? 0),
+      warnings: warnRes.count ?? 0,
+      timeouts: tally("timeout"),
+      kicks: tally("kick"),
+      bans: tally("ban"),
+    };
+  } catch (err) {
+    console.warn(
+      `[Pulse] fetchMemberMetrics failed for ${userId}:`,
+      err.message,
+    );
+    return empty;
+  }
 }
 
 const CATEGORY_LABELS = {
@@ -205,6 +558,34 @@ const CATEGORY_LABELS = {
   insights: "Insights",
   moderation: "Moderation",
 };
+
+function effectiveCommandPermission(def, config) {
+  return config.permission_level === "inherit"
+    ? def.defaultPermission
+    : config.permission_level;
+}
+
+function memberIsAdmin(member) {
+  const perms = member?.permissions;
+  return (
+    perms?.has(PermissionFlagsBits.Administrator) ||
+    perms?.has(PermissionFlagsBits.ManageGuild) ||
+    false
+  );
+}
+
+function commandUsage(def) {
+  const opts = (def.data.toJSON().options ?? [])
+    .map((o) => (o.required ? `<${o.name}>` : `[${o.name}]`))
+    .join(" ");
+  return `/${def.name}${opts ? ` ${opts}` : ""}`;
+}
+
+function commandAccessLabel(level) {
+  if (level === "admin") return "Admins";
+  if (level === "moderator") return "Mods";
+  return "Everyone";
+}
 
 // ── Catalog ──────────────────────────────────────────────────────────────────
 const COMMANDS = [
@@ -215,54 +596,77 @@ const COMMANDS = [
     data: new SlashCommandBuilder()
       .setName("help")
       .setDescription("List the commands available to you in this server"),
-    async execute({ interaction, guild, supabase, getAllowedCommands, ephemeral }) {
+    async execute({
+      interaction,
+      guild,
+      supabase,
+      getAllowedCommands,
+      ephemeral,
+    }) {
       const colorHex = await getPulseColor(supabase, guild.id);
       const icon = await loadPulseIcon("help", colorHex);
-      const allowed = await getAllowedCommands(supabase, guild, interaction.member);
+      const allowed = await getAllowedCommands(
+        supabase,
+        guild,
+        interaction.member,
+      );
 
       const byCategory = new Map();
       for (const entry of allowed) {
-        if (!byCategory.has(entry.def.category)) byCategory.set(entry.def.category, []);
-        byCategory.get(entry.def.category).push(entry);
+        const level = effectiveCommandPermission(entry.def, entry.config);
+        if (level === "admin" && !memberIsAdmin(interaction.member)) continue;
+
+        const category = entry.config.category ?? entry.def.category;
+        if (!byCategory.has(category)) byCategory.set(category, []);
+        byCategory.get(category).push(entry);
       }
 
+      const visibleCount = [...byCategory.values()].reduce(
+        (sum, entries) => sum + entries.length,
+        0,
+      );
       const body = [];
-      if (allowed.length === 0) {
-        body.push(text("You don't have access to any commands here right now."));
+      if (visibleCount === 0) {
+        body.push(
+          lead("No commands are available to you in this server right now."),
+        );
       } else {
         body.push(
+          lead(
+            `You can run ${visibleCount} command${visibleCount === 1 ? "" : "s"} in ${guild.name}.`,
+          ),
+        );
+        body.push(
           text(
-            `You can run **${allowed.length}** command${allowed.length === 1 ? "" : "s"} in this server. ` +
-              `Arguments shown as \`<required>\` or \`[optional]\`.`,
+            "-# Arguments use `<required>` and `[optional]`. Admin-only commands are only shown to server admins.",
           ),
         );
         for (const [category, entries] of byCategory) {
           const lines = entries
             .map(({ def, config }) => {
-              const opts = (def.data.toJSON().options ?? [])
-                .map((o) => (o.required ? `<${o.name}>` : `[${o.name}]`))
-                .join(" ");
-              const usage = `\`/${def.name}${opts ? ` ${opts}` : ""}\``;
-              const level =
-                config.permission_level === "inherit" ? def.defaultPermission : config.permission_level;
-              const tag = level === "admin" ? " *(Admins)*" : level === "moderator" ? " *(Mods)*" : "";
-              return `${usage} — ${def.data.description}${tag}`;
+              const usage = `\`${commandUsage(def)}\``;
+              const level = effectiveCommandPermission(def, config);
+              return `${usage}\n${def.data.description}\n-# ${commandAccessLabel(level)}`;
             })
-            .join("\n");
+            .join("\n\n");
           body.push(divider());
-          body.push(text(`**${CATEGORY_LABELS[category] ?? category}**\n${lines}`));
+          body.push(
+            text(`**${CATEGORY_LABELS[category] ?? category}**\n${lines}`),
+          );
         }
       }
+
+      body.push(helpLinkButtonRow(guild.id, interaction.member));
 
       await replyContainer(
         interaction,
         buildPulseContainer({
           iconUrl: icon ? `attachment://${icon.name}` : null,
           colorHex,
-          title: "Commands",
-          subtitle: guild.name,
+          title: "Command Menu",
+          subtitle: `Pulse · ${guild.name}`,
           body,
-          footer: "Pulse · Tip: managed from the dashboard Command Center",
+          footer: "Pulse · Help",
         }),
         icon,
         ephemeral,
@@ -270,317 +674,303 @@ const COMMANDS = [
     },
   },
   {
-    name: "serverinfo",
+    name: "profile",
     category: "information",
     defaultPermission: PERMISSION.EVERYONE,
     data: new SlashCommandBuilder()
-      .setName("serverinfo")
-      .setDescription("Show stats and details about this server"),
-    async execute({ interaction, guild, supabase, ephemeral }) {
-      const colorHex = await getPulseColor(supabase, guild.id);
-
-      // Header thumbnail: the server's own icon. Fall back to the Pulse badge
-      // (tinted) for servers without an icon.
-      let iconUrl = guild.iconURL({ size: 128 });
-      let file = null;
-      if (!iconUrl) {
-        file = await loadPulseIcon("info", colorHex);
-        iconUrl = file ? `attachment://${file.name}` : null;
-      }
-
-      const created = Math.floor(guild.createdTimestamp / 1000);
-
-      // Member split is only shown when the member cache is complete (it is on
-      // most servers — the bot fetches members on join/ready) so we never print
-      // a misleading bot count from a partial cache.
-      let membersLine = `**Members:** ${guild.memberCount.toLocaleString()}`;
-      const memberCache = guild.members.cache;
-      if (memberCache.size >= guild.memberCount && guild.memberCount > 0) {
-        const bots = memberCache.filter((m) => m.user.bot).size;
-        membersLine =
-          `**Members:** ${guild.memberCount.toLocaleString()} — ` +
-          `${(guild.memberCount - bots).toLocaleString()} humans · ${bots.toLocaleString()} bots`;
-      }
-
-      const ch = guild.channels.cache;
-      const cnt = (type) => ch.filter((c) => c.type === type).size;
-      const parts = [
-        `${cnt(ChannelType.GuildText)} text`,
-        `${cnt(ChannelType.GuildVoice)} voice`,
-        `${cnt(ChannelType.GuildCategory)} categories`,
-      ];
-      if (cnt(ChannelType.GuildAnnouncement)) parts.push(`${cnt(ChannelType.GuildAnnouncement)} news`);
-      if (cnt(ChannelType.GuildStageVoice)) parts.push(`${cnt(ChannelType.GuildStageVoice)} stage`);
-      if (cnt(ChannelType.GuildForum)) parts.push(`${cnt(ChannelType.GuildForum)} forum`);
-
-      const settings = [
-        `**Boost status:** Tier ${guild.premiumTier} · ${guild.premiumSubscriptionCount ?? 0} boosts`,
-        `**Verification:** ${VERIFICATION_LABELS[guild.verificationLevel] ?? "Unknown"}`,
-        `**Content filter:** ${EXPLICIT_FILTER_LABELS[guild.explicitContentFilter] ?? "Unknown"}`,
-        `**AFK:** ${
-          guild.afkChannelId ? `<#${guild.afkChannelId}> after ${formatDuration(guild.afkTimeout)}` : "Not set"
-        }`,
-      ];
-      if (guild.vanityURLCode) settings.push(`**Vanity URL:** discord.gg/${guild.vanityURLCode}`);
-
-      const body = [
-        text(
-          `**Owner:** <@${guild.ownerId}>\n` +
-            `${membersLine}\n` +
-            `**Created:** <t:${created}:F> (<t:${created}:R>)\n` +
-            `**Locale:** ${guild.preferredLocale}`,
-        ),
-        divider(),
-        text(
-          `**Channels:** ${ch.size} — ${parts.join(" · ")}\n` +
-            `**Roles:** ${guild.roles.cache.size}\n` +
-            `**Emojis:** ${guild.emojis.cache.size} · **Stickers:** ${guild.stickers.cache.size}\n` +
-            `**Scheduled events:** ${guild.scheduledEvents.cache.size}`,
-        ),
-        divider(),
-        text(settings.join("\n")),
-      ];
-      if (guild.description) {
-        body.push(divider());
-        body.push(text(`-# ${guild.description}`));
-      }
-
-      await replyContainer(
-        interaction,
-        buildPulseContainer({
-          iconUrl,
-          colorHex,
-          title: "Server info",
-          subtitle: guild.name,
-          body,
-          footer: `Pulse · Server ID ${guild.id}`,
-        }),
-        file,
-        ephemeral,
-      );
-    },
-  },
-  {
-    name: "userinfo",
-    category: "information",
-    defaultPermission: PERMISSION.EVERYONE,
-    data: new SlashCommandBuilder()
-      .setName("userinfo")
-      .setDescription("Show information about a member")
+      .setName("profile")
+      .setDescription(
+        "Show a member's profile — reputation, level and standing",
+      )
       .addUserOption((o) =>
-        o.setName("user").setDescription("The member to look up (defaults to you)").setRequired(false),
+        o
+          .setName("user")
+          .setDescription("The member to look up (defaults to you)")
+          .setRequired(false),
       ),
-    async execute({ interaction, guild, supabase, ephemeral }) {
+    async execute({ interaction, guild, supabase, leveling, ephemeral }) {
+      // Defer up front: looking up another member adds REST fetches (user +
+      // member) on top of the image generation, which can blow past Discord's
+      // 3s window ("Application did not respond"). Deferring extends it.
+      await interaction.deferReply({
+        flags: ephemeral ? MessageFlags.Ephemeral : 0,
+      });
+
       const colorHex = await getPulseColor(supabase, guild.id);
       const user = interaction.options.getUser("user") ?? interaction.user;
-      // Full fetch to expose the banner; falls back to the partial user object.
-      const full = await user.fetch().catch(() => null);
-      const member = await guild.members.fetch(user.id).catch(() => null);
-      const created = Math.floor(user.createdTimestamp / 1000);
+      const isSelf = user.id === interaction.user.id;
 
-      // Header thumbnail: the member's server avatar (falls back to their
-      // global avatar, then Discord's default — always a valid URL).
-      const avatarUrl = (member ?? user).displayAvatarURL({ size: 256 });
-      const bannerUrl = full?.bannerURL ? full.bannerURL({ size: 512 }) : null;
+      // Pull everything in parallel to stay inside the interaction window: full
+      // user (for the banner), the member, level/rank, and reputation inputs.
+      const [full, member, levelInfo, metrics] = await Promise.all([
+        user.fetch().catch(() => null),
+        guild.members.fetch(user.id).catch(() => null),
+        leveling?.getLevelInfo
+          ? leveling
+              .getLevelInfo(guild, user.id, user.username)
+              .catch(() => null)
+          : Promise.resolve(null),
+        fetchMemberMetrics(supabase, guild.id, user.id),
+      ]);
 
-      const body = [
-        text(
-          `**Username:** @${user.username}\n` +
-            `**Mention:** <@${user.id}>\n` +
-            `**Account type:** ${user.bot ? "Bot" : "Human"}\n` +
-            `**Account created:** <t:${created}:F> (<t:${created}:R>)`,
-        ),
+      const displayName =
+        member?.displayName ?? user.globalName ?? user.username;
+      const avatarUrl = (member ?? user).displayAvatarURL({ size: 512 });
+      // Full-size avatar for the "View Avatar" link button (opens in a browser).
+      const avatarLinkUrl = (member ?? user).displayAvatarURL({ size: 4096 });
+      // Fetch the banner at higher resolution so the framed image (and Discord's
+      // downsampled preview) stay sharp — display size is unchanged. Force a
+      // static PNG: animated (Nitro) banners default to .gif, which the next/og
+      // banner-frame route can't decode — that failure drops us onto the raw CDN
+      // URL, which Discord renders narrower (~90%) instead of the full-width frame.
+      const bannerUrl = full?.bannerURL
+        ? full.bannerURL({ size: 2048, extension: "png", forceStatic: true })
+        : null;
+      // Original banner (animated .gif kept) for the "View Banner" link button —
+      // unlike the framed copy above, this opens the member's real banner in full.
+      const bannerOriginalUrl = full?.bannerURL
+        ? full.bannerURL({ size: 4096 })
+        : null;
+
+      // Reputation from the same inputs the dashboard uses (mirror).
+      const assignableRoles = member
+        ? member.roles.cache.filter((r) => r.id !== guild.id && !r.managed).size
+        : 0;
+      const rep = computeReputation({
+        accountAgeDays: daysSince(user.createdTimestamp),
+        tenureDays: daysSince(member?.joinedTimestamp),
+        messages: metrics.messages,
+        voiceSeconds: metrics.voiceSeconds,
+        commands: metrics.commands,
+        activeChannels: metrics.activeChannels,
+        assignableRoles,
+        warnings: metrics.warnings,
+        timeouts: metrics.timeouts,
+        kicks: metrics.kicks,
+        bans: metrics.bans,
+      });
+
+      const prog = levelInfo?.prog ?? {
+        level: 0,
+        pct: 0,
+        intoLevel: 0,
+        span: 0,
+        toNext: 0,
+      };
+      const levelingOn = levelInfo?.enabled !== false;
+
+      // Identity + activity fields, rendered as a grid of cards (static values,
+      // so an image is fine). Username + display name + dates + activity counts.
+      // The member's single highest role (excludes @everyone), shown as a card.
+      const topRole = member
+        ? member.roles.cache
+            .filter((r) => r.id !== guild.id)
+            .sort((a, b) => b.position - a.position)
+            .first()
+        : null;
+
+      const cards = [
+        { l: "Username", v: `@${user.username}` },
+        { l: "Display name", v: displayName },
+        { l: "Account", v: relAge(user.createdTimestamp) },
       ];
+      if (member?.joinedTimestamp)
+        cards.push({ l: "Joined", v: relAge(member.joinedTimestamp) });
+      if (member?.premiumSinceTimestamp)
+        cards.push({ l: "Boosting", v: relAge(member.premiumSinceTimestamp) });
+      if (topRole) cards.push({ l: "Top role", v: topRole.name });
+      cards.push({
+        l: "Messages",
+        v: `${metrics.messages.toLocaleString()} message${metrics.messages === 1 ? "" : "s"}`,
+      });
+      cards.push({ l: "Voice", v: formatDurationWords(metrics.voiceSeconds) });
+      cards.push({
+        l: "Commands",
+        v: `${metrics.commands.toLocaleString()} command${metrics.commands === 1 ? "" : "s"}`,
+      });
+      cards.push({
+        l: "Active in",
+        v: `${metrics.activeChannels.toLocaleString()} channel${metrics.activeChannels === 1 ? "" : "s"}`,
+      });
 
-      if (member) {
-        const memberLines = [];
-        if (member.joinedTimestamp) {
-          const j = Math.floor(member.joinedTimestamp / 1000);
-          memberLines.push(`**Joined server:** <t:${j}:F> (<t:${j}:R>)`);
-        }
-        if (member.id === guild.ownerId) memberLines.push(`**Server owner:** Yes`);
-        if (member.nickname) memberLines.push(`**Nickname:** ${member.nickname}`);
-        const highest = member.roles.highest;
-        if (highest && highest.id !== guild.id) memberLines.push(`**Highest role:** <@&${highest.id}>`);
-        if (member.premiumSinceTimestamp) {
-          memberLines.push(`**Boosting since:** <t:${Math.floor(member.premiumSinceTimestamp / 1000)}:R>`);
-        }
-        const timeout = member.communicationDisabledUntilTimestamp;
-        if (timeout && timeout > Date.now()) {
-          memberLines.push(`**Timed out until:** <t:${Math.floor(timeout / 1000)}:R>`);
-        }
-        if (memberLines.length > 0) {
-          body.push(divider());
-          body.push(text(memberLines.join("\n")));
-        }
+      // Generate the images in parallel to stay inside the interaction window:
+      // the reputation/level bars, the field cards, and the framed banner.
+      const [bars, cardsImg, bannerFile] = await Promise.all([
+        loadProfileBars({
+          colorHex,
+          rep: {
+            pct: rep.score,
+            label: "Reputation",
+            detail: `${rep.score}/100 · ${rep.tier}`,
+          },
+          level: levelingOn
+            ? {
+                pct: prog.pct,
+                label: `Level ${prog.level}`,
+                detail: `${prog.intoLevel.toLocaleString()}/${prog.span.toLocaleString()} XP`,
+              }
+            : null,
+        }),
+        loadProfileCards(colorHex, cards),
+        bannerUrl ? loadBanner(bannerUrl) : Promise.resolve(null),
+      ]);
 
-        const keyPerms = KEY_PERMISSIONS.filter(([bit]) => member.permissions.has(bit)).map(
-          ([, label]) => label,
-        );
-        if (keyPerms.length > 0) {
-          body.push(divider());
-          body.push(text(`**Key permissions:** ${keyPerms.join(", ")}`));
-        }
+      const body = [];
 
-        const roles = member.roles.cache
-          .filter((r) => r.id !== guild.id)
-          .sort((a, b) => b.position - a.position);
-        body.push(divider());
+      body.push(
+        lead(
+          isSelf
+            ? `Here's your standing and activity in ${guild.name}.`
+            : `Here's how ${displayName} is doing in ${guild.name}.`,
+        ),
+      );
+
+      // Reputation + level bars right at the top (single combined image; the
+      // heading above each bar is baked in, so no caption is needed below).
+      body.push(divider());
+      if (bars) {
+        body.push({
+          type: 12,
+          items: [{ media: { url: "attachment://profile-bars.png" } }],
+        });
+      } else {
+        // Unicode fallback when the image can't be fetched — same headings.
         body.push(
           text(
-            `**Roles (${roles.size}):** ${
-              roles.size > 0 ? roles.map((r) => `<@&${r.id}>`).slice(0, 20).join(" ") : "None"
-            }`,
+            `**Reputation** ${rep.score}/100 · ${rep.tier}\n\`${unicodeBar(rep.score)}\``,
           ),
         );
-      } else {
-        body.push(divider());
-        body.push(text("-# This user isn't a member of this server."));
+        if (levelingOn) {
+          body.push(
+            text(
+              `**Level ${prog.level}** ${prog.intoLevel.toLocaleString()}/${prog.span.toLocaleString()} XP\n\`${unicodeBar(prog.pct)}\``,
+            ),
+          );
+        }
       }
 
-      const links = [`[Avatar](${avatarUrl})`];
-      if (bannerUrl) links.push(`[Banner](${bannerUrl})`);
-      body.push(text(`-# ${links.join(" · ")}`));
+      // Identity + activity field cards (image), or a plain text fallback.
+      body.push(divider());
+      if (cardsImg) {
+        body.push({
+          type: 12,
+          items: [{ media: { url: "attachment://profile-cards.png" } }],
+        });
+      } else {
+        body.push(text(cards.map((c) => `**${c.l}:** ${c.v}`).join("\n")));
+      }
 
-      await replyContainer(
-        interaction,
-        buildPulseContainer({
-          iconUrl: avatarUrl,
-          colorHex,
-          title: user.globalName ?? user.username,
-          subtitle: `@${user.username}`,
-          body,
-          footer: `Pulse · User ID ${user.id}`,
-        }),
-        null,
-        ephemeral,
-      );
+      // The member's profile banner, centred + full-width at the very bottom (if
+      // they have one) — no divider above it. Prefer the normalised framed image;
+      // fall back to the raw CDN URL (which Discord fetches itself) if the frame
+      // couldn't be generated.
+      if (bannerUrl) {
+        body.push({
+          type: 12,
+          items: [
+            {
+              media: {
+                url: bannerFile ? "attachment://banner.png" : bannerUrl,
+              },
+            },
+          ],
+        });
+      }
+
+      // Quick links to open the avatar (and banner, if any) full-size in a
+      // browser — same link-button style (type 2, style 5) as the changelog.
+      const profileLinks = [
+        { type: 2, style: 5, label: "View Avatar", url: avatarLinkUrl },
+      ];
+      if (bannerOriginalUrl) {
+        profileLinks.push({
+          type: 2,
+          style: 5,
+          label: "View Banner",
+          url: bannerOriginalUrl,
+        });
+      }
+      // Admins also get a link straight to this member's dashboard detail page
+      // (Members › Details). Hidden entirely for non-admins.
+      if (
+        interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
+      ) {
+        profileLinks.push({
+          type: 2,
+          style: 5,
+          label: "Manage on Pulsify",
+          url: `${getDashboardUrl(guild.id)}/members/${user.id}`,
+        });
+      }
+      body.push({ type: 1, components: profileLinks });
+
+      // Ephemeral was set at defer time; the edit just adds the Components V2
+      // flag + the actual payload.
+      await interaction.editReply({
+        flags: MessageFlags.IsComponentsV2,
+        components: [
+          buildPulseContainer({
+            iconUrl: avatarUrl,
+            colorHex,
+            title: `**${displayName}**`,
+            subtitle: `${rep.tier}${levelingOn ? ` · Level ${prog.level}` : ""}`,
+            body,
+            footer: "Pulse · Member profile",
+            noSpacer: true,
+          }),
+        ],
+        files: [bars, cardsImg, bannerFile].filter(Boolean),
+      });
     },
   },
   {
-    name: "stats",
-    category: "insights",
-    defaultPermission: PERMISSION.MODERATOR,
+    name: "changelog",
+    category: "utility",
+    defaultPermission: PERMISSION.ADMIN,
+    // Public reply out of the box — admins can flip it to ephemeral per server.
+    defaultEphemeral: false,
     data: new SlashCommandBuilder()
-      .setName("stats")
-      .setDescription("Show this server's recent activity summary"),
+      .setName("changelog")
+      .setDescription(
+        "Shows detailed release notes for a specific Pulsify version.",
+      )
+      .addStringOption((o) =>
+        o
+          .setName("version")
+          .setDescription("A version to look up.")
+          .setRequired(false),
+      ),
     async execute({ interaction, guild, supabase, ephemeral }) {
       const colorHex = await getPulseColor(supabase, guild.id);
-      const icon = await loadPulseIcon("stats", colorHex);
+      const icon = await loadPulseIcon("announcement", colorHex);
 
-      const since24 = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      const [day, week] = await Promise.all([
-        supabase.rpc("get_analytics_summary", { p_guild_id: guild.id, p_since: since24 }),
-        supabase.rpc("get_analytics_summary", { p_guild_id: guild.id, p_since: since7d }),
-      ]);
-      const d = day.data?.[0] ?? {};
-      const w = week.data?.[0] ?? {};
-      const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+      // Optional `version` arg → that release; otherwise the latest. Tolerate a
+      // leading "v" and surrounding whitespace so "v0.30.0" / " 0.30.0 " work.
+      const raw = interaction.options.getString("version");
+      const wanted = raw ? raw.trim().replace(/^v/i, "") : null;
+      const release = wanted
+        ? await getReleaseByVersion(wanted)
+        : await getLatestRelease();
 
-      const summary = (label, s) => {
-        const joins = n(s.member_joins);
-        const leaves = n(s.member_leaves);
-        const net = joins - leaves;
-        return text(
-          `**${label}**\n` +
-            `**Messages:** ${n(s.total_messages).toLocaleString()} · **Active members:** ${n(s.active_users).toLocaleString()}\n` +
-            `**Joins:** ${joins.toLocaleString()} · **Leaves:** ${leaves.toLocaleString()} (net ${net >= 0 ? "+" : ""}${net.toLocaleString()})\n` +
-            `**Commands:** ${n(s.total_commands).toLocaleString()} · **Mod actions:** ${n(s.total_mod_actions).toLocaleString()}\n` +
-            `**Voice time:** ${formatDuration(n(s.voice_seconds))}`,
+      if (!release) {
+        const msg = wanted
+          ? `No release notes found for v${wanted}. Browse every version on the release notes page.`
+          : undefined;
+        await replyContainer(
+          interaction,
+          buildUnavailableContainer(colorHex, guild.id, icon, msg),
+          icon,
+          ephemeral,
         );
-      };
+        return;
+      }
 
       await replyContainer(
         interaction,
-        buildPulseContainer({
-          iconUrl: icon ? `attachment://${icon.name}` : null,
-          colorHex,
-          title: "Activity",
-          subtitle: guild.name,
-          body: [
-            summary("Last 24 hours", d),
-            divider(),
-            summary("Last 7 days", w),
-            divider(),
-            text(`[Open the full analytics dashboard →](${appUrl}/dashboard/${guild.id}/statistics)`),
-          ],
-          footer: "Pulse · Live server analytics",
-        }),
+        buildChangelogContainer(release, { colorHex, icon, guildId: guild.id }),
         icon,
         ephemeral,
       );
-    },
-  },
-  {
-    name: "sync",
-    category: "utility",
-    defaultPermission: PERMISSION.ADMIN,
-    data: new SlashCommandBuilder()
-      .setName("sync")
-      .setDescription("Sync this server's data to the Pulse dashboard"),
-    async execute({ interaction, guild, supabase, syncGuild, ephemeral }) {
-      const colorHex = await getPulseColor(supabase, guild.id);
-      const icon = await loadPulseIcon("sync", colorHex);
-      try {
-        await replyContainer(interaction, buildSyncContainer(guild, colorHex, !!icon), icon, ephemeral);
-      } catch (err) {
-        console.warn(`[Pulse] /sync reply failed for guild ${guild.id}:`, err.message);
-      }
-      await syncGuild(guild);
-    },
-  },
-  {
-    name: "ticket",
-    category: "utility",
-    defaultPermission: PERMISSION.EVERYONE,
-    data: new SlashCommandBuilder()
-      .setName("ticket")
-      .setDescription("Open a support ticket"),
-    // Delegates to the ticket module (passed in via the execute context from
-    // index.js) which presents an ephemeral type picker, then opens a private
-    // channel. See pulse-bot/src/tickets.js.
-    async execute({ interaction, tickets }) {
-      if (!tickets) {
-        await interaction.reply({ content: "The ticket system is unavailable right now.", flags: MessageFlags.Ephemeral });
-        return;
-      }
-      await tickets.handleTicketCommand(interaction);
-    },
-  },
-  {
-    name: "rank",
-    category: "information",
-    defaultPermission: PERMISSION.EVERYONE,
-    data: new SlashCommandBuilder()
-      .setName("rank")
-      .setDescription("Show your level, XP and server rank")
-      .addUserOption((o) =>
-        o.setName("user").setDescription("The member to look up (defaults to you)").setRequired(false),
-      ),
-    // Delegates to the leveling module (injected via the execute context from
-    // index.js), which builds the themed rank embed. See pulse-bot/src/leveling.js.
-    async execute({ interaction, guild, leveling, ephemeral }) {
-      if (!leveling) {
-        await interaction.reply({ content: "The leveling system is unavailable right now.", flags: MessageFlags.Ephemeral });
-        return;
-      }
-      await leveling.handleRankCommand({ interaction, guild, ephemeral });
-    },
-  },
-  {
-    name: "leaderboard",
-    category: "information",
-    defaultPermission: PERMISSION.EVERYONE,
-    data: new SlashCommandBuilder()
-      .setName("leaderboard")
-      .setDescription("Show the top members by XP"),
-    async execute({ interaction, guild, leveling, ephemeral }) {
-      if (!leveling) {
-        await interaction.reply({ content: "The leveling system is unavailable right now.", flags: MessageFlags.Ephemeral });
-        return;
-      }
-      await leveling.handleLeaderboardCommand({ interaction, guild, ephemeral });
     },
   },
 ];

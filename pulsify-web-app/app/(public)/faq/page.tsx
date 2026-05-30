@@ -130,7 +130,7 @@ const GROUPS: Group[] = [
     items: [
       {
         q: 'My changes aren’t showing up',
-        a: 'Most changes sync instantly. If data looks out of date, run /sync in your server, or use the “Trigger server sync” quick action in the dashboard, to refresh members and metadata.',
+        a: 'Most changes sync instantly. If data looks out of date, use the “Trigger server sync” quick action in the dashboard to refresh members and metadata.',
       },
       {
         q: 'The Pulse bot appears offline',
