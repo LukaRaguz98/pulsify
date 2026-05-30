@@ -16,24 +16,16 @@ import path from 'node:path'
  */
 
 export const PULSE_ICONS = {
-  /** Pulse Guard shield — moderation alerts. */
-  guard: 'pulse-guard.png',
-  /** Warning badge — AutoMod warning DMs. */
-  warn: 'pulse-warn.png',
-  /** Sync glyph — the bot's /sync reply. */
-  sync: 'pulse-sync.png',
   /** Help glyph — the bot's /help reply. */
   help: 'pulse-help.png',
-  /** Info glyph — the bot's /serverinfo + /userinfo replies. */
-  info: 'pulse-info.png',
-  /** Stats glyph — the bot's /stats reply. */
-  stats: 'pulse-stats.png',
   /** Recap glyph — the Insights weekly recap posted to Discord. */
   recap: 'pulse-recap.png',
   /** Ticket glyph — the opening embed of a freshly-created support ticket. */
   ticket: 'pulse-ticket.png',
   /** Gift glyph — the giveaway embed posted/edited in Discord. */
   giveaway: 'pulse-giveaway.png',
+  /** Megaphone glyph — the bot's /changelog (update) embed. */
+  announcement: 'pulse-annoucement.png',
 } as const
 
 export type PulseIconName = keyof typeof PULSE_ICONS

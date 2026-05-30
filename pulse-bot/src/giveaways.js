@@ -62,8 +62,8 @@ const JOIN_BLURB = "Click **Join Giveaway** below for your chance to win!";
 // doesn't read as an empty gap. Returns an ARRAY so callers spread it into the
 // body; falls back to plain text components when the icon is unavailable.
 function headerBlocks(title, subtitle) {
-  const lines = [td(`# ${title}`)];
-  if (subtitle) lines.push(td(subtitle));
+  const lines = [td("**Pulse**"), td(`# ${title}`)];
+  if (subtitle) lines.push(td(`-# ${subtitle}`));
   if (!HAS_ICON) return lines;
   return [
     {
@@ -228,7 +228,7 @@ function createGiveaways(client, supabase, leveling = null) {
     // Requirements on a single compact subtext line (· separated) rather than a
     // stacked bullet list — readable even with several conditions enabled.
     if (hasRequirements(req)) {
-      body.push(td(`-# 🔒 **Requirements:** ${describeRequirements(req).join(" · ")}`));
+      body.push(td(`-# **Requirements:** ${describeRequirements(req).join(" · ")}`));
     }
     if (g.host_name || g.host_id) {
       body.push(td(`-# Hosted by ${g.host_id ? `<@${g.host_id}>` : g.host_name}`));
@@ -247,14 +247,14 @@ function createGiveaways(client, supabase, leveling = null) {
     if (g.description) body.push(td(String(g.description).slice(0, 1500)));
     body.push(divider());
     if (g.status === "cancelled") {
-      body.push(td("❌ This giveaway was cancelled."));
+      body.push(td("This giveaway was cancelled."));
       body.push(td("-# Pulse · Giveaway cancelled"));
       return { type: 17, accent_color: GREY, components: body };
     }
     if (winners && winners.length > 0) {
-      body.push(td(`🏆 **Winner${winners.length === 1 ? "" : "s"}:** ${winners.map((w) => `<@${w.id}>`).join(", ")}`));
+      body.push(td(`**Winner${winners.length === 1 ? "" : "s"}:** ${winners.map((w) => `<@${w.id}>`).join(", ")}`));
     } else {
-      body.push(td("😔 No eligible entries — no winner could be drawn."));
+      body.push(td("No eligible entries — no winner could be drawn."));
     }
     const n = g.entry_count ?? 0;
     body.push(td(`-# Pulse · Giveaway ended · ${n} entr${n === 1 ? "y" : "ies"}`));

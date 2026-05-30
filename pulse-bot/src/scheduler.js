@@ -25,12 +25,22 @@ const { recordNotification } = require("./notifications");
  * `body` entries are skipped. No emoji in the heading — the accent bar carries
  * the branding, per the Pulse embed design language.
  */
-function buildScheduleContainer({ colorInt, title, body, footerLabel }) {
+function lead(content) {
+  return { type: 10, content: `### ${content}` };
+}
+
+function buildScheduleContainer({ colorInt, title, subtitle, body, footerLabel }) {
   const unix = Math.floor(Date.now() / 1000);
-  const components = [{ type: 10, content: `# ${title}` }];
-  for (const block of body) if (block) components.push({ type: 10, content: block });
+  const components = [
+    { type: 10, content: "**Pulse**" },
+    { type: 10, content: `# ${title}` },
+  ];
+  if (subtitle) components.push({ type: 10, content: `-# ${subtitle}` });
+  const [first, ...rest] = body.filter(Boolean);
+  if (first) components.push(lead(first));
+  for (const block of rest) components.push({ type: 10, content: block });
   components.push({ type: 14, divider: true, spacing: 1 });
-  components.push({ type: 10, content: `-# Pulse · ${footerLabel} <t:${unix}:R>` });
+  components.push({ type: 10, content: `-# Pulse · ${footerLabel} · <t:${unix}:R>` });
   return { type: 17, accent_color: colorInt, components };
 }
 
@@ -375,7 +385,8 @@ function createScheduler(client, supabase) {
     const net = joins - leaves;
     const container = buildScheduleContainer({
       colorInt: 0x8b5cf6,
-      title: `${guild.name} — activity digest`,
+      title: "Activity digest",
+      subtitle: guild.name,
       body: [
         `A summary of the ${periodLabel}.`,
         `**Messages:** ${messages.toLocaleString()} · **Commands:** ${commands.toLocaleString()}\n` +
@@ -514,6 +525,7 @@ function createScheduler(client, supabase) {
     const container = buildScheduleContainer({
       colorInt: 0x94a3b8,
       title: "Inactivity report",
+      subtitle: guild.name,
       body: [
         `**${inactive.length}** member(s) have had no tracked activity in the last **${days}** day(s).` +
           (roleName ? `\nRemoved @${roleName} from **${removed}** of them.` : ""),

@@ -1,64 +1,67 @@
-PULSIFY-31 — Discord Bot Update & Release Visibility System (v0.31.0)
+PULSIFY-31 — Changelog Command & Update Existing Commands (v0.31.0)
 
 Description
-	Implement a Discord bot update and version visibility system for Pulse that allows users and administrators to easily see the current bot version, latest changes, 	release notes, and update status directly from Discord.
-	The system should improve transparency, make Pulse feel more polished, and connect Discord bot updates with the public Pulsify Release Notes page.
+	Implement a /changelog [version] slash command for Pulse that allows users to view release notes and version information directly from Discord and update existing commands.
+	The command should provide an easy way to view the latest updates, improvements, and fixes without leaving Discord while remaining synchronized with Pulsify release notes.
 
 Goals
-	Improve Pulse bot update communication
-	Add version visibility inside Discord
-	Connect bot updates with Pulsify release notes
-	Improve user trust and product polish
+	Improve update visibility inside Discord
+	Allow users to access release information quickly
+	Connect Discord with Pulsify Release Notes
+	Improve transparency around new features and changes
+	Update existing commands
 
 Tasks
-	Version Commands
-		Add /version slash command
-		Add /changelog slash command
-		Add /release-notes slash command
-		Display:
-			current Pulse version
-			latest release title
-			release date
-			short changelog
-			link to full release notes
 
-	Bot Update Embeds
-		Create polished v2 embeds for version/changelog responses
-		Use Pulse branding and consistent embed styling
-		Add buttons:
-			View Release Notes
-			Open Dashboard
-			Invite Pulse
-		Add fallback/error embeds if release data is unavailable
+	Slash Command
+		Add /changelog [version] command
+		Add optional version parameter
+		If a version is specified:
+			Display release information for the requested version
+		If no version is specified:
+			Display the latest available release
+
+	Changelog Data
+		Create changelog storage structure
+		Store:
+			version number
+			release title
+			release date
+			features
+			improvements
+			fixes
+		Prepare structure for future releases
+
+	Embed Design
+		Create dedicated changelog embed design
+		Display:
+			version number
+			release date
+			categorized changes
+			release notes link
+		Use Pulse v2 embed styling
+		Ensure mobile readability
+
+	Error Handling
+		Handle unknown versions gracefully
+		Display friendly error messages
+		Suggest latest version when requested version is unavailable
 
 	Release Notes Integration
-		Connect bot release commands with Pulsify release notes data
-		Allow latest release info to be fetched dynamically
-		Add support for manual/static fallback release data
-		Ensure release notes link points to public website
+		Add button linking to Pulsify Release Notes page
+		Ensure version numbers match website release notes
+		Prepare support for future dynamic changelog synchronization
 
-	Startup Version Logging
-		Log Pulse version on bot startup
-		Log connected guild count on startup
-		Log loaded commands count
-		Add clear startup success/failure output
-
-	Admin Update Notification
-		Add optional update announcement command for admins
-		Allow posting latest update embed into configured announcements channel
-		Add permission checks for update announcement usage
-
-	UX & Consistency
-		Ensure all update/version embeds match Pulse design language
-		Add clear wording for MVP/early access status
-		Add loading/error/success handling
-		Add command cooldowns to prevent spam
+	UX Improvements
+		Add command cooldown
+		Add loading state while fetching changelog data
+		Ensure consistent Pulse branding
+		Optimize long changelogs for Discord embed limits
 
 Acceptance Criteria
-	/version displays current Pulse version correctly
-	/changelog displays latest update summary
-	/release-notes links to the public release notes page
-	Bot update embeds are visually consistent with Pulse branding
-	Startup logs show version, guild count, and command count
-	Admins can optionally post update announcements to Discord
-	Commands handle errors gracefully
+	/changelog displays the latest release
+	/changelog [version] displays the requested release
+	Unknown versions return a friendly error message
+	Release notes link works correctly
+	Embed follows Pulse design standards
+	Changelog data is easy to maintain for future releases

@@ -33,7 +33,7 @@ const TROUBLESHOOTING: QA[] = [
   },
   {
     q: 'My changes aren’t showing up',
-    a: 'Most changes sync instantly. If data looks out of date, run the /sync command in your server, or use the “Trigger server sync” quick action in the dashboard, to refresh members and metadata.',
+    a: 'Most changes sync instantly. If data looks out of date, use the “Trigger server sync” quick action in the dashboard to refresh members and metadata.',
   },
   {
     q: 'I can’t see one of my servers',

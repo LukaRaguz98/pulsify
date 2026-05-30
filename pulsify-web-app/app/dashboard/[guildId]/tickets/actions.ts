@@ -82,6 +82,19 @@ async function loadTicket(
   return (data as TicketRow | null) ?? null
 }
 
+const td = (content: string) => ({ type: 10 as const, content })
+const divider = () => ({ type: 14 as const, divider: true, spacing: 1 })
+
+function ticketNoticeContainer(accent: number, lines: string[], footer = 'Ticket update'): V2TopLevelComponent {
+  const clean = lines.filter(Boolean)
+  const [first, ...rest] = clean
+  const components: Record<string, unknown>[] = [td('**Pulse**')]
+  if (first) components.push(td(first.startsWith('# ') ? first : `### ${first}`))
+  for (const line of rest) components.push(td(line))
+  components.push(divider(), td(`-# Pulse · ${footer}`))
+  return { type: 17, accent_color: accent, components } as unknown as V2TopLevelComponent
+}
+
 /**
  * Post a Components V2 notice into a ticket channel, tinted with the guild's
  * panel accent — so every bot-sent message (dashboard or bot side) is a V2
@@ -95,12 +108,8 @@ async function postNotice(
 ): Promise<void> {
   const { data } = await supabase.from('ticket_configs').select('panel').eq('guild_id', guildId).maybeSingle()
   const color = (data?.panel as { color?: string } | null)?.color
-  const container = {
-    type: 17,
-    accent_color: hexToInt(isHexColor(color) ? (color as string) : '#5865f2'),
-    components: lines.map((l) => ({ type: 10, content: l })),
-  }
-  await postChannelComponents(channelId, [container] as unknown as V2TopLevelComponent[])
+  const accent = hexToInt(isHexColor(color) ? (color as string) : '#5865f2')
+  await postChannelComponents(channelId, [ticketNoticeContainer(accent, lines)])
 }
 
 /** Append a timeline / audit entry. Best-effort — never blocks the action. */
@@ -203,9 +212,10 @@ export async function postTicketPanel(guildId: string): Promise<ActionResult> {
     type: 17,
     accent_color: accent,
     components: [
-      { type: 10, content: `# ${panel.title}` },
-      { type: 10, content: panel.description },
-      { type: 14, divider: true, spacing: 1 },
+      td('**Pulse**'),
+      td(`# ${panel.title}`),
+      td(`-# ${panel.description}`),
+      divider(),
     ],
   }
   const body = container.components as unknown[]
@@ -239,6 +249,7 @@ export async function postTicketPanel(guildId: string): Promise<ActionResult> {
       })),
     })
   }
+  body.push(td('-# Pulse · Ticket panel'))
 
   const res = await postChannelComponents(
     panel.channel_id,
@@ -283,7 +294,7 @@ export async function claimTicket(guildId: string, ticketId: string): Promise<Ac
     ticketId, guildId, type: 'claimed', actorId: auth.moderator.userId, actorName: name,
   })
   if (ticket.channel_id) {
-    await postNotice(supabase, guildId, ticket.channel_id, [`🙌 **${name}** claimed this ticket.`])
+    await postNotice(supabase, guildId, ticket.channel_id, [`**${name}** claimed this ticket.`])
   }
   revalidate(guildId)
   return { ok: true }
@@ -339,7 +350,7 @@ export async function assignTicket(
     detail: `Assigned to ${name}`,
   })
   if (ticket.channel_id) {
-    await postNotice(supabase, guildId, ticket.channel_id, [`📌 This ticket was assigned to <@${cleanId}>.`])
+    await postNotice(supabase, guildId, ticket.channel_id, [`This ticket was assigned to <@${cleanId}>.`])
   }
   revalidate(guildId)
   return { ok: true }
@@ -451,7 +462,7 @@ export async function addTicketUser(
     actorName: auth.moderator.username,
     detail: `Added ${member.user.global_name ?? member.user.username}`,
   })
-  await postNotice(supabase, guildId, ticket.channel_id, [`➕ <@${cleanId}> was added to the ticket.`])
+  await postNotice(supabase, guildId, ticket.channel_id, [`<@${cleanId}> was added to the ticket.`])
   revalidate(guildId)
   return { ok: true }
 }
@@ -537,8 +548,7 @@ export async function closeTicket(
   // both the in-channel close notice and the transcript-channel summary.
   const config = await loadConfig(supabase, guildId)
   const accent = hexToInt(config.panel.color)
-  const v2 = (lines: string[]) =>
-    [{ type: 17, accent_color: accent, components: lines.map((l) => ({ type: 10, content: l })) }] as unknown as V2TopLevelComponent[]
+  const v2 = (lines: string[], footer = 'Ticket update') => [ticketNoticeContainer(accent, lines, footer)]
 
   // Lock the channel: opener keeps read access, loses the ability to post.
   if (ticket.channel_id) {
@@ -550,7 +560,7 @@ export async function closeTicket(
     )
     await postChannelComponents(
       ticket.channel_id,
-      v2([`🔒 Ticket closed by ${auth.moderator.username ?? 'staff'}${closeReason ? ` — ${closeReason}` : ''}.`]),
+      v2([`Ticket closed by ${auth.moderator.username ?? 'staff'}${closeReason ? ` — ${closeReason}` : ''}.`], 'Ticket'),
     )
   }
 
@@ -565,7 +575,7 @@ export async function closeTicket(
           `**Closed by:** ${auth.moderator.username ?? 'staff'}` +
           (closeReason ? `\n**Reason:** ${closeReason}` : ''),
         `-# Full transcript is available on the Pulsify dashboard.`,
-      ]),
+      ], 'Transcript'),
     )
   }
 
@@ -612,7 +622,7 @@ export async function reopenTicket(guildId: string, ticketId: string): Promise<A
       { type: 1, allow: TICKET_MEMBER_ALLOW, deny: '0' },
       'Ticket reopened',
     )
-    await postNotice(supabase, guildId, ticket.channel_id, [`🔓 Ticket reopened by ${auth.moderator.username ?? 'staff'}.`])
+    await postNotice(supabase, guildId, ticket.channel_id, [`Ticket reopened by ${auth.moderator.username ?? 'staff'}.`])
   }
   await recordEvent(supabase, {
     ticketId, guildId, type: 'reopened', actorId: auth.moderator.userId, actorName: auth.moderator.username,

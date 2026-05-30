@@ -20,6 +20,7 @@ import { createClient as createSupabase } from '@/lib/supabase'
 import {
   COMMAND_CATALOG,
   defaultConfig,
+  defaultConfigFor,
   commandStatus,
   hasRestrictions,
   CATALOG_BY_NAME,
@@ -59,12 +60,15 @@ export function CommandsContent({ guildId, channels, roles, initialConfigs }: Pr
   const [refreshing, setRefreshing] = useState(false)
 
   const configFor = useCallback(
-    (name: string): CommandConfig => configs[name] ?? defaultConfig(),
+    (name: string): CommandConfig => {
+      const def = CATALOG_BY_NAME[name]
+      return configs[name] ?? (def ? defaultConfigFor(def) : defaultConfig())
+    },
     [configs],
   )
 
   const resolved: ResolvedCommand[] = useMemo(
-    () => COMMAND_CATALOG.map((def) => ({ def, config: configs[def.name] ?? defaultConfig() })),
+    () => COMMAND_CATALOG.map((def) => ({ def, config: configs[def.name] ?? defaultConfigFor(def) })),
     [configs],
   )
 
