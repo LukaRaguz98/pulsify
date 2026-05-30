@@ -18,6 +18,8 @@ import path from 'node:path'
 export const PULSE_ICONS = {
   /** Help glyph — the bot's /help reply. */
   help: 'pulse-help.png',
+  /** Guard glyph - the Pulse Guard logo. */
+  guard: 'pulse-help.png',
   /** Recap glyph — the Insights weekly recap posted to Discord. */
   recap: 'pulse-recap.png',
   /** Ticket glyph — the opening embed of a freshly-created support ticket. */
