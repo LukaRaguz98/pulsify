@@ -22,6 +22,8 @@ export const PULSE_ICONS = {
   guard: 'pulse-help.png',
   /** Recap glyph — the Insights weekly recap posted to Discord. */
   recap: 'pulse-recap.png',
+  /** Warn glyph — The Warn icon. */
+  warn: 'pulse-warn.png',
   /** Ticket glyph — the opening embed of a freshly-created support ticket. */
   ticket: 'pulse-ticket.png',
   /** Gift glyph — the giveaway embed posted/edited in Discord. */
