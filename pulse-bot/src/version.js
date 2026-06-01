@@ -24,7 +24,7 @@ const PULSE_VERSION = "0.32.1";
 // Mirrors the shape produced by the parser so callers don't special-case it.
 const STATIC_RELEASES = [
   {
-    version: "0.31.0",
+    version: "0.32.1",
     title: "Bot Version & Update Visibility",
     date: "May 29, 2026",
     description: "Pulse can now tell you what's new — right inside Discord.",
@@ -67,7 +67,11 @@ function compareVersion(a, b) {
 }
 
 function formatDate(d) {
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 /**
@@ -88,7 +92,11 @@ function parseRelease(content, mtime) {
   // Lead paragraph: next non-blank line that isn't a section/bullet.
   let description = "";
   while (i < lines.length && lines[i].trim() === "") i++;
-  if (i < lines.length && !SECTION_RE.test(lines[i].trim()) && !BULLET_RE.test(lines[i].trim())) {
+  if (
+    i < lines.length &&
+    !SECTION_RE.test(lines[i].trim()) &&
+    !BULLET_RE.test(lines[i].trim())
+  ) {
     description = lines[i].trim();
     i++;
   }
@@ -114,7 +122,11 @@ function parseRelease(content, mtime) {
       const leadMatch = text.match(BULLET_LEAD_RE);
       // Keep the lead **bold** so the embed renders it bold too (plain bullets
       // already keep any inline **markers** verbatim).
-      highlights.push(leadMatch ? `**${leadMatch[1].trim()}** — ${leadMatch[2].trim()}` : text);
+      highlights.push(
+        leadMatch
+          ? `**${leadMatch[1].trim()}** — ${leadMatch[2].trim()}`
+          : text,
+      );
       continue;
     }
 
@@ -163,7 +175,10 @@ async function loadReleases({ force = false } = {}) {
       for (const f of files) {
         try {
           const full = path.join(dir, f);
-          const [content, info] = await Promise.all([readFile(full, "utf8"), stat(full)]);
+          const [content, info] = await Promise.all([
+            readFile(full, "utf8"),
+            stat(full),
+          ]);
           const result = parseRelease(content, info.mtime);
           if (result) parsed.push(result);
         } catch {
@@ -175,7 +190,10 @@ async function loadReleases({ force = false } = {}) {
       }
     }
   } catch (err) {
-    console.warn("[Pulse] Failed to load release notes, using static fallback:", err.message);
+    console.warn(
+      "[Pulse] Failed to load release notes, using static fallback:",
+      err.message,
+    );
   }
 
   cache = { releases, fetchedAt: Date.now() };
