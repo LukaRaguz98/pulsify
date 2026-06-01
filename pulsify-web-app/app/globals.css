@@ -493,6 +493,78 @@ a[style*="line-strong"]:hover {
    neutralised by the [data-animations="false"] rule defined above. */
 html { scroll-behavior: smooth; }
 
+/* Global guard: nothing may ever produce a horizontal scrollbar. `clip` (not
+   `hidden`) clips overflow without turning <html> into a scroll container, so
+   sticky headers and vertical scrolling keep working. Pairs with body's
+   overflow-x:hidden above. */
+html { overflow-x: clip; }
+
+/* ── Responsive data tables (phones) ───────────────
+   Below sm a wide table forces a sideways scroll that hides half the columns.
+   `table-stack` collapses each row into a labelled card: the header row is
+   hidden and every cell shows its column name (from data-label) above the value,
+   stacked vertically — so everything is visible without horizontal scrolling.
+   Cells marked data-label="" (the primary identity cell and the action cell)
+   render without a label. Each <tr> keeps its bottom border as a card divider. */
+@media (max-width: 640px) {
+  table.table-stack { display: block; min-width: 0 !important; }
+  table.table-stack thead { display: none; }
+  table.table-stack tbody { display: block; }
+  table.table-stack tr { display: block; }
+  table.table-stack td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1875rem;
+    padding: 0.5rem 0.875rem !important;
+    text-align: left;
+    white-space: normal;
+  }
+  table.table-stack td::before {
+    content: attr(data-label);
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-3);
+  }
+  table.table-stack td[data-label='']::before { content: none; }
+  table.table-stack td[data-label='']:first-child { padding-top: 0.75rem !important; }
+}
+
+/* ── Roles CSS-grid table → stacked cards on phones ──
+   The roles list is a CSS grid (not a <table>), ~824px wide, so on a phone the
+   right-hand columns were clipped. Same idea as table-stack: hide the header
+   row, drop the drag handle, show the role name as a card header and the rest
+   as labelled fields. Desktop keeps the aligned grid. */
+.role-grid {
+  display: grid;
+  grid-template-columns: 24px minmax(220px, 340px) 90px 210px minmax(220px, 1fr) 60px;
+  align-items: center;
+}
+@media (max-width: 640px) {
+  .role-grid-header { display: none !important; }
+  .role-grid-row { display: block; }
+  .role-grid-row > .role-drag { display: none; }
+  .role-grid-row > .role-name { margin-bottom: 0.5rem; }
+  .role-grid-row > [data-label] {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1875rem;
+    padding: 0.25rem 0;
+    text-align: left;
+  }
+  .role-grid-row > [data-label]::before {
+    content: attr(data-label);
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-3);
+  }
+}
+
 @keyframes lp-float {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
   50%      { transform: translate3d(0, -26px, 0) scale(1.07); }

@@ -406,7 +406,7 @@ export function MembersDirectory({ guildId }: Props) {
             />
           ) : (
             <div className="rounded-xl border overflow-x-auto" style={{ borderColor: 'var(--line-strong)' }}>
-              <table className="w-full min-w-[860px] text-sm">
+              <table className="w-full min-w-[860px] text-sm table-stack">
                 <thead>
                   <tr className="border-b" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
                     <th className="text-left"><SortableHeader label="Member" columnKey="name" activeKey={sort.key} direction={sort.dir} onSort={handleSort} /></th>
@@ -433,7 +433,7 @@ export function MembersDirectory({ guildId }: Props) {
                         onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-2)' }}
                         onMouseLeave={(e) => { e.currentTarget.style.background = 'color-mix(in srgb, var(--panel) 50%, transparent)' }}
                       >
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3" data-label="">
                           <div className="flex items-center gap-3">
                             <Image src={av} alt={r.displayName} width={30} height={30} className="rounded-full shrink-0" unoptimized />
                             <div className="min-w-0">
@@ -454,18 +454,18 @@ export function MembersDirectory({ guildId }: Props) {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3"><LevelBadge level={r.dm.level?.level ?? 0} size="sm" /></td>
-                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{(r.dm.level?.xp ?? 0).toLocaleString()}</td>
-                        <td className="px-4 py-3"><ReputationBadge reputation={r.reputation} size="sm" /></td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3" data-label="Level"><LevelBadge level={r.dm.level?.level ?? 0} size="sm" /></td>
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground" data-label="XP">{(r.dm.level?.xp ?? 0).toLocaleString()}</td>
+                        <td className="px-4 py-3" data-label="Reputation"><ReputationBadge reputation={r.reputation} size="sm" /></td>
+                        <td className="px-4 py-3" data-label="Messages">
                           <span className="font-mono text-xs text-foreground">{r.dm.activity.message_count.toLocaleString()}</span>
                           <span className="ml-1 text-[10px] text-subtle">· {relativeTime(r.dm.activity.last_active)}</span>
                         </td>
-                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{formatDuration(r.dm.activity.voice_seconds)}</td>
-                        <td className="px-4 py-3 text-xs text-subtle">
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground" data-label="Voice">{formatDuration(r.dm.activity.voice_seconds)}</td>
+                        <td className="px-4 py-3 text-xs text-subtle" data-label="Joined">
                           {new Date(m.joined_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </td>
-                        <td className="px-4 py-3"><RiskBadge risk={r.risk} /></td>
+                        <td className="px-4 py-3" data-label="Risk"><RiskBadge risk={r.risk} /></td>
                       </tr>
                     )
                   })}

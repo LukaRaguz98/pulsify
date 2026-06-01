@@ -102,7 +102,7 @@ export function AIModerationLogs({ events }: Props) {
         />
       ) : (
         <div className="rounded-xl border overflow-x-auto" style={{ borderColor: 'var(--line-strong)' }}>
-          <table className="w-full min-w-[760px] text-sm">
+          <table className="w-full min-w-[760px] text-sm table-stack">
             <thead>
               <tr className="border-b" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
                 <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-subtle">Category</th>
@@ -129,7 +129,7 @@ export function AIModerationLogs({ events }: Props) {
                       background: 'color-mix(in srgb, var(--panel) 50%, transparent)',
                     }}
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="Category">
                       <span
                         className="inline-flex whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-medium"
                         style={{ background: `${catColor}1f`, color: catColor }}
@@ -137,7 +137,7 @@ export function AIModerationLogs({ events }: Props) {
                         {cat}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-foreground">
+                    <td className="px-4 py-3 text-foreground" data-label="Message">
                       <p className="line-clamp-2 max-w-md text-xs" title={e.content}>
                         {e.content}
                       </p>
@@ -149,7 +149,7 @@ export function AIModerationLogs({ events }: Props) {
                         </p>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="Status">
                       <span
                         className="inline-flex whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-medium"
                         style={{ background: `${status.color}1f`, color: status.color }}
@@ -157,15 +157,15 @@ export function AIModerationLogs({ events }: Props) {
                         {status.label}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs">
+                    <td className="px-4 py-3 text-muted-foreground text-xs" data-label="Action">
                       {AUTO_ACTION_LABELS[e.action_taken]}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="Confidence">
                       <span className="font-mono text-xs" style={{ color: severityColor }}>
                         {Math.round(e.confidence * 100)}%
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-subtle text-xs font-mono">
+                    <td className="px-4 py-3 text-subtle text-xs font-mono" data-label="When">
                       {new Date(e.created_at).toLocaleString()}
                     </td>
                   </tr>

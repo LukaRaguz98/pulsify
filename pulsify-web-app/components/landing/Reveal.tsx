@@ -52,7 +52,13 @@ export function Reveal({
           }
         }
       },
-      { threshold: 0.12, rootMargin: '0px 0px -8% 0px' },
+      // threshold 0 (not a ratio): a section taller than the viewport — common
+      // on mobile where everything stacks — can never reach a 12%-visible ratio,
+      // so a ratio threshold would leave it stuck at opacity:0. Firing as soon
+      // as any part crosses into the (slightly inset) viewport reveals reliably
+      // at every height. The -10% bottom inset gives the reveal a beat before it
+      // hits the very edge.
+      { threshold: 0, rootMargin: '0px 0px -10% 0px' },
     )
 
     function reveal() {

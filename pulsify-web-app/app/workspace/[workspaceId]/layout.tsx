@@ -65,7 +65,10 @@ export default async function WorkspaceLayout({
         <CornerDecorations />
         <WorkspaceDiscordCornerIcon />
         <WorkspaceNotificationBell workspaceId={workspaceId} />
-        <main className="flex-1 overflow-y-auto flex flex-col">
+        {/* overflow-x-hidden: matches the guild dashboard — `overflow-y-auto`
+            alone computes overflow-x to `auto`, which let pages drag sideways on
+            mobile. Clip the cross-axis; wide children keep their own scroll. */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
           <div className="flex-1 max-lg:pt-12">{children}</div>
           <Footer />
         </main>

@@ -35,7 +35,6 @@ export function LandingNav() {
     >
       <nav
         className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-3.5"
-        style={{ transform: 'translateX(57px)' }}
       >
         <a href="#top" className="flex items-center gap-2.5">
           <Image

@@ -153,7 +153,7 @@ export function BansTab({ guildId, bans, onActionComplete }: Props) {
         />
       ) : (
       <div className="rounded-xl border overflow-x-auto" style={{ borderColor: 'var(--line-strong)' }}>
-        <table className="w-full min-w-[680px] text-sm">
+        <table className="w-full min-w-[680px] text-sm table-stack">
           <thead>
             <tr className="border-b" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
               <th className="text-left">
@@ -190,7 +190,7 @@ export function BansTab({ guildId, bans, onActionComplete }: Props) {
                     background: 'color-mix(in srgb, var(--panel) 50%, transparent)',
                   }}
                 >
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3" data-label="">
                     <div className="flex items-center gap-3">
                       {av ? (
                         <Image
@@ -210,10 +210,10 @@ export function BansTab({ guildId, bans, onActionComplete }: Props) {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">
+                  <td className="px-4 py-3 text-muted-foreground" data-label="Reason">
                     {ban.reason ?? 'No reason provided'}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3" data-label="Moderator">
                     {ban.moderator ? (
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-subtle">{ban.moderator.username}</span>
@@ -233,10 +233,10 @@ export function BansTab({ guildId, bans, onActionComplete }: Props) {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-subtle text-xs font-mono">
+                  <td className="px-4 py-3 text-subtle text-xs font-mono" data-label="When">
                     {ban.banned_at ? new Date(ban.banned_at).toLocaleString() : '—'}
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-4 py-3 text-center" data-label="">
                     <div className="flex items-center justify-center gap-2">
                       {err && (
                         <span className="flex items-center gap-1 text-xs" style={{ color: '#f87171' }}>

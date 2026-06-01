@@ -47,10 +47,9 @@ type Member = {
 
 type Toast = { kind: 'ok' | 'err'; text: string }
 
-// Grid template shared between the header and each row so columns stay aligned.
-// Role is capped (was 1fr — felt empty); Properties expands to fill remaining
-// space; Created shows the date derived from the role snowflake.
-const ROLE_GRID = '24px minmax(220px, 340px) 90px 210px minmax(220px, 1fr) 60px'
+// The roles grid template lives in globals.css as `.role-grid` (shared between
+// the header and each row so columns stay aligned) — that lets a media query
+// restack it into labelled cards on phones, which an inline style couldn't.
 
 // Substring of the moderation-auth transient-failure message. When the API
 // returns this, the dashboard keeps the loading spinner up and silently
@@ -339,8 +338,8 @@ export function RolesContent({ guildId }: Props) {
           ) : (
             <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--line-strong)' }}>
               <div
-                className="grid border-b px-4 py-2 text-xs font-semibold uppercase tracking-wider text-subtle"
-                style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)', gridTemplateColumns: ROLE_GRID }}
+                className="role-grid role-grid-header border-b px-4 py-2 text-xs font-semibold uppercase tracking-wider text-subtle"
+                style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
               >
                 <span />
                 <span>Role</span>
@@ -441,13 +440,12 @@ function SortableRoleRow({
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0.5 : 1,
-        gridTemplateColumns: ROLE_GRID,
         background: isDragging
           ? 'var(--bg-2)'
           : 'color-mix(in srgb, var(--panel) 50%, transparent)',
         borderColor: 'var(--line-strong)',
       }}
-      className="group grid border-b items-center px-4 py-2 text-sm cursor-pointer transition-colors hover:bg-[var(--bg-2)]"
+      className="group role-grid role-grid-row border-b px-4 py-2 text-sm cursor-pointer transition-colors hover:bg-[var(--bg-2)]"
       onClick={onClick}
     >
       <button
@@ -456,13 +454,13 @@ function SortableRoleRow({
         onClick={(e) => e.stopPropagation()}
         disabled={role.managed}
         title={role.managed ? 'Managed roles cannot be moved' : 'Drag to reorder'}
-        className="flex h-5 w-5 cursor-grab items-center justify-center text-muted-foreground transition active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-30"
+        className="role-drag flex h-5 w-5 cursor-grab items-center justify-center text-muted-foreground transition active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-30"
         aria-label={`Drag handle for ${role.name}`}
       >
         <GripVertical size={14} />
       </button>
 
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="role-name flex min-w-0 items-center gap-3">
         <span
           className="h-3.5 w-3.5 rounded-full border shrink-0"
           style={{ backgroundColor: color, borderColor: 'var(--line-strong)' }}
@@ -485,15 +483,15 @@ function SortableRoleRow({
         )}
       </div>
 
-      <span className="text-center text-muted-foreground font-mono text-xs">
+      <span className="text-center text-muted-foreground font-mono text-xs" data-label="Members">
         {memberCount.toLocaleString()}
       </span>
 
-      <span className="text-subtle font-mono text-xs truncate" title={createdLabel ?? undefined}>
+      <span className="text-subtle font-mono text-xs truncate" title={createdLabel ?? undefined} data-label="Created">
         {createdLabel ?? '—'}
       </span>
 
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-1" data-label="Properties">
         {role.hoist && (
           <span className="rounded px-1.5 py-0.5 text-xs text-muted-foreground" style={{ background: 'var(--bg-2)' }}>
             Hoisted
@@ -511,7 +509,7 @@ function SortableRoleRow({
         )}
       </div>
 
-      <span className="text-center text-subtle font-mono text-xs">#{role.position}</span>
+      <span className="text-center text-subtle font-mono text-xs" data-label="Position">#{role.position}</span>
     </div>
   )
 }

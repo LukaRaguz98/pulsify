@@ -218,7 +218,7 @@ client.once(Events.ClientReady, async (readyClient) => {
   // the end of this handler) loads the active guild's config and takes over.
   // Also the steady-state presence whenever no guild is driving it.
   readyClient.user.setPresence({
-    activities: [{ name: "Powered by Pulsify" }],
+    activities: [{ name: `Powered by Pulsify [${version}]` }],
     status: "online",
   });
 

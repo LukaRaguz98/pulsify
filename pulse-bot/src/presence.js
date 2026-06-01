@@ -16,6 +16,7 @@
 // giveaways.js ↔ lib/giveaways.ts, scheduler.js ↔ lib/automations.ts).
 
 const { ActivityType } = require("discord.js");
+const { getCurrentVersion } = require("./version");
 
 // ── Catalog (mirror of lib/presence.ts) ─────────────────────────────────────
 
@@ -259,10 +260,12 @@ function createPresence(client, supabase) {
       if (!client.user) return;
       const pick = selectActivity();
       if (!pick) {
-        // Default presence.
+        // Default presence — shows the live Pulse version (newest
+        // resources/notes/vX.Y.Z.txt) so the bot's status reflects what it runs.
+        const version = await getCurrentVersion();
         client.user.setPresence({
           status: DEFAULT_PRESENCE.status,
-          activities: [{ name: DEFAULT_PRESENCE.text, type: ActivityType.Playing }],
+          activities: [{ name: `${DEFAULT_PRESENCE.text} [${version}]`, type: ActivityType.Playing }],
         });
         return;
       }

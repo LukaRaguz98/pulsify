@@ -97,10 +97,15 @@ export default async function DashboardPage() {
           <div className="flex items-center gap-3">
             <Link
               href="/workspace"
-              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition hover:text-foreground"
+              title="Workspaces"
+              aria-label="Workspaces"
+              // On phones the label is dropped and the control collapses to a
+              // square icon button (matching Preferences) to save header space.
+              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition hover:text-foreground max-sm:h-8 max-sm:w-8 max-sm:justify-center max-sm:gap-0 max-sm:p-0"
               style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
             >
-              <Building2 size={15} /> Workspaces
+              <Building2 size={15} />
+              <span className="hidden sm:inline">Workspaces</span>
             </Link>
             <Link
               href="/preferences"
@@ -111,18 +116,21 @@ export default async function DashboardPage() {
             >
               <SlidersHorizontal size={15} />
             </Link>
-            <UserProfileButton
-              displayName={displayName}
-              username={username}
-              discriminator={discriminator}
-              discordId={discordId}
-              email={user.email}
-              avatarUrl={userAvatar}
-              bannerUrl={bannerUrl || undefined}
-              bannerColor={bannerColor}
-              avatarSize={30}
-              popupDirection="down"
-            />
+            {/* Small right margin so the avatar isn't flush against the edge. */}
+            <div className="mr-1">
+              <UserProfileButton
+                displayName={displayName}
+                username={username}
+                discriminator={discriminator}
+                discordId={discordId}
+                email={user.email}
+                avatarUrl={userAvatar}
+                bannerUrl={bannerUrl || undefined}
+                bannerColor={bannerColor}
+                avatarSize={30}
+                popupDirection="down"
+              />
+            </div>
           </div>
         </div>
       </header>

@@ -79,7 +79,13 @@ export default async function GuildLayout({
             <DiscordCornerIcon guildId={guildId} />
             <NotificationBell guildId={guildId} />
             <PingIndicator />
-            <main className="flex-1 overflow-y-auto flex flex-col">
+            {/* overflow-x-hidden: `overflow-y-auto` alone makes the browser
+                compute overflow-x to `auto`, turning this scroll container into a
+                horizontal one whenever a child is slightly too wide — that's what
+                let pages drag left/right on mobile. Clipping the cross-axis stops
+                it app-wide; genuinely wide children (e.g. tables) keep their own
+                inner overflow-x-auto scroll. */}
+            <main className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
               {/* max-lg:pt-12 clears the fixed mobile top bar (h-12) rendered by
                   GuildSidebar on small screens; desktop has no offset. */}
               <div className="flex-1 max-lg:pt-12">{children}</div>

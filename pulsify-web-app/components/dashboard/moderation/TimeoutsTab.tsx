@@ -209,7 +209,7 @@ export function TimeoutsTab({ guildId, members, meta, referenceTime, onActionCom
         />
       ) : (
         <div className="rounded-xl border overflow-x-auto" style={{ borderColor: 'var(--line-strong)' }}>
-          <table className="w-full min-w-[760px] text-sm">
+          <table className="w-full min-w-[760px] text-sm table-stack">
             <thead>
               <tr className="border-b" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
                 <th className="text-left">
@@ -247,7 +247,7 @@ export function TimeoutsTab({ guildId, members, meta, referenceTime, onActionCom
                       background: 'color-mix(in srgb, var(--panel) 50%, transparent)',
                     }}
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="">
                       <div className="flex items-center gap-3">
                         <Image src={av} alt={lines.top} width={28} height={28} className="rounded-full shrink-0" unoptimized />
                         <div className="min-w-0">
@@ -258,10 +258,10 @@ export function TimeoutsTab({ guildId, members, meta, referenceTime, onActionCom
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground max-w-xs truncate" title={info?.reason ?? undefined}>
+                    <td className="px-4 py-3 text-muted-foreground max-w-xs truncate" title={info?.reason ?? undefined} data-label="Reason">
                       {info?.reason ?? '—'}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="Moderator">
                       {info?.moderator ? (
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-subtle">{info.moderator.username}</span>
@@ -281,10 +281,10 @@ export function TimeoutsTab({ guildId, members, meta, referenceTime, onActionCom
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-subtle text-xs font-mono">
+                    <td className="px-4 py-3 text-subtle text-xs font-mono" data-label="When">
                       {info?.issued_at ? new Date(info.issued_at).toLocaleString() : '—'}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="Ends">
                       <div className="flex items-center gap-2">
                         <span
                           className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs"
@@ -296,7 +296,7 @@ export function TimeoutsTab({ guildId, members, meta, referenceTime, onActionCom
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3 text-center" data-label="">
                       <div className="flex items-center justify-center gap-2">
                         {err && (
                           <span className="flex items-center gap-1 text-xs" style={{ color: '#f87171' }}>

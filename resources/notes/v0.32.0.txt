@@ -5,7 +5,7 @@ Pulsify now goes everywhere you do. The whole dashboard has been tuned for phone
 - **Built for mobile** — every view, from Analytics to Tickets to Billing, now lays out cleanly on small screens.
 - **Charts in landscape** — on phones, charts now prompt you to rotate to landscape (or tap for a full-screen landscape view), so detailed graphs get real room instead of being squeezed into a narrow column.
 - **Notifications in the top bar** — on mobile the bell now lives neatly in the top menu bar instead of floating over your content.
-- **Tables that fit** — moderation, member and log tables swipe sideways on phones instead of squashing, so every column stays readable.
+- **Tables that fit** — on phones, moderation, member and log tables reflow into clean labelled cards, so every detail is visible without scrolling sideways or squashing columns.
 - **Dialogs that behave** — pop-ups and forms stay fully on-screen and scroll when they're tall, so the buttons are always reachable.
 - **Smoother calendar** — the Events calendar keeps its day cells legible on narrow screens.
 

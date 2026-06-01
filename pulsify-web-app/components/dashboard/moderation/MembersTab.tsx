@@ -588,7 +588,7 @@ export function MembersTab({ guildId, members, roles, onActionComplete }: Props)
         />
       ) : (
         <div className="rounded-xl border overflow-x-auto" style={{ borderColor: 'var(--line-strong)' }}>
-          <table className="w-full min-w-[760px] text-sm">
+          <table className="w-full min-w-[760px] text-sm table-stack">
             <thead>
               <tr className="border-b" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
                 <th className="text-left">
@@ -627,7 +627,7 @@ export function MembersTab({ guildId, members, roles, onActionComplete }: Props)
                       background: 'color-mix(in srgb, var(--panel) 50%, transparent)',
                     }}
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="">
                       <div className="flex items-center gap-3">
                         <Image src={av} alt={name} width={28} height={28} className="rounded-full shrink-0" unoptimized />
                         <div className="min-w-0">
@@ -647,7 +647,7 @@ export function MembersTab({ guildId, members, roles, onActionComplete }: Props)
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="Roles">
                       <div className="flex flex-wrap items-center gap-1">
                         {visibleRoles.map((r) => (
                           <span
@@ -672,10 +672,10 @@ export function MembersTab({ guildId, members, roles, onActionComplete }: Props)
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-subtle text-xs font-mono">
+                    <td className="px-4 py-3 text-subtle text-xs font-mono" data-label="Joined">
                       {new Date(m.joined_at).toLocaleString('en-US')}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="Status">
                       {inTimeout ? (
                         <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs" style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}>
                           <Clock size={10} />
@@ -685,7 +685,7 @@ export function MembersTab({ guildId, members, roles, onActionComplete }: Props)
                         <span className="text-xs text-subtle">Active</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()} data-label="">
                       <button
                         onClick={(e) => {
                           e.stopPropagation()

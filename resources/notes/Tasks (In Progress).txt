@@ -1,7 +1,7 @@
 PULSIFY-33 — Member Milestones & Recognition System (v0.33.0)
 
 Description
-	Implement a Member Milestones system that automatically rewards and recognizes members based on their time spent in the server, activity, achievements, and engagement milestones.
+	Implement a Member Milestones system that automatically rewards and recognizes members based on their time spent in the server, activity, achievements, and engagement 	milestones.
 	The system should encourage long-term community participation and provide administrators with automated member recognition tools.
 
 Goals

@@ -707,7 +707,7 @@ function SortableChannelRow({
       <span className="flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground">
         {channelTypeIcon(channel.type)}
       </span>
-      <span className="truncate font-medium text-foreground">{channel.name}</span>
+      <span className="min-w-0 truncate font-medium text-foreground">{channel.name}</span>
       {isPrivate && (
         <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-subtle" title="Private channel">
           <Lock size={9} />
@@ -721,7 +721,7 @@ function SortableChannelRow({
         </span>
       )}
       {channel.topic && (
-        <span className="ml-2 truncate text-xs text-subtle">— {channel.topic}</span>
+        <span className="ml-2 hidden truncate text-xs text-subtle sm:inline">— {channel.topic}</span>
       )}
       {lastActive && (
         <span className="ml-auto shrink-0 text-[10px] text-subtle" title={lastActive.toLocaleString()}>

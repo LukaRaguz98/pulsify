@@ -199,7 +199,7 @@ export function LogsTab({ guildId, refreshKey, members }: Props) {
         />
       ) : (
         <div className="rounded-xl border overflow-x-auto" style={{ borderColor: 'var(--line-strong)' }}>
-          <table className="w-full min-w-[720px] text-sm">
+          <table className="w-full min-w-[720px] text-sm table-stack">
             <thead>
               <tr className="border-b" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
                 {/* Action lives on the left — it's a non-interactive label
@@ -236,7 +236,7 @@ export function LogsTab({ guildId, refreshKey, members }: Props) {
                       background: 'color-mix(in srgb, var(--panel) 50%, transparent)',
                     }}
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="Action">
                       <span
                         className="inline-flex whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-medium"
                         style={{ background: `${color}1f`, color }}
@@ -244,7 +244,7 @@ export function LogsTab({ guildId, refreshKey, members }: Props) {
                         {label}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="Target">
                       {(() => {
                         const lines = targetLines(log)
                         if (!lines) return <span className="text-muted-foreground">—</span>
@@ -277,13 +277,13 @@ export function LogsTab({ guildId, refreshKey, members }: Props) {
                         )
                       })()}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground max-w-xs truncate" title={log.reason ?? undefined}>
+                    <td className="px-4 py-3 text-muted-foreground max-w-xs truncate" title={log.reason ?? undefined} data-label="Reason">
                       {log.reason ?? '—'}
                     </td>
-                    <td className="px-4 py-3 text-subtle text-xs">
+                    <td className="px-4 py-3 text-subtle text-xs" data-label="Moderator">
                       {log.moderator_username ?? log.moderator_id}
                     </td>
-                    <td className="px-4 py-3 text-subtle text-xs font-mono">
+                    <td className="px-4 py-3 text-subtle text-xs font-mono" data-label="When">
                       {new Date(log.created_at).toLocaleString()}
                     </td>
                   </tr>
