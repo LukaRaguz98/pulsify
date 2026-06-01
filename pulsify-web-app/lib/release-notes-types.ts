@@ -34,6 +34,54 @@ export type Release = {
   outro: string | null
 }
 
+/**
+ * A release flattened to the shape the `/changelog` embed renders — a single
+ * description, a flat bullet list, and an optional outro. Client-safe so the
+ * Presence "Publish changelog" UI can preview it without the server-only loader.
+ */
+export type ChangelogRelease = {
+  version: string
+  title: string
+  date: string
+  description: string
+  highlights: string[]
+  outro: string | null
+}
+
+/**
+ * Flatten a release's structured sections into the flat bullet list the
+ * `/changelog` embed shows. Mirrors pulse-bot/src/version.js parseRelease: each
+ * bullet keeps its `**lead** — body` form so the embed renders the lead bold.
+ */
+export function flattenHighlights(sections: ReleaseSection[]): string[] {
+  const out: string[] = []
+  for (const section of sections) {
+    for (const item of section.items) {
+      out.push(item.lead ? `**${item.lead}** — ${item.body}` : item.body)
+    }
+  }
+  return out
+}
+
+/** Reduce a parsed Release to the client-safe changelog shape. */
+export function toChangelogRelease(r: {
+  version: string
+  title: string
+  date: string
+  description: string
+  sections: ReleaseSection[]
+  outro: string | null
+}): ChangelogRelease {
+  return {
+    version: r.version,
+    title: r.title,
+    date: r.date,
+    description: r.description,
+    highlights: flattenHighlights(r.sections),
+    outro: r.outro,
+  }
+}
+
 export const RELEASE_CATEGORY_LABEL: Record<ReleaseCategory, string> = {
   feature: 'Features',
   improvement: 'Improvements',

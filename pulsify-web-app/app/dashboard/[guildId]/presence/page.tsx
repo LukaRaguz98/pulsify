@@ -1,7 +1,9 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
-import { fetchGuild } from '@/lib/discord'
+import { fetchGuild, fetchGuildChannels, CHANNEL_TYPES } from '@/lib/discord'
 import { isCurrentUserOperator, getOperators } from '@/lib/operator'
+import { getReleases } from '@/lib/release-notes'
+import { toChangelogRelease } from '@/lib/release-notes-types'
 import { PresenceContent } from '@/components/dashboard/presence/PresenceContent'
 import {
   normalisePresenceConfig,
@@ -21,7 +23,7 @@ export default async function PresencePage({
   } = await supabase.auth.getUser()
   if (!user) redirect('/')
 
-  const [guild, { data: configRow }, { data: stateRow }, operator, operators, ticketsCount, giveawaysCount, serversCount] =
+  const [guild, { data: configRow }, { data: stateRow }, operator, operators, ticketsCount, giveawaysCount, serversCount, channels, releaseList] =
     await Promise.all([
       fetchGuild(guildId),
       supabase.from('guild_presence').select('*').eq('guild_id', guildId).maybeSingle(),
@@ -39,10 +41,20 @@ export default async function PresencePage({
         .eq('guild_id', guildId)
         .eq('status', 'active'),
       supabase.from('synced_guilds').select('guild_id', { count: 'exact', head: true }),
+      fetchGuildChannels(guildId),
+      getReleases(),
     ])
 
   const config = normalisePresenceConfig(configRow as Record<string, unknown> | null, guildId)
   const activeGuildId = (stateRow?.active_guild_id as string | null) ?? null
+
+  // For the "Publish changelog" surface: parsed releases (newest first) + the
+  // text/announcement channels Pulse can post into.
+  const releases = releaseList.map(toChangelogRelease)
+  const textChannels = channels
+    .filter((c) => c.type === CHANNEL_TYPES.TEXT || c.type === CHANNEL_TYPES.ANNOUNCEMENT)
+    .sort((a, b) => a.position - b.position)
+    .map((c) => ({ id: c.id, name: c.name }))
   // Pulse has a single bot-wide presence, so only the configured operator(s)
   // may edit it. Everyone else gets a read-only view + preview.
   const canEdit = operator
@@ -68,6 +80,8 @@ export default async function PresencePage({
       canEdit={canEdit}
       operators={operators}
       previewVars={previewVars}
+      releases={releases}
+      channels={textChannels}
     />
   )
 }

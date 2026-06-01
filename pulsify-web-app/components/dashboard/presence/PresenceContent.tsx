@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Radio, Power, CheckCircle2, AlertCircle, Info, Save, Eye, Sparkles, Activity, Repeat, Wrench, ShieldCheck } from 'lucide-react'
+import { Loader2, Radio, Power, CheckCircle2, AlertCircle, Info, Save, Eye, Sparkles, Activity, Repeat, Wrench, ShieldCheck, Megaphone } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { CategorySection } from '@/components/ui/category-section'
 import {
@@ -11,10 +11,12 @@ import {
   type PresenceVars,
   type PresencePreset,
 } from '@/lib/presence'
+import type { ChangelogRelease } from '@/lib/release-notes-types'
 import { savePresenceConfig, setActivePresence, clearActivePresence } from '@/app/dashboard/[guildId]/presence/actions'
 import { StatusActivitiesField, RotationScheduleField, MaintenanceField } from './PresenceEditor'
 import { PresencePreview } from './PresencePreview'
 import { PresencePresets } from './PresencePresets'
+import { PublishChangelog } from './PublishChangelog'
 
 type Props = {
   guildId: string
@@ -25,6 +27,8 @@ type Props = {
   canEdit: boolean
   operators: { id: string; name: string }[]
   previewVars: PresenceVars
+  releases: ChangelogRelease[]
+  channels: { id: string; name: string }[]
 }
 
 export function PresenceContent({
@@ -36,6 +40,8 @@ export function PresenceContent({
   canEdit,
   operators,
   previewVars,
+  releases,
+  channels,
 }: Props) {
   const router = useRouter()
   const [draft, setDraft] = useState<PresenceDraft>(initialDraft)
@@ -248,6 +254,15 @@ export function PresenceContent({
               </div>
             </div>
           </div>
+        </CategorySection>
+
+        {/* Publish changelog — post the /changelog embed to a channel. */}
+        <CategorySection
+          icon={<Megaphone size={14} />}
+          title="Publish changelog"
+          description="Announce a release to a server channel — the same /changelog embed, no slash command shown."
+        >
+          <PublishChangelog guildId={guildId} releases={releases} channels={channels} disabled={!canEdit} />
         </CategorySection>
 
         {/* Quick presets — full width. */}
