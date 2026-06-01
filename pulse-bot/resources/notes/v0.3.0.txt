@@ -1,0 +1,19 @@
+**Pulsify v0.3.0 — Connecting the Dashboard to Discord**
+This release closes the loop between the dashboard and your server. Settings you configure in Pulsify are now saved, synced, and acted on in real time by the Pulse bot.
+
+**Automations**
+- **Welcome messages** — automatically greet new members in a channel of your choice the moment they join.
+- **Auto-role** — assign a chosen role to every new member as soon as they arrive.
+- **Moderation alerts** — post a notice to a dedicated channel whenever a moderation action takes place, keeping your team informed.
+
+**Events**
+- **Live Discord events** — your server's scheduled events are pulled from Discord and displayed directly in the dashboard.
+
+**Reliability and control**
+- **Enable or disable per feature** — turn each automation on or off independently; disabled automations never run.
+- **Validation built in** — Pulsify confirms the bot is installed and checks it has the permissions each feature needs, with clear errors when something is missing.
+- **Unban from the dashboard** — remove a ban directly in Pulsify and have the change reflected on Discord instantly.
+
+Configure once in the dashboard, and Pulse handles the rest on your server.
+
+April 22, 2026

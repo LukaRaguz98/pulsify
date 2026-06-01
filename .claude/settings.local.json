@@ -115,7 +115,9 @@
       "Bash(awk NR>=218 && NR<=256 *)",
       "Bash(awk NR>=262 && NR<=300 *)",
       "Bash(awk NR>=218 && NR<=300 *)",
-      "Bash(awk NR>=218 && NR<=295 *)"
+      "Bash(awk NR>=218 && NR<=295 *)",
+      "Bash(git check-ignore *)",
+      "Bash(echo \"exit=$?\")"
     ]
   }
 }

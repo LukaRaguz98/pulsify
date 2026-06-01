@@ -1,0 +1,20 @@
+**Pulsify v0.30.0 — Custom Bot Status & Presence**
+Pulse comes alive. Shape exactly what its Discord status says — rotating activities, live server stats, schedules and a one-tap maintenance mode — all from a brand-new Presence dashboard.
+
+**What's new**
+- **Presence dashboard** — a new **Presence** view under Pulse Bot to design Pulse's status, with a live, animated preview of exactly how it'll look in Discord.
+- **Custom activities** — Playing, Watching, Listening, Competing, Streaming or a free-form Custom status, each with optional emoji.
+- **Dynamic placeholders** — drop live numbers into your status: `{servers}`, `{members}`, `{tickets}`, `{giveaways}`, `{mod_actions}` and `{uptime}` fill in automatically.
+- **Rotating statuses** — line up multiple activities and Pulse cycles through them on an interval you choose.
+- **Schedule windows** — show a specific status during set UTC time windows (e.g. quieter hours), overriding the rotation.
+- **Maintenance mode** — one toggle flips Pulse to Do-Not-Disturb with a downtime message, perfect for updates and incidents.
+- **Quick presets** — start from Branding, Pulse Guard, Community, Live Event or Maintenance templates, then tweak.
+
+**Also**
+- **Set as active** — Pulse has one bot-wide status, so each server builds its own config and the "active" server drives what everyone sees; switch or revert to the default in a click.
+- **Live, responsive UI** — polished loading, error and success states, status-dot colours, reorderable activities and an animated rotation preview.
+- **Operator-managed** — Pulse's status is bot-wide, so it's managed centrally by the Pulsify operators; the Presence view shows who's in charge.
+
+Open **Presence** from your server's sidebar to give Pulse some personality.
+
+May 29, 2026

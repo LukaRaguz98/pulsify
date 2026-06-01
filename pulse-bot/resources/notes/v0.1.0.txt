@@ -1,0 +1,12 @@
+**Pulsify v0.1.0 — Project Initialization**
+The first Pulsify release establishes the foundation the entire platform is built on. There are no user-facing features yet — this groundwork is what makes everything in the releases that follow possible.
+
+**What's included**
+- **Web dashboard** — a new Next.js application (TypeScript, App Router) that will host the entire Pulsify experience.
+- **Pulse bot** — the Discord bot that powers Pulsify is connected and online, ready to act on your server.
+- **Sign in with Discord** — secure authentication through Discord OAuth, so the servers you manage and your permissions are recognized automatically.
+- **Database and infrastructure** — a managed Supabase backend for authentication and data storage, plus the project structure and environments needed for fast, reliable development.
+
+With the platform's core wired together end to end, development of Pulsify's features begins from here.
+
+April 19, 2026

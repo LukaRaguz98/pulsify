@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "sync-notes": "node scripts/sync-notes.js",
+    "prestart": "node scripts/sync-notes.js",
     "start": "node src/index.js",
     "test": "node --test"
   },

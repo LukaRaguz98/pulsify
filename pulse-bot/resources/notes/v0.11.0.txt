@@ -1,0 +1,19 @@
+**Pulsify v0.11.0 — Notifications & Real-Time Activity**
+Stay aware of everything happening on your server as it happens. This release adds a real-time activity system that keeps the dashboard live without a single page refresh.
+
+**Live activity feed**
+- **Real-time updates** — member joins and leaves, moderation actions, role changes, event activity, channel updates and triggered automations all appear the moment they occur.
+- **Detailed entries** — each item carries a timestamp and a detailed view, so you can see exactly what happened and who was involved.
+
+**Stay organized**
+- **Categories and filtering** — narrow the feed to just the kinds of activity you care about.
+- **Read and unread states** — with unread badges so nothing important slips past.
+
+**On your terms**
+- **In-app toasts** — optional pop-up notifications when new activity arrives.
+- **Per-type preferences** — choose precisely which events should notify you, and which stay quiet.
+- **Automatic cleanup** — older notifications are retired on their own, keeping the feed relevant.
+
+The result is faster awareness, quicker moderation response, and a dashboard that always reflects your server's current state.
+
+May 02, 2026

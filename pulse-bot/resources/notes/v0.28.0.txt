@@ -1,0 +1,28 @@
+**Pulsify v0.28.0 — Release Notes & Community Roadmap**
+A brand-new public Release Notes page, a dynamic Community roadmap and a polished, consistent design language across both — Pulsify development progress is now front and centre.
+
+**Release Notes**
+- **Dedicated page** — every Pulsify release lives at `/release-notes`, accessible from the footer of every public page.
+- **Modern changelog timeline** — versioned entries on a vertical timeline, newest first, with the latest release pinned and auto-expanded.
+- **Categorised sections** — each release groups its bullets into Features, Improvements, Fixes, UI/UX and Performance, each with its own accent colour and label.
+- **Search & filter** — search by keyword across versions, titles and bullet text, and filter to a single category with one click.
+- **Expandable entries** — collapse old releases to focus on what's new and re-open them in place with a smooth animation.
+- **Loading & empty states** — clear empty states when no releases or no search matches are found.
+- **Responsive** — header, search bar and filter chips reflow cleanly down to mobile.
+
+**Community roadmap**
+- **Live roadmap** — the "Where we're headed" section now sources data from the same task list we build against, so Shipped / In progress / Planned stay in sync without hand-edits.
+- **Status badges** — Completed, Active development and Planned chips ride every card so the column a card lives in is obvious at a glance.
+- **Roadmap cards** — every entry shows the title, a one-line description, the target version, a category tag and the ticket id.
+- **Animated columns** — subtle hover lift, an accent edge per status and a spinning indicator for in-progress work.
+- **Streamlined Shipped** — the Shipped column shows only the latest release on Community, with a one-click link to the full history on Release Notes.
+
+**Consistency & polish**
+- **Shared components** — the same Status badge and roadmap card power both pages, so the design language stays consistent.
+- **Inline bold** — `**highlighted**` words in release prose now render as actual bold instead of leaking asterisks.
+- **Footer parity** — the dashboard footer gained a Release Notes link; the landing footer's Overview link now routes back to the landing page (not the current view) and a new Release Notes entry sits beneath Dashboard.
+- **Structure ready for automation** — release notes and roadmap items are parsed from versioned text files, so future automatic task syncing won't need a UI change.
+
+Open **Release Notes** from any footer to see the full Pulsify history, or visit **Community → Where we're headed** to track what's coming next.
+
+May 25, 2026

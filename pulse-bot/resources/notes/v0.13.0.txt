@@ -1,0 +1,20 @@
+**Pulsify v0.13.0 — Quality of Life Improvements**
+A focused release that polishes the experience across the bot and dashboard, with particular emphasis on consistency, communication and customization.
+
+**Better moderation communication**
+- **Warning DMs** — when Pulse Guard warns a member, they now receive a direct message explaining it, styled to match Pulsify's moderation embeds so the experience feels consistent.
+
+**A refreshed /sync command**
+- **Modern embed** — the `/sync` response has been redesigned into a cleaner, branded embed that reflects your configured Pulse Guard color.
+
+**Per-server bot branding**
+- **Custom identity** — give the Pulse bot a custom display name and avatar on each server, so it fits right into your community.
+- **Safe and previewable** — uploaded images are validated for type, size and dimensions, with a preview before saving and a one-click reset to default branding.
+- **Audited** — branding changes are recorded in your activity feed.
+
+**Smaller refinements**
+- Confirmation modals for sensitive changes, copy-to-clipboard buttons, clearer empty states, unsaved-changes warnings, loading skeletons, and more consistent success feedback throughout the dashboard.
+
+Dozens of small improvements that together make Pulsify feel noticeably more refined.
+
+May 05, 2026

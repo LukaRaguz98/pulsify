@@ -1,0 +1,18 @@
+**Pulsify v0.5.0 — Analytics & Statistics**
+This release gives administrators a genuine understanding of their community through a redesigned Overview and a dedicated Statistics tab full of meaningful metrics.
+
+**A redesigned Overview**
+- **Activity charts** — visualize messages over time, member joins and leaves, voice activity, command usage and moderation activity.
+- **Engagement at a glance** — quickly see your most active channels and most active members.
+
+**The new Statistics tab**
+- **Detailed metrics** — total messages sent, voice channel time, executed bot commands, moderation actions and active users.
+- **Activity patterns** — peak activity times along with daily, weekly and monthly trends.
+
+**Flexible and reliable**
+- **Timeframe filtering** — view any metric across the last 24 hours, 7 days, 30 days or all time.
+- **Continuous tracking** — activity is collected and stored automatically, so your charts stay accurate and persist across restarts.
+
+Clear, actionable insight into exactly how your community is growing and where it is most active.
+
+April 24, 2026

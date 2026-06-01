@@ -1,0 +1,29 @@
+**Pulsify v0.21.0 — Server Insights & Recommendations**
+Meet Insights: a brand-new dashboard view that reads your server's activity and tells you exactly what to do next. No more digging through charts to figure out what matters — Pulsify surfaces it for you.
+
+**A server health score at a glance**
+- **One number that says it all** — an at-a-glance health score summarises your activity, moderation, growth and structure, with a clear breakdown of what needs attention.
+- **Engagement overview** — messages, voice time, new members, net growth, moderation and command usage, each with an up / down / stable trend versus the period before.
+
+**Smart, actionable recommendations**
+- **Know what to fix** — Pulsify flags inactive channels, unused roles, roles with dangerous permissions, moderation spikes, declining engagement and incomplete setup.
+- **Fix it in one click** — every recommendation comes with a quick-action button that takes you straight to the right place.
+- **Filter by what matters** — sort recommendations across Growth, Activity, Moderation, Security and Optimization.
+
+**Know exactly when to post**
+- **Activity heatmap** — a day-by-hour map shows precisely when your community is online.
+- **Best time to engage** — Pulsify pinpoints your peak window and lets you schedule announcements for it in one click.
+
+**Share it with your community**
+- **Weekly recap** — Pulsify writes a plain-language summary of your week and posts it to any channel in one click.
+
+**Numbers that mean something**
+- **Server vitals** — participation rate, engagement depth and how concentrated your activity is, all derived for you.
+- **Housekeeping** — spot quiet channels, empty roles and risky permissions in one tidy panel.
+
+**Built to get smarter**
+- **Pulse ready** — today's insights are powered by Pulsify's rules engine, with the groundwork laid for AI-authored recommendations coming soon.
+
+Find Insights in the sidebar under Analytics. Polished, responsive, and updating live with your server.
+
+May 15, 2026

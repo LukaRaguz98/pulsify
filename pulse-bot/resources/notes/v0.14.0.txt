@@ -1,0 +1,19 @@
+**Pulsify v0.14.0 — New Website & Pricing**
+Pulsify's public website has been redesigned into a polished, modern presentation of everything the platform can do — and it now introduces our subscription plans.
+
+**A redesigned experience**
+- **New hero section** — refreshed messaging, animated visuals and clear calls to action: Invite Pulse, Open Dashboard, and Join Early Access.
+- **Feature showcases** — dedicated sections for every major system, complete with dashboard previews and interactive cards.
+- **Platform story** — "How it works" and "Why Pulsify" sections that communicate the value at a glance.
+
+**Pricing and plans**
+- **Four tiers** — Free, Pro, Business and Enterprise, each with a clear feature checklist.
+- **Flexible billing** — a monthly and yearly toggle, with the recommended plan highlighted.
+- **Easy comparison** — see exactly what each plan includes; the Free plan is always available.
+
+**Rounding it out**
+- A FAQ section, trust badges, a redesigned footer, smooth scrolling and transitions, and full mobile responsiveness.
+
+A professional front door that is ready for Pulsify's public launch.
+
+May 07, 2026

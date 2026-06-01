@@ -1,0 +1,19 @@
+**Pulsify v0.2.0 — Dashboard Redesign & Preferences** 
+This release rebuilds the Pulsify dashboard into a polished, modern interface and introduces a full preferences system so each administrator can tailor the experience to the way they work.
+
+**A refreshed dashboard**
+- **New layout and navigation** — a cleaner sidebar and overall structure designed to scale gracefully as more features arrive.
+- **Reusable design system** — consistent cards, buttons, section headers and dialogs across the app for a cohesive, professional feel.
+- **Responsive and mobile-friendly** — the dashboard now adapts smoothly to smaller screens.
+- **Refined states** — polished loading skeletons and empty states so the app feels responsive even before data has loaded.
+
+**Personalization**
+- **Light and dark mode** — improved, carefully tuned color schemes for both.
+- **Accent colors** — several built-in themes, plus a custom color picker for an exact match to your brand.
+- **Layout density** — switch between comfortable and compact spacing.
+- **Font size** — scale the entire interface up or down for comfort.
+- **Motion and effects** — toggle animations and decorative elements to taste.
+
+Every preference applies instantly and is remembered across sessions, so your dashboard always looks and feels the way you left it.
+
+April 21, 2026

@@ -1,0 +1,13 @@
+**Pulsify v0.31.0 — Bot Version & Update Visibility**
+Pulse now tells you exactly what it's running and what's new — right inside Discord. Check the version, read the latest changelog, and jump to the full release notes without leaving your server.
+
+**What's new**
+- **/changelog** — a polished summary of the newest update with the headline changes, straight in chat.
+- **Quick-link buttons** — every update reply carries View Release Notes, Open Dashboard and Invite Pulse buttons.
+
+**Also**
+- **Polished update embeds** — version and changelog replies use Pulse's branding and consistent styling, with graceful fallbacks if release data isn't available.
+- **Clearer startup logs** — Pulse now logs its version, connected server count and loaded command count on boot, with obvious success and failure output.
+- **Live release data** — version commands read the same release notes that power the Pulsify website, so they're always current.
+
+May 30, 2026

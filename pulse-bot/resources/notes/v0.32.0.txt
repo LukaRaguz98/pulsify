@@ -1,0 +1,19 @@
+**Pulsify v0.32.0 — Mobile Optimization & Stability**
+Pulsify now goes everywhere you do. The whole dashboard has been tuned for phones and tablets, with a stability and polish pass across the board to get things ready for everyone.
+
+**What's new**
+- **Built for mobile** — every view, from Analytics to Tickets to Billing, now lays out cleanly on small screens.
+- **Charts in landscape** — on phones, charts now prompt you to rotate to landscape (or tap for a full-screen landscape view), so detailed graphs get real room instead of being squeezed into a narrow column.
+- **Notifications in the top bar** — on mobile the bell now lives neatly in the top menu bar instead of floating over your content.
+- **Tables that fit** — on phones, moderation, member and log tables reflow into clean labelled cards, so every detail is visible without scrolling sideways or squashing columns.
+- **Dialogs that behave** — pop-ups and forms stay fully on-screen and scroll when they're tall, so the buttons are always reachable.
+- **Smoother calendar** — the Events calendar keeps its day cells legible on narrow screens.
+
+**Also**
+- **Tidier notifications on mobile** — the notification panel now sizes itself to your screen instead of running off the edge.
+- **Consistent spacing & touch targets** — cards, buttons and menus line up more cleanly and are easier to tap.
+- **Stability polish** — a sweep for layout breaks and rough edges to make the dashboard feel solid on every device.
+
+Pull up Pulsify on your phone and give it a try.
+
+June 01, 2026

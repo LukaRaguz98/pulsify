@@ -1,0 +1,19 @@
+**Pulsify v0.10.0 — Server Settings**
+This release centralizes your server's most important configuration in the dashboard, so administrators can manage it without digging through Discord's own settings.
+
+**Server information**
+- **At a glance** — name, icon, owner, member count, boost level and verification level, all in one place.
+
+**Editable configuration**
+- **Identity** — update the server name and icon.
+- **Safety and notifications** — verification level, explicit content filter and default notification settings.
+- **Key channels** — set the AFK, system messages, rules and community-updates channels.
+
+**Tools and safeguards**
+- **Invite management** — review and manage your server's invites.
+- **Bot permission overview** — see clearly what the Pulse bot can and cannot do on your server.
+- **Save and reset flow** — review changes before committing them, with confirmation dialogs on sensitive settings.
+
+Every supported change syncs with Discord, with clear feedback if anything cannot be applied.
+
+May 01, 2026

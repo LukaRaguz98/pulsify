@@ -1,0 +1,20 @@
+**Pulsify v0.25.0 — Giveaways polish & consistent Discord embeds**
+A polish pass on Giveaways: a clearer creation dialog, a Manage view that matches the rest of the dashboard, and giveaway embeds that look and read like the rest of Pulse.
+
+**Creating a giveaway**
+- **Readable form** — the New Giveaway dialog now matches Pulsify's other editors: fields stand out clearly in both light and dark themes, with a wider layout, tidier sections, and inline validation that points out what's missing before you publish.
+- **True-to-Discord preview** — the live preview mirrors the exact embed that gets posted, down to the requirements line and footer.
+
+**Managing giveaways**
+- **Search & filter** — find a giveaway by title or prize, and filter by status (Active, Scheduled, Ended, Cancelled), just like the Scheduled view.
+- **Friendlier details** — requirement chips and the detail drawer now show real role and channel names instead of raw IDs.
+
+**Clearer requirements**
+- Requirements read as plain labels — **Required role: Member**, **Account age: 7+ days**, **Minimum messages: 5**, **In server: 7+ days** — instead of terse shorthand, and sit on one compact line rather than a stacked list.
+
+**Discord embeds**
+- Giveaway embeds now carry the Pulse giveaway badge, a consistent **Pulse · Giveaway** footer, the native countdown, and the same clean requirement formatting — aligned with Pulse's embed design language across success, info, moderation and sync messages.
+
+Find **Giveaways** under Engagement.
+
+May 20, 2026

@@ -1,0 +1,23 @@
+**Pulsify v0.29.0 — Plans, Billing & Premium Features**
+Pulsify gets its first real billing system. Pick a plan that fits, unlock premium tools, and manage everything — payment methods, invoices, upgrades and cancellations — from one place.
+
+**What's new**
+- **Four plans, clear pricing** — Free, Pro, Business and Enterprise, each with a tagline, feature list and a transparent monthly or yearly price.
+- **Billing & subscription page** — a brand-new `/billing` home where you can see your active plan, status, renewal date, billing cycle and recent invoices at a glance.
+- **One-click checkout** — upgrade straight from the pricing page or any locked feature; powered by Stripe Checkout for a fast, secure, hosted flow.
+- **Stripe Customer Portal** — change payment method, switch billing cycle, download invoices or cancel/reactivate — all through Stripe's secure UI, accessible from a single button.
+- **Real feature gating** — premium tools (Pulse Guard, advanced moderation, custom branding, workspaces, advanced analytics, backup/restore, API access…) unlock automatically when your plan supports them.
+- **Locked feature states** — premium screens now show a polished upgrade prompt instead of breaking, with a direct link to the right plan.
+- **Usage indicators** — see how close you are to your plan's automations, giveaways and ticket limits, with a soft nudge to upgrade as you approach them.
+- **7-day free trial support** — Pro can be tried free for 7 days when a trial flag is enabled on checkout.
+
+**Also**
+- **Plan-aware workspaces** — workspace and per-workspace server caps now respect your plan; Business unlocks multi-server collaboration as designed.
+- **Billing in your profile menu** — quick "Billing & plan" link added to the avatar popup so you can jump there from anywhere.
+- **Pricing in the footer** — the landing footer now links straight to the public pricing page.
+- **Webhook-driven sync** — Stripe webhooks (checkout.session.completed, customer.subscription.*, invoice.*) keep your plan in lockstep with payments, with signature verification and replay-safe event recording.
+- **Audit log** — every billing-relevant event is recorded for transparency and easy debugging.
+
+Pulsify is now ready for public launch. Open **Billing & plan** from your profile or visit **`/pricing`** to choose a plan and unlock the full Pulsify experience.
+
+May 26, 2026

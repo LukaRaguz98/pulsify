@@ -1,0 +1,30 @@
+**Pulsify v0.22.0 — Discord Ticket System & Support Center**
+Say hello to tickets: a complete, Discord-native support system that lets your members open private help channels in a click — and lets your team run the whole thing from the Pulsify dashboard.
+
+**Open tickets right inside Discord**
+- **One-click panels** — drop a ticket panel into any channel with buttons or a dropdown, styled to match your server.
+- **Pick a reason** — support, bug reports, moderation reports, partnerships, applications, or your own custom types.
+- **Ask the right questions** — give each type its own short form so you get the details up front.
+- **/ticket command** — members can also open a ticket straight from a slash command.
+
+**Private channels, handled for you**
+- **Automatic channels** — Pulsify spins up a private channel under your chosen category with the right permissions for the member, support staff and admins.
+- **Your naming, your rules** — customise the channel name format and a welcome message for every new ticket.
+
+**Run support from the dashboard**
+- **Everything in one place** — see open, claimed and closed tickets with type, priority, assignee and creation time.
+- **Search & filter** — find any ticket by member, subject, status, type or priority in seconds.
+- **Manage end to end** — claim, assign, set priority, rename the channel, add or remove users, leave internal staff notes, and close, reopen or delete — all synced to Discord.
+
+**Transcripts, logs & alerts**
+- **Auto transcripts** — every closed ticket is captured and downloadable, with a copy sent to your transcript channel.
+- **Stay in the loop** — staff get notified on new tickets, and every action lands on the ticket's activity timeline and your log channel.
+
+**Smart housekeeping & insights**
+- **Auto-close** — quiet tickets get a heads-up and close themselves after the inactivity window you set.
+- **Limits** — cap how many open tickets a single member can hold.
+- **Analytics** — volume over time, resolution rate, average resolution time, and a breakdown by type and priority.
+
+Find Tickets in the sidebar under Safety. Polished, responsive, and updating live.
+
+May 16, 2026

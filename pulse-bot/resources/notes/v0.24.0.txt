@@ -1,0 +1,21 @@
+**Pulsify v0.24.0 — Giveaways & Community Engagement**
+Keep your community buzzing with built-in giveaways — create them on the dashboard, run them in Discord, and let Pulse handle entries and winners for you.
+
+** What's new**
+- **Giveaways view** — a brand-new section under Engagement showing your active, scheduled and ended giveaways with entry counts, winners and prizes at a glance.
+- **Create in seconds** — set a title, prize, duration, winner count and channel, then preview the exact Discord embed before you publish. Start from a template (Quick drop, Nitro, Members-only, Milestone) to skip the setup.
+- **Fully automatic** — Pulse posts the giveaway with a live countdown and a Join button, tracks every entrant, draws winners when the timer ends, and announces them — no manual work.
+- **Schedule ahead** — line up a giveaway to start later, and it goes live on its own.
+- **Reroll & end early** — draw winners on demand or reroll a finished giveaway in one click.
+
+**Fair play, built in**
+- **Entry requirements** — gate entry by role, minimum account age, time in the server, or message activity.
+- **Anti-alt & blacklist** — block throwaway accounts and bar specific users from entering.
+
+**Insights & history**
+- **Engagement analytics** — participation rates, most active giveaways, entry trends and completion rate.
+- **Export entrants** — download the full participant list as CSV any time.
+
+Find **Giveaways** in the sidebar under Engagement — responsive, animated, and updating live.
+
+May 19, 2026

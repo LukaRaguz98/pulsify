@@ -1,0 +1,22 @@
+**Pulsify v0.19.0 — Legal, Support & Community Pages**
+This release completes Pulsify's public pages, bringing the transparency, support resources and professionalism expected of a finished product.
+
+**Legal**
+- **Privacy Policy** — a clear explanation of what data Pulsify collects, how Discord OAuth data is used, analytics and cookies, data storage and security, and the third-party services involved.
+- **Terms of Service** — acceptable use, prohibited behavior, service limitations, moderation and automation disclaimers, account termination, liability and intellectual property.
+
+**Support**
+- A dedicated Support page with contact options, support categories, a troubleshooting guide, and clear paths for reporting bugs and requesting features.
+
+**Community**
+- A Community page featuring the Discord invite, a changelog, a roadmap preview, ways to contribute, and social links.
+
+**FAQ**
+- A dedicated, categorized FAQ page answering the most common questions about Pulsify and the Pulse bot.
+
+**Throughout**
+- Consistent layouts, SEO metadata, smooth page transitions, full mobile responsiveness, and footer links that route correctly across the site.
+
+Everything a new or prospective user needs to understand, trust and get help with Pulsify.
+
+May 13, 2026

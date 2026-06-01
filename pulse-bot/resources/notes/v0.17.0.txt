@@ -1,0 +1,19 @@
+**Pulsify v0.17.0 — Scheduled Automations**
+Put repetitive server tasks on autopilot. This release introduces scheduled automation workflows that run themselves on the schedule you choose, so routine maintenance no longer needs a person behind it.
+
+**Flexible scheduling**
+- **Any cadence** — daily, weekly, monthly, or a custom cron-style schedule.
+- **Timezone aware** — schedules run in your chosen timezone, with a preview of the next run time before you save.
+
+**A library of actions**
+- **Automate** announcements, recurring reminders, role synchronization, temporary-role cleanup, scheduled moderation (such as locking a channel overnight), recurring events, inactivity reports and analytics summaries.
+- **Conditions and pacing** — add conditions, cooldowns and delays so a workflow only runs when it genuinely should.
+
+**Reliable and transparent**
+- **Templates** — start from ready-made presets instead of a blank slate.
+- **Execution logs and status** — see exactly when each workflow ran and what the outcome was.
+- **Failure handling** — automatic retries and alerts when something doesn't go as planned.
+
+Less repetitive admin work, and a server that quietly maintains itself in the background.
+
+May 10, 2026

@@ -1,0 +1,24 @@
+**Pulsify v0.16.0 — Member Profiles & Reputation**
+This release helps you truly understand your members through detailed profiles, activity insight and a reputation system built for community administration.
+
+**Detailed member profiles**
+- **The complete picture** — avatar, display name, join date, roles, activity statistics, voice activity, message count and moderation history, all on a single page.
+
+**Reputation system**
+- **Trust scoring** — a reputation score calculated from activity, moderation history, account age and overall engagement, surfaced with clear indicators and badges.
+
+**Activity tracking**
+- **What members do** — messages sent, voice time, command usage, active channels and event participation.
+- **History and heatmaps** — an activity timeline and visual heatmaps reveal patterns at a glance.
+
+**Moderation insight**
+- **Full history** — complete with risk indicators and repeat-offender detection.
+- **Moderator-only notes** — private comments your team can leave on a member, never shown to the member.
+
+**Find anyone fast**
+- **Advanced search and filters** — active, inactive, high-risk, new members and staff.
+- **Quick actions** — warn, timeout, ban or assign roles right from the profile.
+
+A complete view of every member, designed to make moderation and community management far easier.
+
+May 09, 2026

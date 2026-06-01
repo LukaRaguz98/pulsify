@@ -1,0 +1,15 @@
+**Pulsify v0.29.2 — Early Access: Everything's Free**
+Big one: while Pulsify is in early access, every plan is completely free. All premium features are unlocked for everyone, and billing is paused.
+
+**What's new**
+- **Everything unlocked** — Pulse Guard, advanced moderation, custom branding, multi-server workspaces, advanced analytics, backup & restore and the rest are switched on for all accounts, no plan required.
+- **No payment needed** — checkout and billing are turned off for now, so you'll never be asked for a card during early access.
+- **Clear pricing, zero surprises** — the pricing page still shows what each plan will cost later, with a friendly heads-up that it's all free for now.
+
+**Also**
+- **Billing page reflects it** — your billing screen shows an "Early access" state with everything included, instead of an empty subscription.
+- **Flip-of-a-switch** — when early access ends, plans and billing simply resume as normal. We'll give you plenty of notice before anything changes.
+
+Enjoy the full Pulsify experience on us — just invite the bot and dive in.
+
+May 27, 2026
