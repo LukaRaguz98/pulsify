@@ -1,0 +1,18 @@
+**Pulsify v0.33.0 — Announcements**
+Write, preview and publish polished announcements to your server — straight from the Pulsify dashboard. Pulse posts them as on-brand embeds and keeps a tidy history of everything you've sent.
+
+**What's new**
+- **Engagement › Announcements** — a new view for drafting announcements and browsing everything you've published, with search and status filters.
+- **Compose with a live preview** — see exactly how your announcement will look as a Pulse embed before it goes out, with a title, message and target channel.
+- **Publish through Pulse** — announcements are posted as a polished Components-V2 embed that matches the /changelog styling, complete with the Pulse announcement badge.
+- **Drafts & scheduling** — save a draft to finish later, or set a planned publish time to keep your announcements organised.
+
+**Also**
+- **Manage every announcement** — view details, copy the content, edit drafts, duplicate or repost a past announcement, and delete (which also retracts the Discord message).
+- **Clear failure handling** — if Pulse can't post to a channel, the announcement is marked failed with the reason, and you can retry in one click.
+- **Permission-aware** — Pulse checks it can actually send to the chosen channel before publishing, so you're not left guessing.
+- **Activity logging** — published and failed announcements show up in your server's notifications feed for a full audit trail.
+
+Keeping your community in the loop just got a whole lot easier.
+
+June 01, 2026

@@ -7,6 +7,11 @@ type Props = {
   title: string
   content: string
   color?: string
+  /** Public path to the branded badge shown top-right inside the container
+   *  (e.g. '/pulse-rules.png'). Omit for no badge. */
+  icon?: string
+  /** Footer line rendered under a divider (e.g. 'Pulse · Server Rules'). */
+  footer?: string
 }
 
 function renderMd(text: string, lineIdx: number) {
@@ -53,7 +58,7 @@ function renderContent(text: string) {
   })
 }
 
-export function AppEmbedPreview({ title, content, color }: Props) {
+export function AppEmbedPreview({ title, content, color, icon, footer }: Props) {
   // Render an empty placeholder on the server, then fill in the actual
   // current time on the client. Avoids hydration mismatch when the SSR's
   // "Today at HH:MM" differs from the client's clock by a minute (and from
@@ -97,8 +102,9 @@ export function AppEmbedPreview({ title, content, color }: Props) {
           </div>
 
           {/* Components V2 container — rounded card with a full-height left
-              accent stripe. Title renders as a markdown `#` heading to match
-              how the posted V2 message looks. */}
+              accent stripe. Mirrors the posted Pulse v2 embed: a `Pulse` label +
+              `#` title heading beside the branded badge, the body, then a divider
+              and footer (the /changelog + announcement style). */}
           <div style={{
             borderLeft: `4px solid ${color ?? 'var(--p-1)'}`,
             background: 'var(--bg-2)',
@@ -106,22 +112,35 @@ export function AppEmbedPreview({ title, content, color }: Props) {
             padding: '12px 16px',
             maxWidth: '432px',
           }}>
-            <div style={{
-              color: 'var(--text)',
-              fontWeight: '700',
-              fontSize: '20px',
-              margin: '0 0 6px',
-              lineHeight: '1.3',
-            }}>
-              {title || <span style={{ color: 'var(--text-3)', fontWeight: 600, fontSize: '15px' }}>No title…</span>}
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ color: 'var(--text-2)', fontWeight: 700, fontSize: '12px', marginBottom: '2px' }}>Pulse</div>
+                <div style={{
+                  color: 'var(--text)',
+                  fontWeight: '700',
+                  fontSize: '20px',
+                  margin: '0 0 6px',
+                  lineHeight: '1.3',
+                }}>
+                  {title || <span style={{ color: 'var(--text-3)', fontWeight: 600, fontSize: '15px' }}>No title…</span>}
+                </div>
+                <div style={{
+                  color: 'var(--text-2)',
+                  fontSize: '14px',
+                  lineHeight: '1.45',
+                }}>
+                  {content ? renderContent(content) : <span style={{ color: 'var(--text-3)' }}>No content yet…</span>}
+                </div>
+              </div>
+              {icon && (
+                <Image src={icon} alt="" width={40} height={40} style={{ flexShrink: 0, borderRadius: '6px', marginTop: '2px' }} />
+              )}
             </div>
-            <div style={{
-              color: 'var(--text-2)',
-              fontSize: '14px',
-              lineHeight: '1.45',
-            }}>
-              {content ? renderContent(content) : <span style={{ color: 'var(--text-3)' }}>No content yet…</span>}
-            </div>
+            {footer && (
+              <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px solid var(--line-strong)', color: 'var(--text-3)', fontSize: '12px' }}>
+                {footer}
+              </div>
+            )}
           </div>
         </div>
       </div>

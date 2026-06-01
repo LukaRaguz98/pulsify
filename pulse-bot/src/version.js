@@ -18,20 +18,22 @@ const path = require("node:path");
 // Current Pulse version. Used for the startup banner and as the displayed
 // version when no release files are reachable. Keep this in step with the
 // newest resources/notes/vX.Y.Z.txt on each release.
-const PULSE_VERSION = "0.32.1";
+const PULSE_VERSION = "0.33.0";
 
 // Manual/static fallback used only when the release-notes files can't be read.
 // Mirrors the shape produced by the parser so callers don't special-case it.
 const STATIC_RELEASES = [
   {
-    version: "0.32.1",
-    title: "Bot Version & Update Visibility",
-    date: "May 29, 2026",
-    description: "Pulse can now tell you what's new — right inside Discord.",
+    version: "0.33.0",
+    title: "Announcements",
+    date: "Jun 1, 2026",
+    description:
+      "Write, preview and publish polished announcements to your server — right from the Pulsify dashboard.",
     highlights: [
-      "New /changelog command with polished, on-brand update embeds.",
-      "Look up any past release with /changelog version:0.30.0.",
-      "Admins-only by default, with quick links to the release notes, dashboard and invite.",
+      "**Engagement › Announcements** — a new view to draft, manage and review everything you've published, with search and filters.",
+      "**Compose with a live preview** — publish on-brand Pulse embeds that match the /changelog styling.",
+      "**Drafts & scheduling** — save a draft, set a planned publish time, or duplicate a past announcement.",
+      "**Reliable publishing** — Pulse checks it can post to the channel first, with clear failures and one-click retry.",
     ],
     outro: null,
   },

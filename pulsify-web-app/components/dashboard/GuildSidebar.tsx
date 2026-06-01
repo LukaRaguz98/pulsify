@@ -28,6 +28,7 @@ import {
   Lightbulb,
   LifeBuoy,
   Gift,
+  Megaphone,
   Building2,
   Menu,
   X,
@@ -145,7 +146,6 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
         { label: 'Channels', href: `${base}/channels`, icon: <Hash size={16} /> },
         { label: 'Members', href: `${base}/members`, icon: <UserRound size={16} />, matchPrefixes: ['/leveling-settings'] },
         { label: 'Roles', href: `${base}/roles`, icon: <Users size={16} /> },
-        { label: 'Events', href: `${base}/events`, icon: <CalendarDays size={16} /> },
       ],
     },
     {
@@ -153,6 +153,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
       icon: <TerminalSquare size={16} />,
       items: [
         { label: 'Commands', href: `${base}/commands`, icon: <Command size={16} /> },
+        { label: 'Automations', href: `${base}/automations`, icon: <Zap size={16} /> },
         // Presence is a bot-wide, operator-only surface — hide it from everyone
         // else (the page itself re-checks operator status server-side).
         ...(isOperator
@@ -164,7 +165,8 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
       title: 'Engagement',
       icon: <Sparkles size={16} />,
       items: [
-        { label: 'Automations', href: `${base}/automations`, icon: <Zap size={16} /> },
+        { label: 'Events', href: `${base}/events`, icon: <CalendarDays size={16} /> },
+        { label: 'Announcements', href: `${base}/announcements`, icon: <Megaphone size={16} /> },
         { label: 'Scheduled', href: `${base}/scheduled`, icon: <CalendarClock size={16} /> },
         { label: 'Giveaways', href: `${base}/giveaways`, icon: <Gift size={16} /> },
       ],

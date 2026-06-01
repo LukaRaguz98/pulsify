@@ -122,7 +122,7 @@ async function loadPulseIcon(iconKey, colorHex) {
   try {
     if (!localIconCache[iconKey]) {
       localIconCache[iconKey] = await readFile(
-        path.join(__dirname, "..", "resources", name),
+        path.join(__dirname, "..", "resources", "images", name),
       );
     }
     return { attachment: localIconCache[iconKey], name };

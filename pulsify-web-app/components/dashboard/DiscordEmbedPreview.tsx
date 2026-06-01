@@ -17,6 +17,9 @@ export type EmbedData = {
 type Props = {
   embed: EmbedData
   serverName: string
+  /** Footer shown when the user left footer_text blank (e.g. 'Pulse · Welcome'),
+   *  mirroring the bot's branded fallback. */
+  footerFallback?: string
 }
 
 function renderMd(text: string, lineIdx: number) {
@@ -62,7 +65,7 @@ function renderContent(text: string) {
   })
 }
 
-export function DiscordEmbedPreview({ embed, serverName }: Props) {
+export function DiscordEmbedPreview({ embed, serverName, footerFallback }: Props) {
   const resolve = (text: string) =>
     text.replace(/\{server\}/g, serverName).replace(/\{user\}/g, '@NewMember')
 
@@ -117,6 +120,10 @@ export function DiscordEmbedPreview({ embed, serverName }: Props) {
             maxWidth: '432px',
             padding: '12px 16px',
           }}>
+            {/* Pulse label — matches the `**Pulse**` line the bot puts at the
+                top of the v2 container. */}
+            <div style={{ color: 'var(--text-2)', fontWeight: 700, fontSize: '12px', marginBottom: '2px' }}>Pulse</div>
+
             {/* Title — H1 heading */}
             {resolve(embed.title) && (
               <div style={{
@@ -172,14 +179,15 @@ export function DiscordEmbedPreview({ embed, serverName }: Props) {
               </div>
             )}
 
-            {/* Footer — subtext (`-#`) style, no avatar chip */}
-            {embed.footer_text && (
-              <div style={{
-                color: 'var(--text-3)', fontSize: '12px',
-                marginTop: '10px', lineHeight: '1.3',
-              }}>
-                {resolve(embed.footer_text)}
-              </div>
+            {/* Divider + footer — the standardized Pulse v2 close. Honours the
+                user's footer_text, falling back to the branded label. */}
+            {(embed.footer_text || footerFallback) && (
+              <>
+                <div style={{ borderTop: '1px solid var(--line-strong)', margin: '12px 0 8px' }} />
+                <div style={{ color: 'var(--text-3)', fontSize: '12px', lineHeight: '1.3' }}>
+                  {embed.footer_text ? resolve(embed.footer_text) : footerFallback}
+                </div>
+              </>
             )}
           </div>
         </div>

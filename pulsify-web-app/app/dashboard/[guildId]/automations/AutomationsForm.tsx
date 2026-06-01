@@ -330,7 +330,7 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
   async function generateWithPulse(section: string) {
     const prefs = getPulsePrefs()
     if (!prefs?.description?.trim()) {
-      setPulseGenError('Add a server description in Settings → Pulse to get started.')
+      setPulseGenError('Add a server description in Automations settings to get started.')
       setPulseGenErrorSection(section)
       return
     }
@@ -904,7 +904,11 @@ function MemberEventExtra({
 
       {isEmbed && previewEmbed && embed ? (
         <div className="space-y-3">
-          <DiscordEmbedPreview embed={previewEmbed} serverName={guildName} />
+          <DiscordEmbedPreview
+            embed={previewEmbed}
+            serverName={guildName}
+            footerFallback={variant === 'welcome' ? 'Pulse · Welcome' : 'Pulse · Goodbye'}
+          />
           <div className="space-y-2">
             <div>
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Embed Title</label>
@@ -1032,7 +1036,13 @@ function PulseContentExtra({
         <p className="text-xs" style={{ color: '#f87171' }}>{pulseGenError}</p>
       )}
 
-      <AppEmbedPreview title={title} content={content} color={accentHex} />
+      <AppEmbedPreview
+        title={title}
+        content={content}
+        color={accentHex}
+        icon={section === 'rules' ? '/pulse-rules.png' : section === 'onboarding' ? '/pulse-onboarding.png' : undefined}
+        footer={section === 'rules' ? 'Pulse · Server Rules' : section === 'onboarding' ? 'Pulse · Onboarding Guide' : undefined}
+      />
 
       <div className="space-y-2">
         <div>

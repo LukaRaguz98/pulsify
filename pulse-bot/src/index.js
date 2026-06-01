@@ -112,32 +112,43 @@ async function notifyIfNotBot(opts) {
   });
 }
 
+// Pins a consistent, comfortable width across Pulse's v2 embeds (U+2800 blanks
+// occupy width without being trimmed) — same trick as commands.js WIDTH_SPACER.
+const MEMBER_WIDTH_SPACER = `-# ${"⠀".repeat(44)}`;
+
 /**
- * Build a Components V2 container for a member welcome/goodbye embed.
- *
- * Mirrors the old EmbedBuilder layout but as V2: title → `#` heading,
- * description → body, fields → bold label blocks, banner → MediaGallery,
- * footer → subtext. `resolve` runs the {user}/{server} placeholder swap on
- * every text field. Returns the raw container object — the caller sends it
- * with the IS_COMPONENTS_V2 flag.
+ * Build a Components V2 container for a member welcome/goodbye embed, following
+ * the standardized Pulse v2 style (same as /changelog, announcements and the
+ * rules/onboarding blocks): a `**Pulse**` label + `#` title heading, a width
+ * spacer for a consistent width, the description/fields body, then a divider and
+ * a `-#` footer. `resolve` runs the {user}/{server} placeholder swap on every
+ * text field; `footerLabel` ("Welcome"/"Goodbye") brands the fallback footer
+ * when the user left footer_text blank. Returns the raw container object — the
+ * caller sends it with the IS_COMPONENTS_V2 flag.
  */
-function buildMemberV2Container(cfg, resolve, hasBanner) {
+function buildMemberV2Container(cfg, resolve, hasBanner, footerLabel) {
   const colorInt = parseInt((cfg.color ?? "#6366f1").replace("#", ""), 16);
   const components = [{ type: 10, content: "**Pulse**" }];
 
   const title = resolve(cfg.title ?? "");
   if (title) components.push({ type: 10, content: `# ${title}` });
 
+  // Width spacer to pin a consistent width — skipped when a banner is present,
+  // since the full-width image already defines the embed's width.
+  if (!hasBanner) components.push({ type: 10, content: MEMBER_WIDTH_SPACER });
+
   const description = resolve(cfg.description ?? "");
   if (description) components.push({ type: 10, content: description });
 
   if (Array.isArray(cfg.fields) && cfg.fields.length > 0) {
-    if (description) components.push({ type: 14, divider: true, spacing: 1 });
     const fieldText = cfg.fields
       .filter((f) => f && (f.name || f.value))
       .map((f) => `**${resolve(f.name ?? "")}**\n${resolve(f.value ?? "")}`)
       .join("\n\n");
-    if (fieldText) components.push({ type: 10, content: fieldText });
+    if (fieldText) {
+      if (description) components.push({ type: 14, divider: true, spacing: 1 });
+      components.push({ type: 10, content: fieldText });
+    }
   }
 
   // Banner — MediaGallery (type 12) referencing the attached banner.png.
@@ -148,9 +159,13 @@ function buildMemberV2Container(cfg, resolve, hasBanner) {
     });
   }
 
-  if (cfg.footer_text) {
-    components.push({ type: 10, content: `-# ${resolve(cfg.footer_text)}` });
-  }
+  // Divider + footer — the standardized Pulse v2 close. Honour the user's
+  // footer_text; fall back to a branded `Pulse · <label>` when it's blank.
+  const footer = cfg.footer_text
+    ? resolve(cfg.footer_text)
+    : `Pulse · ${footerLabel}`;
+  components.push({ type: 14, divider: true, spacing: 1 });
+  components.push({ type: 10, content: `-# ${footer}` });
 
   return {
     type: 17,
@@ -361,7 +376,7 @@ client.on(Events.GuildMemberAdd, async (member) => {
         if (settings.welcome.type === "embed" && settings.welcome.embed) {
           const cfg = settings.welcome.embed;
           const hasBanner = !!cfg.banner_color;
-          const container = buildMemberV2Container(cfg, resolve, hasBanner);
+          const container = buildMemberV2Container(cfg, resolve, hasBanner, "Welcome");
           const payload = {
             flags: MessageFlags.IsComponentsV2,
             components: [container],
@@ -473,7 +488,7 @@ client.on(Events.GuildMemberRemove, async (member) => {
         if (settings.goodbye.type === "embed" && settings.goodbye.embed) {
           const cfg = settings.goodbye.embed;
           const hasBanner = !!cfg.banner_color;
-          const container = buildMemberV2Container(cfg, resolve, hasBanner);
+          const container = buildMemberV2Container(cfg, resolve, hasBanner, "Goodbye");
           const payload = {
             flags: MessageFlags.IsComponentsV2,
             components: [container],

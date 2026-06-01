@@ -267,7 +267,11 @@ export function MemberEmbedSection({
         {previewEmbed && !loading && (
           <div className="space-y-4">
             {/* Discord preview mockup */}
-            <DiscordEmbedPreview embed={previewEmbed} serverName={guildName} />
+            <DiscordEmbedPreview
+              embed={previewEmbed}
+              serverName={guildName}
+              footerFallback={variant === 'welcome' ? 'Pulse · Welcome' : 'Pulse · Goodbye'}
+            />
 
             {/* Editable fields */}
             <div className="space-y-3 pt-1">

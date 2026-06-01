@@ -40,7 +40,7 @@ const DISCORD_EPOCH = 1420070400000n;
 const ICON_NAME = "pulse-giveaway.png";
 let ICON_BUFFER = null;
 try {
-  ICON_BUFFER = fs.readFileSync(path.join(__dirname, "..", "resources", ICON_NAME));
+  ICON_BUFFER = fs.readFileSync(path.join(__dirname, "..", "resources", "images", ICON_NAME));
 } catch {
   ICON_BUFFER = null;
 }
