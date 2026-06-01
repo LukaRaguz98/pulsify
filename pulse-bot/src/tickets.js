@@ -72,7 +72,7 @@ async function loadTicketIcon(colorHex) {
     clearTimeout(timer);
   }
   try {
-    if (!ticketIconLocal) ticketIconLocal = await readFile(path.join(__dirname, "..", "resources", TICKET_ICON_FILE));
+    if (!ticketIconLocal) ticketIconLocal = await readFile(path.join(__dirname, "..", "resources", "images", TICKET_ICON_FILE));
     return { attachment: ticketIconLocal, name: TICKET_ICON_FILE };
   } catch {
     return null;

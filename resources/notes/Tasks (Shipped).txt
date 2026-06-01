@@ -2201,3 +2201,88 @@ Acceptance Criteria
 	Known bugs are resolved
 	Platform feels stable, polished, and production-ready
 	User experience is consistent across desktop, tablet, and mobile
+	
+PULSIFY-33 — Pulse Bot Announcements Management (v0.33.0)
+
+Description
+	Implement an Announcements section inside the Engagement category that allows administrators to view previous announcements and create new announcements directly from the Pulsify web app.
+	Announcements should be published to Discord through Pulse using a polished embed design consistent with the /changelog command styling and Pulse v2 embed standards.
+
+Goals
+	Add announcement management inside the Engagement category
+	Allow admins to create and publish announcements from the web app
+	Display previous announcements inside Pulsify
+	Standardize Pulse announcement embed styling
+	Improve communication workflow for server updates
+
+Tasks
+	Announcements View
+		Create new Engagement > Announcements view
+		Display previous announcements
+		Show:
+			announcement title
+			description/content preview
+			target Discord channel
+			created date
+			published date
+			author/admin
+			status
+		Add search and filtering
+		Add empty, loading, and error states
+
+	Announcement Creation
+		Add create announcement dialog/page
+		Allow configuring:
+			title
+			message/content
+			target channel
+			publish status
+			optional scheduled publish date
+		Add preview before publishing
+		Add validation for required fields
+		Add draft/save support if applicable
+
+	Discord Publishing
+		Publish announcements to selected Discord channels through Pulse
+		Store published announcement history
+		Track Discord message ID after publishing
+		Handle failed publish attempts gracefully
+		Add retry support for failed announcements
+
+	Embed Design
+		Create Pulse announcement embed using existing Pulse v2 embed standards
+		Match the visual style used by the /changelog command
+		Use pulse-annoucement.png as the announcement embed icon/image where appropriate
+		Standardize:
+			embed color
+			title formatting
+			description spacing
+			footer
+			timestamp
+			buttons/links if needed
+		Ensure embed is readable on desktop and mobile Discord clients
+
+	Management Actions
+		Allow viewing announcement details
+		Allow editing drafts/unpublished announcements
+		Allow deleting drafts
+		Allow copying announcement content
+		Add option to repost or duplicate an existing announcement
+		Add audit log entry when announcement is created/published/deleted
+
+	Permissions & Validation
+		Validate that the user has permission to create announcements
+		Validate Pulse permissions for the selected channel
+		Show clear errors if Pulse cannot send messages or embeds
+		Prevent publishing to inaccessible channels
+
+Acceptance Criteria
+	Engagement > Announcements view exists
+	Previous announcements are visible in the web app
+	Admins can create announcements through Pulsify
+	Announcements can be published to Discord through Pulse
+	Announcement embeds match /changelog styling and Pulse v2 standards
+	pulse-annoucement.png is used where appropriate
+	Publish failures are handled with clear error messages
+	Announcement history persists correctly
+	UI remains responsive and visually polished
