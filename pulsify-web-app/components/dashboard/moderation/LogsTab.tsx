@@ -198,8 +198,8 @@ export function LogsTab({ guildId, refreshKey, members }: Props) {
           }
         />
       ) : (
-        <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--line-strong)' }}>
-          <table className="w-full text-sm">
+        <div className="rounded-xl border overflow-x-auto" style={{ borderColor: 'var(--line-strong)' }}>
+          <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
                 {/* Action lives on the left — it's a non-interactive label

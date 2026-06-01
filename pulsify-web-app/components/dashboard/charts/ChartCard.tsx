@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { ChartLandscape } from './ChartLandscape'
 
 type Props = {
   title: string
@@ -6,10 +7,13 @@ type Props = {
   icon?: ReactNode
   action?: ReactNode
   className?: string
+  /** Opt out of the mobile portrait → landscape treatment (e.g. non-chart
+   *  content that already fits a narrow column). */
+  disableLandscape?: boolean
   children: ReactNode
 }
 
-export function ChartCard({ title, subtitle, icon, action, className, children }: Props) {
+export function ChartCard({ title, subtitle, icon, action, className, disableLandscape, children }: Props) {
   return (
     <div
       className={`rounded-xl border p-5 ${className ?? ''}`}
@@ -34,7 +38,7 @@ export function ChartCard({ title, subtitle, icon, action, className, children }
         </div>
         {action && <div className="shrink-0">{action}</div>}
       </div>
-      {children}
+      {disableLandscape ? children : <ChartLandscape title={title}>{children}</ChartLandscape>}
     </div>
   )
 }

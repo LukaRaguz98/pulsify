@@ -587,8 +587,8 @@ export function MembersTab({ guildId, members, roles, onActionComplete }: Props)
           description={search ? `No members matching "${search}".` : 'No members in this view.'}
         />
       ) : (
-        <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--line-strong)' }}>
-          <table className="w-full text-sm">
+        <div className="rounded-xl border overflow-x-auto" style={{ borderColor: 'var(--line-strong)' }}>
+          <table className="w-full min-w-[760px] text-sm">
             <thead>
               <tr className="border-b" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
                 <th className="text-left">

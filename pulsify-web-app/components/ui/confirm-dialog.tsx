@@ -138,11 +138,11 @@ export function ConfirmDialog({
         aria-label={title}
         onSubmit={handleSubmit}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-xl border shadow-2xl"
+        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-xl border shadow-2xl"
         style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
       >
         <div
-          className="flex items-start gap-3 border-b px-5 py-4"
+          className="flex shrink-0 items-start gap-3 border-b px-5 py-4"
           style={{ borderColor: 'var(--line-strong)' }}
         >
           {tone !== 'default' && (
@@ -170,6 +170,7 @@ export function ConfirmDialog({
           </button>
         </div>
 
+        <div className="min-h-0 overflow-y-auto">
         {fields.length > 0 && (
           <div className="space-y-3 px-5 py-4">
             {fields.map((f, idx) => {
@@ -255,9 +256,10 @@ export function ConfirmDialog({
             <span>{error}</span>
           </div>
         )}
+        </div>
 
         <div
-          className="flex items-center justify-end gap-2 border-t px-5 py-3"
+          className="flex shrink-0 items-center justify-end gap-2 border-t px-5 py-3"
           style={{ borderColor: 'var(--line-strong)', background: 'var(--bg-2)' }}
         >
           <button
