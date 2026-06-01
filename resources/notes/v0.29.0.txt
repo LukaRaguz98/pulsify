@@ -19,3 +19,5 @@ Pulsify gets its first real billing system. Pick a plan that fits, unlock premiu
 - **Audit log** — every billing-relevant event is recorded for transparency and easy debugging.
 
 Pulsify is now ready for public launch. Open **Billing & plan** from your profile or visit **`/pricing`** to choose a plan and unlock the full Pulsify experience.
+
+May 26, 2026

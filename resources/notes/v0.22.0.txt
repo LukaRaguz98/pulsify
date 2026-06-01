@@ -26,3 +26,5 @@ Say hello to tickets: a complete, Discord-native support system that lets your m
 - **Analytics** — volume over time, resolution rate, average resolution time, and a breakdown by type and priority.
 
 Find Tickets in the sidebar under Safety. Polished, responsive, and updating live.
+
+May 16, 2026

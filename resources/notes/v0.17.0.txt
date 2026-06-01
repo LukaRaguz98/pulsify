@@ -15,3 +15,5 @@ Put repetitive server tasks on autopilot. This release introduces scheduled auto
 - **Failure handling** — automatic retries and alerts when something doesn't go as planned.
 
 Less repetitive admin work, and a server that quietly maintains itself in the background.
+
+May 10, 2026

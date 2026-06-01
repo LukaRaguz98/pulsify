@@ -15,3 +15,5 @@ This release closes the loop between the dashboard and your server. Settings you
 - **Unban from the dashboard** — remove a ban directly in Pulsify and have the change reflected on Discord instantly.
 
 Configure once in the dashboard, and Pulse handles the rest on your server.
+
+April 22, 2026

@@ -16,3 +16,5 @@ A focused release that polishes the experience across the bot and dashboard, wit
 - Confirmation modals for sensitive changes, copy-to-clipboard buttons, clearer empty states, unsaved-changes warnings, loading skeletons, and more consistent success feedback throughout the dashboard.
 
 Dozens of small improvements that together make Pulsify feel noticeably more refined.
+
+May 05, 2026

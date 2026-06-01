@@ -25,3 +25,5 @@ Meet Insights: a brand-new dashboard view that reads your server's activity and 
 - **Pulse ready** — today's insights are powered by Pulsify's rules engine, with the groundwork laid for AI-authored recommendations coming soon.
 
 Find Insights in the sidebar under Analytics. Polished, responsive, and updating live with your server.
+
+May 15, 2026

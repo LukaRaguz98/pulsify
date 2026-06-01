@@ -13,3 +13,5 @@ A quick follow-up to v0.32.0 with another round of mobile refinements so the who
 - **Landing page fixes** — removed an unnecessary black strip on the right edge, brought the menu fully into view, and fixed sections that stayed blank while scrolling on mobile.
 
 Pulsify just keeps getting comfier on the small screen.
+
+June 01, 2026

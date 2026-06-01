@@ -23,4 +23,6 @@ A brand-new public Release Notes page, a dynamic Community roadmap and a polishe
 - **Footer parity** — the dashboard footer gained a Release Notes link; the landing footer's Overview link now routes back to the landing page (not the current view) and a new Release Notes entry sits beneath Dashboard.
 - **Structure ready for automation** — release notes and roadmap items are parsed from versioned text files, so future automatic task syncing won't need a UI change.
 
-Open **Release Notes** from any footer to see the full Pulsify history, or visit **Community → Where we're headed** to track what's coming next. 💜
+Open **Release Notes** from any footer to see the full Pulsify history, or visit **Community → Where we're headed** to track what's coming next.
+
+May 25, 2026

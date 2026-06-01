@@ -15,3 +15,5 @@ Stay aware of everything happening on your server as it happens. This release ad
 - **Automatic cleanup** — older notifications are retired on their own, keeping the feed relevant.
 
 The result is faster awareness, quicker moderation response, and a dashboard that always reflects your server's current state.
+
+May 02, 2026

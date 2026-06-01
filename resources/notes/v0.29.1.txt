@@ -11,3 +11,5 @@ Search just landed in Workspaces, plus a few small touches that make the dashboa
 - **Tidier roadmap cards** — removed the stray counter in the corner of the "Where we're headed" cards on the Community page.
 
 Nothing to set up — open any workspace and start searching.
+
+May 27, 2026

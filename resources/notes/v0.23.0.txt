@@ -27,3 +27,5 @@ A big quality-and-stability pass: smoother loading, a tidier sidebar, a dashboar
 - **Tidier Community page** — trimmed the duplicate "join our Discord" buttons down to the ones that matter.
 
 Nothing to set up — just a smoother, more consistent Pulsify across desktop, mobile and Discord.
+
+May 18, 2026

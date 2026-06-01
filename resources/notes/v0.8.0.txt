@@ -17,3 +17,5 @@ Plan, run and review Discord events entirely from Pulsify, with a calendar, cove
 - **Event analytics** — track participation and attendance trends, and identify your most popular events.
 
 Every change syncs with Discord, so your dashboard and your server always show the same schedule.
+
+April 28, 2026

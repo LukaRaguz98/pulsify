@@ -48,6 +48,28 @@ test("parseRelease extracts version, title, description, highlights and outro", 
   assert.equal(r.outro, "Closing line.");
 });
 
+test("parseRelease uses a trailing date line and keeps it out of the outro", () => {
+  const withDate = `**Pulsify v9.9.9 — Dated Release**
+A short lead description.
+
+**What's new**
+- A feature
+
+Closing line.
+
+June 01, 2026
+`;
+  // mtime is deliberately a different date — the explicit line must win.
+  const r = parseRelease(withDate, new Date("2020-01-01T00:00:00Z"));
+  assert.equal(r.date, "Jun 1, 2026");
+  assert.equal(r.outro, "Closing line.");
+});
+
+test("parseRelease falls back to mtime when there is no date line", () => {
+  const r = parseRelease(SAMPLE, new Date("2026-05-29T12:00:00"));
+  assert.equal(r.date, "May 29, 2026");
+});
+
 test("parseRelease returns null when the header line is missing", () => {
   assert.equal(parseRelease("Just some text\n- a bullet", new Date()), null);
   assert.equal(parseRelease("", new Date()), null);

@@ -16,3 +16,5 @@ Pulse comes alive. Shape exactly what its Discord status says — rotating activ
 - **Operator-managed** — Pulse's status is bot-wide, so it's managed centrally by the Pulsify operators; the Presence view shows who's in charge.
 
 Open **Presence** from your server's sidebar to give Pulse some personality.
+
+May 29, 2026

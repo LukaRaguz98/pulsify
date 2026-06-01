@@ -15,4 +15,6 @@ A polish pass on Giveaways: a clearer creation dialog, a Manage view that matche
 **Discord embeds**
 - Giveaway embeds now carry the Pulse giveaway badge, a consistent **Pulse · Giveaway** footer, the native countdown, and the same clean requirement formatting — aligned with Pulse's embed design language across success, info, moderation and sync messages.
 
-Find **Giveaways** under Engagement. 💜
+Find **Giveaways** under Engagement.
+
+May 20, 2026

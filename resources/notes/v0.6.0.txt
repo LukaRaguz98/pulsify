@@ -13,3 +13,5 @@ A complete moderation workspace inside Pulsify, so your team can manage members 
 - **Permission and hierarchy checks** — Pulsify verifies both your access and the bot's role position before acting, and explains clearly when an action would be rejected by Discord.
 
 Every action is mirrored on Discord instantly, keeping the dashboard and your server perfectly in sync.
+
+April 25, 2026

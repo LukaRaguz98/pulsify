@@ -20,3 +20,5 @@ Your members now level up. Pulsify tracks activity as XP, turns it into levels, 
 - **/leaderboard** — show the top members by XP, with your own standing.
 
 Find it all under **Members**, and tune it from **Level settings**.
+
+May 22, 2026

@@ -16,3 +16,5 @@ Managing Discord roles has always been tedious. This release brings a complete, 
 - **Validation before changes** — the bot's permissions and position are checked so edits don't silently fail.
 
 Every change syncs with Discord, giving you complete control over your server's hierarchy from a single screen.
+
+April 27, 2026

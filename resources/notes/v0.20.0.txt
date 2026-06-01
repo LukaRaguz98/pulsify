@@ -17,3 +17,5 @@ Getting started with Pulsify is now effortless. This release introduces a guided
 - **Tailored to you** — tell Pulsify your server type, preferred moderation intensity, dashboard layout and theme, and the recommended setup adapts to match.
 
 You can re-run the setup at any time from Preferences. A polished first impression that gets new servers up and running fast.
+
+May 14, 2026

@@ -16,3 +16,5 @@ Pulse Guard is Pulsify's AI-powered moderation system. It reads messages as they
 - **Alerts and analytics** — real-time notifications when something is caught, plus statistics on what Pulse Guard is handling.
 
 Around-the-clock protection that catches what manual moderation misses, without taking control away from your team.
+
+May 03, 2026

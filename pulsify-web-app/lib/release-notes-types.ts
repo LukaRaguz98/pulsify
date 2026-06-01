@@ -25,7 +25,7 @@ export type Release = {
   /** Short SemVer-style key used to sort and to anchor the entry. */
   versionKey: string
   title: string
-  /** Human-readable date from the file's mtime. */
+  /** Human-readable release date — the file's trailing date line, or mtime as fallback. */
   date: string
   /** Sortable timestamp for the file's mtime, ms since epoch. */
   mtime: number

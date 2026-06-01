@@ -43,6 +43,13 @@ const HEADER_RE = /^\*\*Pulsify\s+v([\d.]+)\s*[—-]\s*(.+?)\*\*$/
 const SECTION_RE = /^\*\*(.+?)\*\*$/
 const BULLET_RE = /^[-*•]\s+(.*)$/
 const BULLET_LEAD_RE = /^\*\*(.+?)\*\*\s*[—–-]\s*(.+)$/
+// Optional trailing `Month DD, YYYY` line that records the actual release date.
+const DATE_RE = /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}$/
+
+/** Format a date for display, matching the short style used across the UI. */
+function formatDate(d: Date): string {
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
 
 function categoryFor(sectionTitle: string): ReleaseCategory {
   const t = sectionTitle.toLowerCase()
@@ -78,7 +85,21 @@ function compareVersion(a: string, b: string): number {
 
 function parseRelease(content: string, mtime: Date): Omit<Release, 'mtime'> | null {
   // Split into lines but preserve blanks — section / outro boundaries need them.
-  const lines = content.replace(/\r\n/g, '\n').split('\n')
+  const rawLines = content.replace(/\r\n/g, '\n').split('\n')
+
+  // Pull an explicit `Month DD, YYYY` line off the end if present. It records
+  // the real release date (file mtime is unreliable — a clone/deploy resets it),
+  // and stripping it here keeps it out of the outro / last-bullet during the
+  // body walk below.
+  let explicitDate: Date | null = null
+  let end = rawLines.length
+  while (end > 0 && rawLines[end - 1].trim() === '') end--
+  if (end > 0 && DATE_RE.test(rawLines[end - 1].trim())) {
+    const parsed = new Date(rawLines[end - 1].trim())
+    if (!Number.isNaN(parsed.getTime())) explicitDate = parsed
+    end--
+  }
+  const lines = rawLines.slice(0, end)
 
   // First non-blank line must be the header `**Pulsify vX.Y.Z — Title**`.
   let i = 0
@@ -151,7 +172,7 @@ function parseRelease(content: string, mtime: Date): Omit<Release, 'mtime'> | nu
     version: headerMatch[1],
     versionKey: headerMatch[1],
     title: headerMatch[2].trim(),
-    date: mtime.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    date: formatDate(explicitDate ?? mtime),
     description,
     sections,
     outro: outroLines.length > 0 ? outroLines.join(' ').trim() : null,

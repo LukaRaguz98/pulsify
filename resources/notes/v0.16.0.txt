@@ -20,3 +20,5 @@ This release helps you truly understand your members through detailed profiles, 
 - **Quick actions** — warn, timeout, ban or assign roles right from the profile.
 
 A complete view of every member, designed to make moderation and community management far easier.
+
+May 09, 2026

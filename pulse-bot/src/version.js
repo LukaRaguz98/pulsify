@@ -50,6 +50,9 @@ const HEADER_RE = /^\*\*Pulsify\s+v([\d.]+)\s*[—-]\s*(.+?)\*\*$/;
 const SECTION_RE = /^\*\*(.+?)\*\*$/;
 const BULLET_RE = /^[-*•]\s+(.*)$/;
 const BULLET_LEAD_RE = /^\*\*(.+?)\*\*\s*[—–-]\s*(.+)$/;
+// Optional trailing `Month DD, YYYY` line that records the actual release date.
+const DATE_RE =
+  /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}$/;
 
 // In-memory cache so repeated commands don't re-read the disk each time.
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -81,7 +84,20 @@ function formatDate(d) {
  * dropped, inline **bold** kept) — enough for a compact changelog embed.
  */
 function parseRelease(content, mtime) {
-  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  const rawLines = content.replace(/\r\n/g, "\n").split("\n");
+
+  // Pull an explicit `Month DD, YYYY` line off the end if present. It records
+  // the real release date (mtime is unreliable — a clone/deploy resets it),
+  // and stripping it keeps it out of the outro during the body walk below.
+  let explicitDate = null;
+  let end = rawLines.length;
+  while (end > 0 && rawLines[end - 1].trim() === "") end--;
+  if (end > 0 && DATE_RE.test(rawLines[end - 1].trim())) {
+    const parsed = new Date(rawLines[end - 1].trim());
+    if (!Number.isNaN(parsed.getTime())) explicitDate = parsed;
+    end--;
+  }
+  const lines = rawLines.slice(0, end);
 
   let i = 0;
   while (i < lines.length && lines[i].trim() === "") i++;
@@ -137,7 +153,7 @@ function parseRelease(content, mtime) {
   return {
     version: headerMatch[1],
     title: headerMatch[2].trim(),
-    date: formatDate(mtime),
+    date: formatDate(explicitDate ?? mtime),
     description,
     highlights,
     outro: outroLines.length > 0 ? outroLines.join(" ").trim() : null,

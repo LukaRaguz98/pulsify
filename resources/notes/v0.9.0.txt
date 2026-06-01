@@ -17,3 +17,5 @@ Build and reorganize your entire server layout from a single screen, without the
 - **Channel statistics** — message activity, active users and voice usage per channel.
 
 Changes are validated against the bot's permissions and applied to Discord immediately, so reorganizing even a busy server stays fast and safe.
+
+April 30, 2026

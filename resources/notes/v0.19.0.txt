@@ -18,3 +18,5 @@ This release completes Pulsify's public pages, bringing the transparency, suppor
 - Consistent layouts, SEO metadata, smooth page transitions, full mobile responsiveness, and footer links that route correctly across the site.
 
 Everything a new or prospective user needs to understand, trust and get help with Pulsify.
+
+May 13, 2026

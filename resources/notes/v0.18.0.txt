@@ -16,3 +16,5 @@ Navigating a large server should be instant. This release adds a powerful global
 - Debounced search, cached indexing and lazy loading keep results quick even on very large servers.
 
 A modern, keyboard-driven way to move through Pulsify and manage your server at speed.
+
+May 12, 2026

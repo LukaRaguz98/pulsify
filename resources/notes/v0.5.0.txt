@@ -14,3 +14,5 @@ This release gives administrators a genuine understanding of their community thr
 - **Continuous tracking** — activity is collected and stored automatically, so your charts stay accurate and persist across restarts.
 
 Clear, actionable insight into exactly how your community is growing and where it is most active.
+
+April 24, 2026

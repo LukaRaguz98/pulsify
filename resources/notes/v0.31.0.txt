@@ -9,3 +9,5 @@ Pulse now tells you exactly what it's running and what's new — right inside Di
 - **Polished update embeds** — version and changelog replies use Pulse's branding and consistent styling, with graceful fallbacks if release data isn't available.
 - **Clearer startup logs** — Pulse now logs its version, connected server count and loaded command count on boot, with obvious success and failure output.
 - **Live release data** — version commands read the same release notes that power the Pulsify website, so they're always current.
+
+May 30, 2026

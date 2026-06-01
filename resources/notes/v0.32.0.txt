@@ -15,3 +15,5 @@ Pulsify now goes everywhere you do. The whole dashboard has been tuned for phone
 - **Stability polish** — a sweep for layout breaks and rough edges to make the dashboard feel solid on every device.
 
 Pull up Pulsify on your phone and give it a try.
+
+June 01, 2026

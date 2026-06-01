@@ -15,3 +15,5 @@ This release rebuilds the Pulsify dashboard into a polished, modern interface an
 - **Motion and effects** — toggle animations and decorative elements to taste.
 
 Every preference applies instantly and is remembered across sessions, so your dashboard always looks and feels the way you left it.
+
+April 21, 2026

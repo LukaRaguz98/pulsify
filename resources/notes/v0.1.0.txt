@@ -8,3 +8,5 @@ The first Pulsify release establishes the foundation the entire platform is buil
 - **Database and infrastructure** — a managed Supabase backend for authentication and data storage, plus the project structure and environments needed for fast, reliable development.
 
 With the platform's core wired together end to end, development of Pulsify's features begins from here.
+
+April 19, 2026

@@ -19,3 +19,5 @@ The Command Center brings complete, per-server control over Pulse's slash comman
 - Command examples, quick tests and clear status indicators throughout.
 
 Everything stays in sync with Discord, giving you precise control over how Pulse behaves on each server.
+
+May 08, 2026

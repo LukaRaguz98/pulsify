@@ -15,3 +15,5 @@ This release centralizes your server's most important configuration in the dashb
 - **Save and reset flow** — review changes before committing them, with confirmation dialogs on sensitive settings.
 
 Every supported change syncs with Discord, with clear feedback if anything cannot be applied.
+
+May 01, 2026
