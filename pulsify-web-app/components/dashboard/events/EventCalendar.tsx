@@ -110,6 +110,10 @@ export function EventCalendar({ events, onEventClick }: Props) {
         </div>
       </div>
 
+      {/* The day grid keeps a usable min-width on phones and scrolls
+          horizontally instead of crushing 7 columns into unreadable cells. */}
+      <div className="overflow-x-auto">
+      <div className="min-w-[700px]">
       <div className="grid grid-cols-7 border-b text-center text-[10px] font-semibold uppercase tracking-wider text-subtle"
         style={{ borderColor: 'var(--line-strong)', background: 'var(--bg-2)' }}>
         {WEEKDAYS.map((d) => (
@@ -173,6 +177,8 @@ export function EventCalendar({ events, onEventClick }: Props) {
             </div>
           )
         })}
+      </div>
+      </div>
       </div>
     </div>
   )

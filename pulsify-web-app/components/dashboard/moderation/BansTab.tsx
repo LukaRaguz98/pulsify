@@ -152,8 +152,8 @@ export function BansTab({ guildId, bans, onActionComplete }: Props) {
           description={`No bans matching "${search}".`}
         />
       ) : (
-      <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--line-strong)' }}>
-        <table className="w-full text-sm">
+      <div className="rounded-xl border overflow-x-auto" style={{ borderColor: 'var(--line-strong)' }}>
+        <table className="w-full min-w-[680px] text-sm">
           <thead>
             <tr className="border-b" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
               <th className="text-left">

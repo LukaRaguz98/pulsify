@@ -76,13 +76,13 @@ export function PingIndicator() {
   return (
     <div
       data-pulsify-ping="true"
-      className="fixed z-0 flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-mono"
+      // Desktop: bottom-right corner, mirroring the Discord-icon offsets so the
+      // bottom-row chrome sits at a 48px baseline, 52px in from the edge (z-0 =
+      // behind page content). Mobile: there's a fixed top bar instead, so the
+      // chip moves up into it, just left of the notification bell, and lifts
+      // above the bar (z-[35]) so it stays visible.
+      className="fixed z-0 bottom-[48px] right-[52px] max-lg:bottom-auto max-lg:top-[11px] max-lg:right-[56px] max-lg:z-[35] flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-mono"
       style={{
-        // Mirror Discord-icon offsets on the opposite side so both bottom-row
-        // chrome elements sit at the same baseline (48px) and 52px in from
-        // their respective edges.
-        bottom: '48px',
-        right: '52px',
         background: 'var(--panel)',
         borderColor: 'var(--line-strong)',
         color: 'var(--text-2)',

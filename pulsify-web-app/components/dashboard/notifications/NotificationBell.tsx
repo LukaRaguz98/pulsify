@@ -58,7 +58,7 @@ export function NotificationBell({ guildId }: Props) {
     <div
       ref={rootRef}
       data-pulsify-bell="true"
-      className="fixed top-2 right-3 z-10 mt-[40px] mr-[40px]"
+      className="fixed top-2 right-3 z-10 mt-[40px] mr-[40px] max-lg:top-[6px] max-lg:mt-0 max-lg:mr-0 max-lg:z-[35]"
     >
       {/* Hover: accent-tinted bg, accent border, slight lift + glow.
           active: snaps back down on press for tactile feedback. */}
@@ -89,7 +89,7 @@ export function NotificationBell({ guildId }: Props) {
           // overflow-hidden clips child backgrounds (the footer's bg-2 fill,
           // the rounded scroll list) so the rounded-xl bottom corners look
           // identical to the top instead of square-cut.
-          className="absolute right-0 top-full z-40 mt-2 w-[360px] overflow-hidden rounded-xl border shadow-2xl"
+          className="absolute right-0 top-full z-40 mt-2 w-[min(360px,calc(100vw-1.5rem))] overflow-hidden rounded-xl border shadow-2xl"
           style={{
             background: 'var(--panel)',
             borderColor: 'var(--line-strong)',
