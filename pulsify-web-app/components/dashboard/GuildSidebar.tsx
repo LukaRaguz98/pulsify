@@ -28,6 +28,7 @@ import {
   Lightbulb,
   LifeBuoy,
   Gift,
+  Award,
   Megaphone,
   Building2,
   Plug,
@@ -171,6 +172,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
         { label: 'Announcements', href: `${base}/announcements`, icon: <Megaphone size={16} /> },
         { label: 'Scheduled', href: `${base}/scheduled`, icon: <CalendarClock size={16} /> },
         { label: 'Giveaways', href: `${base}/giveaways`, icon: <Gift size={16} /> },
+        { label: 'Milestones', href: `${base}/milestones`, icon: <Award size={16} /> },
       ],
     },
     {

@@ -43,6 +43,6 @@ export async function GET(req: NextRequest) {
         />
       </div>
     ),
-    { width: W, height: H },
+    { width: W, height: H, headers: { 'Cache-Control': 'public, max-age=21600, s-maxage=21600' } },
   )
 }

@@ -51,6 +51,8 @@ export const NOTIFICATION_TYPES = [
   'integration_error',
   // leveling
   'level_up',
+  // milestones
+  'milestone_reached',
   // bot
   'bot_warning',
   'bot_error',
@@ -71,6 +73,7 @@ export type NotificationCategory =
   | 'announcements'
   | 'integrations'
   | 'leveling'
+  | 'milestones'
   | 'bot'
 
 export type NotificationSeverity = 'info' | 'success' | 'warning' | 'error'
@@ -104,6 +107,7 @@ export const TYPE_TO_CATEGORY: Record<NotificationType, NotificationCategory> = 
   integration_disconnected: 'integrations',
   integration_error: 'integrations',
   level_up: 'leveling',
+  milestone_reached: 'milestones',
   bot_warning: 'bot',
   bot_error: 'bot',
 }
@@ -137,6 +141,7 @@ export const TYPE_TO_SEVERITY: Record<NotificationType, NotificationSeverity> = 
   integration_disconnected: 'info',
   integration_error: 'error',
   level_up: 'success',
+  milestone_reached: 'success',
   bot_warning: 'warning',
   bot_error: 'error',
 }
@@ -154,6 +159,7 @@ export const CATEGORY_LABELS: Record<NotificationCategory, string> = {
   announcements: 'Announcements',
   integrations: 'Integrations',
   leveling: 'Levels & XP',
+  milestones: 'Milestones',
   bot: 'Bot Status',
 }
 
@@ -185,6 +191,7 @@ export const TYPE_LABELS: Record<NotificationType, string> = {
   integration_disconnected: 'Integration disconnected',
   integration_error: 'Integration error',
   level_up: 'Member level-up',
+  milestone_reached: 'Milestone reached',
   bot_warning: 'Bot warnings',
   bot_error: 'Bot errors',
 }
@@ -218,6 +225,7 @@ export const TYPE_DESCRIPTIONS: Record<NotificationType, string> = {
   integration_disconnected: 'An external service is disconnected.',
   integration_error: 'An integration connection or sync failed.',
   level_up: 'A member reaches a new level.',
+  milestone_reached: 'A member earns a recognition milestone.',
   bot_warning: 'Recoverable issues like failed welcome messages.',
   bot_error: 'Critical bot failures that need attention.',
 }

@@ -18,11 +18,25 @@ const path = require("node:path");
 // Current Pulse version. Used for the startup banner and as the displayed
 // version when no release files are reachable. Keep this in step with the
 // newest resources/notes/vX.Y.Z.txt on each release.
-const PULSE_VERSION = "0.34.0";
+const PULSE_VERSION = "0.35.0";
 
 // Manual/static fallback used only when the release-notes files can't be read.
 // Mirrors the shape produced by the parser so callers don't special-case it.
 const STATIC_RELEASES = [
+  {
+    version: "0.35.0",
+    title: "Member Milestones",
+    date: "Jun 3, 2026",
+    description:
+      "Automatically recognise and reward members for their time in the server, activity and participation.",
+    highlights: [
+      "**Engagement › Milestones** — create, manage and track recognition milestones, with stats, search and filters.",
+      "**Recognise what matters** — milestones for time in server, messages, voice, events, giveaways, or XP/level.",
+      "**Automatic rewards** — Pulse grants reward roles and posts a celebration embed the moment a member qualifies.",
+      "**/milestones** — members see what they've earned and how close they are to the next ones; preview & test from the dashboard.",
+    ],
+    outro: null,
+  },
   {
     version: "0.34.0",
     title: "Integrations Hub",
