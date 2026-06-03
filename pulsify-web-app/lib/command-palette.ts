@@ -81,6 +81,7 @@ const NAV_CATALOG: NavDef[] = [
   { id: 'nav-commands', label: 'Commands', icon: 'Command', path: '/commands', keywords: 'slash bot command center' },
   { id: 'nav-presence', label: 'Presence', icon: 'Radio', path: '/presence', keywords: 'status activity rotation playing watching listening streaming maintenance bot presence' },
   { id: 'nav-automations', label: 'Automations', icon: 'Zap', path: '/automations', keywords: 'engagement welcome auto-role triggers' },
+  { id: 'nav-integrations', label: 'Integrations', icon: 'Plug', path: '/integrations', keywords: 'integrations connect external services github gitlab youtube tiktok twitch kick reddit twitter x rss steam patreon google calendar trello jira notion notifications sync hub' },
   { id: 'nav-scheduled', label: 'Scheduled', icon: 'CalendarClock', path: '/scheduled', keywords: 'workflows recurring tasks' },
   { id: 'nav-moderation', label: 'Moderation', icon: 'Shield', path: '/moderation', keywords: 'mod bans kicks warnings timeouts logs' },
   { id: 'nav-pulse-guard', label: 'Pulse Guard', icon: 'ShieldAlert', path: '/ai-moderation', keywords: 'ai moderation automod' },
@@ -117,6 +118,7 @@ const ACTION_CATALOG: ActionDef[] = [
   { id: 'act-create-giveaway', label: 'Create giveaway', subtitle: 'Launch a new Discord giveaway', icon: 'Gift', keywords: 'new giveaway contest raffle prize draw', action: { kind: 'navigate', href: '/giveaways?new=1' } },
   { id: 'act-open-leaderboard', label: 'Open leaderboard', subtitle: 'Top members by level, XP & reputation', icon: 'Trophy', keywords: 'leaderboard ranking levels xp top members rank progression', action: { kind: 'navigate', href: '/members?tab=leaderboard' } },
   { id: 'act-trigger-sync', label: 'Trigger server sync', subtitle: 'Refresh dashboard data from Discord', icon: 'RefreshCw', keywords: 'sync refresh resync update reload', action: { kind: 'command', commandId: 'sync' } },
+  { id: 'act-open-integrations', label: 'Connect an integration', subtitle: 'Wire up GitHub, YouTube, RSS, Notion & more', icon: 'Plug', keywords: 'integrations connect external services notifications sync hub github youtube twitch reddit rss', action: { kind: 'navigate', href: '/integrations' } },
 ]
 
 function withGuild(guildId: string, path: string): string {

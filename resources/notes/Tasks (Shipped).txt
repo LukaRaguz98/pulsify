@@ -2286,3 +2286,77 @@ Acceptance Criteria
 	Publish failures are handled with clear error messages
 	Announcement history persists correctly
 	UI remains responsive and visually polished
+
+PULSIFY-34 — Integrations Hub & External Services Platform (v0.34.0)
+
+Description
+	Implement an Integrations Hub that allows administrators to connect third-party services to Pulsify and extend automation, notifications, and community workflows beyond Discord.
+	The Integrations Hub should serve as a central place for managing external services and future Pulsify ecosystem integrations.
+
+Goals
+	Expand Pulsify ecosystem
+	Improve automation possibilities
+	Enable external service connectivity
+	Prepare Pulsify for future growth
+
+Tasks
+	Integrations Dashboard
+		Create new "Integrations" navigation view
+		Display:
+			connected integrations
+			available integrations
+			connection status
+			last synchronization
+		Add search and filtering
+
+	Discord Adjacent Integrations
+		Add support for:
+			GitHub
+			YouTube
+			Twitch
+			Reddit
+			X/Twitter
+			RSS feeds
+		Allow automatic notifications into Discord channels
+
+	Productivity Integrations
+		Add support for:
+			Google Calendar
+			Trello
+			Jira
+			Notion
+		Add configurable event synchronization
+
+	Configuration
+		Add connect/disconnect functionality
+		Add integration settings pages
+		Add permission validation
+		Add test connection functionality
+
+	Notifications
+		Configure channel destinations
+		Configure notification templates
+		Add enable/disable controls
+		Add integration logs
+
+	UX Improvements
+		Add integration cards
+		Add setup wizards
+		Add loading/error/success states
+		Add integration health indicators
+
+Acceptance Criteria
+	Integrations can be connected successfully
+	Notifications sync correctly into Discord
+	Integration status is visible
+	Configuration persists correctly
+	Logs and diagnostics are available
+	UI remains responsive and visually polished
+
+	Live Delivery (follow-up)
+		Initial ship was dashboard-only (connect/configure + manual "Test connection"); connections didn't yet forward real activity.
+		Added a bot-side polling worker (pulse-bot/src/integrations.js + integration-providers.js, wired in index.js) that polls every armed connection once a minute, forwards new activity into the configured channel as a Pulse v2 notification, advances a per-connection cursor, and logs the outcome to integration_logs.
+		First poll only establishes a baseline (no backlog dump); paused/disconnected connections are skipped; errored connections keep retrying and recover automatically.
+		Live providers: GitHub, GitLab, YouTube, Twitch, Reddit, Steam, Patreon, RSS, Google Calendar, Trello, Jira, Notion.
+		Twitch requires app credentials (TWITCH_CLIENT_ID / TWITCH_CLIENT_SECRET — see pulse-bot/.env.example).
+		Marked unavailable in the catalog (no usable public API): TikTok, X/Twitter. Planned: Kick.

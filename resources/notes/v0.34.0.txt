@@ -1,0 +1,26 @@
+**Pulsify v0.34.0 — Integrations Hub**
+Connect the services your community already lives on — and let Pulse pipe their activity straight into Discord. The new Integrations Hub is a central place to wire up external services, manage their settings, and keep an eye on their health.
+
+**What's new**
+- **Pulse Bot › Integrations** — a brand-new hub to browse, connect and manage external services, with at-a-glance health, search and filtering.
+- **Live delivery** — connections aren't just configured, they're *live*: Pulse polls every armed integration about once a minute and posts new activity straight into your channel — no manual refresh, no webhooks to set up.
+- **Notification sources** — connect **GitHub**, **GitLab**, **YouTube**, **Twitch**, **Reddit**, **Steam**, **Patreon** and any **RSS feed** to post their updates into a channel you choose.
+- **Productivity tools** — connect **Google Calendar**, **Trello**, **Jira** and **Notion**, with configurable event synchronization so the right activity reaches Discord.
+- **Setup wizards** — a guided Configure → Notifications → Review flow with a live preview of exactly how each notification will look as a Pulse embed.
+
+**Configuration**
+- **Connect & disconnect** — connect a service, pause it without losing your setup, reconnect in a click, or remove it entirely.
+- **Channel destinations & templates** — pick where notifications land and customise the message with handy placeholders like {{title}}, {{author}} and {{url}}.
+- **Test connection** — send a sample notification to Discord on demand to confirm everything's wired up correctly, with permission checks before anything is posted.
+- **Health indicators** — every connection shows whether it's healthy, paused, needs attention, or disconnected, plus when it last synced.
+
+**Also**
+- **First-run baseline** — connecting a feed never dumps its whole backlog; Pulse marks where things stand and only posts what happens next.
+- **Logs & diagnostics** — a filterable activity trail of connects, tests, syncs and errors for every integration.
+- **Permission-aware** — Pulse verifies it can post to the chosen channel before saving, so notifications never silently fail.
+- **Activity logging** — connects, disconnects and test failures show up in your server's notifications feed for a full audit trail.
+- **Command palette** — jump straight to Integrations or connect a service from ⌘K.
+
+Your community's world is bigger than Discord — now your dashboard is too.
+
+June 02, 2026
