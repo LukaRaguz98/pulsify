@@ -83,6 +83,18 @@ export const COMMAND_CATALOG: CommandDefinition[] = [
     detail:
       'A polished summary of a Pulse release — the headline changes and highlights — with a link to the complete release notes. Defaults to the latest release; pass a version to view any past release. Admins only by default.',
   },
+  {
+    name: 'milestones',
+    description: "Show a member's recognition milestones — earned and in progress",
+    category: 'information',
+    defaultPermission: 'everyone',
+    options: [
+      { name: 'user', description: 'The member to look up (defaults to you)', type: 'user' },
+    ],
+    examples: ['/milestones', '/milestones user:@username'],
+    detail:
+      'Lists the recognition milestones a member has earned (time in server, messages, voice, events, giveaways, XP/level) and how close they are to the next ones. Milestones are configured in the dashboard under Engagement › Milestones. Defaults to your own.',
+  },
 ]
 
 export const CATALOG_BY_NAME: Record<string, CommandDefinition> = Object.fromEntries(

@@ -21,6 +21,7 @@ const {
   getInviteUrl,
 } = require("./version");
 const { computeReputation, daysSince } = require("./reputation");
+const { fetchImageCached } = require("./image-cache");
 
 const PERMISSION = {
   EVERYONE: "everyone",
@@ -41,6 +42,7 @@ const DEFAULT_PULSE_COLOR = "#8b5cf6";
 const ICON_FILES = {
   help: "pulse-help.png",
   announcement: "pulse-annoucement.png",
+  milestone: "pulse-milestone.png",
 };
 const localIconCache = {};
 
@@ -363,25 +365,9 @@ async function loadProfileBars({ colorHex, rep, level }) {
     qs.set("lvlLabel", level.label);
     qs.set("lvlDetail", level.detail);
   }
-  const controller = new AbortController();
-  // Generous timeout: /profile defers its reply, so we're no longer racing the
-  // 3s interaction window — let the image actually generate instead of falling
-  // back (e.g. the normalised banner frame, which is what makes it fill width).
-  const timer = setTimeout(() => controller.abort(), 8000);
-  try {
-    const res = await fetch(`${appUrl}/api/profile-bars?${qs.toString()}`, {
-      signal: controller.signal,
-    });
-    if (res.ok) {
-      const buf = Buffer.from(await res.arrayBuffer());
-      return { attachment: buf, name: "profile-bars.png" };
-    }
-  } catch {
-    // fall through to the unicode fallback
-  } finally {
-    clearTimeout(timer);
-  }
-  return null;
+  // Cached per exact bar payload (see image-cache.js) so a re-run is instant and
+  // a CDN in production serves the first render for everyone after.
+  return fetchImageCached(`${appUrl}/api/profile-bars?${qs.toString()}`, "profile-bars.png");
 }
 
 /**
@@ -395,25 +381,7 @@ async function loadProfileCards(colorHex, cards) {
     color: colorHex.replace("#", ""),
     cards: JSON.stringify(cards),
   });
-  const controller = new AbortController();
-  // Generous timeout: /profile defers its reply, so we're no longer racing the
-  // 3s interaction window — let the image actually generate instead of falling
-  // back (e.g. the normalised banner frame, which is what makes it fill width).
-  const timer = setTimeout(() => controller.abort(), 8000);
-  try {
-    const res = await fetch(`${appUrl}/api/profile-cards?${qs.toString()}`, {
-      signal: controller.signal,
-    });
-    if (res.ok) {
-      const buf = Buffer.from(await res.arrayBuffer());
-      return { attachment: buf, name: "profile-cards.png" };
-    }
-  } catch {
-    // fall through to the text fallback
-  } finally {
-    clearTimeout(timer);
-  }
-  return null;
+  return fetchImageCached(`${appUrl}/api/profile-cards?${qs.toString()}`, "profile-cards.png");
 }
 
 /**
@@ -460,28 +428,13 @@ function formatDurationWords(totalSeconds) {
  */
 async function loadBanner(bannerUrl) {
   const appUrl = process.env.APP_URL ?? "http://localhost:3000";
-  const controller = new AbortController();
-  // Generous timeout: /profile defers its reply, so we're no longer racing the
-  // 3s interaction window — let the image actually generate instead of falling
-  // back (e.g. the normalised banner frame, which is what makes it fill width).
-  const timer = setTimeout(() => controller.abort(), 8000);
-  try {
-    const res = await fetch(
-      `${appUrl}/api/banner-frame?url=${encodeURIComponent(bannerUrl)}`,
-      {
-        signal: controller.signal,
-      },
-    );
-    if (res.ok) {
-      const buf = Buffer.from(await res.arrayBuffer());
-      return { attachment: buf, name: "banner.png" };
-    }
-  } catch {
-    // fall through to the raw CDN URL
-  } finally {
-    clearTimeout(timer);
-  }
-  return null;
+  // The framed banner only changes when the member changes their banner, so it
+  // can live a good while; cached per source CDN url.
+  return fetchImageCached(
+    `${appUrl}/api/banner-frame?url=${encodeURIComponent(bannerUrl)}`,
+    "banner.png",
+    { ttlMs: 60 * 60 * 1000 },
+  );
 }
 
 /** Monospace fallback bar for when the generated image is unavailable. */
@@ -688,7 +641,7 @@ const COMMANDS = [
           .setDescription("The member to look up (defaults to you)")
           .setRequired(false),
       ),
-    async execute({ interaction, guild, supabase, leveling, ephemeral }) {
+    async execute({ interaction, guild, supabase, leveling, milestones, ephemeral }) {
       // Defer up front: looking up another member adds REST fetches (user +
       // member) on top of the image generation, which can blow past Discord's
       // 3s window ("Application did not respond"). Deferring extends it.
@@ -879,9 +832,20 @@ const COMMANDS = [
 
       // Quick links to open the avatar (and banner, if any) full-size in a
       // browser — same link-button style (type 2, style 5) as the changelog.
-      const profileLinks = [
-        { type: 2, style: 5, label: "View Avatar", url: avatarLinkUrl },
-      ];
+      // When the server runs milestones, lead with a Milestones button styled to
+      // match the link buttons (secondary/grey, no emoji). It must carry a
+      // custom_id — Discord link buttons (style 5) need a URL and can't open the
+      // in-Discord milestones page — handled by the milestones `ms:` listener.
+      const profileLinks = [];
+      if (milestones?.hasEnabledMilestones?.(guild.id)) {
+        profileLinks.push({
+          type: 2,
+          style: 2,
+          label: "Milestones",
+          custom_id: `ms:prof:${user.id}`,
+        });
+      }
+      profileLinks.push({ type: 2, style: 5, label: "View Avatar", url: avatarLinkUrl });
       if (bannerOriginalUrl) {
         profileLinks.push({
           type: 2,
@@ -971,6 +935,32 @@ const COMMANDS = [
         icon,
         ephemeral,
       );
+    },
+  },
+  {
+    name: "milestones",
+    category: "information",
+    defaultPermission: PERMISSION.EVERYONE,
+    data: new SlashCommandBuilder()
+      .setName("milestones")
+      .setDescription(
+        "Show a member's recognition milestones — earned and in progress",
+      )
+      .addUserOption((o) =>
+        o
+          .setName("user")
+          .setDescription("The member to look up (defaults to you)")
+          .setRequired(false),
+      ),
+    async execute({ interaction, guild, milestones, ephemeral }) {
+      if (!milestones?.handleMilestonesCommand) {
+        await interaction.reply({
+          content: "Milestones aren't available right now.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      await milestones.handleMilestonesCommand({ interaction, guild, ephemeral });
     },
   },
 ];

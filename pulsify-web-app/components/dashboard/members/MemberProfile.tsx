@@ -51,6 +51,7 @@ import { ActivityHeatmap } from '@/components/dashboard/members/ActivityHeatmap'
 import { ModerationHistory } from '@/components/dashboard/members/ModerationHistory'
 import { ModerationNotes } from '@/components/dashboard/members/ModerationNotes'
 import { MemberQuickActions } from '@/components/dashboard/members/MemberQuickActions'
+import { MemberMilestones } from '@/components/dashboard/members/MemberMilestones'
 
 type Props = { guildId: string; userId: string }
 
@@ -412,6 +413,20 @@ export function MemberProfile({ guildId, userId }: Props) {
             </div>
           </ChartCard>
         </CategorySection>
+
+        {/* Achievements — milestones this member has earned / is working toward.
+            Renders nothing for servers without milestones. */}
+        <MemberMilestones
+          guildId={guildId}
+          userId={userId}
+          base={{
+            join_age_days: tenureDays,
+            messages: stats.message_count,
+            voice_minutes: Math.floor(stats.voice_seconds / 60),
+            xp: levelData.xp,
+            level: levelProgress.level,
+          }}
+        />
 
         {/* Reputation & roles */}
         <CategorySection icon={<Award size={14} />} title="Reputation & Trust" description="How this member's trust score breaks down, and their server roles.">

@@ -2360,3 +2360,74 @@ Acceptance Criteria
 		Live providers: GitHub, GitLab, YouTube, Twitch, Reddit, Steam, Patreon, RSS, Google Calendar, Trello, Jira, Notion.
 		Twitch requires app credentials (TWITCH_CLIENT_ID / TWITCH_CLIENT_SECRET — see pulse-bot/.env.example).
 		Marked unavailable in the catalog (no usable public API): TikTok, X/Twitter. Planned: Kick.
+		
+PULSIFY-35 — Member Milestones & Recognition System (v0.35.0)
+
+Description
+	Implement a Member Milestones system that automatically rewards and recognizes members based on their time spent in the server, activity, achievements, and engagement 	milestones.
+	The system should encourage long-term community participation and provide administrators with automated member recognition tools.
+
+Goals
+	Increase member retention
+	Reward long-term community members
+	Automate member recognition
+	Improve community engagement
+
+Tasks
+	Milestones Dashboard
+		Create new "Milestones" navigation view
+		Display:
+			active milestones
+			completed milestones
+			reward roles
+			eligible members
+		Add searchable milestone list
+
+	Milestone Types
+		Support:
+			server join age
+			message milestones
+			voice activity milestones
+			event participation milestones
+			giveaway participation milestones
+			XP/Level milestones
+		Add custom milestone support
+
+	Rewards System
+		Automatically assign reward roles
+		Automatically send congratulations messages
+		Generate milestone embeds
+		Add milestone-specific rewards
+		Add multiple rewards per milestone
+
+	Discord Integration
+		Announce milestones in configured channels
+		Generate Pulse-styled milestone embeds
+		Add milestone notification settings
+		Add reward history logs
+
+	Management Features
+		Create/edit/delete milestones
+		Enable/disable milestones
+		Preview milestone rewards
+		Add milestone testing functionality
+
+	Analytics
+		Display milestone completion rates
+		Track engagement impact
+		Show most earned milestones
+		Add milestone activity charts
+
+	UX Improvements
+		Add responsive milestone dashboard
+		Add loading/error/success states
+		Add milestone progress indicators
+		Add reward preview cards
+
+Acceptance Criteria
+	Milestones are tracked correctly
+	Rewards are assigned automatically
+	Milestone announcements work correctly
+	Analytics display correctly
+	Milestone management functions properly
+	UI remains responsive and polished

@@ -28,6 +28,7 @@ const { createScheduler } = require("./scheduler");
 const { createTickets } = require("./tickets");
 const { createGiveaways } = require("./giveaways");
 const { createLeveling } = require("./leveling");
+const { createMilestones } = require("./milestones");
 const { createPresence } = require("./presence");
 const { createIntegrations } = require("./integrations");
 
@@ -73,6 +74,14 @@ const leveling = createLeveling(client, supabase);
 // giveaways and draws winners when they end. `leveling` is passed so a Join
 // awards engagement XP.
 const giveaways = createGiveaways(client, supabase, leveling);
+
+// The milestones system recognises members for crossing activity / tenure
+// thresholds. Like leveling it owns its table (member_milestones): a periodic
+// sweep evaluates members against the dashboard-defined milestones, assigns
+// reward roles, announces, and records a notification. It registers no
+// interaction listener — /milestones routes through the command handler below,
+// and event participation is fed in from the GuildScheduledEventUserAdd handler.
+const milestones = createMilestones(client, supabase);
 
 // The presence system owns the bot's global Discord status. It reads the
 // "active" guild's presence config (bot_presence_state → guild_presence),
@@ -327,6 +336,10 @@ client.once(Events.ClientReady, async (readyClient) => {
   // Leveling system: load per-guild XP config, subscribe to settings changes,
   // and start the voice-XP tick.
   await leveling.start();
+
+  // Milestones system: load per-guild milestone definitions, subscribe to
+  // changes, and start the recognition sweep.
+  await milestones.start();
 
   // Presence system: take over the bot's global status from the static default
   // set above. Loads the active guild's config and starts the rotation; if no
@@ -894,7 +907,11 @@ client.on(Events.GuildScheduledEventUserAdd, async (scheduledEvent, user) => {
   const guild = scheduledEvent.guild ?? client.guilds.cache.get(scheduledEvent.guildId);
   if (!guild) return;
   const member = await guild.members.fetch(user.id).catch(() => null);
-  if (member) void leveling.awardEventInterest(guild, member);
+  if (member) {
+    void leveling.awardEventInterest(guild, member);
+    // Record the participation so "event participation" milestones can count it.
+    void milestones.recordEventParticipation(guild, member, scheduledEvent.id);
+  }
 });
 
 // ── Server settings ─────────────────────────────────────────────────────────
@@ -991,6 +1008,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       supabase,
       getAllowedCommands,
       leveling,
+      milestones,
       ephemeral: verdict.ephemeral,
     });
     verdict.commit();

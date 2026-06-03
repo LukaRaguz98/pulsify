@@ -1,0 +1,21 @@
+**Pulsify v0.35.0 — Member Milestones**
+Reward the members who make your community what it is. The new Milestones system automatically recognises members for their time in the server, their activity and their participation — handing out roles and celebrating the moment, all on autopilot.
+
+**What's new**
+- **Engagement › Milestones** — a new view to create, manage and track recognition milestones, with at-a-glance stats, search and filtering.
+- **Recognise what matters** — set milestones for time in the server, messages sent, voice activity, event and giveaway participation, or XP and level — plus fully custom ones with your own name and icon.
+- **Automatic rewards** — assign one or more reward roles that Pulse grants the instant a member crosses a milestone, with a polished, on-brand celebration embed.
+- **Your words, your channel** — write a custom congratulations message (with handy placeholders) and announce it in a channel, by DM, or keep it silent.
+- **Preview & test** — see exactly how a milestone will look and send a test to a channel before going live.
+
+**Other features**
+- **/milestones command** — members check which milestones they've earned and how close they are to the next, right in Discord — shown as a board of progress cards with a milestone banner, and paged when there are lots.
+- **Achievements on your profile** — every member's dashboard profile now shows their milestones as unlocked/locked cards with live progress bars, paged nine at a time.
+- **From /profile** — a Milestones button opens that member's achievements without leaving Discord.
+- **Members & analytics** — see who's earned each milestone and who's closest to the next, plus completion totals, most-earned milestones and a 14-day trend.
+- **Reward history & alerts** — every milestone earned is logged and shows up in your notifications feed, and you can jump straight to Milestones from ⌘K.
+- **Snappier embeds** — milestone and profile images are now cached, so they render noticeably faster.
+
+Give your long-time members the recognition they deserve — automatically.
+
+June 04, 2026

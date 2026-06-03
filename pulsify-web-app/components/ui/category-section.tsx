@@ -5,9 +5,11 @@ type Props = {
   title: string
   description: string
   children: ReactNode
+  /** Optional controls rendered on the right of the header line (after the rule). */
+  action?: ReactNode
 }
 
-export function CategorySection({ icon, title, description, children }: Props) {
+export function CategorySection({ icon, title, description, children, action }: Props) {
   return (
     <section>
       <div className="mb-3 flex items-center gap-2.5">
@@ -31,6 +33,7 @@ export function CategorySection({ icon, title, description, children }: Props) {
           <p className="text-xs text-subtle">{description}</p>
         </div>
         <div className="ml-1 h-px flex-1" style={{ background: 'var(--line-strong)' }} />
+        {action && <div className="shrink-0">{action}</div>}
       </div>
       <div className="space-y-4">{children}</div>
     </section>

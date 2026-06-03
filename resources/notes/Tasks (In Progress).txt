@@ -1,70 +1,69 @@
-PULSIFY-35 — Member Milestones & Recognition System (v0.35.0)
+PULSIFY-36 — Server Templates & Configuration Presets (v0.36.0)
 
 Description
-	Implement a Member Milestones system that automatically rewards and recognizes members based on their time spent in the server, activity, achievements, and engagement 	milestones.
-	The system should encourage long-term community participation and provide administrators with automated member recognition tools.
+	Implement a Server Templates system that allows administrators to save, reuse, import, and export server configurations, moderation setups, automations, ticket systems, and Pulse settings.
+	The system should help administrators quickly deploy proven server configurations across multiple Discord servers.
 
 Goals
-	Increase member retention
-	Reward long-term community members
-	Automate member recognition
-	Improve community engagement
+	Speed up server setup
+	Improve multi-server management
+	Enable reusable configurations
+	Reduce repetitive administration work
 
 Tasks
-	Milestones Dashboard
-		Create new "Milestones" navigation view
+	Templates Dashboard
+		Create new "Templates" navigation view
 		Display:
-			active milestones
-			completed milestones
-			reward roles
-			eligible members
-		Add searchable milestone list
+			saved templates
+			template type
+			creation date
+			author
+			usage count
+		Add search and filtering
 
-	Milestone Types
-		Support:
-			server join age
-			message milestones
-			voice activity milestones
-			event participation milestones
-			giveaway participation milestones
-			XP/Level milestones
-		Add custom milestone support
+	Template Creation
+		Allow creating templates from existing server configuration
+		Support exporting:
+			moderation settings
+			Pulse Guard settings
+			ticket configurations
+			giveaway settings
+			role structures
+			onboarding settings
+			automations
+			announcements settings
+		Add template preview before saving
 
-	Rewards System
-		Automatically assign reward roles
-		Automatically send congratulations messages
-		Generate milestone embeds
-		Add milestone-specific rewards
-		Add multiple rewards per milestone
+	Template Application
+		Apply templates to a selected server
+		Allow partial template imports
+		Add configuration conflict detection
+		Add preview of changes before applying
 
-	Discord Integration
-		Announce milestones in configured channels
-		Generate Pulse-styled milestone embeds
-		Add milestone notification settings
-		Add reward history logs
+	Built-in Templates
+		Add official Pulsify presets:
+			Gaming Community
+			Creator Community
+			Support Server
+			Startup/Product Community
+			Large Public Community
+		Add one-click deployment
 
-	Management Features
-		Create/edit/delete milestones
-		Enable/disable milestones
-		Preview milestone rewards
-		Add milestone testing functionality
-
-	Analytics
-		Display milestone completion rates
-		Track engagement impact
-		Show most earned milestones
-		Add milestone activity charts
+	Import & Export
+		Export templates as JSON
+		Import templates from JSON
+		Add validation and compatibility checks
 
 	UX Improvements
-		Add responsive milestone dashboard
+		Add template cards
+		Add setup wizards
 		Add loading/error/success states
-		Add milestone progress indicators
-		Add reward preview cards
+		Add change summary views
 
 Acceptance Criteria
-	Milestones are tracked correctly
-	Rewards are assigned automatically
-	Milestone announcements work correctly
-	Analytics display correctly
-	Milestone management functions properly
-	UI remains responsive and polished
+	Templates can be created successfully
+	Templates can be applied to servers
+	Partial imports work correctly
+	Built-in presets deploy correctly
+	Configuration previews display accurately
+	UI remains responsive and visually polished

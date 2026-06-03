@@ -30,6 +30,8 @@ export const PULSE_ICONS = {
   giveaway: 'pulse-giveaway.png',
   /** Megaphone glyph — the bot's /changelog (update) embed. */
   announcement: 'pulse-annoucement.png',
+  /** Milestone glyph — the member-milestone embed posted on completion. */
+  milestone: 'pulse-milestone.png',
 } as const
 
 export type PulseIconName = keyof typeof PULSE_ICONS
