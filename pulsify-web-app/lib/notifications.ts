@@ -45,6 +45,10 @@ export const NOTIFICATION_TYPES = [
   // announcements
   'announcement_published',
   'announcement_failed',
+  // integrations
+  'integration_connected',
+  'integration_disconnected',
+  'integration_error',
   // leveling
   'level_up',
   // bot
@@ -65,6 +69,7 @@ export type NotificationCategory =
   | 'tickets'
   | 'giveaways'
   | 'announcements'
+  | 'integrations'
   | 'leveling'
   | 'bot'
 
@@ -95,6 +100,9 @@ export const TYPE_TO_CATEGORY: Record<NotificationType, NotificationCategory> = 
   giveaway_rerolled: 'giveaways',
   announcement_published: 'announcements',
   announcement_failed: 'announcements',
+  integration_connected: 'integrations',
+  integration_disconnected: 'integrations',
+  integration_error: 'integrations',
   level_up: 'leveling',
   bot_warning: 'bot',
   bot_error: 'bot',
@@ -125,6 +133,9 @@ export const TYPE_TO_SEVERITY: Record<NotificationType, NotificationSeverity> = 
   giveaway_rerolled: 'info',
   announcement_published: 'success',
   announcement_failed: 'error',
+  integration_connected: 'success',
+  integration_disconnected: 'info',
+  integration_error: 'error',
   level_up: 'success',
   bot_warning: 'warning',
   bot_error: 'error',
@@ -141,6 +152,7 @@ export const CATEGORY_LABELS: Record<NotificationCategory, string> = {
   tickets: 'Tickets',
   giveaways: 'Giveaways',
   announcements: 'Announcements',
+  integrations: 'Integrations',
   leveling: 'Levels & XP',
   bot: 'Bot Status',
 }
@@ -169,6 +181,9 @@ export const TYPE_LABELS: Record<NotificationType, string> = {
   giveaway_rerolled: 'Giveaway rerolled',
   announcement_published: 'Announcement published',
   announcement_failed: 'Announcement failed',
+  integration_connected: 'Integration connected',
+  integration_disconnected: 'Integration disconnected',
+  integration_error: 'Integration error',
   level_up: 'Member level-up',
   bot_warning: 'Bot warnings',
   bot_error: 'Bot errors',
@@ -199,6 +214,9 @@ export const TYPE_DESCRIPTIONS: Record<NotificationType, string> = {
   giveaway_rerolled: 'New winners are drawn for a giveaway.',
   announcement_published: 'An announcement is posted to a channel.',
   announcement_failed: 'An announcement could not be published.',
+  integration_connected: 'An external service is connected to the server.',
+  integration_disconnected: 'An external service is disconnected.',
+  integration_error: 'An integration connection or sync failed.',
   level_up: 'A member reaches a new level.',
   bot_warning: 'Recoverable issues like failed welcome messages.',
   bot_error: 'Critical bot failures that need attention.',

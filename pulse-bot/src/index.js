@@ -29,6 +29,7 @@ const { createTickets } = require("./tickets");
 const { createGiveaways } = require("./giveaways");
 const { createLeveling } = require("./leveling");
 const { createPresence } = require("./presence");
+const { createIntegrations } = require("./integrations");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -79,6 +80,13 @@ const giveaways = createGiveaways(client, supabase, leveling);
 // {servers}/{members}), and honours maintenance mode. Registers no interaction
 // listener — just a rotation timer + a realtime watch on both tables.
 const presence = createPresence(client, supabase);
+
+// The integrations worker polls every armed connection in the `integrations`
+// table once a minute, forwarding new external activity (GitHub pushes, YouTube
+// uploads, RSS items, Jira transitions, …) into the configured Discord channel.
+// Registers no interaction listener — just a poll tick + a realtime watch so
+// dashboard connects/edits/disconnects take effect immediately.
+const integrations = createIntegrations(client, supabase);
 
 /**
  * Shared helper for Discord-side activity → notifications row.
@@ -324,6 +332,10 @@ client.once(Events.ClientReady, async (readyClient) => {
   // set above. Loads the active guild's config and starts the rotation; if no
   // guild is active it leaves the default "Powered by Pulsify" in place.
   await presence.start();
+
+  // Integrations worker: load connected integrations, watch for dashboard
+  // changes over realtime, and poll each armed connection once a minute.
+  await integrations.start();
 
   // Startup banner — a clear, scannable success summary so an operator can
   // confirm at a glance which version is live, how many servers it serves, and

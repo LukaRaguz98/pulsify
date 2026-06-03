@@ -29,6 +29,7 @@ export const CATEGORY_ACCENT: Record<NotificationCategory, string> = {
   tickets:     '#5865f2',
   giveaways:   '#8b5cf6',
   announcements: '#8b5cf6',
+  integrations: '#22d3ee',
   leveling:    '#fbbf24',
   bot:         '#ec4899',
 }

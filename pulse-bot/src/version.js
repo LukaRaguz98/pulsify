@@ -18,11 +18,25 @@ const path = require("node:path");
 // Current Pulse version. Used for the startup banner and as the displayed
 // version when no release files are reachable. Keep this in step with the
 // newest resources/notes/vX.Y.Z.txt on each release.
-const PULSE_VERSION = "0.33.0";
+const PULSE_VERSION = "0.34.0";
 
 // Manual/static fallback used only when the release-notes files can't be read.
 // Mirrors the shape produced by the parser so callers don't special-case it.
 const STATIC_RELEASES = [
+  {
+    version: "0.34.0",
+    title: "Integrations Hub",
+    date: "Jun 2, 2026",
+    description:
+      "Connect external services and let Pulse pipe their activity straight into Discord.",
+    highlights: [
+      "**Pulse Bot › Integrations** — a hub to browse, connect and manage external services, with health, search and filters.",
+      "**Notification sources** — GitHub, YouTube, Twitch, Reddit, X/Twitter and RSS post updates into a channel you choose.",
+      "**Productivity tools** — Google Calendar, Trello, Jira and Notion with configurable event synchronization.",
+      "**Setup wizards & test** — a guided flow with a live preview, customisable templates, and a one-click connection test.",
+    ],
+    outro: null,
+  },
   {
     version: "0.33.0",
     title: "Announcements",

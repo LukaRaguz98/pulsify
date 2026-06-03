@@ -30,6 +30,7 @@ import {
   Gift,
   Megaphone,
   Building2,
+  Plug,
   Menu,
   X,
 } from 'lucide-react'
@@ -154,6 +155,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
       items: [
         { label: 'Commands', href: `${base}/commands`, icon: <Command size={16} /> },
         { label: 'Automations', href: `${base}/automations`, icon: <Zap size={16} /> },
+        { label: 'Integrations', href: `${base}/integrations`, icon: <Plug size={16} /> },
         // Presence is a bot-wide, operator-only surface — hide it from everyone
         // else (the page itself re-checks operator status server-side).
         ...(isOperator

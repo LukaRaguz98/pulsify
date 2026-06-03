@@ -198,8 +198,9 @@
   display: none !important;
 }
 
-/* Hide the top-right corner deco while a right-side slide-over is open —
-   otherwise the extended bracket bleeds across the dialog. Same treatment
+/* Hide the corner decos (top-right and bottom-left) while a slide-over or
+   centered modal is open — otherwise the extended brackets bleed across the
+   dialog (and stay animating through a blurred backdrop). Same treatment
    for the Discord corner icon so it sits below (visually behind) the panel.
    The app footer ([data-app-footer]) is also hidden: the universal `* {
    position: relative; z-index: 1 }` rule below gives every element its own
@@ -208,6 +209,7 @@
    un-clickable in the bottom strip. The data-attribute scopes this to the
    app footer only — slide-overs use <footer> for their action bars too. */
 body.slide-over-open [data-cd-pos="tr"],
+body.slide-over-open [data-cd-pos="bl"],
 body.slide-over-open [data-discord-corner="true"],
 body.slide-over-open [data-app-footer="true"] {
   display: none !important;
