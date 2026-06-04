@@ -14,7 +14,6 @@ type EmbedConfig = {
 }
 
 export type PulseRulesConfig      = { enabled: boolean; channel_id: string; title: string; content: string }
-export type PulseOnboardingConfig = { enabled: boolean; channel_id: string; title: string; content: string }
 export type PulseChannelsConfig   = { enabled: boolean; structure: { category: string; channels: string[] }[] }
 
 export type AutomationSettings = {
@@ -36,7 +35,6 @@ export type AutomationSettings = {
   moderation_alerts: { enabled: boolean; channel_id: string }
   // Pulse content — optional: when omitted, existing stored values are preserved.
   rules?:              PulseRulesConfig
-  onboarding?:         PulseOnboardingConfig
   channels_reference?: PulseChannelsConfig
 }
 
@@ -102,7 +100,6 @@ export async function saveAutomations(
     auto_role: settings.auto_role,
     moderation_alerts: settings.moderation_alerts,
     ...(settings.rules              !== undefined ? { rules: settings.rules } : {}),
-    ...(settings.onboarding         !== undefined ? { onboarding: settings.onboarding } : {}),
     ...(settings.channels_reference !== undefined ? { channels_reference: settings.channels_reference } : {}),
   }
 

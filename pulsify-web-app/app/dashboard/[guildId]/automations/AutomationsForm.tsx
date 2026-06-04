@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition, type ReactNode } from 'react'
 import { saveAutomations, removePulseContent, type AutomationSettings } from './actions'
-import { applyRules, applyOnboarding, applyChannelsReference } from '@/app/dashboard/[guildId]/ai-setup/actions'
+import { applyRules, applyChannelsReference } from '@/app/dashboard/[guildId]/ai-setup/actions'
 import type { DiscordChannel, DiscordRole } from '@/lib/discord'
 import { AppEmbedPreview } from '@/components/dashboard/AppEmbedPreview'
 import { DiscordEmbedPreview, type EmbedData } from '@/components/dashboard/DiscordEmbedPreview'
@@ -13,7 +13,7 @@ import { THEMES } from '@/lib/themes'
 import {
   MessageSquare, Star, Bell,
   AlertCircle, Sparkles, RotateCcw,
-  ShieldCheck, BookOpen, LayoutGrid, Loader2, Check, Trash2, RefreshCw,
+  ShieldCheck, LayoutGrid, Loader2, Check, Trash2, RefreshCw,
   UserPlus, Shield, FolderTree, LogOut, Send, Plus, X, Zap,
 } from 'lucide-react'
 
@@ -33,7 +33,6 @@ type ModerationAlertsConfig = AutomationSettings['moderation_alerts']
 type MemberEventConfig      = WelcomeConfig
 
 type PulseRulesConfig      = { enabled: boolean; channel_id: string; title?: string; content: string }
-type PulseOnboardingConfig = { enabled: boolean; channel_id: string; title?: string; content: string }
 type PulseChannelsConfig   = { enabled: boolean; structure: { category: string; channels: string[] }[] }
 
 type GenerationResult = {
@@ -111,7 +110,6 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
   const rawModAlerts = initialSettings.moderation_alerts  as Partial<ModerationAlertsConfig> | undefined
 
   const rawRules   = initialSettings.rules             as PulseRulesConfig      | undefined
-  const rawOnboard = initialSettings.onboarding        as PulseOnboardingConfig | undefined
   const rawChRef   = initialSettings.channels_reference as PulseChannelsConfig  | undefined
 
   const [welcome, setWelcome] = useState<WelcomeConfig>({
@@ -149,14 +147,6 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
   const [rulesResult,     setRulesResult]     = useState<'success' | 'error' | null>(null)
   const [rulesError,      setRulesError]      = useState('')
 
-  const [onboardVisible,  setOnboardVisible]  = useState(rawOnboard?.enabled  ?? false)
-  const [onboardChannel,  setOnboardChannel]  = useState(rawOnboard?.channel_id ?? (channels[0]?.id ?? ''))
-  const [onboardTitle,    setOnboardTitle]    = useState(rawOnboard?.title     ?? '📖 Onboarding Guide')
-  const [onboardContent,  setOnboardContent]  = useState(rawOnboard?.content  ?? '')
-  const [applyingOnboard, setApplyingOnboard] = useState(false)
-  const [onboardResult,   setOnboardResult]   = useState<'success' | 'error' | null>(null)
-  const [onboardError,    setOnboardError]    = useState('')
-
   const [chRefVisible,  setChRefVisible]  = useState(rawChRef?.enabled ?? false)
   const [chStructure,   setChStructure]   = useState<{ category: string; channels: string[] }[] | null>(rawChRef?.structure ?? null)
   const [creatingCh,    setCreatingCh]    = useState(false)
@@ -177,19 +167,16 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     autoRole: AutoRoleConfig
     modAlerts: ModerationAlertsConfig
     rulesVisible: boolean; rulesChannel: string; rulesTitle: string; rulesContent: string
-    onboardVisible: boolean; onboardChannel: string; onboardTitle: string; onboardContent: string
     chRefVisible: boolean; chStructure: { category: string; channels: string[] }[] | null
   }
   const buildSnapshot = (): Snapshot => ({
     welcome, goodbye, autoRole, modAlerts,
     rulesVisible, rulesChannel, rulesTitle, rulesContent,
-    onboardVisible, onboardChannel, onboardTitle, onboardContent,
     chRefVisible, chStructure,
   })
   const [snapshot, setSnapshot] = useState<Snapshot>(() => ({
     welcome, goodbye, autoRole, modAlerts,
     rulesVisible, rulesChannel, rulesTitle, rulesContent,
-    onboardVisible, onboardChannel, onboardTitle, onboardContent,
     chRefVisible, chStructure,
   }))
 
@@ -205,7 +192,6 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot, welcome, goodbye, autoRole, modAlerts,
     rulesVisible, rulesChannel, rulesTitle, rulesContent,
-    onboardVisible, onboardChannel, onboardTitle, onboardContent,
     chRefVisible, chStructure])
   const dirty = changedCount > 0
 
@@ -218,10 +204,6 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     setRulesChannel(snapshot.rulesChannel)
     setRulesTitle(snapshot.rulesTitle)
     setRulesContent(snapshot.rulesContent)
-    setOnboardVisible(snapshot.onboardVisible)
-    setOnboardChannel(snapshot.onboardChannel)
-    setOnboardTitle(snapshot.onboardTitle)
-    setOnboardContent(snapshot.onboardContent)
     setChRefVisible(snapshot.chRefVisible)
     setChStructure(snapshot.chStructure)
     setError(null)
@@ -277,7 +259,6 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
           auto_role: autoRole,
           moderation_alerts: modAlerts,
           rules: { enabled: rulesVisible, channel_id: rulesChannel, title: rulesTitle, content: rulesContent },
-          onboarding: { enabled: onboardVisible, channel_id: onboardChannel, title: onboardTitle, content: onboardContent },
           channels_reference: chStructure ? { enabled: chRefVisible, structure: chStructure } : undefined,
         })
         if (result.ok) {
@@ -300,15 +281,6 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     setRulesResult(res.ok ? 'success' : 'error')
     if (!res.ok) setRulesError(res.error)
     setApplyingRules(false)
-  }
-
-  async function handleRepostOnboard() {
-    setApplyingOnboard(true)
-    setOnboardResult(null)
-    const res = await applyOnboarding(guildId, onboardChannel, onboardTitle, onboardContent, accentHex)
-    setOnboardResult(res.ok ? 'success' : 'error')
-    if (!res.ok) setOnboardError(res.error)
-    setApplyingOnboard(false)
   }
 
   async function handleRemoveChRef() {
@@ -382,9 +354,6 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
         if (section === 'rules') {
           setRulesContent(result.rules.map((r, i) => `${i + 1}. ${r}`).join('\n'))
           setRulesVisible(true)
-        } else if (section === 'onboarding') {
-          setOnboardContent(result.onboarding)
-          setOnboardVisible(true)
         } else if (section === 'channels') {
           setChStructure(result.channels)
           setChRefVisible(false)
@@ -494,39 +463,6 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     ),
   }
 
-  const onboardingCard: CardDef = {
-    icon:        <BookOpen size={16} />,
-    iconBg:      'rgba(16,185,129,0.12)',
-    iconColor:   '#10b981',
-    title:       'Onboarding Guide',
-    description: 'Post an AI-generated onboarding guide to a channel.',
-    enabled:  onboardVisible,
-    onToggle: (v: boolean) => { setOnboardVisible(v); clearFeedback() },
-    extra: onboardVisible && (
-      <PulseContentExtra
-        section="onboarding"
-        genLabel="onboarding guide"
-        mono={false}
-        channels={channels}
-        channelId={onboardChannel}
-        onChannelChange={setOnboardChannel}
-        title={onboardTitle}
-        onTitleChange={setOnboardTitle}
-        content={onboardContent}
-        onContentChange={setOnboardContent}
-        accentHex={accentHex}
-        generatingSection={generatingSection}
-        onGenerate={() => generateWithPulse('onboarding')}
-        pulseGenError={pulseGenError}
-        pulseGenErrorSection={pulseGenErrorSection}
-        applying={applyingOnboard}
-        applyResult={onboardResult}
-        applyError={onboardError}
-        onRepost={handleRepostOnboard}
-      />
-    ),
-  }
-
   const autoRoleCard: CardDef = {
     icon:        <Star size={16} />,
     iconBg:      'rgba(16,185,129,0.12)',
@@ -579,17 +515,16 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
 
   return (
     <div className="space-y-8">
-      {/* ── Joining & Onboarding ────────────────────────────────────────── */}
+      {/* ── Joining & Welcome ───────────────────────────────────────────── */}
       <CategorySection
         icon={<UserPlus size={14} />}
-        title="Joining & Onboarding"
-        description="Greet new members and give them what they need to get started."
+        title="Joining & Welcome"
+        description="Greet new members. For the full guided onboarding experience, see Server › Onboarding."
       >
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           <CardItem card={welcomeCard} />
           <CardItem card={goodbyeCard} />
           <CardItem card={rulesCard} />
-          <CardItem card={onboardingCard} />
         </div>
       </CategorySection>
 
