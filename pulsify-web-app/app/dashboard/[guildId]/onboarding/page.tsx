@@ -4,11 +4,17 @@ import {
   fetchGuild,
   fetchGuildChannels,
   fetchGuildRoles,
+  fetchGuildEvents,
   checkBotPermissions,
   guildIconUrl,
+  type DiscordScheduledEvent,
 } from '@/lib/discord'
-import { OnboardingWizard } from '@/components/dashboard/onboarding/OnboardingWizard'
-import type { OnboardingState } from '@/lib/onboarding'
+import { OnboardingManager } from '@/components/dashboard/onboarding/OnboardingManager'
+import {
+  normalizeMemberOnboarding,
+  type MemberOnboardingConfig,
+  type OnboardingStats,
+} from '@/lib/onboarding'
 
 export default async function OnboardingPage({
   params,
@@ -22,22 +28,29 @@ export default async function OnboardingPage({
   } = await supabase.auth.getUser()
   if (!user) redirect('/')
 
-  const [guild, channels, roles, perms, settingsRow] = await Promise.all([
+  const [guild, channels, roles, perms, settingsRow, statsRes] = await Promise.all([
     fetchGuild(guildId),
     fetchGuildChannels(guildId),
     fetchGuildRoles(guildId),
     checkBotPermissions(guildId),
     supabase.from('guild_settings').select('settings').eq('guild_id', guildId).maybeSingle(),
+    supabase.rpc('get_onboarding_stats', { p_guild_id: guildId, p_days: 30 }),
   ])
   if (!guild) redirect('/dashboard')
 
-  const settings = (settingsRow.data?.settings as Record<string, unknown>) ?? {}
-  const state = (settings.onboarding_state as OnboardingState | undefined) ?? null
-  const welcome = settings.welcome as { channel_id?: string } | undefined
-  const moderation = settings.moderation_alerts as { channel_id?: string } | undefined
-  const autoRole = settings.auto_role as { role_id?: string } | undefined
+  // Scheduled-events fetch can throw on transient 429s — never block the editor.
+  let events: DiscordScheduledEvent[] = []
+  try {
+    events = await fetchGuildEvents(guildId)
+  } catch {
+    events = []
+  }
 
-  // Text + announcement channels are the only ones that can receive posts.
+  const settings = (settingsRow.data?.settings as Record<string, unknown>) ?? {}
+  const config: MemberOnboardingConfig = normalizeMemberOnboarding(
+    settings.member_onboarding as Partial<MemberOnboardingConfig> | undefined,
+  )
+
   const textChannels = channels
     .filter((c) => c.type === 0 || c.type === 5)
     .sort((a, b) => a.position - b.position)
@@ -48,23 +61,29 @@ export default async function OnboardingPage({
     .sort((a, b) => b.position - a.position)
     .map((r) => ({ id: r.id, name: r.name, color: r.color }))
 
-  const firstChannel = textChannels[0]?.id ?? ''
-  const defaults = {
-    welcomeChannelId: welcome?.channel_id ?? firstChannel,
-    modChannelId: moderation?.channel_id ?? firstChannel,
-    autoRoleId: autoRole?.role_id ?? '',
-  }
+  const upcomingEvents = events
+    .filter((e) => e.status === 1 || e.status === 2)
+    .sort((a, b) => +new Date(a.scheduled_start_time) - +new Date(b.scheduled_start_time))
+    .map((e) => ({
+      id: e.id,
+      name: e.name,
+      scheduled_start_time: e.scheduled_start_time,
+      user_count: e.user_count ?? 0,
+    }))
+
+  const stats = (statsRes.data as OnboardingStats | null) ?? null
 
   return (
-    <OnboardingWizard
+    <OnboardingManager
       guildId={guildId}
       guildName={guild.name}
       guildIcon={guildIconUrl(guild.id, guild.icon, 64) || null}
       channels={textChannels}
       roles={assignableRoles}
+      events={upcomingEvents}
       perms={perms}
-      defaults={defaults}
-      initialState={state}
+      initialConfig={config}
+      stats={stats}
     />
   )
 }

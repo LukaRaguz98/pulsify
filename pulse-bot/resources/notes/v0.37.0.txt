@@ -1,0 +1,23 @@
+**Pulsify v0.37.0 — Onboarding & Welcome**
+First impressions matter. The Onboarding & Welcome system gets a full upgrade — a guided, interactive welcome that greets new members, hands out the right roles, verifies access, shows what's happening, and rewards them for getting set up. Everything is configured from one place and delivered straight into Discord.
+
+**What's new**
+- **Server › Onboarding** — a redesigned editor to build the whole new-member experience: a reorderable flow, a Pulse v2 welcome embed, self-roles, verification, events, community links and rewards, with a live preview beside every change.
+- **Interactive welcome panel** — on join, Pulse posts a polished welcome (banner, thumbnail, quick links and buttons) plus an interactive panel members actually use — in a channel or by DM.
+- **Self-roles by category** — group assignable roles into Notifications, Interests, Languages, Platform Updates and Community Access, each with its own pick-your-roles menu and per-category limits.
+- **Built-in verification** — add a one-click verify gate that grants a verified role and guides members through unlocking the server.
+
+**Showcase your community**
+- **Featured events** — surface upcoming Discord events to new members, pin the ones that matter, and let them jump in.
+- **Community highlights** — point newcomers to your guidelines, support, feedback, feature-request, announcement and release-note channels.
+
+**Reward completion**
+- **Finish and earn** — completing onboarding grants XP, starter roles and a reputation bonus, with everything configurable per server.
+- **Presets** — start from a Gaming, Community, Creator or Verified preset and fine-tune from there.
+
+**See how it's working**
+- **Onboarding analytics** — track starts, completions, completion rate and verifications, see your most-picked roles and most-skipped steps, and a 30-day starts-vs-completions chart.
+
+Turn every new join into a member who's set up, verified and ready to take part.
+
+June 08, 2026

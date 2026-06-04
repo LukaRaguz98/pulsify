@@ -1,37 +1,44 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { Rocket, ArrowRight, X, Loader2 } from 'lucide-react'
-import { STEP_COUNT, type OnboardingState } from '@/lib/onboarding'
-import { skipOnboarding } from '@/app/dashboard/[guildId]/onboarding/actions'
+import { Rocket, ArrowRight, X } from 'lucide-react'
+
+// localStorage-backed dismissal read via useSyncExternalStore: SSR/hydration use
+// the `false` server snapshot, then the client reads the persisted value — no
+// setState-in-effect, no hydration mismatch.
+const subscribe = (cb: () => void) => {
+  window.addEventListener('storage', cb)
+  return () => window.removeEventListener('storage', cb)
+}
 
 /**
- * First-run entry point on the server overview. Shown until onboarding is
- * completed or skipped; resumes at the saved step. Dismissing marks it skipped
- * so it won't reappear (the wizard stays reachable at /onboarding).
+ * Overview nudge to configure the member-facing Onboarding & Welcome experience
+ * (PULSIFY-37). Shown until onboarding is enabled; dismissal is remembered
+ * client-side so it stays out of the way without a server write.
  */
 export function OnboardingBanner({
   guildId,
   guildName,
-  state,
 }: {
   guildId: string
   guildName: string
-  state: OnboardingState | null
 }) {
-  const router = useRouter()
-  const [dismissing, setDismissing] = useState(false)
+  const key = `pulsify:onboarding-nudge:${guildId}`
+  const persistedDismissed = useSyncExternalStore(
+    subscribe,
+    () => {
+      try { return localStorage.getItem(key) === 'dismissed' } catch { return false }
+    },
+    () => false,
+  )
+  const [locallyDismissed, setLocallyDismissed] = useState(false)
 
-  const inProgress = !!state && state.status === 'in_progress' && state.step > 0
-  const stepLabel = inProgress ? Math.min(state!.step + 1, STEP_COUNT) : 1
-  const progress = inProgress ? Math.round((state!.step / STEP_COUNT) * 100) : 0
+  if (persistedDismissed || locallyDismissed) return null
 
-  async function dismiss() {
-    setDismissing(true)
-    await skipOnboarding(guildId).catch(() => {})
-    router.refresh()
+  function dismiss() {
+    try { localStorage.setItem(key, 'dismissed') } catch {}
+    setLocallyDismissed(true)
   }
 
   return (
@@ -47,14 +54,13 @@ export function OnboardingBanner({
       <button
         type="button"
         onClick={dismiss}
-        disabled={dismissing}
-        aria-label="Dismiss setup"
-        className="absolute right-3 top-3 rounded-md p-1.5 transition-colors disabled:opacity-50"
+        aria-label="Dismiss"
+        className="absolute right-3 top-3 rounded-md p-1.5 transition-colors"
         style={{ color: 'var(--text-3)' }}
         onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)' }}
         onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-3)' }}
       >
-        {dismissing ? <Loader2 size={15} className="animate-spin" /> : <X size={15} />}
+        <X size={15} />
       </button>
 
       <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -67,18 +73,11 @@ export function OnboardingBanner({
 
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-bold tracking-tight text-foreground">
-            {inProgress ? `Finish setting up ${guildName}` : `Welcome to Pulsify — let’s set up ${guildName}`}
+            Welcome new members to {guildName} the right way
           </h2>
           <p className="mt-1 text-sm" style={{ color: 'var(--text-2)' }}>
-            {inProgress
-              ? `You’re on step ${stepLabel} of ${STEP_COUNT}. Pick up where you left off.`
-              : 'A quick guided setup configures moderation, welcomes, auto-roles and Pulse Guard in a couple of minutes.'}
+            Set up an interactive onboarding — a welcome embed, self-roles, verification, featured events and completion rewards — in a few minutes.
           </p>
-          {inProgress && (
-            <div className="mt-3 h-1.5 w-full max-w-xs overflow-hidden rounded-full" style={{ background: 'var(--bg-2)' }}>
-              <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: 'linear-gradient(90deg, var(--p-1), var(--p-2))' }} />
-            </div>
-          )}
         </div>
 
         <Link
@@ -86,7 +85,7 @@ export function OnboardingBanner({
           className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-all active:translate-y-px"
           style={{ background: 'linear-gradient(180deg, var(--p-1) 0%, var(--p-2) 100%)', boxShadow: '0 6px 20px -6px var(--p-glow)' }}
         >
-          {inProgress ? 'Resume setup' : 'Start setup'}
+          Set up onboarding
           <ArrowRight size={16} />
         </Link>
       </div>

@@ -31,6 +31,7 @@ const { createLeveling } = require("./leveling");
 const { createMilestones } = require("./milestones");
 const { createPresence } = require("./presence");
 const { createIntegrations } = require("./integrations");
+const { createOnboarding } = require("./onboarding");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -96,6 +97,13 @@ const presence = createPresence(client, supabase);
 // Registers no interaction listener — just a poll tick + a realtime watch so
 // dashboard connects/edits/disconnects take effect immediately.
 const integrations = createIntegrations(client, supabase);
+
+// Member onboarding (PULSIFY-37): delivers the welcome embed + interactive
+// onboarding panel on join and owns completion (self-roles, verify, rewards).
+// Registers its own `ob:` interaction listener; posting is driven from
+// GuildMemberAdd below. Passed `leveling` so completion XP routes through the
+// same atomic RPC the rest of the levelling system uses.
+const onboarding = createOnboarding(client, supabase, leveling);
 
 /**
  * Shared helper for Discord-side activity → notifications row.
@@ -350,6 +358,9 @@ client.once(Events.ClientReady, async (readyClient) => {
   // changes over realtime, and poll each armed connection once a minute.
   await integrations.start();
 
+  // Onboarding: register the `ob:` interaction listener for the member panel.
+  onboarding.start();
+
   // Startup banner — a clear, scannable success summary so an operator can
   // confirm at a glance which version is live, how many servers it serves, and
   // that every command loaded. Mirrors the data /version reports.
@@ -481,6 +492,11 @@ client.on(Events.GuildMemberAdd, async (member) => {
       });
     }
   }
+
+  // Member onboarding (PULSIFY-37): post the interactive welcome panel. Runs
+  // independently of the legacy welcome/auto-role above so admins can use either
+  // or both. No-ops unless member_onboarding is enabled.
+  await onboarding.postForMember(member, settings);
 });
 
 client.on(Events.GuildMemberRemove, async (member) => {

@@ -2501,3 +2501,99 @@ Acceptance Criteria
 	Built-in presets deploy correctly
 	Configuration previews display accurately
 	UI remains responsive and visually polished
+
+PULSIFY-37 — Onboarding System Polish & Upgrade (v0.37.0)
+
+Description
+	Upgrade the existing Onboarding and Welcome System to fully integrate with the latest Pulsify features, improve the new member experience, and provide a more guided and interactive onboarding journey.
+	This update focuses on modernizing the onboarding flow, improving customization options, and connecting onboarding with systems introduced in recent Pulsify updates.
+
+Goals
+	Improve new member conversion and retention
+	Modernize the onboarding experience
+	Integrate onboarding with newly added Pulsify systems
+	Increase onboarding customization options
+	Improve onboarding analytics and visibility
+
+Tasks
+	Onboarding Flow Improvements
+		Review and modernize the existing onboarding flow
+		Improve onboarding step organization
+		Allow reordering onboarding steps
+		Add onboarding progress indicators
+		Add onboarding completion tracking
+
+	Role Assignment Integration
+		Integrate onboarding with Roles Management
+		Improve self-assignable role selection
+		Add role categories:
+			Notifications
+			Interests
+			Languages
+			Platform Updates
+			Community Access
+		Add onboarding role previews
+
+	Events Integration
+		Allow showcasing upcoming Discord Events during onboarding
+		Display featured events to new members
+		Allow one-click event participation
+
+	Community Integration
+		Highlight:
+			Community Guidelines
+			Support Channels
+			Feedback Channels
+			Feature Request Channels
+			Announcements
+			Release Notes
+		Allow administrators to select featured channels
+
+	Welcome Message Improvements
+		Upgrade welcome embed design to current Pulse v2 standards
+		Add support for:
+			custom banners
+			thumbnails
+			buttons
+			quick links
+		Improve mobile readability
+
+	Analytics Integration
+		Add onboarding analytics:
+			onboarding starts
+			onboarding completions
+			completion rate
+			skipped steps
+			selected roles
+		Display onboarding performance charts
+
+	Verification Integration
+		Integrate onboarding with Verification System
+		Display verification status within onboarding flow
+		Guide members through required verification steps
+
+	Levels & Reputation Integration
+		Introduce onboarding rewards
+		Display onboarding completion rewards
+		Support:
+			XP rewards
+			starter roles
+			reputation bonuses
+		Add configurable onboarding incentives
+
+	UX Improvements
+		Add onboarding preview mode
+		Add responsive onboarding editor
+		Add loading/error/success states
+		Add onboarding templates/presets
+		Improve consistency with the rest of Pulsify
+
+Acceptance Criteria
+	Existing onboarding functionality remains operational
+	New onboarding flow supports recent Pulsify systems
+	Role assignment integration works correctly
+	Event and community integrations display properly
+	Welcome messages use Pulse v2 embed standards
+	Analytics track onboarding performance correctly
+	Verification and rewards integrate successfully
+	UI remains responsive and visually polished
