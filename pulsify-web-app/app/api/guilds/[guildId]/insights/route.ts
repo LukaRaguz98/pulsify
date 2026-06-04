@@ -178,15 +178,11 @@ export async function GET(
   const welcomeConfigured = welcome?.enabled === true
   const pulseGuardEnabled = aiModRow.data?.enabled === true
 
-  const onboardingState = settings.onboarding_state as { status?: string } | undefined
+  // Member onboarding (PULSIFY-37) replaced the admin first-run wizard as the
+  // "onboarding" signal — enabled means the new-member experience is live.
+  const memberOnboarding = settings.member_onboarding as { enabled?: boolean } | undefined
   const onboardingStatus: OnboardingStatusSignal =
-    onboardingState?.status === 'completed'
-      ? 'completed'
-      : onboardingState?.status === 'in_progress'
-        ? 'in_progress'
-        : onboardingState?.status === 'skipped'
-          ? 'skipped'
-          : 'not_started'
+    memberOnboarding?.enabled === true ? 'completed' : 'not_started'
 
   const signals: InsightSignals = {
     windowDays,

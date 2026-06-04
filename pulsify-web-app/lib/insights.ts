@@ -403,17 +403,15 @@ export function generateRecommendations(s: InsightSignals): Recommendation[] {
     })
   }
   if (s.onboardingStatus !== 'completed') {
-    const notStarted = s.onboardingStatus === 'not_started'
     recs.push({
       id: 'finish-onboarding',
       category: 'optimization',
       severity: 'suggestion',
-      title: notStarted ? 'Run the first-time setup' : 'Your onboarding setup is incomplete',
-      detail: notStarted
-        ? 'You haven’t run Pulsify’s guided setup yet. It configures moderation, welcomes and analytics with sensible defaults in a couple of minutes.'
-        : 'You started the setup wizard but didn’t finish. Complete it to make sure your core features are configured.',
+      title: 'Set up member onboarding',
+      detail:
+        'New members don’t get a guided welcome yet. Turn on Onboarding & Welcome to greet them, hand out self-roles, verify access and reward completion.',
       icon: 'Rocket',
-      action: { label: notStarted ? 'Start setup' : 'Resume setup', path: '/onboarding' },
+      action: { label: 'Set up onboarding', path: '/onboarding' },
       source: 'rule',
     })
   }

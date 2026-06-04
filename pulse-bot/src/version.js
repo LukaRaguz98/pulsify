@@ -18,11 +18,39 @@ const path = require("node:path");
 // Current Pulse version. Used for the startup banner and as the displayed
 // version when no release files are reachable. Keep this in step with the
 // newest resources/notes/vX.Y.Z.txt on each release.
-const PULSE_VERSION = "0.35.0";
+const PULSE_VERSION = "0.37.0";
 
 // Manual/static fallback used only when the release-notes files can't be read.
 // Mirrors the shape produced by the parser so callers don't special-case it.
 const STATIC_RELEASES = [
+  {
+    version: "0.37.0",
+    title: "Onboarding & Welcome",
+    date: "Jun 8, 2026",
+    description:
+      "A guided, interactive welcome that greets new members, hands out roles, verifies access and rewards completion.",
+    highlights: [
+      "**Server › Onboarding** — a redesigned editor for the whole new-member experience, with a live preview.",
+      "**Interactive welcome panel** — on join Pulse posts a Pulse v2 welcome plus self-role menus, a verify button, events and community links.",
+      "**Self-roles, verification & rewards** — roles by category, a built-in verify gate, and XP / starter roles / reputation on completion.",
+      "**Onboarding analytics** — starts, completions, completion rate, verifications, most-picked roles and most-skipped steps.",
+    ],
+    outro: null,
+  },
+  {
+    version: "0.36.0",
+    title: "Server Templates",
+    date: "Jun 6, 2026",
+    description:
+      "Save a server's configuration once and deploy it anywhere as a reusable blueprint.",
+    highlights: [
+      "**Server › Templates** — save, browse, apply, import and export server configurations.",
+      "**Capture & apply** — snapshot automations, moderation, Pulse content, onboarding, Pulse Guard, tickets and role structure.",
+      "**Smart conflict handling** — missing channel/role references are cleared and existing roles skipped on apply.",
+      "**Presets, import & export** — six ready-made setups plus JSON import/export with validation.",
+    ],
+    outro: null,
+  },
   {
     version: "0.35.0",
     title: "Member Milestones",

@@ -8,14 +8,14 @@ Set up a new server in minutes, not hours. Server Templates let you save a serve
 - **Smart conflict handling** — references to channels and roles that don't exist on the target server are cleared automatically, and roles you already have are skipped — no duplicates, no broken links.
 
 **Official presets**
-- **Five ready-made setups** — Gaming Community, Creator Community, Support Server, Startup / Product Community and Large Public Community, each tuned with sensible automations, moderation and a complete role hierarchy.
+- **Six ready-made setups** — Gaming Community, Creator Community, Support Server, Startup / Product Community, Large Public Community and Education / Study Community, each tuned with sensible automations, moderation and a complete role hierarchy.
 - **One-click deployment** — start from a preset and apply it straight to your server, then fine-tune from there.
 
 **Import & export**
 - **Share & back up** — export any template as JSON and import templates from a file or pasted JSON, with validation and compatibility checks so you always know what you're applying.
 
 **Other touches**
-- **⌘K everywhere** — jump to Templates, save the current server as a template, or import one, right from the command palette.
+- **Search everything** — jump to Templates, save the current server as a template, or import one, right from the command palette.
 - **Polished throughout** — template cards, setup wizards, and clear loading, error and success states.
 
 Build it once, deploy it everywhere.

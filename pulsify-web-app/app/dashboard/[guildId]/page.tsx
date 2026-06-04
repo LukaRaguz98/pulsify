@@ -6,7 +6,6 @@ import { StatsCard } from '@/components/dashboard/StatsCard'
 import { PageHeader } from '@/components/ui/page-header'
 import { CategorySection } from '@/components/ui/category-section'
 import { OnboardingBanner } from '@/components/dashboard/onboarding/OnboardingBanner'
-import type { OnboardingState } from '@/lib/onboarding'
 import { Users, Wifi, Hash, Crown, Activity, LayoutGrid, FolderTree, Sparkles, ShieldCheck, CalendarDays } from 'lucide-react'
 
 const VERIFICATION_LABELS = ['None', 'Low', 'Medium', 'High', 'Very High'] as const
@@ -81,13 +80,13 @@ export default async function GuildOverviewPage({
 
   if (!guild) redirect('/dashboard')
 
-  // First-run onboarding: show the entry banner until setup is completed or
-  // explicitly skipped.
-  const onboardingState =
-    ((settingsRow.data?.settings as Record<string, unknown> | undefined)?.onboarding_state as
-      | OnboardingState
-      | undefined) ?? null
-  const showOnboarding = !onboardingState || onboardingState.status === 'in_progress'
+  // Member onboarding (PULSIFY-37): nudge to configure the new-member experience
+  // until it's enabled. Dismissal is remembered client-side by the banner.
+  const memberOnboarding =
+    (settingsRow.data?.settings as Record<string, unknown> | undefined)?.member_onboarding as
+      | { enabled?: boolean }
+      | undefined
+  const showOnboarding = memberOnboarding?.enabled !== true
 
   const textChannels = channels.filter((c) => c.type === 0)
   const voiceChannels = channels.filter((c) => c.type === 2)
@@ -122,7 +121,7 @@ export default async function GuildOverviewPage({
   return (
     <div className="page-content">
       {showOnboarding && (
-        <OnboardingBanner guildId={guildId} guildName={guild.name} state={onboardingState} />
+        <OnboardingBanner guildId={guildId} guildName={guild.name} />
       )}
 
       <PageHeader

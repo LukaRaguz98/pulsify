@@ -8,6 +8,8 @@ import {
   type ModSensitivity,
   type OnboardingSelections,
   type OnboardingState,
+  type MemberOnboardingConfig,
+  normalizeMemberOnboarding,
 } from '@/lib/onboarding'
 
 type Result = { ok: true } | { ok: false; error: string }
@@ -222,6 +224,64 @@ export async function applyOnboardingSetup(
   })
 
   return { ok: true, applied, warnings }
+}
+
+// ── Member-facing Onboarding & Welcome (PULSIFY-37) ─────────────────────────
+
+/**
+ * Persist the member onboarding & welcome configuration into
+ * guild_settings.settings.member_onboarding. The bot reads the same shape to
+ * deliver the interactive panel to new members. Validation is light — the editor
+ * already constrains shapes; we normalize and clean obviously-empty entries.
+ */
+export async function saveMemberOnboarding(
+  guildId: string,
+  config: MemberOnboardingConfig,
+): Promise<Result> {
+  const { supabase, user } = await requireUser()
+  if (!user) return { ok: false, error: 'Unauthorized.' }
+
+  const clean = normalizeMemberOnboarding(config)
+
+  // Drop empty role categories / roles and empty quick-links/buttons so the
+  // panel never renders blank controls.
+  clean.roleCategories = clean.roleCategories
+    .map((c) => ({ ...c, roles: c.roles.filter((r) => r.role_id) }))
+    .filter((c) => c.roles.length > 0)
+  clean.welcome.buttons = clean.welcome.buttons.filter((b) => b.label.trim() && b.url.trim())
+  clean.welcome.quick_links = clean.welcome.quick_links.filter((q) => q.label.trim() && q.channel_id)
+
+  if (clean.enabled && clean.delivery === 'channel' && !clean.channel_id)
+    return { ok: false, error: 'Pick a channel to post onboarding to, or switch delivery to DM.' }
+  if (clean.enabled && clean.verification.enabled && !clean.verification.role_id)
+    return { ok: false, error: 'Verification is on but no verified role is selected.' }
+
+  const current = await readSettings(supabase, guildId)
+  const { error } = await supabase
+    .from('guild_settings')
+    .upsert(
+      {
+        guild_id: guildId,
+        settings: { ...current, member_onboarding: clean },
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'guild_id' },
+    )
+  if (error) return { ok: false, error: error.message }
+
+  const claims = user.user_metadata?.custom_claims as { global_name?: string; username?: string } | undefined
+  await recordNotification({
+    guildId,
+    type: 'automation_saved',
+    title: 'Onboarding updated',
+    body: clean.enabled ? 'Member onboarding is live.' : 'Member onboarding saved (disabled).',
+    link: `/dashboard/${guildId}/onboarding`,
+    actorId: user.user_metadata?.provider_id ?? user.id,
+    actorName: claims?.global_name ?? claims?.username ?? user.user_metadata?.full_name ?? null,
+    actorUsername: claims?.username ?? null,
+  }).catch(() => {})
+
+  return { ok: true }
 }
 
 function featureLabel(key: FeatureKey): string {
