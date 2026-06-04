@@ -2431,3 +2431,73 @@ Acceptance Criteria
 	Analytics display correctly
 	Milestone management functions properly
 	UI remains responsive and polished
+
+PULSIFY-36 — Server Templates & Configuration Presets (v0.36.0)
+
+Description
+	Implement a Server Templates system that allows administrators to save, reuse, import, and export server configurations, moderation setups, automations, ticket systems, and Pulse settings.
+	The system should help administrators quickly deploy proven server configurations across multiple Discord servers.
+
+Goals
+	Speed up server setup
+	Improve multi-server management
+	Enable reusable configurations
+	Reduce repetitive administration work
+
+Tasks
+	Templates Dashboard
+		Create new "Templates" navigation view
+		Display:
+			saved templates
+			template type
+			creation date
+			author
+			usage count
+		Add search and filtering
+
+	Template Creation
+		Allow creating templates from existing server configuration
+		Support exporting:
+			moderation settings
+			Pulse Guard settings
+			ticket configurations
+			giveaway settings
+			role structures
+			onboarding settings
+			automations
+			announcements settings
+		Add template preview before saving
+
+	Template Application
+		Apply templates to a selected server
+		Allow partial template imports
+		Add configuration conflict detection
+		Add preview of changes before applying
+
+	Built-in Templates
+		Add official Pulsify presets:
+			Gaming Community
+			Creator Community
+			Support Server
+			Startup/Product Community
+			Large Public Community
+		Add one-click deployment
+
+	Import & Export
+		Export templates as JSON
+		Import templates from JSON
+		Add validation and compatibility checks
+
+	UX Improvements
+		Add template cards
+		Add setup wizards
+		Add loading/error/success states
+		Add change summary views
+
+Acceptance Criteria
+	Templates can be created successfully
+	Templates can be applied to servers
+	Partial imports work correctly
+	Built-in presets deploy correctly
+	Configuration previews display accurately
+	UI remains responsive and visually polished

@@ -1,0 +1,23 @@
+**Pulsify v0.36.0 — Server Templates**
+Set up a new server in minutes, not hours. Server Templates let you save a server's configuration once and deploy it anywhere — your automations, moderation, Pulse Guard, tickets, onboarding and role structure, captured as a reusable blueprint you can apply across every server you run.
+
+**What's new**
+- **Server › Templates** — a new view to save, browse, apply, import and export server configurations, with at-a-glance stats, search and category filtering.
+- **Save from any server** — snapshot the parts you want: automations (welcome/goodbye/auto-role), moderation alerts, Pulse content, onboarding, Pulse Guard, the ticket system and your role structure.
+- **Apply with confidence** — pick exactly which sections to apply (partial imports supported), see what's new versus what will be overwritten, and review a full change summary before anything goes live.
+- **Smart conflict handling** — references to channels and roles that don't exist on the target server are cleared automatically, and roles you already have are skipped — no duplicates, no broken links.
+
+**Official presets**
+- **Five ready-made setups** — Gaming Community, Creator Community, Support Server, Startup / Product Community and Large Public Community, each tuned with sensible automations, moderation and a complete role hierarchy.
+- **One-click deployment** — start from a preset and apply it straight to your server, then fine-tune from there.
+
+**Import & export**
+- **Share & back up** — export any template as JSON and import templates from a file or pasted JSON, with validation and compatibility checks so you always know what you're applying.
+
+**Other touches**
+- **⌘K everywhere** — jump to Templates, save the current server as a template, or import one, right from the command palette.
+- **Polished throughout** — template cards, setup wizards, and clear loading, error and success states.
+
+Build it once, deploy it everywhere.
+
+June 06, 2026

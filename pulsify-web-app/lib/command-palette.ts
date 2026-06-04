@@ -77,6 +77,7 @@ const NAV_CATALOG: NavDef[] = [
   { id: 'nav-channels', label: 'Channels', icon: 'Hash', path: '/channels', keywords: 'text voice category' },
   { id: 'nav-members', label: 'Members', icon: 'UserRound', path: '/members', keywords: 'users people directory' },
   { id: 'nav-roles', label: 'Roles', icon: 'Users', path: '/roles', keywords: 'permissions ranks' },
+  { id: 'nav-templates', label: 'Templates', icon: 'LayoutTemplate', path: '/templates', keywords: 'server templates presets reuse export import config setup deploy clone copy backup configuration blueprint' },
   { id: 'nav-events', label: 'Events', icon: 'CalendarDays', path: '/events', keywords: 'scheduled events calendar' },
   { id: 'nav-commands', label: 'Commands', icon: 'Command', path: '/commands', keywords: 'slash bot command center' },
   { id: 'nav-presence', label: 'Presence', icon: 'Radio', path: '/presence', keywords: 'status activity rotation playing watching listening streaming maintenance bot presence' },
@@ -110,6 +111,8 @@ type ActionDef = {
 const ACTION_CATALOG: ActionDef[] = [
   { id: 'act-create-event', label: 'Create event', subtitle: 'Schedule a new Discord event', icon: 'CalendarPlus', keywords: 'new event schedule add', action: { kind: 'navigate', href: '/events?new=1' } },
   { id: 'act-create-role', label: 'Create role', subtitle: 'Add a new server role', icon: 'Plus', keywords: 'new role add permission', action: { kind: 'navigate', href: '/roles?new=1' } },
+  { id: 'act-save-template', label: 'Save as template', subtitle: "Snapshot this server's configuration", icon: 'LayoutTemplate', keywords: 'template save snapshot capture reuse export config setup blueprint', action: { kind: 'navigate', href: '/templates?new=1' } },
+  { id: 'act-import-template', label: 'Import a template', subtitle: 'Apply a saved or shared configuration', icon: 'Upload', keywords: 'template import json apply deploy config setup restore', action: { kind: 'navigate', href: '/templates?import=1' } },
   { id: 'act-warn-member', label: 'Warn a member', subtitle: 'Record a warning against a member', icon: 'AlertCircle', keywords: 'warning moderate discipline', action: { kind: 'pick-member', memberAction: 'warn' } },
   { id: 'act-timeout-member', label: 'Timeout a member', subtitle: 'Temporarily mute a member', icon: 'Clock', keywords: 'mute timeout moderate silence', action: { kind: 'pick-member', memberAction: 'timeout' } },
   { id: 'act-open-analytics', label: 'Open analytics', subtitle: 'Jump to the server overview', icon: 'LineChart', keywords: 'stats analytics dashboard', action: { kind: 'navigate', href: '' } },

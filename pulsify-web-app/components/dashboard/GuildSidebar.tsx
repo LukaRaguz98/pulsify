@@ -32,6 +32,7 @@ import {
   Megaphone,
   Building2,
   Plug,
+  LayoutTemplate,
   Menu,
   X,
 } from 'lucide-react'
@@ -148,6 +149,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
         { label: 'Channels', href: `${base}/channels`, icon: <Hash size={16} /> },
         { label: 'Members', href: `${base}/members`, icon: <UserRound size={16} />, matchPrefixes: ['/leveling-settings'] },
         { label: 'Roles', href: `${base}/roles`, icon: <Users size={16} /> },
+        { label: 'Templates', href: `${base}/templates`, icon: <LayoutTemplate size={16} /> },
       ],
     },
     {
