@@ -5,7 +5,7 @@ import { fetchGuild, fetchGuildChannels, fetchGuildRoles, snowflakeToDate } from
 import { StatsCard } from '@/components/dashboard/StatsCard'
 import { PageHeader } from '@/components/ui/page-header'
 import { CategorySection } from '@/components/ui/category-section'
-import { OnboardingBanner } from '@/components/dashboard/onboarding/OnboardingBanner'
+import { QuickSetupBanner } from '@/components/dashboard/quick-setup/QuickSetupBanner'
 import { Users, Wifi, Hash, Crown, Activity, LayoutGrid, FolderTree, Sparkles, ShieldCheck, CalendarDays } from 'lucide-react'
 
 const VERIFICATION_LABELS = ['None', 'Low', 'Medium', 'High', 'Very High'] as const
@@ -71,22 +71,18 @@ export default async function GuildOverviewPage({
   } = await supabase.auth.getUser()
   if (!user) redirect('/')
 
-  const [guild, channels, roles, settingsRow] = await Promise.all([
+  const [guild, channels, roles, templatesCount] = await Promise.all([
     fetchGuild(guildId),
     fetchGuildChannels(guildId),
     fetchGuildRoles(guildId),
-    supabase.from('guild_settings').select('settings').eq('guild_id', guildId).maybeSingle(),
+    supabase.from('server_templates').select('id', { count: 'exact', head: true }).eq('guild_id', guildId),
   ])
 
   if (!guild) redirect('/dashboard')
 
-  // Member onboarding (PULSIFY-37): nudge to configure the new-member experience
-  // until it's enabled. Dismissal is remembered client-side by the banner.
-  const memberOnboarding =
-    (settingsRow.data?.settings as Record<string, unknown> | undefined)?.member_onboarding as
-      | { enabled?: boolean }
-      | undefined
-  const showOnboarding = memberOnboarding?.enabled !== true
+  // Quick setup nudge: prompt to configure the server until at least one setup /
+  // template exists for it. Dismissal is also remembered client-side by the banner.
+  const showQuickSetup = (templatesCount.count ?? 0) === 0
 
   const textChannels = channels.filter((c) => c.type === 0)
   const voiceChannels = channels.filter((c) => c.type === 2)
@@ -120,8 +116,8 @@ export default async function GuildOverviewPage({
 
   return (
     <div className="page-content">
-      {showOnboarding && (
-        <OnboardingBanner guildId={guildId} guildName={guild.name} />
+      {showQuickSetup && (
+        <QuickSetupBanner guildId={guildId} guildName={guild.name} />
       )}
 
       <PageHeader

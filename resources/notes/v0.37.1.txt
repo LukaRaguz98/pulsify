@@ -1,0 +1,17 @@
+**Pulsify v0.37.1 — Onboarding polish & integration fixes**
+A focused follow-up to v0.37.0: a more modern welcome embed, a faithful editor preview, and a fix for duplicated integration notifications.
+
+**Onboarding**
+- **Modernised welcome embed** — cleaner community links, action buttons (verify, finish and links) on a single row, and a tidier overall layout.
+- **Preview matches reality** — the editor preview now mirrors exactly what gets posted to Discord.
+- **Custom banner** — drop in your own banner image instead of the generated one.
+- **General community channels** — highlight general chat, introductions, music, bot commands, support and announcements.
+
+**Quick setup**
+- The server overview now opens a **Quick setup** that configures your server in minutes and saves it as an editable template.
+
+**Integrations**
+- **No more duplicate notifications** — an update is now delivered exactly once, even across restarts or multiple bot instances.
+- Editing a connection's source re-baselines it instead of backfilling old activity.
+
+June 07, 2026

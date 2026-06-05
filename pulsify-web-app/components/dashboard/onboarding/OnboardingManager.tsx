@@ -121,7 +121,7 @@ export function OnboardingManager({
       )}
 
       {/* Tabs */}
-      <div className="mb-6 flex flex-wrap gap-1 border-b" style={{ borderColor: 'var(--line-strong)' }}>
+      <div className="mb-6 inline-flex flex-wrap rounded-xl border p-1" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
         {TABS.map((t) => {
           const active = tab === t.id
           return (
@@ -129,11 +129,11 @@ export function OnboardingManager({
               key={t.id}
               type="button"
               onClick={() => setTab(t.id)}
-              className="relative flex items-center gap-1.5 px-3.5 py-2.5 text-sm font-medium transition"
-              style={{ color: active ? 'var(--text)' : 'var(--text-3)' }}
+              className="flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors"
+              style={active ? { background: 'var(--p-soft)', color: 'var(--text)' } : { color: 'var(--text-2)' }}
             >
-              <t.icon size={14} /> {t.label}
-              {active && <span className="absolute inset-x-1 -bottom-px h-0.5 rounded-full" style={{ background: 'linear-gradient(90deg, var(--p-1), var(--p-2))' }} />}
+              <span style={active ? { color: 'var(--p-1)' } : { color: 'var(--text-3)' }}><t.icon size={15} /></span>
+              {t.label}
             </button>
           )
         })}

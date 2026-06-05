@@ -501,3 +501,72 @@ export async function applyTemplate(
   revalidate(guildId)
   return { ok: true, data: { applied, warnings } }
 }
+
+// ── Quick Setup ────────────────────────────────────────────────────────────────
+// The overview "Quick setup" wizard generates a configuration from a handful of
+// preferences (see lib/quick-setup.ts) and saves it as an editable library
+// template — optionally applying it to this server straight away.
+
+export type QuickSetupSaveInput = {
+  name: string
+  description: string
+  category: TemplateCategory
+  icon: string
+  sections: TemplateSections
+  /** Apply the generated config to this server immediately after saving. */
+  apply: boolean
+}
+
+export async function createQuickSetupTemplate(
+  guildId: string,
+  input: QuickSetupSaveInput,
+): Promise<ActionResult<{ template: ServerTemplate; summary: ApplySummary | null }>> {
+  const auth = await authorizeGuildModerator(guildId)
+  if (!auth.ok) return { ok: false, error: auth.error }
+
+  // Run the generated config through the import validator so it gets the same
+  // guarantees as an imported file (known sections only, role cap, coercion).
+  const parsed = validateTemplateImport({
+    name: input.name,
+    description: input.description,
+    category: input.category,
+    icon: input.icon,
+    sections: input.sections,
+  })
+  if (!parsed.ok) return { ok: false, error: parsed.error }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('server_templates')
+    .insert({
+      guild_id: guildId,
+      name: parsed.value.name,
+      description: parsed.value.description,
+      category: parsed.value.category,
+      icon: parsed.value.icon,
+      sections: parsed.value.sections,
+      author_id: auth.moderator.userId,
+      author_name: auth.moderator.username,
+    })
+    .select('*')
+    .single()
+
+  if (error || !data)
+    return { ok: false, error: `Failed to save setup: ${error?.message ?? 'unknown error'}` }
+
+  const template = normaliseTemplate(data as Record<string, unknown>)
+
+  // Optionally apply it now. A failed apply doesn't lose the saved template —
+  // we surface the reason as a warning so the admin can apply it from the library.
+  let summary: ApplySummary | null = null
+  if (input.apply) {
+    const res = await applyTemplate(guildId, {
+      templateId: template.id,
+      sectionKeys: sectionKeysPresent(template.sections),
+    })
+    summary = res.ok ? res.data : { applied: [], warnings: [res.error] }
+  }
+
+  revalidate(guildId)
+  return { ok: true, data: { template, summary } }
+}

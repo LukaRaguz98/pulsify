@@ -267,9 +267,19 @@ export async function updateIntegration(
   if (!existing) return { ok: false, error: 'Integration not found.' }
 
   const fields = buildFields(provider, draft)
+
+  // If the feed target changed (different provider or resource), the stored
+  // cursor points at the old feed. Reset it to re-baseline so the worker doesn't
+  // backfill the new feed's recent history as a burst of notifications.
+  const targetChanged =
+    existing.provider !== fields.provider ||
+    (existing.external_ref ?? null) !== (fields.external_ref ?? null)
+  const patch: Record<string, unknown> = { ...fields, updated_at: new Date().toISOString() }
+  if (targetChanged) patch.cursor = null
+
   const { error } = await supabase
     .from('integrations')
-    .update({ ...fields, updated_at: new Date().toISOString() })
+    .update(patch)
     .eq('id', id)
     .eq('guild_id', guildId)
   if (error) return { ok: false, error: `Failed to save: ${error.message}` }

@@ -164,6 +164,50 @@ function createIntegrations(client, supabase) {
     }
   }
 
+  // Optimistically advance the cursor, succeeding only if it still matches the
+  // value we polled against. Returns true when THIS worker won the right to post
+  // the batch. Because the advance is a single conditional UPDATE, only one
+  // caller can win even if several ticks — or several bot instances sharing this
+  // database — poll the same row at once. This is what guarantees an update is
+  // delivered exactly once instead of being duplicated.
+  async function claimCursor(row, prevCursor, nextCursor, nowIso) {
+    let query = supabase
+      .from("integrations")
+      .update({
+        cursor: nextCursor,
+        last_sync_at: nowIso,
+        updated_at: nowIso,
+        status: "connected",
+        last_error: null,
+      })
+      .eq("id", row.id);
+    query =
+      prevCursor == null
+        ? query.is("cursor", null)
+        : query.eq("cursor", prevCursor);
+    try {
+      const { data, error } = await query.select("id");
+      if (error) {
+        // Fail closed: don't deliver if we can't prove we claimed the batch.
+        console.warn("[Pulse] integrations cursor claim failed:", error.message);
+        return false;
+      }
+      if (data && data.length > 0) {
+        Object.assign(row, {
+          cursor: nextCursor,
+          last_sync_at: nowIso,
+          status: "connected",
+          last_error: null,
+        });
+        return true;
+      }
+      return false; // lost the race — another worker already advanced the cursor
+    } catch (err) {
+      console.warn("[Pulse] integrations cursor claim threw:", err.message);
+      return false;
+    }
+  }
+
   // ── Delivery ──────────────────────────────────────────────────────────────
 
   // Post one rendered item to the given (pre-resolved) channel. Throws on a
@@ -215,14 +259,16 @@ function createIntegrations(client, supabase) {
       if (!poller) return; // unknown provider id — nothing to do
 
       const firstRun = row.cursor == null;
+      const prevCursor = row.cursor;
       const { items, cursor } = await poller(row);
+      const nextCursor = cursor ?? row.cursor;
+
+      const guild = client.guilds.cache.get(row.guild_id);
+      const willDeliver = items.length > 0 && row.channel_id && guild;
 
       // Deliver (only when armed + a channel is set). A paused/channel-less row
       // still advances its cursor so it never backfills history on resume.
-      let delivered = 0;
-      let channelName = null;
-      const guild = client.guilds.cache.get(row.guild_id);
-      if (items.length && row.channel_id && guild) {
+      if (willDeliver) {
         const channel = await guild.channels
           .fetch(row.channel_id)
           .catch(() => null);
@@ -233,15 +279,36 @@ function createIntegrations(client, supabase) {
         ) {
           throw new Error("Destination channel not found or not text-based.");
         }
-        channelName = channel.name;
+
+        // Claim the batch before posting. If the cursor already moved — a
+        // concurrent tick or a second bot instance got here first — we skip,
+        // which is what prevents the same update being posted more than once.
+        const claimed = await claimCursor(row, prevCursor, nextCursor, nowIso);
+        if (!claimed) return;
+
+        let delivered = 0;
         for (const item of items) {
           await deliver(row, channel, item);
           delivered++;
         }
+        erroredSeen.delete(row.id);
+        await recordLog(
+          row,
+          "success",
+          "notification",
+          `Delivered ${delivered} update${delivered === 1 ? "" : "s"} to #${channel.name}.`,
+          { count: delivered, channel_id: row.channel_id },
+        );
+        console.log(
+          `[Pulse] Integration "${row.label}" delivered ${delivered} update(s).`,
+        );
+        return;
       }
 
+      // Nothing to post (baseline, no new items, or no channel/guild yet). Just
+      // advance bookkeeping — no race to guard since nothing is delivered.
       const patch = {
-        cursor: cursor ?? row.cursor,
+        cursor: nextCursor,
         last_sync_at: nowIso,
         updated_at: nowIso,
       };
@@ -252,18 +319,7 @@ function createIntegrations(client, supabase) {
       await patchRow(row, patch);
       erroredSeen.delete(row.id);
 
-      if (delivered > 0) {
-        await recordLog(
-          row,
-          "success",
-          "notification",
-          `Delivered ${delivered} update${delivered === 1 ? "" : "s"} to #${channelName}.`,
-          { count: delivered, channel_id: row.channel_id },
-        );
-        console.log(
-          `[Pulse] Integration "${row.label}" delivered ${delivered} update(s).`,
-        );
-      } else if (firstRun) {
+      if (firstRun) {
         await recordLog(
           row,
           "info",

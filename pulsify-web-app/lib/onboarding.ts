@@ -238,8 +238,11 @@ export type WelcomeEmbedConfig = {
   title: string
   description: string
   color: string
-  /** Render the generated server banner image as a full-width header. */
+  /** Render a full-width banner header (generated, or a custom image below). */
   banner: boolean
+  /** Custom banner image URL. When set (and banner is on) it replaces the
+   *  auto-generated server banner. */
+  banner_url: string
   thumbnail: ThumbnailMode
   footer_text: string
   buttons: WelcomeButton[]
@@ -249,27 +252,27 @@ export type WelcomeEmbedConfig = {
 // ── Community link highlights ───────────────────────────────────────────────
 
 export type CommunityLinkKey =
-  | 'guidelines'
+  | 'general'
+  | 'introductions'
+  | 'music'
+  | 'commands'
   | 'support'
-  | 'feedback'
-  | 'feature_requests'
   | 'announcements'
-  | 'release_notes'
 
 export const COMMUNITY_LINK_META: Record<
   CommunityLinkKey,
   { label: string; desc: string; icon: string; emoji: string }
 > = {
-  guidelines:       { label: 'Community Guidelines', desc: 'Rules & code of conduct.',          icon: 'BookOpen',     emoji: '📜' },
-  support:          { label: 'Support',              desc: 'Where to get help.',                icon: 'LifeBuoy',     emoji: '🛟' },
-  feedback:         { label: 'Feedback',             desc: 'Share thoughts & ideas.',           icon: 'MessageSquare', emoji: '💬' },
-  feature_requests: { label: 'Feature Requests',     desc: 'Suggest new features.',             icon: 'Lightbulb',    emoji: '💡' },
-  announcements:    { label: 'Announcements',        desc: 'Important server updates.',         icon: 'Megaphone',    emoji: '📣' },
-  release_notes:    { label: 'Release Notes',        desc: 'What’s new in the bot.',       icon: 'Sparkles',     emoji: '✨' },
+  general:       { label: 'General Chat',  desc: 'Start a conversation with the community.', icon: 'MessagesSquare', emoji: '💬' },
+  introductions: { label: 'Introductions', desc: 'Say hi and introduce yourself.',           icon: 'Hand',           emoji: '👋' },
+  music:         { label: 'Music',         desc: 'Hang out and listen to music together.',    icon: 'Music',          emoji: '🎵' },
+  commands:      { label: 'Bot Commands',  desc: 'Where members can run bot commands.',       icon: 'TerminalSquare', emoji: '🤖' },
+  support:       { label: 'Support',       desc: 'Where to get help.',                        icon: 'LifeBuoy',       emoji: '🛟' },
+  announcements: { label: 'Announcements', desc: 'Important server updates.',                 icon: 'Megaphone',      emoji: '📣' },
 }
 
 export const COMMUNITY_LINK_ORDER: CommunityLinkKey[] = [
-  'guidelines', 'support', 'feedback', 'feature_requests', 'announcements', 'release_notes',
+  'general', 'introductions', 'music', 'commands', 'support', 'announcements',
 ]
 
 export type CommunityLinks = Partial<Record<CommunityLinkKey, string>>
@@ -320,8 +323,10 @@ export type MemberOnboardingConfig = {
 export const DEFAULT_WELCOME_EMBED: WelcomeEmbedConfig = {
   title: 'Welcome to {server}!',
   description: 'Hey {user}, glad to have you here! 👋\n\nTake a moment to set yourself up below — grab your roles, check out what’s happening, and find your way around.',
-  color: '#6366f1',
+  // App default accent (the left-most swatch in the picker — THEMES[0], violet).
+  color: '#8b5cf6',
   banner: true,
+  banner_url: '',
   thumbnail: 'member_avatar',
   footer_text: '',
   buttons: [],

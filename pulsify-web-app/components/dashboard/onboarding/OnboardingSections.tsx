@@ -155,6 +155,11 @@ export function WelcomeSection({ config, patch, channels }: SectionProps) {
             <span className="flex items-center gap-2 text-sm text-foreground"><ImageIcon size={14} className="text-subtle" /> Full-width server banner</span>
             <Toggle checked={w.banner} onChange={(v) => setW({ banner: v })} />
           </label>
+          {w.banner && (
+            <Labeled label="Custom banner image (optional)" hint="Paste an image URL to use instead of the generated banner.">
+              <TextInput value={w.banner_url} onChange={(v) => setW({ banner_url: v })} placeholder="https://…/banner.png" />
+            </Labeled>
+          )}
         </div>
       </SubCard>
 
