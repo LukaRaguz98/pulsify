@@ -25,6 +25,7 @@ import {
   Command,
   Radio,
   UserRound,
+  UserCog,
   Lightbulb,
   LifeBuoy,
   Gift,
@@ -141,6 +142,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
       items: [
         { label: 'Statistics', href: `${base}/statistics`, icon: <Activity size={16} /> },
         { label: 'Insights', href: `${base}/insights`, icon: <Lightbulb size={16} /> },
+        { label: 'Management', href: `${base}/management`, icon: <UserCog size={16} /> },
       ],
     },
     {
