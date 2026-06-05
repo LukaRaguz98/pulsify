@@ -1,106 +1,103 @@
-PULSIFY-40 — UI/UX Refinement & Product Experience Update (v0.40.0)
+PULSIFY-41 — Pulse Guard: Detection Accuracy & Intelligence Upgrade (v0.41.0)
 
 Description
-	Conduct a platform-wide UI/UX refinement pass focused on improving usability, consistency, responsiveness, visual hierarchy, and overall user experience throughout Pulsify.
-	The goal is not to introduce major new features, but to make the platform feel more polished, intuitive, modern, and production-ready.
+	Upgrade the existing Pulse Guard AI Moderation system to improve detection accuracy, reduce false positives, provide better moderation context, and introduce advanced threat analysis capabilities.
+	The goal is to make Pulse Guard feel significantly smarter, more transparent, and more reliable for server administrators while improving overall moderation effectiveness.
 
 Goals
-	Improve overall user experience
-	Increase interface consistency
-	Improve usability and discoverability
-	Reduce visual clutter
-	Improve perceived product quality
+	Improve AI moderation accuracy
+	Reduce false positives
+	Improve moderation transparency
+	Expand threat detection capabilities
+	Improve moderator trust in Pulse Guard decisions
 
 Tasks
-	Navigation Improvements
-		Review entire navigation structure
-		Improve page grouping and organization
-		Reduce unnecessary clicks
-		Add better active state indicators
-		Improve mobile navigation experience
-		Improve breadcrumbs and navigation flow
+	Detection Engine Improvements
+		Review and improve existing Pulse Guard detection logic
+		Improve:
+			scam detection
+			toxicity detection
+			harassment detection
+			spam detection
+			phishing detection
+			malicious link detection
+		Reduce false positive rates
+		Improve contextual message analysis
 
-	Dashboard Consistency
-		Review all views and cards
-		Standardize:
-			spacing
-			paddings
-			margins
-			typography
-			icon usage
-			card styling
-		Ensure visual consistency across all modules
+	AI Confidence Scoring
+		Introduce confidence scoring for detections
+		Display:
+			Low Confidence
+			Medium Confidence
+			High Confidence
+		Store confidence values in moderation history
+		Expose confidence information to moderators
 
-	Data Presentation
-		Improve tables and data-heavy views
-		Add:
-			empty states
-			loading skeletons
-			no-results states
-			better pagination
-		Improve readability of statistics and analytics
+	Detection Reasoning
+		Generate detailed detection reasons
+		Explain why a message was flagged
+		Display triggered categories and signals
+		Improve moderation transparency
 
-	Dialog & Form Refinement
-		Review every modal/dialog
-		Standardize widths and layouts
-		Improve validation messages
-		Improve error handling
-		Improve mobile form usability
-		Add autosave where appropriate
+	Pulse Guard Analytics
+		Add Pulse Guard performance metrics
+		Track:
+			detections
+			false positives
+			moderator overrides
+			successful actions
+			detection categories
+		Integrate with existing Analytics and Management views
 
-	Visual Hierarchy
-		Improve page headers
-		Improve section separation
-		Highlight important actions
-		Reduce visual noise
-		Improve CTA visibility
+	Moderator Override System
+		Allow moderators to mark detections as:
+			Correct
+			Incorrect
+		Store feedback for future tuning
+		Track override rates
 
-	Micro-Interactions
-		Add subtle animations
-		Improve hover states
-		Improve button interactions
-		Improve loading transitions
-		Improve success/error feedback
+	Threat Categorization
+		Improve categorization system
+		Support:
+			Scam
+			Phishing
+			Spam
+			Toxicity
+			Harassment
+			NSFW
+			Suspicious Links
+			Impersonation Attempts
+			Mass Mention Abuse
+		Display category-specific moderation actions
 
-	Empty States
-		Create meaningful empty states for:
-			Giveaways
-			Events
-			Tickets
-			Analytics
-			Members
-			Moderation
-			Onboarding
-		Include helpful actions and guidance
+	Pulse Guard Embeds
+		Upgrade Pulse Guard moderation embeds
+		Ensure consistency with latest Pulse v2 design standards
+		Improve:
+			readability
+			moderation details
+			confidence display
+			action summaries
+		Maintain custom branding support
 
-	Performance & Responsiveness
-		Improve perceived loading performance
-		Optimize page transitions
-		Improve responsiveness across:
-			desktop
-			tablet
-			mobile
-		Reduce layout shifts
+	Logging & Investigation
+		Improve Pulse Guard moderation logs
+		Add detection timeline information
+		Improve investigation workflow
+		Add links to related moderation history
 
-	Accessibility
-		Improve keyboard navigation
-		Improve contrast where needed
-		Improve focus states
-		Improve screen-reader compatibility
-
-	Final Product Polish
-		Review every view in the application
-		Remove inconsistencies
-		Remove placeholder content
-		Standardize Pulse branding
-		Ensure all components feel part of the same ecosystem
+	Performance & Reliability
+		Optimize detection execution time
+		Improve handling of large messages
+		Improve queue processing
+		Improve resilience to API failures
 
 Acceptance Criteria
-	Navigation feels intuitive and consistent
-	UI components follow a unified design language
-	Dialogs and forms behave consistently
-	Empty states provide useful guidance
-	Animations and transitions improve UX without being distracting
-	Mobile and desktop experiences feel polished
-	Platform feels production-ready and cohesive
-	Overall user experience is noticeably improved
+	Detection accuracy improves across supported categories
+	False positives are reduced
+	Confidence scores are visible to moderators
+	Detection reasoning is displayed clearly
+	Pulse Guard embeds follow Pulse v2 standards
+	Analytics and logging integrate correctly
+	Moderator override system functions correctly
+	Pulse Guard provides a noticeably better moderation experience
