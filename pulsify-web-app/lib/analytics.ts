@@ -33,6 +33,42 @@ export function timeframeBucket(tf: Timeframe): 'hour' | 'day' {
   return tf === '24h' ? 'hour' : 'day'
 }
 
+export function isTimeframe(value: unknown): value is Timeframe {
+  return value === '24h' || value === '7d' || value === '30d' || value === 'all'
+}
+
+/**
+ * Days a timeframe spans, used by the comparison-style views (Insights,
+ * Management) to size the "previous window" they trend against. `null` for
+ * 'all', which has no comparable previous period.
+ */
+export function timeframeWindowDays(tf: Timeframe): number | null {
+  switch (tf) {
+    case '24h':
+      return 1
+    case '7d':
+      return 7
+    case '30d':
+      return 30
+    case 'all':
+      return null
+  }
+}
+
+/** Human "period" phrase for copy — e.g. "the last 7 days" / "all time". */
+export function timeframePeriodLabel(tf: Timeframe): string {
+  switch (tf) {
+    case '24h':
+      return 'the last 24 hours'
+    case '7d':
+      return 'the last 7 days'
+    case '30d':
+      return 'the last 30 days'
+    case 'all':
+      return 'all time'
+  }
+}
+
 export type AnalyticsSummary = {
   total_messages: number
   total_commands: number

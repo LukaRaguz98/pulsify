@@ -2,15 +2,15 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import type { Timeframe } from '@/lib/analytics'
-import type { InsightsData } from '@/lib/insights'
+import type { ManagementData } from '@/lib/management'
 
 /**
- * Loads the server insights payload for a guild + timeframe. Mirrors
- * useAnalytics: a blocking initial load, a silent refresh that keeps the old
- * data on screen, and a surfaced error string.
+ * Loads the management analytics payload for a guild + timeframe. Mirrors
+ * useInsights/useAnalytics: a blocking initial load, a silent refresh that keeps
+ * the old data on screen, and a surfaced error string.
  */
-export function useInsights(guildId: string, timeframe: Timeframe) {
-  const [data, setData] = useState<InsightsData | null>(null)
+export function useManagement(guildId: string, timeframe: Timeframe) {
+  const [data, setData] = useState<ManagementData | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -21,16 +21,16 @@ export function useInsights(guildId: string, timeframe: Timeframe) {
       else setLoading(true)
       setError(null)
       try {
-        const res = await fetch(`/api/guilds/${guildId}/insights?timeframe=${timeframe}`, {
+        const res = await fetch(`/api/guilds/${guildId}/management?timeframe=${timeframe}`, {
           cache: 'no-store',
         })
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as { error?: string }
           throw new Error(body.error ?? `Request failed (${res.status})`)
         }
-        setData((await res.json()) as InsightsData)
+        setData((await res.json()) as ManagementData)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load insights.')
+        setError(err instanceof Error ? err.message : 'Failed to load management analytics.')
       } finally {
         setLoading(false)
         setRefreshing(false)

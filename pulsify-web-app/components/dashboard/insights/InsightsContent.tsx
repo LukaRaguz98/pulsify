@@ -37,14 +37,13 @@ import { CategorySection } from '@/components/ui/category-section'
 import { ChartCard } from '@/components/dashboard/charts/ChartCard'
 import { ToggleableChart } from '@/components/dashboard/charts/ToggleableChart'
 import { RefreshButton } from '@/components/dashboard/RefreshButton'
+import { TimeframeFilter } from '@/components/dashboard/TimeframeFilter'
 import { useInsights } from '@/lib/use-insights'
-import { formatDuration, formatHourLabel } from '@/lib/analytics'
+import { formatDuration, formatHourLabel, timeframePeriodLabel, type Timeframe } from '@/lib/analytics'
 import {
   CATEGORY_META,
   SEVERITY_META,
-  INSIGHT_WINDOWS,
   buildRecap,
-  type InsightWindow,
   type InsightCategory,
   type InsightSeverity,
   type HealthScore,
@@ -65,9 +64,9 @@ type Props = {
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 export function InsightsContent({ guildId, guildName }: Props) {
-  const [windowDays, setWindowDays] = useState<InsightWindow>(7)
+  const [timeframe, setTimeframe] = useState<Timeframe>('7d')
   const [activeCategory, setActiveCategory] = useState<InsightCategory | 'all'>('all')
-  const { data, loading, refreshing, error, refresh } = useInsights(guildId, windowDays)
+  const { data, loading, refreshing, error, refresh } = useInsights(guildId, timeframe)
 
   const header = (
     <PageHeader
@@ -80,7 +79,7 @@ export function InsightsContent({ guildId, guildName }: Props) {
       }
       action={
         <div className="flex items-center gap-3">
-          <WindowFilter value={windowDays} onChange={setWindowDays} disabled={loading} />
+          <TimeframeFilter value={timeframe} onChange={setTimeframe} disabled={loading} />
           <RefreshButton onClick={refresh} refreshing={refreshing} />
         </div>
       }
@@ -123,7 +122,11 @@ export function InsightsContent({ guildId, guildName }: Props) {
     )
   }
 
-  const { overview } = data
+  const { overview, comparison } = data
+  // Effective window length (derived from the data for 'all') and the period
+  // phrase shared with the rest of the analytics views.
+  const windowDays = data.windowDays
+  const periodLabel = timeframePeriodLabel(timeframe)
   const cur = overview.current
   const prev = overview.previous
   const net = cur.joins - cur.leaves
@@ -225,62 +228,72 @@ export function InsightsContent({ guildId, guildName }: Props) {
         <CategorySection
           icon={<BarChart3 size={14} />}
           title="Engagement Overview"
-          description={`How the last ${windowDays} days compare to the previous ${windowDays} — the trend you won’t find on Statistics.`}
+          description={
+            comparison
+              ? `How ${periodLabel} compares to the period before — the trend you won’t find on Statistics.`
+              : `Activity over ${periodLabel}.`
+          }
         >
           <div className="insight-grid grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <TrendStat
               label="Messages"
               value={fmt(cur.messages)}
-              sub={`Previous: ${fmt(prev.messages)}`}
+              sub={comparison ? `Previous: ${fmt(prev.messages)}` : undefined}
               icon={<MessageSquare size={16} />}
               accent="var(--p-1)"
               trend={overview.trends.messages}
               goodDirection="up"
+              hideTrend={!comparison}
             />
             <TrendStat
               label="Voice Time"
               value={formatDuration(cur.voice_seconds)}
-              sub={`Previous: ${formatDuration(prev.voice_seconds)}`}
+              sub={comparison ? `Previous: ${formatDuration(prev.voice_seconds)}` : undefined}
               icon={<Mic size={16} />}
               accent="#22d3ee"
               trend={overview.trends.voice_seconds}
               goodDirection="up"
+              hideTrend={!comparison}
             />
             <TrendStat
               label="New Members"
               value={fmt(cur.joins)}
-              sub={`Previous: ${fmt(prev.joins)}`}
+              sub={comparison ? `Previous: ${fmt(prev.joins)}` : undefined}
               icon={<UserPlus size={16} />}
               accent="#10b981"
               trend={overview.trends.joins}
               goodDirection="up"
+              hideTrend={!comparison}
             />
             <TrendStat
               label="Net Growth"
               value={`${net >= 0 ? '+' : ''}${fmt(net)}`}
-              sub={`Previous: ${prevNet >= 0 ? '+' : ''}${fmt(prevNet)}`}
+              sub={comparison ? `Previous: ${prevNet >= 0 ? '+' : ''}${fmt(prevNet)}` : undefined}
               icon={<TrendingUp size={16} />}
               accent="#8b5cf6"
               trend={overview.trends.netGrowth}
               goodDirection="up"
+              hideTrend={!comparison}
             />
             <TrendStat
               label="Mod Actions"
               value={fmt(cur.mod_actions)}
-              sub={`Previous: ${fmt(prev.mod_actions)}`}
+              sub={comparison ? `Previous: ${fmt(prev.mod_actions)}` : undefined}
               icon={<ShieldAlert size={16} />}
               accent="#f87171"
               trend={overview.trends.mod_actions}
               goodDirection="none"
+              hideTrend={!comparison}
             />
             <TrendStat
               label="Commands"
               value={fmt(cur.commands)}
-              sub={`Previous: ${fmt(prev.commands)}`}
+              sub={comparison ? `Previous: ${fmt(prev.commands)}` : undefined}
               icon={<Terminal size={16} />}
               accent="#f59e0b"
               trend={overview.trends.commands}
               goodDirection="up"
+              hideTrend={!comparison}
             />
           </div>
         </CategorySection>
@@ -693,38 +706,6 @@ function HighlightRow({
 }
 
 // ── Small pieces ──────────────────────────────────────────────────────────
-
-function WindowFilter({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: InsightWindow
-  onChange: (w: InsightWindow) => void
-  disabled?: boolean
-}) {
-  return (
-    <div
-      className="inline-flex items-center gap-0.5 rounded-lg border p-0.5"
-      style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
-    >
-      {INSIGHT_WINDOWS.map((w) => {
-        const active = w === value
-        return (
-          <button
-            key={w}
-            onClick={() => onChange(w)}
-            disabled={disabled}
-            className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50"
-            style={active ? { background: 'var(--p-soft)', color: 'var(--p-1)' } : { color: 'var(--text-3)' }}
-          >
-            {w}d
-          </button>
-        )
-      })}
-    </div>
-  )
-}
 
 function FilterChip({
   label,

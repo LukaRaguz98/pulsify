@@ -16,7 +16,6 @@ import {
   computeTrends,
   bestActivitySlot,
   buildRecap,
-  isInsightWindow,
   type HeatmapCell,
   type RecapInput,
   type RecapItem,
@@ -96,7 +95,10 @@ export async function postInsightsRecap(
   const auth = await authorizeGuildModerator(guildId)
   if (!auth.ok) return { ok: false, error: auth.error }
 
-  const windowDays = isInsightWindow(windowDaysInput) ? windowDaysInput : 7
+  // Accept any positive day count (the view now spans 24h…all-time); clamp to a
+  // sane range so a bad input can't request an absurd window.
+  const windowDays =
+    Number.isFinite(windowDaysInput) && windowDaysInput > 0 ? Math.min(Math.round(windowDaysInput), 3650) : 7
   const supabase = await createClient()
   const now = Date.now()
   const trendSince = new Date(now - windowDays * 2 * DAY_MS).toISOString()

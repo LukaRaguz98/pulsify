@@ -55,13 +55,15 @@ type Props = {
   accent: string
   trend: Trend
   goodDirection: 'up' | 'down' | 'none'
+  /** Suppress the trend pill — e.g. the 'all time' window has no prior period. */
+  hideTrend?: boolean
 }
 
 /**
  * An engagement-overview metric: headline value, an accent icon chip and a
  * trend pill comparing this period to the one before it.
  */
-export function TrendStat({ label, value, sub, icon, accent, trend, goodDirection }: Props) {
+export function TrendStat({ label, value, sub, icon, accent, trend, goodDirection, hideTrend }: Props) {
   const sentiment = sentimentOf(trend, goodDirection)
   return (
     <div
@@ -84,7 +86,7 @@ export function TrendStat({ label, value, sub, icon, accent, trend, goodDirectio
         >
           {value}
         </p>
-        <TrendBadge trend={trend} sentiment={sentiment} />
+        {!hideTrend && <TrendBadge trend={trend} sentiment={sentiment} />}
       </div>
       {sub && <p className="mt-1.5 text-xs text-subtle">{sub}</p>}
     </div>

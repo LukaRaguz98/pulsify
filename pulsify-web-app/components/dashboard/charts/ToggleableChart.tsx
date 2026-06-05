@@ -25,6 +25,7 @@ type Props = {
   tooltipValueFormatter?: (value: number, name: string) => string
   tooltipLabelFormatter?: (value: string) => string
   showLegend?: boolean
+  stacked?: boolean
 }
 
 const STORAGE_PREFIX = 'pulsify:chart-kind:'

@@ -7,7 +7,7 @@
 // no JSX, so the rules stay trivially testable and the same Recommendation
 // shape can later be produced by Pulse instead of (or alongside) these rules.
 
-import { formatDuration, type TimeseriesPoint } from '@/lib/analytics'
+import { formatDuration, type TimeseriesPoint, type Timeframe } from '@/lib/analytics'
 
 // ── Categorisation ───────────────────────────────────────────────────────────
 
@@ -505,7 +505,12 @@ export type HeatmapCell = { dow: number; hour: number; message_count: number }
 /** The full response the /insights route returns and the UI renders. */
 export type InsightsData = {
   generatedAt: string
+  /** Shared analytics timeframe selector (24h/7d/30d/all). */
+  timeframe: Timeframe
+  /** Effective window length in days (derived from the data for 'all'). */
   windowDays: number
+  /** False for 'all' — there's no previous period to trend against. */
+  comparison: boolean
   /** Whether any activity at all was recorded in the window. */
   hasActivity: boolean
   health: HealthScore
@@ -614,9 +619,3 @@ export function buildRecap(i: RecapInput): RecapItem[] {
   return items
 }
 
-export const INSIGHT_WINDOWS = [7, 30] as const
-export type InsightWindow = (typeof INSIGHT_WINDOWS)[number]
-
-export function isInsightWindow(n: number): n is InsightWindow {
-  return (INSIGHT_WINDOWS as readonly number[]).includes(n)
-}

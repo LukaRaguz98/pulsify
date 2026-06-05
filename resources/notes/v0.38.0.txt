@@ -1,0 +1,26 @@
+**Pulsify v0.38.0 — Management Analytics**
+Statistics shows what's happening and Insights shows what to do — Management Analytics shows who's doing it. A dedicated Analytics view for the people running your community: their moderation, support and community work, all in one place, with rankings, response times and accountability built in.
+
+**What's new**
+- **Analytics › Management** — a new view focused entirely on staff performance and management effectiveness, using the same 24h / 7d / 30d / all-time date ranges as the rest of your analytics so the period is consistent everywhere.
+- **Management overview** — active staff, moderation actions, support actions and community actions at a glance, each with a period-over-period trend.
+
+**Staff performance**
+- **Moderation breakdown** — warnings, timeouts, kicks, bans, unbans and total actions tracked per moderator, with performance rankings.
+- **Support analytics** — tickets handled and resolved, average first-response and resolution times, resolution rate and support workload distribution.
+- **Community management** — announcements published, events created, giveaways managed and more, attributed to the staff behind them.
+
+**Rankings & leaderboards**
+- **Know your top contributors** — most active moderator, support member and administrator, fastest responder and most tickets resolved, all filterable by timeframe.
+- **Drill-down profiles** — click any staff member for a full breakdown of their moderation, support and community activity, active days and consistency.
+
+**Smart management insights**
+- **Workload balancing** — Pulsify highlights overloaded staff, support bottlenecks, exceptional contributors and members who've gone quiet, with recommendations to rebalance the load.
+
+**Built for real teams**
+- **Visualizations** — a stacked activity-over-time chart and a contribution breakdown make the split between moderation, support and community easy to read.
+- **Search, filter & export** — search staff, filter by role and export the full performance breakdown to CSV. Responsive, polished and consistent with the rest of Pulsify.
+
+Run your community with the visibility, accountability and recognition your team deserves.
+
+June 08, 2026

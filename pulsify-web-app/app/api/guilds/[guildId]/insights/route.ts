@@ -8,14 +8,13 @@ import {
   snowflakeToDate,
 } from '@/lib/discord'
 import { permissionKeysFromBits, PERMISSION_BY_KEY } from '@/lib/discord-permissions'
-import type { TimeseriesPoint } from '@/lib/analytics'
+import { isTimeframe, timeframeWindowDays, timeframeBucket, type TimeseriesPoint, type Timeframe } from '@/lib/analytics'
 import {
   splitWindow,
   computeTrends,
   generateRecommendations,
   healthFromRecommendations,
   bestActivitySlot,
-  isInsightWindow,
   type InsightSignals,
   type InsightsData,
   type InactiveChannel,
@@ -44,7 +43,7 @@ function inactiveThresholdDays(windowDays: number): number {
 const TEXTY_CHANNEL_TYPES = new Set([0, 5, 15, 16])
 
 /**
- * GET /api/guilds/[guildId]/insights?window=7|30
+ * GET /api/guilds/[guildId]/insights?timeframe=24h|7d|30d|all
  *
  * Reduces Discord (channels, roles, members) + analytics (RPC timeseries,
  * summary, leaderboards) + feature config into a single InsightSignals object,
@@ -67,15 +66,20 @@ export async function GET(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { guildId } = await params
-  const windowParam = Number(new URL(req.url).searchParams.get('window'))
-  const windowDays = isInsightWindow(windowParam) ? windowParam : 7
+  const tfParam = new URL(req.url).searchParams.get('timeframe')
+  const timeframe: Timeframe = isTimeframe(tfParam) ? tfParam : '7d'
+  const fixedDays = timeframeWindowDays(timeframe)
+  // 24h/7d/30d compare against the equivalent previous window; 'all' has no
+  // comparable previous period, so trends are suppressed downstream.
+  const comparison = fixedDays !== null
 
   const now = Date.now()
-  // Two windows of daily buckets so we can compare "this period" vs "the period
-  // before it" entirely from one timeseries query.
-  const trendSince = new Date(now - windowDays * 2 * DAY_MS).toISOString()
-  const windowSince = new Date(now - windowDays * DAY_MS).toISOString()
+  // For comparison timeframes fetch 2× the window (current + previous) from one
+  // timeseries query; 'all' fetches everything (no lower bound).
+  const trendSince = comparison ? new Date(now - fixedDays * 2 * DAY_MS).toISOString() : null
+  const windowSince = comparison ? new Date(now - fixedDays * DAY_MS).toISOString() : null
   const heatmapSince = new Date(now - HEATMAP_DAYS * DAY_MS).toISOString()
+  const trunc = timeframeBucket(timeframe)
 
   const [
     guild,
@@ -96,7 +100,7 @@ export async function GET(
     supabase.rpc('get_analytics_timeseries', {
       p_guild_id: guildId,
       p_since: trendSince,
-      p_trunc: 'day',
+      p_trunc: trunc,
     }),
     supabase.rpc('get_analytics_summary', { p_guild_id: guildId, p_since: windowSince }),
     supabase.rpc('get_top_channels', { p_guild_id: guildId, p_since: windowSince, p_limit: 8 }),
@@ -116,7 +120,25 @@ export async function GET(
   const heatmap = (heatmapRes.error ? [] : (heatmapRes.data ?? [])) as HeatmapCell[]
 
   const series = (timeseriesRes.data ?? []) as TimeseriesPoint[]
-  const { current, previous } = splitWindow(series, windowDays, now)
+  // For comparison timeframes, split the 2×window series into current/previous.
+  // For 'all', a window large enough to capture everything makes the whole
+  // series "current" with an empty previous (no comparison); the effective
+  // window length for thresholds/copy is derived from the earliest bucket.
+  let windowDays: number
+  let current: TimeseriesTotals
+  let previous: TimeseriesTotals
+  if (comparison) {
+    windowDays = fixedDays
+    ;({ current, previous } = splitWindow(series, fixedDays, now))
+  } else {
+    let earliest = now
+    for (const p of series) {
+      const t = new Date(p.bucket).getTime()
+      if (!Number.isNaN(t) && t < earliest) earliest = t
+    }
+    windowDays = Math.max(1, Math.ceil((now - earliest) / DAY_MS))
+    ;({ current, previous } = splitWindow(series, windowDays, now))
+  }
   const trends = computeTrends(current, previous)
 
   const summary = summaryRes.data?.[0] as { active_users?: number } | undefined
@@ -210,7 +232,9 @@ export async function GET(
 
   const data: InsightsData = {
     generatedAt: new Date().toISOString(),
+    timeframe,
     windowDays,
+    comparison,
     hasActivity,
     health,
     overview: { current, previous, trends, activeUsers, totalMembers },

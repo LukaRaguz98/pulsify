@@ -2597,3 +2597,107 @@ Acceptance Criteria
 	Analytics track onboarding performance correctly
 	Verification and rewards integrate successfully
 	UI remains responsive and visually polished
+
+PULSIFY-38 — Moderation & Management Analytics (v0.38.0)
+
+Description
+	Implement a dedicated Management Analytics module that provides administrators and server owners with detailed insights into staff performance, moderation activity, support efficiency, and overall management effectiveness.
+	While Statistics focuses on server-wide activity and Insights focuses on recommendations, Management Analytics should focus on the people responsible for running the community.
+
+Goals
+	Improve visibility into staff activity
+	Measure moderation and support effectiveness
+	Help server owners identify top contributors
+	Improve accountability and transparency
+	Provide actionable management insights
+
+Tasks
+	Management View
+		Create new Analytics > Management view
+		Display:
+			active staff members
+			moderation activity
+			support activity
+			event management activity
+			management trends
+		Add selectable date ranges
+
+	Staff Performance
+		Track and display:
+			warnings issued
+			timeouts issued
+			kicks performed
+			bans performed
+			unbans performed
+			moderation actions total
+		Add performance rankings
+
+	Ticket & Support Analytics
+		Track:
+			tickets handled
+			tickets resolved
+			average first response time
+			average resolution time
+			support workload distribution
+		Display support leaderboards
+
+	Community Management Analytics
+		Track:
+			announcements published
+			events created
+			events managed
+			giveaways managed
+			applications reviewed
+			onboarding actions performed
+		Display contribution metrics
+
+	Activity Tracking
+		Track:
+			dashboard actions
+			command usage
+			last active date
+			active days
+			activity consistency
+		Highlight inactive staff members
+
+	Rankings & Leaderboards
+		Add:
+			most active moderator
+			most active support member
+			most active administrator
+			fastest responder
+			most tickets resolved
+		Support filtering by timeframe
+
+	Visualizations
+		Add:
+			moderation activity charts
+			ticket performance charts
+			staff activity heatmaps
+			contribution breakdown charts
+			activity trends
+
+	Insights Integration
+		Generate management-specific insights
+		Highlight:
+			overloaded staff members
+			inactive staff members
+			exceptional contributors
+			support bottlenecks
+		Add recommendations for workload balancing
+
+	UX Improvements
+		Add responsive layouts
+		Add search and filtering
+		Add loading/error/empty states
+		Add drill-down staff profile views
+		Add export functionality
+
+Acceptance Criteria
+	Management Analytics view is accessible from Analytics navigation
+	Staff performance metrics calculate correctly
+	Support and moderation statistics display accurately
+	Rankings and leaderboards update correctly
+	Management insights provide meaningful recommendations
+	Visualizations are responsive and easy to understand
+	UI remains visually polished and consistent with Pulsify
