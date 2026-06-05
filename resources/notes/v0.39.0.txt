@@ -1,0 +1,28 @@
+**Pulsify v0.39.0 — Community Feedback & Testimonials**
+The landing page's testimonials are no longer hand-written placeholders — they're real reviews from the people running their servers on Pulsify. Signed-in users can leave feedback, rate the product, upvote what helped them, and the highest-rated entries automatically showcase on the homepage as live social proof.
+
+**What's new**
+- **Real community feedback** — a complete feedback system replaces the static landing-page testimonials. Sign in with Discord, leave a title, a message and a 1–5 star rating, and it shows up across the site.
+- **Top reviews on the homepage** — the three highest-rated entries are showcased on the landing page automatically, with a smooth swipeable carousel on mobile and a clean grid on desktop. The page falls back to illustrative quotes only until the first real reviews land.
+
+**Leave & manage your feedback**
+- **One place to be heard** — write your feedback in a polished modal with live character counts, an animated star picker and instant validation.
+- **Edit or delete any time** — everyone has a single review they fully control; updating it never floods the wall with duplicates.
+- **Your identity, handled gracefully** — your Discord name and avatar are shown on your review, and the wall still renders correctly even if an account is later deleted.
+
+**Discover what people think**
+- **A dedicated /feedback page** — browse every community review with search, a star-rating filter, and sorting by Highest rated, Newest or Most helpful.
+- **Mark what helped** — upvote the reviews you found useful. You can't vote on your own feedback, and each person counts once, so the "most helpful" ranking stays honest.
+- **At-a-glance trust** — average rating and total review count sit right above the wall.
+
+**Moderation & safety**
+- **Report abuse** — flag any review for the Pulsify team to look at.
+- **Operator controls** — Pulsify operators can hide abusive feedback and see report counts inline, keeping the wall clean.
+- **Built-in safeguards** — validation, anti-duplicate, anti-self-vote and anti-double-vote protections throughout.
+
+**Polished throughout**
+- **Modern testimonial cards, animated rating displays, loading / error / empty states and success confirmations** — responsive on every screen and consistent with the rest of Pulsify.
+
+Your community's voice now lives on the homepage — real, fresh and earned.
+
+June 06, 2026

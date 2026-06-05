@@ -255,26 +255,3 @@ export const FAQS: Faq[] = [
     a: 'Yes — upgrade, downgrade or cancel whenever you like. Your settings and data stay intact, and the Free plan is always available to fall back on.',
   },
 ]
-
-export type Testimonial = { quote: string; name: string; role: string; initial: string }
-
-export const TESTIMONIALS: Testimonial[] = [
-  {
-    quote: 'Pulse Guard caught a wave of scam links before any of my mods even woke up. The dashboard is genuinely the cleanest I have used.',
-    name: 'Community Owner',
-    role: 'Gaming server · 40k members',
-    initial: 'G',
-  },
-  {
-    quote: 'We replaced three bots with Pulsify. Analytics, events and moderation in one place — my mod team finally agrees on something.',
-    name: 'Head Moderator',
-    role: 'Creator community · 12k members',
-    initial: 'C',
-  },
-  {
-    quote: 'The automations and welcome embeds are gorgeous out of the box, and the real-time feed means I never miss a thing.',
-    name: 'Server Admin',
-    role: 'Study & dev hub · 8k members',
-    initial: 'S',
-  },
-]

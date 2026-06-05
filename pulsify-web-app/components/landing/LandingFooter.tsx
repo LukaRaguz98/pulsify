@@ -25,6 +25,7 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
       { label: 'FAQ', href: '/faq' },
       { label: 'Support', href: '/support' },
       { label: 'Community', href: '/community' },
+      { label: 'Feedback', href: '/feedback' },
     ],
   },
   {

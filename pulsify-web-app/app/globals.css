@@ -442,6 +442,25 @@ body:has([role="dialog"]) [data-pulsify-ping] {
   animation: leaderboard-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Community Feedback (PULSIFY-39) — filled stars pop in as a card reveals, and
+   feedback cards rise on scroll. Both auto-neutralised by the
+   [data-animations="false"] reduced-motion rule above. */
+@keyframes fb-star-pop {
+  0%   { opacity: 0; transform: scale(0.4) rotate(-12deg); }
+  70%  { transform: scale(1.18) rotate(4deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+.fb-star {
+  animation: fb-star-pop 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes fb-card-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fb-card-in {
+  animation: fb-card-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* ── Button hover effects ──────────────────────────────────────
    Most primary/secondary buttons in the app are inline-styled
    (var(--p-1) gradients for primary, var(--line-strong) borders for

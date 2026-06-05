@@ -1,9 +1,19 @@
-import { Star } from 'lucide-react'
-import { TESTIMONIALS } from './landing-data'
+import Link from 'next/link'
+import { MessageSquarePlus } from 'lucide-react'
 import { SectionHeading } from './landing-ui'
 import { EarlyAccessButton, InvitePulseButton } from './LandingCtas'
+import { getTopFeedback } from '@/lib/feedback-server'
+import { CommunityFeedback } from '@/components/feedback/CommunityFeedback'
 
-export function Community() {
+/**
+ * Social-proof section. Shows ONLY the top-rated real community feedback
+ * (PULSIFY-39) — the top 3 entries. No placeholder/illustrative quotes: until
+ * the first real reviews land, this renders a clean empty state inviting people
+ * to be the first. CTAs point into the full /feedback wall.
+ */
+export async function Community() {
+  const top = await getTopFeedback(3)
+
   return (
     <section className="mx-auto max-w-7xl px-6 py-16">
       <SectionHeading
@@ -12,40 +22,36 @@ export function Community() {
         subtitle="Pulsify is shaped by the people who run real Discord servers every day."
       />
 
-      <div className="mt-12 grid gap-5 md:grid-cols-3">
-        {TESTIMONIALS.map((t) => (
-          <div
-            key={t.name}
-            className="lp-card flex flex-col rounded-2xl border p-6"
-            style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
+      {top.length > 0 ? (
+        <CommunityFeedback items={top} />
+      ) : (
+        <div
+          className="mt-12 flex flex-col items-center rounded-2xl border border-dashed px-6 py-16 text-center"
+          style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}
+        >
+          <span
+            className="flex h-14 w-14 items-center justify-center rounded-2xl"
+            style={{ background: 'var(--p-soft)', color: 'var(--p-1)' }}
           >
-            <div className="flex gap-0.5" style={{ color: 'var(--amber)' }}>
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Star key={i} size={14} fill="currentColor" />
-              ))}
-            </div>
-            <p className="mt-4 flex-1 text-sm leading-relaxed" style={{ color: 'var(--text-2)' }}>
-              “{t.quote}”
-            </p>
-            <div className="mt-5 flex items-center gap-3">
-              <div
-                className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white"
-                style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}
-              >
-                {t.initial}
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">{t.name}</p>
-                <p className="text-xs" style={{ color: 'var(--text-3)' }}>{t.role}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <p className="mt-6 text-center text-xs" style={{ color: 'var(--text-3)' }}>
-        Community quotes shown for illustration during early access.
-      </p>
+            <MessageSquarePlus size={26} />
+          </span>
+          <p className="mt-5 text-lg font-semibold text-foreground">No reviews yet</p>
+          <p className="mt-1.5 max-w-md text-sm leading-relaxed" style={{ color: 'var(--text-2)' }}>
+            Be the first to share what you think about Pulsify — your feedback will be showcased
+            right here.
+          </p>
+          <Link
+            href="/feedback"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-all"
+            style={{
+              background: 'linear-gradient(180deg, var(--p-1) 0%, var(--p-2) 100%)',
+              boxShadow: '0 6px 20px -6px var(--p-glow), inset 0 1px 0 rgba(255,255,255,0.2)',
+            }}
+          >
+            Leave the first review
+          </Link>
+        </div>
+      )}
     </section>
   )
 }
