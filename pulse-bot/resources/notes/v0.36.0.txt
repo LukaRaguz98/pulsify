@@ -20,4 +20,4 @@ Set up a new server in minutes, not hours. Server Templates let you save a serve
 
 Build it once, deploy it everywhere.
 
-June 06, 2026
+June 04, 2026

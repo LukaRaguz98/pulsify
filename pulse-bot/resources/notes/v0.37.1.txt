@@ -14,4 +14,4 @@ A focused follow-up to v0.37.0: a more modern welcome embed, a faithful editor p
 - **No more duplicate notifications** — an update is now delivered exactly once, even across restarts or multiple bot instances.
 - Editing a connection's source re-baselines it instead of backfilling old activity.
 
-June 07, 2026
+June 05, 2026
