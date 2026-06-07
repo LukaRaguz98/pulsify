@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from 'next/font/google'
 import { cookies } from 'next/headers'
 import './globals.css'
 import { ThemeProvider } from '@/components/ThemeProvider'
+import { CookieConsent } from '@/components/CookieConsent'
 import type { ThemeId } from '@/lib/themes'
 import type { ColorScheme, LayoutDensity, FontSize } from '@/lib/preferences'
 import { PREF_COOKIES, DEFAULT_PREFERENCES } from '@/lib/preferences'
@@ -85,6 +86,7 @@ export default async function RootLayout({
           initialPingIndicator={pingIndicator}
         >
           {children}
+          <CookieConsent />
         </ThemeProvider>
       </body>
     </html>

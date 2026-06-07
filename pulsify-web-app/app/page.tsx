@@ -12,16 +12,25 @@ import { Reveal } from '@/components/landing/Reveal'
 import { LandingBackdrop } from '@/components/landing/LandingBackdrop'
 import { ScrollProgress } from '@/components/landing/ScrollProgress'
 import { BackToTop } from '@/components/landing/BackToTop'
+import { createClient } from '@/lib/supabase-server'
 
-export default function Home() {
+export default async function Home() {
+  // Resolve auth state server-side so the nav renders the correct CTA on first
+  // paint (no "Sign in" flash for logged-in visitors).
+  const supabase = await createClient()
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  const isAuthed = !!session
+
   return (
     <div className="relative min-h-screen bg-background text-foreground">
       <ScrollProgress />
       <LandingBackdrop />
-      <LandingNav />
+      <LandingNav isAuthed={isAuthed} />
       <main>
         {/* Hero keeps its own load-in animation; the rest reveal on scroll. */}
-        <Hero />
+        <Hero isAuthed={isAuthed} />
         <Reveal><DashboardPreview /></Reveal>
         <Reveal><Features /></Reveal>
         <Reveal><Showcases /></Reveal>
@@ -30,7 +39,7 @@ export default function Home() {
         <Reveal><Pricing /></Reveal>
         <Reveal><Faq /></Reveal>
         <Reveal><Community /></Reveal>
-        <Reveal><FinalCta /></Reveal>
+        <Reveal><FinalCta isAuthed={isAuthed} /></Reveal>
       </main>
       <LandingFooter />
       <BackToTop />

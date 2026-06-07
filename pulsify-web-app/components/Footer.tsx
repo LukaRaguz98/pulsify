@@ -1,7 +1,9 @@
 import Link from 'next/link'
+import { PUBLIC_PAGES } from '@/lib/public-nav'
 
 // Sits at the bottom of every dashboard page. Uses the current year so we
-// don't have to revisit this every January.
+// don't have to revisit this every January. The page links mirror the public
+// sub-nav exactly (same pages, same order) via the shared PUBLIC_PAGES list.
 export function Footer() {
   const year = new Date().getFullYear()
   return (
@@ -19,24 +21,11 @@ export function Footer() {
         </div>
 
         <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-          <Link href="/privacy" className="transition-colors hover:text-[var(--p-1)]">
-            Privacy Policy
-          </Link>
-          <Link href="/terms" className="transition-colors hover:text-[var(--p-1)]">
-            Terms of Service
-          </Link>
-          <Link href="/faq" className="transition-colors hover:text-[var(--p-1)]">
-            FAQ
-          </Link>
-          <Link href="/support" className="transition-colors hover:text-[var(--p-1)]">
-            Support
-          </Link>
-          <Link href="/community" className="transition-colors hover:text-[var(--p-1)]">
-            Community
-          </Link>
-          <Link href="/release-notes" className="transition-colors hover:text-[var(--p-1)]">
-            Release Notes
-          </Link>
+          {PUBLIC_PAGES.map((p) => (
+            <Link key={p.href} href={p.href} className="transition-colors hover:text-[var(--p-1)]">
+              {p.label}
+            </Link>
+          ))}
         </nav>
       </div>
     </footer>

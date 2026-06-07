@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Bot, LayoutDashboard, Loader2, Sparkles } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
@@ -41,12 +42,26 @@ const DiscordGlyph = ({ size = 16 }: { size?: number }) => (
   </svg>
 )
 
-/** Opens the Discord OAuth flow, same as the legacy LoginButton. */
+/**
+ * Opens the Discord OAuth flow — unless the visitor is already signed in, in
+ * which case it routes straight to `redirectAfter`. Every auth CTA (Sign in,
+ * Join Early Access, footer Dashboard link, feedback prompt…) goes through this
+ * hook, so this one session check makes them all session-aware: a logged-in
+ * user never gets bounced to the login screen.
+ */
 export function useDiscordSignIn(redirectAfter = '/dashboard') {
+  const router = useRouter()
   const [pending, setPending] = useState(false)
   const signIn = async () => {
     setPending(true)
     const supabase = createClient()
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    if (session) {
+      router.push(redirectAfter)
+      return
+    }
     const next = encodeURIComponent(redirectAfter)
     await supabase.auth.signInWithOAuth({
       provider: 'discord',

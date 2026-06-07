@@ -181,10 +181,18 @@
 
 /* ── Font Size ─────────────────────────────── */
 /* Root font-size drives every rem-based size in Tailwind utilities, so this
-   scales the entire UI proportionally instead of overriding per element. */
-[data-font-size="small"]  { font-size: 14px; }
-[data-font-size="medium"] { font-size: 16px; }
-[data-font-size="large"]  { font-size: 18px; }
+   scales the entire UI proportionally instead of overriding per element.
+
+   Each preference is fluid (clamp) rather than a fixed px so the whole UI grows
+   on wide, high-resolution monitors (e.g. 27" 1440p) instead of looking tiny,
+   while staying identical on smaller screens. The `vw` slope (0.469vw) is
+   anchored so each level keeps its base size up to a ~1920px viewport (24"
+   1080p, the reference that "looked ok"), then scales up to +4px by ~2560px and
+   is capped beyond that so 4K displays don't blow the type up. The clamp floor
+   equals the old fixed size, so narrower screens are unchanged. */
+[data-font-size="small"]  { font-size: clamp(14px, calc(5px + 0.469vw), 18px); }
+[data-font-size="medium"] { font-size: clamp(16px, calc(7px + 0.469vw), 20px); }
+[data-font-size="large"]  { font-size: clamp(18px, calc(9px + 0.469vw), 22px); }
 
 /* ── Ambient background glow toggle ────────── */
 /* Defers to the per-theme --glow-opacity (light scheme dims it to 0.25) so
@@ -324,8 +332,15 @@ body.slide-over-open [data-app-footer="true"] {
 /* ── Page layout helpers ───────────────────── */
 .page-content {
   padding: var(--page-padding);
-  max-width: 80rem;
+  /* Content takes 80% of the available width, centred — leaves a comfortable
+     10% gutter each side so it doesn't stretch edge-to-edge on wide monitors,
+     and scales with the screen instead of a fixed px cap. On tablet/phone the
+     gutter is dropped (see below) so small screens use the full width. */
+  max-width: 80%;
   margin-inline: auto;
+}
+@media (max-width: 1023px) {
+  .page-content { max-width: 100%; }
 }
 
 /* Chrome widgets (bell, ping) sit at a low z so dialogs cover them, but

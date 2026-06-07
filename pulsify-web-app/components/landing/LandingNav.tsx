@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { Menu, X } from 'lucide-react'
-import { InvitePulseButton, SignInButton } from './LandingCtas'
+import { InvitePulseButton, OpenDashboardButton, SignInButton } from './LandingCtas'
 
 const LINKS = [
   { label: 'Features', href: '#features' },
@@ -13,7 +13,7 @@ const LINKS = [
   { label: 'FAQ', href: '#faq' },
 ]
 
-export function LandingNav() {
+export function LandingNav({ isAuthed = false }: { isAuthed?: boolean }) {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
 
@@ -69,7 +69,7 @@ export function LandingNav() {
 
         <div className="hidden items-center gap-2.5 md:flex">
           <InvitePulseButton variant="secondary" size="sm" />
-          <SignInButton />
+          {isAuthed ? <OpenDashboardButton variant="primary" size="sm" /> : <SignInButton />}
         </div>
 
         {/* Mobile toggle */}
@@ -104,7 +104,7 @@ export function LandingNav() {
             ))}
             <div className="mt-2 flex flex-col gap-2">
               <InvitePulseButton variant="secondary" size="md" full />
-              <SignInButton size="md" />
+              {isAuthed ? <OpenDashboardButton variant="primary" size="md" full /> : <SignInButton size="md" />}
             </div>
           </div>
         </div>

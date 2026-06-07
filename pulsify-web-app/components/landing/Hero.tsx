@@ -4,7 +4,7 @@ import { TRUST_BADGES } from './landing-data'
 import { Eyebrow } from './landing-ui'
 import { EarlyAccessButton, InvitePulseButton, OpenDashboardButton } from './LandingCtas'
 
-export function Hero() {
+export function Hero({ isAuthed = false }: { isAuthed?: boolean }) {
   return (
     <section id="top" className="relative overflow-hidden">
       {/* Animated gradient blobs */}
@@ -55,9 +55,12 @@ export function Hero() {
         </p>
 
         <div className="lp-fade-up-2 mt-1 flex flex-col flex-wrap items-center justify-center gap-3 sm:flex-row">
-          <EarlyAccessButton variant="primary" size="lg" />
+          {isAuthed ? (
+            <OpenDashboardButton variant="primary" size="lg" />
+          ) : (
+            <EarlyAccessButton variant="primary" size="lg" />
+          )}
           <InvitePulseButton variant="secondary" size="lg" />
-          <OpenDashboardButton variant="secondary" size="lg" />
         </div>
 
         <p className="lp-fade-up-2 text-sm" style={{ color: 'var(--text-3)' }}>

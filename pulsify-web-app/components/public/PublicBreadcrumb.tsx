@@ -3,17 +3,12 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
+import { PUBLIC_PAGES } from '@/lib/public-nav'
 
-// The four public pages, surfaced as a contextual sub-nav so you can hop
-// between them and always see which one you're on.
-const PAGES = [
-  { href: '/faq', label: 'FAQ' },
-  { href: '/support', label: 'Support' },
-  { href: '/community', label: 'Community' },
-  { href: '/release-notes', label: 'Release Notes' },
-  { href: '/privacy', label: 'Privacy' },
-  { href: '/terms', label: 'Terms' },
-]
+// The public pages, surfaced as a contextual sub-nav so you can hop between them
+// and always see which one you're on. Order is shared with the dashboard footer
+// via PUBLIC_PAGES.
+const PAGES = PUBLIC_PAGES
 
 /**
  * Slim bar under the header. Gives every public page a clear way back to where

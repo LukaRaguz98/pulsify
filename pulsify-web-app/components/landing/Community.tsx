@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { MessageSquarePlus } from 'lucide-react'
 import { SectionHeading } from './landing-ui'
-import { EarlyAccessButton, InvitePulseButton } from './LandingCtas'
+import { EarlyAccessButton, InvitePulseButton, OpenDashboardButton } from './LandingCtas'
 import { getTopFeedback } from '@/lib/feedback-server'
 import { CommunityFeedback } from '@/components/feedback/CommunityFeedback'
 
@@ -56,7 +56,7 @@ export async function Community() {
   )
 }
 
-export function FinalCta() {
+export function FinalCta({ isAuthed = false }: { isAuthed?: boolean }) {
   return (
     <section className="mx-auto max-w-7xl px-6 pb-16">
       <div
@@ -76,7 +76,11 @@ export function FinalCta() {
             Invite the Pulse bot, sign in with Discord, and get your whole server under control in minutes.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <EarlyAccessButton variant="primary" size="lg" />
+            {isAuthed ? (
+              <OpenDashboardButton variant="primary" size="lg" />
+            ) : (
+              <EarlyAccessButton variant="primary" size="lg" />
+            )}
             <InvitePulseButton variant="secondary" size="lg" />
           </div>
           <p className="mt-4 text-sm" style={{ color: 'var(--text-3)' }}>
