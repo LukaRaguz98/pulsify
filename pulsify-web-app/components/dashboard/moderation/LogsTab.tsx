@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import Image from 'next/image'
-import { Loader2, Filter } from 'lucide-react'
+import { Filter } from 'lucide-react'
+import { TableSkeleton } from '@/components/ui/table-skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ScrollText } from 'lucide-react'
 import { Pagination } from '@/components/ui/pagination'
@@ -184,12 +185,11 @@ export function LogsTab({ guildId, refreshKey, members }: Props) {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 size={20} className="animate-spin text-muted-foreground" />
-        </div>
+        <TableSkeleton rows={8} columns={5} />
       ) : filtered.length === 0 ? (
         <EmptyState
-          icon={<ScrollText size={36} />}
+          variant={logs.length === 0 ? 'accent' : 'muted'}
+          icon={<ScrollText size={24} />}
           title={logs.length === 0 ? 'No moderation activity yet' : 'No entries match this filter'}
           description={
             logs.length === 0

@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
+import { useDialogDismiss } from '@/components/ui/use-dialog-dismiss'
 import { useRouter } from 'next/navigation'
 import {
   X,
@@ -95,10 +96,7 @@ export function GiveawayCreatePanel({ guildId, channels, roles, editing, onClose
   // While the slide-over is open, flag the body so globals.css hides the app
   // footer + top-right corner chrome (otherwise they paint over the panel — the
   // universal `z-index: 1` rule traps the drawer in <main>'s stacking context).
-  useEffect(() => {
-    document.body.classList.add('slide-over-open')
-    return () => document.body.classList.remove('slide-over-open')
-  }, [])
+  useDialogDismiss(onClose, saving || pending)
 
   const [draft, setDraft] = useState<GiveawayDraft>(() => {
     if (editing) {

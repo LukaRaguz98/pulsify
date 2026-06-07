@@ -276,11 +276,14 @@ async function finalizePublish(
     .update({ status: 'published', message_id: posted.messageId, published_at: nowIso, error: null, updated_at: nowIso })
     .eq('id', id)
     .eq('guild_id', guildId)
+  // Resolve a readable "#general" for the notification — a raw <#id> mention
+  // only renders to a name inside Discord, not in the dashboard's notifications.
+  const publishedChannel = (await fetchGuildChannels(guildId)).find((c) => c.id === a.channel_id)
   await recordNotification({
     guildId,
     type: 'announcement_published',
     title: `Announcement published: ${a.title}`,
-    body: `Posted to <#${a.channel_id}>`,
+    body: `Posted to ${publishedChannel?.name ? `#${publishedChannel.name}` : 'the channel'}`,
     link: `/dashboard/${guildId}/announcements`,
     actorId: moderator.userId,
     actorName: moderator.username,

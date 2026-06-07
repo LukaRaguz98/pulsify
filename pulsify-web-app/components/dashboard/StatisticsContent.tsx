@@ -44,7 +44,7 @@ type Props = {
 }
 
 export function StatisticsContent({ guildId, guildName }: Props) {
-  const [timeframe, setTimeframe] = useState<Timeframe>('24h')
+  const [timeframe, setTimeframe] = useState<Timeframe>('7d')
   const { data, loading, refreshing, error, refresh } = useAnalytics(guildId, timeframe)
 
   const header = (

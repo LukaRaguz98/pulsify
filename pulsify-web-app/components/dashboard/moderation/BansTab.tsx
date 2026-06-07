@@ -117,7 +117,7 @@ export function BansTab({ guildId, bans, onActionComplete }: Props) {
   if (bans.length === 0) {
     return (
       <EmptyState
-        icon={<Shield size={36} />}
+        icon={<Shield size={24} />}
         title="No active bans"
         description="This server has no banned users."
       />
@@ -147,7 +147,8 @@ export function BansTab({ guildId, bans, onActionComplete }: Props) {
 
       {filtered.length === 0 ? (
         <EmptyState
-          icon={<Search size={36} />}
+          variant="muted"
+          icon={<Search size={24} />}
           title="No bans match"
           description={`No bans matching "${search}".`}
         />

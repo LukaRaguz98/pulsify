@@ -278,19 +278,26 @@ function changelogContainer(
  * post there. Returns an error string when publishing should be blocked, or
  * null when it's safe to post (mirrors announcements' preflight).
  */
-async function preflightChannel(guildId: string, channelId: string): Promise<string | null> {
+// Returns a blocking `error` (null when OK) plus the resolved channel `name`, so
+// callers can surface a readable "#general" in notifications instead of a raw
+// `<#id>` mention (which only renders to a name inside Discord, not the dashboard).
+async function preflightChannel(
+  guildId: string,
+  channelId: string,
+): Promise<{ error: string | null; name: string | null }> {
   const [channels, perms] = await Promise.all([fetchGuildChannels(guildId), checkBotPermissions(guildId)])
   const channel = channels.find((c) => c.id === channelId)
-  if (!channel) return 'That channel no longer exists. Pick another one.'
+  const name = channel?.name ?? null
+  if (!channel) return { error: 'That channel no longer exists. Pick another one.', name }
   if (channel.type !== CHANNEL_TYPES.TEXT && channel.type !== CHANNEL_TYPES.ANNOUNCEMENT) {
-    return 'The changelog can only be posted to a text or announcement channel.'
+    return { error: 'The changelog can only be posted to a text or announcement channel.', name }
   }
-  if (perms === null) return null // couldn't determine perms — let the post try
-  if (!perms.inGuild) return 'Pulse is not in this server. Invite it, then try again.'
+  if (perms === null) return { error: null, name } // couldn't determine perms — let the post try
+  if (!perms.inGuild) return { error: 'Pulse is not in this server. Invite it, then try again.', name }
   if (!perms.administrator && !perms.sendMessages) {
-    return "Pulse can't send messages in this server. Grant it the Send Messages permission."
+    return { error: "Pulse can't send messages in this server. Grant it the Send Messages permission.", name }
   }
-  return null
+  return { error: null, name }
 }
 
 /**
@@ -311,8 +318,9 @@ export async function publishChangelog(
   if (!release) return { ok: false, error: 'That release could not be found.' }
   const changelog = toChangelogRelease(release)
 
-  const blocked = await preflightChannel(guildId, input.channelId)
-  if (blocked) return { ok: false, error: blocked }
+  const preflight = await preflightChannel(guildId, input.channelId)
+  if (preflight.error) return { ok: false, error: preflight.error }
+  const channelLabel = preflight.name ? `#${preflight.name}` : 'the channel'
 
   const supabase = await createClient()
   const colorHex = await pulseColor(supabase, guildId)
@@ -351,7 +359,7 @@ export async function publishChangelog(
     guildId,
     type: 'announcement_published',
     title: `Changelog published: v${changelog.version}`,
-    body: `Posted ${changelog.title} to <#${input.channelId}>`,
+    body: `Posted ${changelog.title} to ${channelLabel}`,
     link: `/dashboard/${guildId}/presence`,
     actorId: auth.userId,
     targetId: input.channelId,

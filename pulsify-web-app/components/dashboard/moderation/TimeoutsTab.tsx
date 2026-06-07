@@ -173,7 +173,7 @@ export function TimeoutsTab({ guildId, members, meta, referenceTime, onActionCom
   if (timedOut.length === 0) {
     return (
       <EmptyState
-        icon={<Clock size={36} />}
+        icon={<Clock size={24} />}
         title="No active timeouts"
         description="No members are currently muted via Discord timeout."
       />
@@ -203,7 +203,8 @@ export function TimeoutsTab({ guildId, members, meta, referenceTime, onActionCom
 
       {filtered.length === 0 ? (
         <EmptyState
-          icon={<Search size={36} />}
+          variant="muted"
+          icon={<Search size={24} />}
           title="No matches"
           description={`No timed-out members matching "${search}".`}
         />

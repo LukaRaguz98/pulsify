@@ -136,6 +136,14 @@ export function WorkspaceSidebar({ workspace, role, workspaces, user }: Props) {
 
   const overviewActive = isItemActive(overview.href)
 
+  // Current location for the mobile top bar — Section › Page, mirroring the
+  // active sidebar item so the page stays identifiable while the drawer is
+  // closed (matches GuildSidebar's mobile breadcrumb).
+  const activeItem = [overview, ...groups.flatMap((g) => g.items)].find((it) => isItemActive(it.href))
+  const activeSectionTitle = groups.find((g) => g.items.some((it) => isItemActive(it.href)))?.title
+  const mobileCrumbSection = activeItem && activeItem !== overview ? activeSectionTitle : undefined
+  const mobileCrumbTitle = activeItem?.label ?? workspace.name
+
   const nav = (
     <nav className="flex-1 overflow-y-auto px-2 pb-2 pt-3 space-y-1">
       {/* Standalone Overview — no parent category. Same row visual as the
@@ -292,13 +300,25 @@ export function WorkspaceSidebar({ workspace, role, workspaces, user }: Props) {
     <>
       {/* Mobile top bar */}
       <div className="lg:hidden fixed top-0 inset-x-0 z-30 flex h-12 items-center gap-2 border-b px-3" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)', backdropFilter: 'blur(12px)' }}>
-        <button type="button" onClick={() => setMobileOpen(true)} aria-label="Open navigation" className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ color: 'var(--text-2)' }}>
+        <button type="button" onClick={() => setMobileOpen(true)} aria-label="Open navigation" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors" style={{ color: 'var(--text-2)' }}>
           <Menu size={18} />
         </button>
         <Link href="/" aria-label="Pulsify home" className="flex shrink-0">
           <Image src="/logo.png" alt="Pulsify" width={22} height={22} className="shrink-0" />
         </Link>
-        <span className="truncate font-bold text-sm tracking-tight text-foreground">{workspace.name}</span>
+        {/* Live breadcrumb — keeps the current page identifiable while the
+            drawer is closed (mirrors the active sidebar item + its section). */}
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          {mobileCrumbSection && (
+            <>
+              <span className="truncate text-sm" style={{ color: 'var(--text-3)' }}>
+                {mobileCrumbSection}
+              </span>
+              <ChevronRight size={13} className="shrink-0" style={{ color: 'var(--text-3)' }} />
+            </>
+          )}
+          <span className="truncate text-sm font-semibold text-foreground">{mobileCrumbTitle}</span>
+        </div>
       </div>
 
       {mobileOpen && (

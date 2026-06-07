@@ -55,14 +55,19 @@ import { MemberMilestones } from '@/components/dashboard/members/MemberMilestone
 
 type Props = { guildId: string; userId: string }
 
-function formatAge(days: number): string {
+// Spelled-out age ("9 years and 1 month", "26 days") used for the joined/account
+// lines on the profile card, where full words read clearer than a compact badge.
+function formatAgeLong(days: number): string {
+  const plural = (n: number, unit: string) => `${n} ${unit}${n === 1 ? '' : 's'}`
   if (days >= 365) {
     const years = Math.floor(days / 365)
     const months = Math.floor((days % 365) / 30)
-    return months > 0 ? `${years}y ${months}mo` : `${years}y`
+    return months > 0
+      ? `${plural(years, 'year')} and ${plural(months, 'month')}`
+      : plural(years, 'year')
   }
-  if (days >= 30) return `${Math.floor(days / 30)}mo`
-  return `${days}d`
+  if (days >= 30) return plural(Math.floor(days / 30), 'month')
+  return plural(days, 'day')
 }
 
 function memberInTimeout(until: string | null | undefined): boolean {
@@ -347,10 +352,10 @@ export function MemberProfile({ guildId, userId }: Props) {
           {/* Meta chips */}
           <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-subtle">
             <span className="inline-flex items-center gap-1.5">
-              <Calendar size={13} /> Joined {new Date(member.joined_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })} · {formatAge(tenureDays)} ago
+              <Calendar size={13} /> Joined {new Date(member.joined_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })} · {formatAgeLong(tenureDays)} ago
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <Clock size={13} /> Account {bundle.accountCreatedAt ? `${formatAge(accountAgeDays)} old` : 'age unknown'}
+              <Clock size={13} /> Account {bundle.accountCreatedAt ? `${formatAgeLong(accountAgeDays)} old` : 'age unknown'}
             </span>
             {inTimeout && (
               <span className="inline-flex items-center gap-1.5" style={{ color: '#f59e0b' }}>

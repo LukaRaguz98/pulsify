@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
+import { useDialogDismiss } from '@/components/ui/use-dialog-dismiss'
 import { useRouter } from 'next/navigation'
 import { X, Megaphone, AlertCircle, Loader2, Send, Save, Eye, Hash, CalendarClock } from 'lucide-react'
 import Image from 'next/image'
@@ -63,12 +64,7 @@ export function AnnouncementComposer({ guildId, channels, editing, onClose, onFe
   const [saving, setSaving] = useState<null | 'draft' | 'publish'>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // Flag the body while the slide-over is open so globals.css hides the app
-  // footer + corner chrome that would otherwise paint over it.
-  useEffect(() => {
-    document.body.classList.add('slide-over-open')
-    return () => document.body.classList.remove('slide-over-open')
-  }, [])
+  useDialogDismiss(onClose, saving !== null)
 
   const draft: AnnouncementDraft = useMemo(
     () => ({

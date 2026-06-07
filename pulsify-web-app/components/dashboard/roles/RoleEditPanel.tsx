@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useDialogDismiss } from '@/components/ui/use-dialog-dismiss'
 import {
   X,
   Loader2,
@@ -103,10 +104,7 @@ export function RoleEditPanel({
   // While the slide-over is mounted, hide the top-right corner decoration so
   // its extended bracket doesn't paint across the dialog. Class is scoped to
   // body so it survives unrelated re-renders.
-  useEffect(() => {
-    document.body.classList.add('slide-over-open')
-    return () => document.body.classList.remove('slide-over-open')
-  }, [])
+  useDialogDismiss(onClose, busy)
 
   useEffect(() => {
     if (!success) return

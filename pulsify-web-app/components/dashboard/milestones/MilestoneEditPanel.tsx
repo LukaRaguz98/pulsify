@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
+import { useDialogDismiss } from '@/components/ui/use-dialog-dismiss'
 import { useRouter } from 'next/navigation'
 import {
   X,
@@ -85,10 +86,7 @@ export function MilestoneEditPanel({ guildId, guildName, channels, roles, editin
 
   const isEdit = editing !== null
 
-  useEffect(() => {
-    document.body.classList.add('slide-over-open')
-    return () => document.body.classList.remove('slide-over-open')
-  }, [])
+  useDialogDismiss(onClose, saving || pending)
 
   const [draft, setDraft] = useState<MilestoneDraft>(() => {
     if (editing) {
