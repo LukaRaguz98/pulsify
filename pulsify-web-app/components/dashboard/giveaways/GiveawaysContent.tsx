@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Gift, Plus, BarChart3, CheckCircle2, AlertCircle, X, ListChecks, Radio, CalendarClock, Users, Search } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { CategorySection } from '@/components/ui/category-section'
+import { EmptyState } from '@/components/ui/empty-state'
 import { RefreshButton } from '@/components/dashboard/RefreshButton'
 import {
   computeGiveawayStats,
@@ -204,18 +205,20 @@ export function GiveawaysContent({ guildId, guildName, initialGiveaways, channel
 
           {tab === 'giveaways' &&
             (initialGiveaways.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-xl border py-16 text-center" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
-                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: 'var(--p-soft)', color: 'var(--p-1)' }}>
-                  <Gift size={26} />
-                </div>
-                <p className="font-semibold text-foreground">No giveaways yet</p>
-                <p className="mt-2 max-w-sm text-sm" style={{ color: 'var(--text-3)' }}>
-                  Create your first giveaway — pick a prize, set a duration, and Pulse will post it, track entries and draw winners automatically.
-                </p>
-                <button onClick={() => setCreating(true)} className="mt-4 inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white" style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))', boxShadow: '0 4px 14px -4px var(--p-glow)' }}>
-                  <Plus size={15} /> Create a giveaway
-                </button>
-              </div>
+              <EmptyState
+                icon={<Gift size={26} />}
+                title="No giveaways yet"
+                description="Create your first giveaway — pick a prize, set a duration, and Pulse will post it, track entries and draw winners automatically."
+                action={
+                  <button
+                    onClick={() => setCreating(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white"
+                    style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))', boxShadow: '0 4px 14px -4px var(--p-glow)' }}
+                  >
+                    <Plus size={15} /> Create a giveaway
+                  </button>
+                }
+              />
             ) : (
               <div className="space-y-5">
                 {/* Search + status filter — same row layout as the Scheduled view */}
@@ -251,13 +254,12 @@ export function GiveawaysContent({ guildId, guildName, initialGiveaways, channel
                 </div>
 
                 {filtered.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center rounded-xl border py-14 text-center" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
-                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl" style={{ background: 'var(--bg-2)', color: 'var(--text-3)' }}>
-                      <Search size={22} />
-                    </div>
-                    <p className="font-semibold text-foreground">No matching giveaways</p>
-                    <p className="mt-1.5 text-sm" style={{ color: 'var(--text-3)' }}>Try a different search or filter.</p>
-                  </div>
+                  <EmptyState
+                    variant="muted"
+                    icon={<Search size={24} />}
+                    title="No matching giveaways"
+                    description="Try a different search or filter."
+                  />
                 ) : (
                   <div className="space-y-7">
                     {SECTIONS.map((status) => {

@@ -49,6 +49,7 @@ import {
   type BotPermissions,
 } from '@/lib/discord'
 import { PageHeader } from '@/components/ui/page-header'
+import { TableSkeleton } from '@/components/ui/table-skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { CategorySection } from '@/components/ui/category-section'
 import { ChannelEditPanel } from './channels/ChannelEditPanel'
@@ -222,9 +223,7 @@ export function ChannelsContent({ guildId }: Props) {
     return (
       <div className="page-content">
         <PageHeader title="Channels" description="Manage Discord channels and categories from the dashboard." />
-        <div className="flex items-center justify-center py-24">
-          <Loader2 size={24} className="animate-spin text-muted-foreground" />
-        </div>
+        <TableSkeleton rows={8} columns={3} className="mt-6" />
       </div>
     )
   }

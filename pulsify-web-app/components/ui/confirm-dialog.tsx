@@ -90,6 +90,7 @@ export function ConfirmDialog({
   onConfirm,
 }: Props) {
   const [values, setValues] = useState<Record<string, string>>(() => initialValues(fields))
+  const [validationError, setValidationError] = useState<string | null>(null)
   const firstFieldRef = useRef<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>(null)
 
   useEffect(() => {
@@ -106,6 +107,8 @@ export function ConfirmDialog({
 
   function setValue(key: string, val: string) {
     setValues((prev) => ({ ...prev, [key]: val }))
+    // Clear the validation hint as soon as the user starts fixing the input.
+    if (validationError) setValidationError(null)
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -113,9 +116,14 @@ export function ConfirmDialog({
     if (busy) return
     for (const f of fields) {
       if ((f.kind === 'text' || f.kind === 'textarea') && f.required && !values[f.key]?.trim()) {
+        // Don't fail silently — name the missing field and focus the form so
+        // the user knows why nothing happened.
+        setValidationError(`${f.label} is required.`)
+        firstFieldRef.current?.focus()
         return
       }
     }
+    setValidationError(null)
     onConfirm(values)
   }
 
@@ -247,13 +255,13 @@ export function ConfirmDialog({
           </div>
         )}
 
-        {error && (
+        {(validationError ?? error) && (
           <div
             className="mx-5 mb-3 flex items-start gap-2 rounded-lg border px-3 py-2 text-xs"
             style={{ borderColor: 'rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.08)', color: '#f87171' }}
           >
             <AlertTriangle size={12} className="mt-0.5 shrink-0" />
-            <span>{error}</span>
+            <span>{validationError ?? error}</span>
           </div>
         )}
         </div>

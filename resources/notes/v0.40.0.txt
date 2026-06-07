@@ -1,0 +1,29 @@
+**Pulsify v0.40.0 — UI/UX Refinement**
+A platform-wide polish pass rather than a big new feature: Pulsify now feels more consistent, responsive and production-ready everywhere, from the landing page to every dashboard view.
+
+**A smarter landing page**
+- **Knows when you're signed in** — every "Sign in / Join Early Access" button turns into "Open Dashboard" the moment you're logged in, so you're never bounced to a login screen you don't need.
+- **Scales to your screen** — the interface now scales smoothly on large, high-resolution monitors and keeps a comfortable reading width instead of stretching edge-to-edge.
+- **Cookie consent** — a clear, on-brand consent notice on first visit.
+- **Feedback, front and centre** — the community feedback page is now linked from the footers and page menus, and its testimonials stack cleanly one-under-another on mobile.
+
+**Consistent empty states**
+- **Every "nothing here yet" looks the same** — Giveaways, Tickets, Events, Members, Moderation and more now share one polished empty state with a tinted icon and a clear next action.
+- **No-results vs truly empty** — a search or filter with no matches now reads differently from a section that's genuinely empty, so you always know which it is.
+
+**Clearer navigation, better on mobile**
+- **Always know where you are** — on phones the top bar shows a live "Section › Page" breadcrumb whenever the menu is closed, in both the server dashboard and workspaces.
+- **Stronger active states** — the current page and section are easier to spot at a glance.
+
+**Dialogs & forms that behave**
+- **Escape always closes** — every edit dialog now closes with the Escape key, consistently.
+- **Helpful validation** — forms tell you exactly what's missing instead of doing nothing when a required field is left empty.
+- **Reliable, consistent modals** — dialogs always render above the rest of the page and share one look and feel.
+
+**Faster-feeling data views**
+- **Loading skeletons** — tables and lists (moderation logs, Members, Roles, Channels, Events) show a structured skeleton while loading instead of a lone spinner, so there's no layout jump when the data arrives.
+- **Consistent pagination** — shared, responsive pagination across the data-heavy views.
+
+Same Pulsify — just smoother, clearer and more consistent everywhere.
+
+June 8, 2026

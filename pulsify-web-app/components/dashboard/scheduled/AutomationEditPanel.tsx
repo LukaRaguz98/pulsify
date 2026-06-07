@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useDialogDismiss } from '@/components/ui/use-dialog-dismiss'
 import {
   X,
   Loader2,
@@ -102,10 +103,7 @@ export function AutomationEditPanel({
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
-  useEffect(() => {
-    document.body.classList.add('slide-over-open')
-    return () => document.body.classList.remove('slide-over-open')
-  }, [])
+  useDialogDismiss(onClose, busy)
 
   useEffect(() => {
     if (!success) return

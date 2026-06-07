@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
+import { TableSkeleton } from '@/components/ui/table-skeleton'
 import { CategorySection } from '@/components/ui/category-section'
 import { StatsCard } from '@/components/dashboard/StatsCard'
 import { RefreshButton } from '@/components/dashboard/RefreshButton'
@@ -294,7 +295,7 @@ export function MembersDirectory({ guildId }: Props) {
             <Skeleton key={i} className="h-[116px]" />
           ))}
         </div>
-        <Skeleton className="h-[420px]" />
+        <TableSkeleton rows={8} columns={5} />
       </div>
     )
   }
@@ -400,7 +401,8 @@ export function MembersDirectory({ guildId }: Props) {
 
           {filtered.length === 0 ? (
             <EmptyState
-              icon={<Search size={36} />}
+              variant="muted"
+              icon={<Search size={24} />}
               title="No members match"
               description={search ? `No members matching "${search}".` : 'No members in this view.'}
             />

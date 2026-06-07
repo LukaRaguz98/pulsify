@@ -6,6 +6,7 @@ import { authorizeGuildModerator } from '@/lib/moderation-auth'
 import { recordNotification } from '@/lib/notifications-server'
 import {
   fetchChannelMessages,
+  fetchGuildChannels,
   fetchGuildMember,
   postChannelComponents,
   modifyChannel,
@@ -257,12 +258,15 @@ export async function postTicketPanel(guildId: string): Promise<ActionResult> {
   )
   if (!res.ok) return { ok: false, error: res.error }
 
+  // Resolve a readable "#support" for the notification — a raw <#id> mention
+  // only renders to a name inside Discord, not in the dashboard's notifications.
+  const panelChannel = (await fetchGuildChannels(guildId)).find((c) => c.id === panel.channel_id)
   await recordNotification({
     guildId,
     type: 'ticket_updated',
     severity: 'info',
     title: 'Ticket panel posted',
-    body: `Members can now open tickets from <#${panel.channel_id}>.`,
+    body: `Members can now open tickets from ${panelChannel?.name ? `#${panelChannel.name}` : 'the channel'}.`,
     link: `/dashboard/${guildId}/tickets`,
     actorId: auth.moderator.userId,
     actorName: auth.moderator.username,

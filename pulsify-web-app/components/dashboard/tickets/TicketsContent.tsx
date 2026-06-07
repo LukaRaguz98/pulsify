@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { LifeBuoy, Inbox, Settings, BarChart3, CheckCircle2, AlertCircle, X } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
+import { EmptyState } from '@/components/ui/empty-state'
 import { RefreshButton } from '@/components/dashboard/RefreshButton'
 import { computeTicketStats, type Ticket, type TicketConfig } from '@/lib/tickets'
 import type { ActionResult } from '@/app/dashboard/[guildId]/tickets/actions'
@@ -158,30 +159,24 @@ export function TicketsContent({
 
       {tab === 'tickets' &&
         (initialTickets.length === 0 ? (
-          <div
-            className="flex flex-col items-center justify-center rounded-xl border py-16 text-center"
-            style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
-          >
-            <div
-              className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl"
-              style={{ background: 'var(--p-soft)', color: 'var(--p-1)' }}
-            >
-              <LifeBuoy size={26} />
-            </div>
-            <p className="font-semibold text-foreground">No tickets yet</p>
-            <p className="mt-2 max-w-sm text-sm" style={{ color: 'var(--text-3)' }}>
-              {config.enabled
+          <EmptyState
+            icon={<LifeBuoy size={26} />}
+            title="No tickets yet"
+            description={
+              config.enabled
                 ? 'When members open a ticket from your Discord panel, it will appear here.'
-                : 'Turn the ticket system on in Settings and post a panel so members can open tickets.'}
-            </p>
-            <Link
-              href={`/dashboard/${guildId}/ticket-settings`}
-              className="mt-4 rounded-lg px-3.5 py-2 text-sm font-medium"
-              style={{ background: 'var(--p-1)', color: '#fff' }}
-            >
-              {config.enabled ? 'Open settings' : 'Set up tickets'}
-            </Link>
-          </div>
+                : 'Turn the ticket system on in Settings and post a panel so members can open tickets.'
+            }
+            action={
+              <Link
+                href={`/dashboard/${guildId}/ticket-settings`}
+                className="rounded-lg px-3.5 py-2 text-sm font-semibold text-white"
+                style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))', boxShadow: '0 4px 14px -4px var(--p-glow)' }}
+              >
+                {config.enabled ? 'Open settings' : 'Set up tickets'}
+              </Link>
+            }
+          />
         ) : (
           <TicketList
             tickets={initialTickets}

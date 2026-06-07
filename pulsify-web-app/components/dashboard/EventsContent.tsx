@@ -3,12 +3,13 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Image from 'next/image'
 import {
-  CalendarDays, MapPin, Mic2, Volume2, Users, RefreshCw, Loader2, Plus,
+  CalendarDays, MapPin, Mic2, Volume2, Users, RefreshCw, Plus,
   Search, LayoutGrid, Calendar as CalendarIcon, AlertCircle, CheckCircle2,
   TrendingUp, Activity, Globe, Sparkles,
 } from 'lucide-react'
 import { formatEventStatus, formatEntityType, type DiscordScheduledEvent, type DiscordChannel } from '@/lib/discord'
 import { PageHeader } from '@/components/ui/page-header'
+import { TableSkeleton } from '@/components/ui/table-skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { CategorySection } from '@/components/ui/category-section'
 import { EventEditor } from './events/EventEditor'
@@ -182,9 +183,7 @@ export function EventsContent({ guildId }: Props) {
     return (
       <div className="page-content">
         <PageHeader title="Events" description="Manage Discord scheduled events for this server." />
-        <div className="flex items-center justify-center py-24">
-          <Loader2 size={24} className="animate-spin text-muted-foreground" />
-        </div>
+        <TableSkeleton rows={6} columns={3} className="mt-6" />
       </div>
     )
   }
@@ -418,7 +417,8 @@ function ListView({
   if (live.length === 0 && upcoming.length === 0 && past.length === 0) {
     return (
       <EmptyState
-        icon={<CalendarDays size={36} />}
+        variant="muted"
+        icon={<CalendarDays size={24} />}
         title="No events match"
         description="Try adjusting the search or filters, or create a new event."
       />

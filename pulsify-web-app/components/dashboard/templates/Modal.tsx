@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
+import { useDialogDismiss } from '@/components/ui/use-dialog-dismiss'
 
 type Props = {
   title: string
@@ -19,20 +20,13 @@ type Props = {
 /** Shared centered-modal shell used by the Templates create / apply / import
  *  dialogs. Mirrors MilestoneEditPanel's overlay so the surfaces feel native. */
 export function Modal({ title, subtitle, icon, maxWidth = 'max-w-3xl', busy, onClose, children, footer }: Props) {
-  useEffect(() => {
-    document.body.classList.add('slide-over-open')
-    return () => document.body.classList.remove('slide-over-open')
-  }, [])
+  useDialogDismiss(onClose, busy)
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !busy) onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [busy, onClose])
+  if (typeof document === 'undefined') return null
 
-  return (
+  // Portal to <body> so the dialog escapes the page's per-element stacking
+  // contexts (globals.css sets `* { z-index: 1 }`), matching ConfirmDialog.
+  return createPortal(
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
@@ -84,6 +78,7 @@ export function Modal({ title, subtitle, icon, maxWidth = 'max-w-3xl', busy, onC
           </footer>
         )}
       </aside>
-    </div>
+    </div>,
+    document.body,
   )
 }

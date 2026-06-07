@@ -35,6 +35,7 @@ import {
 import { roleColor, snowflakeToDate, type DiscordRole } from '@/lib/discord'
 import { permissionKeysFromBits, dangerousKeysIn } from '@/lib/discord-permissions'
 import { PageHeader } from '@/components/ui/page-header'
+import { TableSkeleton } from '@/components/ui/table-skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { CategorySection } from '@/components/ui/category-section'
 import { RoleEditPanel } from './roles/RoleEditPanel'
@@ -250,9 +251,7 @@ export function RolesContent({ guildId }: Props) {
     return (
       <div className="page-content">
         <PageHeader title="Roles" description="View and manage the roles configured on your server." />
-        <div className="flex items-center justify-center py-24">
-          <Loader2 size={24} className="animate-spin text-muted-foreground" />
-        </div>
+        <TableSkeleton rows={8} columns={4} className="mt-6" />
       </div>
     )
   }

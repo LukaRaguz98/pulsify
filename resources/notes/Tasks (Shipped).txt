@@ -2795,3 +2795,110 @@ Acceptance Criteria
 	Moderation controls function correctly
 	UI remains responsive and visually polished
 	Feedback system improves landing page trust and social proof
+
+PULSIFY-40 — UI/UX Refinement & Product Experience Update (v0.40.0)
+
+Description
+	Conduct a platform-wide UI/UX refinement pass focused on improving usability, consistency, responsiveness, visual hierarchy, and overall user experience throughout Pulsify.
+	The goal is not to introduce major new features, but to make the platform feel more polished, intuitive, modern, and production-ready.
+
+Goals
+	Improve overall user experience
+	Increase interface consistency
+	Improve usability and discoverability
+	Reduce visual clutter
+	Improve perceived product quality
+
+Tasks
+	Navigation Improvements
+		Review entire navigation structure
+		Improve page grouping and organization
+		Reduce unnecessary clicks
+		Add better active state indicators
+		Improve mobile navigation experience
+		Improve breadcrumbs and navigation flow
+
+	Dashboard Consistency
+		Review all views and cards
+		Standardize:
+			spacing
+			paddings
+			margins
+			typography
+			icon usage
+			card styling
+		Ensure visual consistency across all modules
+
+	Data Presentation
+		Improve tables and data-heavy views
+		Add:
+			empty states
+			loading skeletons
+			no-results states
+			better pagination
+		Improve readability of statistics and analytics
+
+	Dialog & Form Refinement
+		Review every modal/dialog
+		Standardize widths and layouts
+		Improve validation messages
+		Improve error handling
+		Improve mobile form usability
+		Add autosave where appropriate
+
+	Visual Hierarchy
+		Improve page headers
+		Improve section separation
+		Highlight important actions
+		Reduce visual noise
+		Improve CTA visibility
+
+	Micro-Interactions
+		Add subtle animations
+		Improve hover states
+		Improve button interactions
+		Improve loading transitions
+		Improve success/error feedback
+
+	Empty States
+		Create meaningful empty states for:
+			Giveaways
+			Events
+			Tickets
+			Analytics
+			Members
+			Moderation
+			Onboarding
+		Include helpful actions and guidance
+
+	Performance & Responsiveness
+		Improve perceived loading performance
+		Optimize page transitions
+		Improve responsiveness across:
+			desktop
+			tablet
+			mobile
+		Reduce layout shifts
+
+	Accessibility
+		Improve keyboard navigation
+		Improve contrast where needed
+		Improve focus states
+		Improve screen-reader compatibility
+
+	Final Product Polish
+		Review every view in the application
+		Remove inconsistencies
+		Remove placeholder content
+		Standardize Pulse branding
+		Ensure all components feel part of the same ecosystem
+
+Acceptance Criteria
+	Navigation feels intuitive and consistent
+	UI components follow a unified design language
+	Dialogs and forms behave consistently
+	Empty states provide useful guidance
+	Animations and transitions improve UX without being distracting
+	Mobile and desktop experiences feel polished
+	Platform feels production-ready and cohesive
+	Overall user experience is noticeably improved

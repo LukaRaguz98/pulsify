@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useDialogDismiss } from '@/components/ui/use-dialog-dismiss'
 import {
   X,
   Loader2,
@@ -143,10 +144,7 @@ export function ChannelEditPanel({
   // channels — so initial state derives from props in useState above, and we
   // don't need a sync useEffect here.
 
-  useEffect(() => {
-    document.body.classList.add('slide-over-open')
-    return () => document.body.classList.remove('slide-over-open')
-  }, [])
+  useDialogDismiss(onClose, busy)
 
   useEffect(() => {
     if (!toast) return

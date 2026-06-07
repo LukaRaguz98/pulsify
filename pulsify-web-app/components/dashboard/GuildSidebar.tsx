@@ -236,6 +236,17 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
     })
   }
 
+  // Current location for the mobile top bar. While the off-canvas drawer is
+  // closed it's the only "where am I" cue, so mirror the active sidebar item
+  // (prefixed with its section) as a breadcrumb — Section › Page.
+  const serverSettingsHref = `${base}/server-settings`
+  const activeItem = [overview, ...groups.flatMap((g) => g.items)].find(isNavItemActive)
+  const activeSectionTitle = groups.find((g) => g.items.some(isNavItemActive))?.title
+  const mobileCrumbSection = activeItem && activeItem !== overview ? activeSectionTitle : undefined
+  const mobileCrumbTitle = isItemActive(serverSettingsHref)
+    ? 'Server Profile'
+    : activeItem?.label ?? 'Dashboard'
+
   const icon = guildIconUrl(guild.id, guild.icon, 64)
   const claims = user.user_metadata?.custom_claims
   const displayName =
@@ -263,15 +274,27 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
           type="button"
           onClick={() => setMobileOpen(true)}
           aria-label="Open navigation"
-          className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors"
           style={{ color: 'var(--text-2)' }}
         >
           <Menu size={18} />
         </button>
-        <Link href="/" className="flex items-center gap-2" aria-label="Pulsify home">
+        <Link href="/" className="flex shrink-0 items-center" aria-label="Pulsify home">
           <Image src="/logo.png" alt="Pulsify" width={22} height={22} className="shrink-0" />
-          <span className="font-bold text-sm tracking-tight text-foreground">Pulsify</span>
         </Link>
+        {/* Live breadcrumb — keeps the current page identifiable while the
+            drawer is closed (mirrors the active sidebar item + its section). */}
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          {mobileCrumbSection && (
+            <>
+              <span className="truncate text-sm" style={{ color: 'var(--text-3)' }}>
+                {mobileCrumbSection}
+              </span>
+              <ChevronRight size={13} className="shrink-0" style={{ color: 'var(--text-3)' }} />
+            </>
+          )}
+          <span className="truncate text-sm font-semibold text-foreground">{mobileCrumbTitle}</span>
+        </div>
       </div>
 
       {/* Backdrop — tap to dismiss the drawer. */}

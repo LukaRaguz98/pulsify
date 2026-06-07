@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useDialogDismiss } from '@/components/ui/use-dialog-dismiss'
 import {
   X,
   Loader2,
@@ -70,11 +71,7 @@ export function CommandEditPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [definition.name])
 
-  // Hide the corner decoration behind the slide-over (same trick as RoleEditPanel).
-  useEffect(() => {
-    document.body.classList.add('slide-over-open')
-    return () => document.body.classList.remove('slide-over-open')
-  }, [])
+  useDialogDismiss(onClose, busy)
 
   useEffect(() => {
     if (!success) return
