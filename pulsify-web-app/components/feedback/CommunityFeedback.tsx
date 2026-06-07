@@ -36,7 +36,7 @@ function Avatar({ f }: { f: Feedback }) {
 function FeedbackTestimonial({ f }: { f: Feedback }) {
   return (
     <div
-      className="lp-card flex min-w-[85%] snap-center flex-col rounded-2xl border p-6 sm:min-w-0"
+      className="lp-card flex flex-col rounded-2xl border p-6"
       style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
     >
       <div className="flex items-center justify-between">
@@ -64,14 +64,14 @@ function FeedbackTestimonial({ f }: { f: Feedback }) {
 }
 
 /**
- * Landing-page showcase of the top community feedback (PULSIFY-39). Renders a
- * responsive grid on desktop and a swipeable, snap-scrolling carousel on
- * mobile, plus CTAs into the full /feedback wall.
+ * Landing-page showcase of the top community feedback (PULSIFY-39). Cards stack
+ * vertically on mobile and form a 3-column grid on desktop, plus CTAs into the
+ * full /feedback wall.
  */
 export function CommunityFeedback({ items }: { items: Feedback[] }) {
   return (
     <>
-      <div className="mt-12 -mx-6 flex snap-x snap-mandatory gap-5 overflow-x-auto px-6 pb-2 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0 md:pb-0">
+      <div className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-3">
         {items.map((f) => (
           <FeedbackTestimonial key={f.id} f={f} />
         ))}
