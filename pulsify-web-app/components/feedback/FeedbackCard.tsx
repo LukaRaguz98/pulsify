@@ -236,7 +236,7 @@ export function FeedbackCard({
               }
             >
               <Pin size={13} fill={f.featured ? 'currentColor' : 'none'} />
-              <span className="hidden sm:inline">{f.featured ? 'Featured' : 'Feature'}</span>
+              <span className="hidden sm:inline">Pin</span>
             </button>
           )}
 
