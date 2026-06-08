@@ -1,0 +1,41 @@
+**Pulsify v0.42.0 — Server Recovery & Backup System**
+The safety net for your server: versioned snapshots of your configuration that you can review, compare and restore in a few clicks — so an accidental change, a moderation mistake or a misconfiguration is never permanent.
+
+**A dedicated Backup Center**
+- **All your backups in one place** — a new Backup & Restore page lists every snapshot with its name, type, version, size and creation date.
+- **Search & filter** — find any backup fast and filter by how it was made (manual, daily or weekly).
+- **At-a-glance status** — see your total backups, last backup, storage used and whether automatic backups are on.
+
+**Automatic backups**
+- **Set it and forget it** — schedule **daily** or **weekly** backups and let Pulse capture them for you, no clicks required.
+- **Retention you control** — keep the most recent N automatic backups; older ones are pruned automatically so storage stays tidy.
+- **Choose what's captured** — pick exactly which sections each automatic backup includes.
+
+**Captures everything that matters**
+- Roles, channels & categories (with permissions), automations (welcome/goodbye/auto-role), moderation routing, member onboarding, Pulse Guard, tickets, and a record of giveaways, events and announcements.
+
+**Preview before you restore**
+- **See the changes first** — every restore shows exactly what will be created, what will be overwritten, and what exists on your server but isn't in the backup.
+- **Confirm with confidence** — nothing is applied until you review the preview and confirm.
+
+**Selective, safe restores**
+- **Restore only what you need** — bring back individual sections (just roles, just channels, just onboarding…) instead of the whole server.
+- **Additive & safe by default** — restore creates missing roles and channels and rewrites configuration without touching anything else.
+- **Full revert when you want it** — opt in to "Remove roles & channels not in this backup" for a true point-in-time revert that deletes everything added since (with a clear warning, since deleting a channel removes its messages).
+
+**Compare any two backups**
+- **Visual change summary** — pick two snapshots and see what was added, removed or modified between them, grouped by section.
+
+**Share & clone servers**
+- **Download any backup** as a portable JSON file to keep it safe off-platform or hand it to someone else.
+- **Import a shared backup** — drop in a file (or paste JSON) someone sent you, then restore it to spin up a copy of their server's configuration on yours.
+
+**Recovery logs**
+- **Full audit trail** — every backup, restore, deletion and schedule change is recorded with who did it, when, and whether it succeeded.
+
+**Polished throughout**
+- Status indicators, clear restore warnings, loading/error/success states and a fully responsive layout.
+
+Backup & Restore is part of the Pro toolkit. Manage your community with confidence.
+
+June 8, 2026

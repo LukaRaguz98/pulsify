@@ -860,7 +860,7 @@ export function sampleContext(provider: IntegrationProvider, config: Record<stri
     event: sample.event ?? 'update',
     title: sample.title ?? 'Sample update from your integration',
     author: config.handle?.replace(/^@?/, '@') || config.channel || 'Pulsify',
-    url: provider.docsUrl ?? 'https://pulsify.app',
+    url: provider.docsUrl ?? 'https://www.pulsifydiscord.com',
     subreddit: config.subreddit?.startsWith('r/') ? config.subreddit : `r/${config.subreddit || 'discordapp'}`,
     handle: config.handle?.replace(/^@?/, '@') || '@pulsify',
     when: 'Today at 6:00 PM',

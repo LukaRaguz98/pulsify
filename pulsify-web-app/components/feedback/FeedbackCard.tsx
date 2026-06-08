@@ -109,21 +109,13 @@ export function FeedbackCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <p className="truncate text-sm font-semibold text-foreground">{authorDisplayName(f)}</p>
-            {f.isOwn && (
-              <span
-                className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-                style={{ background: 'var(--p-soft)', color: 'var(--p-1)' }}
-              >
-                You
-              </span>
-            )}
             {isOperator && f.featured && (
               <span
                 className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
                 style={{ background: 'var(--p-soft)', color: 'var(--p-1)' }}
                 title="Shown on the landing page"
               >
-                <Pin size={9} fill="currentColor" /> Featured
+                <Pin size={9} fill="currentColor" /> Pinned
               </span>
             )}
           </div>

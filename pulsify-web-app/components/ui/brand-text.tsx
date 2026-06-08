@@ -9,7 +9,7 @@ const BRAND = 'Pulsify'
  * JSX ones alike. Used by page/view headers to brand the product name in the
  * short description shown under each title.
  */
-export function highlightBrand(node: ReactNode): ReactNode {
+export function highlightBrand(node: ReactNode, allowTrailingPeriod = true): ReactNode {
   if (typeof node === 'string') {
     if (!node.includes(BRAND)) return node
     const segments = node.split(BRAND)
@@ -24,21 +24,26 @@ export function highlightBrand(node: ReactNode): ReactNode {
       }
       if (seg) out.push(<Fragment key={`seg-${i}`}>{seg}</Fragment>)
     })
-    // When the description ends on the brand word it would otherwise finish on
-    // the coloured span with no punctuation. Add a trailing period OUTSIDE the
-    // span so the sentence is closed and the period keeps the normal text colour.
-    if (node.endsWith(BRAND)) {
+    // When the *whole* description ends on the brand word it would otherwise
+    // finish on the coloured span with no punctuation. Add a trailing period
+    // OUTSIDE the span so the sentence is closed and the period keeps the normal
+    // text colour. Only do this at the top level: a string ending in "Pulsify"
+    // that is just one piece of a composite (JSX/array) description is mid-
+    // sentence — appending a period there produces "Manage Pulsify. directly …".
+    if (allowTrailingPeriod && node.endsWith(BRAND)) {
       out.push(<Fragment key="brand-period">.</Fragment>)
     }
     return out
   }
   if (Array.isArray(node)) {
-    return node.map((child, i) => <Fragment key={i}>{highlightBrand(child)}</Fragment>)
+    // Children are pieces of one sentence — never auto-close them; the author's
+    // own text carries the punctuation.
+    return node.map((child, i) => <Fragment key={i}>{highlightBrand(child, false)}</Fragment>)
   }
   if (isValidElement(node)) {
     const el = node as ReactElement<{ children?: ReactNode }>
     if (el.props.children == null) return node
-    return cloneElement(el, undefined, highlightBrand(el.props.children))
+    return cloneElement(el, undefined, highlightBrand(el.props.children, false))
   }
   return node
 }

@@ -217,13 +217,26 @@ export class DiscordFetchError extends Error {
   }
 }
 
+// Short-lived, SUCCESS-ONLY in-memory cache of the user-guilds payload, keyed by
+// access token. `/users/@me/guilds` has a tight Discord rate-limit bucket, and a
+// single dashboard interaction can authorize several times in a few seconds
+// (e.g. the Backup restore wizard re-verifies on open + every section toggle) —
+// without this, those bursts 429 and surface as "Couldn't verify your Discord
+// access right now." We cache only 200s for a few seconds; errors are NEVER
+// cached (that was the bug the `cache: 'no-store'` comment below warns about),
+// so a transient 429/5xx still bubbles up and clears on the next try.
+const userGuildsCache = new Map<string, { at: number; guilds: DiscordGuild[] }>()
+const USER_GUILDS_TTL_MS = 20_000
+
 export async function fetchUserGuilds(accessToken: string): Promise<DiscordGuild[]> {
+  const hit = userGuildsCache.get(accessToken)
+  if (hit && Date.now() - hit.at < USER_GUILDS_TTL_MS) return hit.guilds
+
   // `cache: 'no-store'` skips the Next.js data cache deliberately. Previously
   // we used `next: { revalidate: 30 }`, which cached transient 429/5xx
   // responses from Discord for the revalidate window — surfacing as bogus
   // "you are not a member" errors that only cleared after the cache expired.
-  // The user-guilds payload is small and per-user, so the extra fetch cost is
-  // marginal compared to the UX hit of sticky failures.
+  // Our in-memory cache above sidesteps that by storing successes only.
   const res = await fetch(`${DISCORD_API}/users/@me/guilds?with_counts=true`, {
     headers: { Authorization: `Bearer ${accessToken}` },
     cache: 'no-store',
@@ -234,7 +247,12 @@ export async function fetchUserGuilds(accessToken: string): Promise<DiscordGuild
       res.status,
     )
   }
-  return res.json()
+  const guilds = (await res.json()) as DiscordGuild[]
+  // Bound the map so a long-lived process with many distinct tokens can't grow
+  // unbounded; the cache is a best-effort burst-smoother, not a store of record.
+  if (userGuildsCache.size > 500) userGuildsCache.clear()
+  userGuildsCache.set(accessToken, { at: Date.now(), guilds })
+  return guilds
 }
 
 export async function fetchGuild(guildId: string): Promise<DiscordGuildFull | null> {

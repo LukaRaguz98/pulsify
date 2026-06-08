@@ -35,7 +35,7 @@ import {
 export function PricingCards({
   currentPlan,
   initialCycle = 'yearly',
-  enterpriseContactEmail = 'hello@pulsify.app',
+  enterpriseContactEmail = 'info@pulsifydiscord.com',
   earlyAccess = false,
 }: {
   currentPlan?: Plan
