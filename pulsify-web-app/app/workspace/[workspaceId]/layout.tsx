@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
+import { getValidDiscordToken } from '@/lib/discord-session'
+import { fetchSelfUser, userBannerUrl } from '@/lib/discord'
 import { authorizeWorkspaceMember } from '@/lib/workspace-auth'
 import { getWorkspace, getWorkspaceMembers, getWorkspaceServers, listUserWorkspaces } from '@/lib/workspace-data'
 import { WorkspaceProvider } from '@/components/workspace/WorkspaceProvider'
@@ -37,7 +39,32 @@ export default async function WorkspaceLayout({
   if (!workspace) redirect('/workspace')
 
   const meta = session?.user.user_metadata ?? {}
-  const claims = meta.custom_claims as { username?: string; discriminator?: string } | undefined
+  const claims = meta.custom_claims as
+    | { username?: string; discriminator?: string; global_name?: string }
+    | undefined
+
+  // Fetch the live Discord self user so the profile card matches the guild
+  // dashboard's — username, discriminator and banner all come from here. The
+  // workspace itself is membership-gated (no Discord check), so this is a
+  // best-effort enrichment: if there's no provider token we fall back to the
+  // session's stored claims.
+  const providerToken = session
+    ? await getValidDiscordToken({
+        access_token: session.provider_token,
+        refresh_token: session.provider_refresh_token,
+      })
+    : null
+  const selfUser = providerToken ? await fetchSelfUser(providerToken) : null
+  const bannerUrl = selfUser?.banner
+    ? userBannerUrl(selfUser.id ?? auth.actor.userId, selfUser.banner)
+    : undefined
+
+  const displayName =
+    selfUser?.global_name ??
+    claims?.global_name ??
+    selfUser?.username ??
+    auth.actor.username ??
+    'User'
 
   return (
     <WorkspaceProvider
@@ -54,12 +81,14 @@ export default async function WorkspaceLayout({
           role={auth.role}
           workspaces={workspaces}
           user={{
-            displayName: auth.actor.username ?? 'User',
-            username: claims?.username,
-            discriminator: claims?.discriminator,
+            displayName,
+            username: selfUser?.username ?? claims?.username,
+            discriminator: selfUser?.discriminator ?? claims?.discriminator,
             discordId: auth.actor.userId,
             email: session?.user.email,
             avatarUrl: auth.actor.avatarUrl ?? undefined,
+            bannerUrl,
+            bannerColor: selfUser?.banner_color ?? undefined,
           }}
         />
         <CornerDecorations />

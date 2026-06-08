@@ -32,6 +32,7 @@ const { createMilestones } = require("./milestones");
 const { createPresence } = require("./presence");
 const { createIntegrations } = require("./integrations");
 const { createOnboarding } = require("./onboarding");
+const { createBackups } = require("./backups");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -104,6 +105,12 @@ const integrations = createIntegrations(client, supabase);
 // GuildMemberAdd below. Passed `leveling` so completion XP routes through the
 // same atomic RPC the rest of the levelling system uses.
 const onboarding = createOnboarding(client, supabase, leveling);
+
+// Server Recovery & Backup System (PULSIFY-42): the dashboard owns manual
+// backups + restores; this worker is the WRITER of SCHEDULED backups. An hourly
+// tick captures snapshots for every guild whose backup_schedules row is enabled
+// and due, then prunes to the retention count. Registers no interaction listener.
+const backups = createBackups(client, supabase);
 
 /**
  * Shared helper for Discord-side activity → notifications row.
@@ -360,6 +367,10 @@ client.once(Events.ClientReady, async (readyClient) => {
 
   // Onboarding: register the `ob:` interaction listener for the member panel.
   onboarding.start();
+
+  // Backup system: start the hourly scheduled-backup tick (no-op for guilds
+  // without an enabled schedule).
+  await backups.start();
 
   // Startup banner — a clear, scannable success summary so an operator can
   // confirm at a glance which version is live, how many servers it serves, and

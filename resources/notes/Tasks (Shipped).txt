@@ -3006,3 +3006,100 @@ Acceptance Criteria
 	Analytics and logging integrate correctly
 	Moderator override system functions correctly
 	Pulse Guard provides a noticeably better moderation experience
+
+PULSIFY-42 — Server Recovery & Backup System (v0.42.0)
+
+Description
+	Upgrade the existing Backup & Restore functionality to provide a complete server configuration backup solution with version history, restore previews, selective restores, and disaster recovery capabilities.
+	The goal is to make Pulsify the safest way to manage Discord communities by allowing administrators to quickly recover from accidental changes, moderation mistakes, or server misconfiguration.
+
+Goals
+	Improve server recovery capabilities
+	Reduce risk of accidental configuration loss
+	Improve administrator confidence
+	Expand premium-grade server management features
+
+Tasks
+	Backup Center
+		Create dedicated Backup & Restore dashboard
+		Display:
+			available backups
+			backup size
+			creation date
+			backup type
+			backup version
+		Add search and filtering
+
+	Automatic Backups
+		Add scheduled backup system
+		Support:
+			daily backups
+			weekly backups
+			manual backups
+		Add backup retention settings
+
+	Extended Backup Coverage
+		Expand backup support for:
+			roles
+			channels
+			categories
+			permissions
+			onboarding settings
+			Pulse Guard settings
+			moderation configuration
+			automations
+			tickets configuration
+			giveaways configuration
+			events configuration
+			announcements configuration
+
+	Restore Preview
+		Add restore preview functionality
+		Display:
+			changes that will occur
+			resources affected
+			resources added
+			resources removed
+		Allow confirmation before execution
+
+	Selective Restore
+		Allow restoring:
+			individual roles
+			channels
+			categories
+			automations
+			moderation settings
+			onboarding settings
+		Avoid full server restore when unnecessary
+
+	Backup Comparison
+		Compare two backups
+		Highlight:
+			added items
+			removed items
+			modified items
+		Display visual change summaries
+
+	Recovery Logs
+		Track:
+			backup creation history
+			restore history
+			restore initiator
+			restore success/failure
+		Add audit entries
+
+	UX Improvements
+		Add backup status indicators
+		Add restore warnings
+		Add progress tracking
+		Add loading/error/success states
+		Add responsive backup management views
+
+Acceptance Criteria
+	Automatic backups generate successfully
+	Restore previews display accurate information
+	Selective restores function correctly
+	Backup comparison works correctly
+	Recovery logs are stored properly
+	Existing configurations can be restored safely
+	UI remains responsive and visually polished

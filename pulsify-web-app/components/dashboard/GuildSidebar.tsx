@@ -34,6 +34,7 @@ import {
   Building2,
   Plug,
   LayoutTemplate,
+  DatabaseBackup,
   Rocket,
   Menu,
   X,
@@ -154,6 +155,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
         { label: 'Members', href: `${base}/members`, icon: <UserRound size={16} />, matchPrefixes: ['/leveling-settings'] },
         { label: 'Roles', href: `${base}/roles`, icon: <Users size={16} /> },
         { label: 'Templates', href: `${base}/templates`, icon: <LayoutTemplate size={16} /> },
+        { label: 'Backups', href: `${base}/backups`, icon: <DatabaseBackup size={16} /> },
       ],
     },
     {

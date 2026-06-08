@@ -33,6 +33,8 @@ type Props = {
     discordId: string
     email?: string
     avatarUrl?: string
+    bannerUrl?: string
+    bannerColor?: string
   }
 }
 
@@ -362,6 +364,8 @@ export function WorkspaceSidebar({ workspace, role, workspaces, user }: Props) {
             discordId={user.discordId}
             email={user.email}
             avatarUrl={user.avatarUrl ?? ''}
+            bannerUrl={user.bannerUrl}
+            bannerColor={user.bannerColor}
             popupDirection="up"
           />
         </div>

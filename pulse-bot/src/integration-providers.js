@@ -21,17 +21,24 @@
 
 // ── HTTP + parsing helpers ────────────────────────────────────────────────────
 
-const UA = "Pulse-Integrations/1.0 (+https://pulsify.app)";
+const UA = "Pulse-Integrations/1.0 (+https://www.pulsifydiscord.com)";
 
 async function fetchJson(url, opts = {}) {
   const res = await fetch(url, {
     ...opts,
-    headers: { "User-Agent": UA, Accept: "application/json", ...(opts.headers || {}) },
+    headers: {
+      "User-Agent": UA,
+      Accept: "application/json",
+      ...(opts.headers || {}),
+    },
   });
-  if (res.status === 429) throw new Error("Rate limited by the provider — backing off.");
+  if (res.status === 429)
+    throw new Error("Rate limited by the provider — backing off.");
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`${res.status} ${res.statusText}${body ? ` — ${body.slice(0, 140)}` : ""}`);
+    throw new Error(
+      `${res.status} ${res.statusText}${body ? ` — ${body.slice(0, 140)}` : ""}`,
+    );
   }
   return res.json();
 }
@@ -41,7 +48,8 @@ async function fetchText(url, opts = {}) {
     ...opts,
     headers: { "User-Agent": UA, ...(opts.headers || {}) },
   });
-  if (res.status === 429) throw new Error("Rate limited by the provider — backing off.");
+  if (res.status === 429)
+    throw new Error("Rate limited by the provider — backing off.");
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   return res.text();
 }
@@ -59,7 +67,9 @@ function decodeEntities(s) {
 }
 
 function stripTags(s) {
-  return decodeEntities(String(s).replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
+  return decodeEntities(String(s).replace(/<[^>]*>/g, " "))
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function truncate(s, max) {
@@ -74,7 +84,9 @@ function truncate(s, max) {
  * the first entry whose id matches the cursor (the last one we delivered).
  */
 function diffByCursor(entriesNewestFirst, cursor, idOf, max = 5) {
-  const newest = entriesNewestFirst.length ? idOf(entriesNewestFirst[0]) : cursor;
+  const newest = entriesNewestFirst.length
+    ? idOf(entriesNewestFirst[0])
+    : cursor;
   if (cursor == null) return { items: [], cursor: newest ?? null };
   const fresh = [];
   for (const e of entriesNewestFirst) {
@@ -117,7 +129,8 @@ function watermarkDiff(entries, cursor, updatedOf, max = 8) {
       newestIso = iso;
     }
   }
-  if (watermark == null) return { items: [], cursor: newestIso ?? cursor ?? null };
+  if (watermark == null)
+    return { items: [], cursor: newestIso ?? cursor ?? null };
 
   const fresh = [];
   for (const e of entries) {
@@ -126,34 +139,49 @@ function watermarkDiff(entries, cursor, updatedOf, max = 8) {
     fresh.push({ e, t });
   }
   fresh.sort((a, b) => a.t - b.t); // chronological
-  return { items: fresh.slice(-max).map((x) => x.e), cursor: newestIso ?? cursor };
+  return {
+    items: fresh.slice(-max).map((x) => x.e),
+    cursor: newestIso ?? cursor,
+  };
 }
 
 // ── RSS / Atom feed parsing (used by `rss` and `youtube`) ──────────────────────
 
 function xmlTag(block, tag) {
-  const m = new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i").exec(block);
+  const m = new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i").exec(
+    block,
+  );
   if (!m) return "";
-  return decodeEntities(m[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")).trim();
+  return decodeEntities(
+    m[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1"),
+  ).trim();
 }
 
 function xmlAttr(block, tag, attr) {
-  const m = new RegExp(`<${tag}\\b[^>]*\\b${attr}=["']([^"']*)["']`, "i").exec(block);
+  const m = new RegExp(`<${tag}\\b[^>]*\\b${attr}=["']([^"']*)["']`, "i").exec(
+    block,
+  );
   return m ? m[1] : "";
 }
 
 /** Parse an RSS or Atom document into entries (document order — usually newest first). */
 function parseFeed(xml) {
   const isAtom = /<feed[\s>]/i.test(xml) && !/<rss[\s>]/i.test(xml);
-  const blocks = xml.match(isAtom ? /<entry\b[\s\S]*?<\/entry>/gi : /<item\b[\s\S]*?<\/item>/gi) || [];
+  const blocks =
+    xml.match(
+      isAtom ? /<entry\b[\s\S]*?<\/entry>/gi : /<item\b[\s\S]*?<\/item>/gi,
+    ) || [];
   return blocks.map((b) => {
     const title = xmlTag(b, "title");
     let link = isAtom ? xmlAttr(b, "link", "href") : xmlTag(b, "link");
     if (!link) link = xmlTag(b, "link");
     const id = xmlTag(b, isAtom ? "id" : "guid") || link || title;
     const authorBlock = xmlTag(b, "author");
-    const author = authorBlock ? stripTags(authorBlock) : xmlTag(b, "dc:creator");
-    const summary = xmlTag(b, isAtom ? "summary" : "description") || xmlTag(b, "content");
+    const author = authorBlock
+      ? stripTags(authorBlock)
+      : xmlTag(b, "dc:creator");
+    const summary =
+      xmlTag(b, isAtom ? "summary" : "description") || xmlTag(b, "content");
     const videoId = xmlTag(b, "yt:videoId");
     return {
       id: videoId || id,
@@ -175,7 +203,12 @@ function ghMatchesFilter(type, filter) {
   if (filter === "releases") return type === "ReleaseEvent";
   if (filter === "prs") return type === "PullRequestEvent";
   if (filter === "issues") return type === "IssuesEvent";
-  return ["PushEvent", "PullRequestEvent", "IssuesEvent", "ReleaseEvent"].includes(type);
+  return [
+    "PushEvent",
+    "PullRequestEvent",
+    "IssuesEvent",
+    "ReleaseEvent",
+  ].includes(type);
 }
 
 function ghRender(repo, ev) {
@@ -185,14 +218,36 @@ function ghRender(repo, ev) {
     case "PushEvent": {
       const n = (p.commits || []).length;
       const branch = String(p.ref || "").replace("refs/heads/", "");
-      return { event: "push", title: `${n} new commit${n === 1 ? "" : "s"} to ${branch}`, author: actor, url: `https://github.com/${repo}/commits/${branch}` };
+      return {
+        event: "push",
+        title: `${n} new commit${n === 1 ? "" : "s"} to ${branch}`,
+        author: actor,
+        url: `https://github.com/${repo}/commits/${branch}`,
+      };
     }
     case "PullRequestEvent":
-      return { event: "pull request", title: `#${p.number} ${p.pull_request?.title || ""} (${p.action})`.trim(), author: actor, url: p.pull_request?.html_url || `https://github.com/${repo}/pulls` };
+      return {
+        event: "pull request",
+        title:
+          `#${p.number} ${p.pull_request?.title || ""} (${p.action})`.trim(),
+        author: actor,
+        url: p.pull_request?.html_url || `https://github.com/${repo}/pulls`,
+      };
     case "IssuesEvent":
-      return { event: "issue", title: `#${p.issue?.number} ${p.issue?.title || ""} (${p.action})`.trim(), author: actor, url: p.issue?.html_url || `https://github.com/${repo}/issues` };
+      return {
+        event: "issue",
+        title:
+          `#${p.issue?.number} ${p.issue?.title || ""} (${p.action})`.trim(),
+        author: actor,
+        url: p.issue?.html_url || `https://github.com/${repo}/issues`,
+      };
     case "ReleaseEvent":
-      return { event: "release", title: p.release?.name || p.release?.tag_name || "New release", author: actor, url: p.release?.html_url || `https://github.com/${repo}/releases` };
+      return {
+        event: "release",
+        title: p.release?.name || p.release?.tag_name || "New release",
+        author: actor,
+        url: p.release?.html_url || `https://github.com/${repo}/releases`,
+      };
     default:
       return null;
   }
@@ -205,9 +260,17 @@ async function pollGithub(integration) {
   const filter = cfg.events || "all";
   const headers = { Accept: "application/vnd.github+json" };
   if (cfg.token) headers.Authorization = `Bearer ${cfg.token}`;
-  const events = await fetchJson(`https://api.github.com/repos/${repo}/events?per_page=30`, { headers });
+  const events = await fetchJson(
+    `https://api.github.com/repos/${repo}/events?per_page=30`,
+    { headers },
+  );
 
-  const { items: fresh, cursor } = diffByCursor(events, integration.cursor, (e) => String(e.id), 8);
+  const { items: fresh, cursor } = diffByCursor(
+    events,
+    integration.cursor,
+    (e) => String(e.id),
+    8,
+  );
   const items = [];
   for (const ev of fresh) {
     if (!ghMatchesFilter(ev.type, filter)) continue;
@@ -224,7 +287,11 @@ function glMatchesFilter(ev, filter) {
   if (filter === "mrs") return t === "MergeRequest";
   if (filter === "issues") return t === "Issue";
   if (filter === "releases") return false; // handled by the releases endpoint path
-  return t === "MergeRequest" || t === "Issue" || /pushed/i.test(ev.action_name || "");
+  return (
+    t === "MergeRequest" ||
+    t === "Issue" ||
+    /pushed/i.test(ev.action_name || "")
+  );
 }
 
 async function pollGitlab(integration) {
@@ -238,16 +305,40 @@ async function pollGitlab(integration) {
 
   // Releases aren't reliable in the events feed — poll the releases endpoint.
   if (filter === "releases") {
-    const releases = await fetchJson(`https://gitlab.com/api/v4/projects/${enc}/releases?per_page=10`, { headers });
-    const { items: fresh, cursor } = diffByCursor(releases, integration.cursor, (r) => String(r.tag_name), 5);
+    const releases = await fetchJson(
+      `https://gitlab.com/api/v4/projects/${enc}/releases?per_page=10`,
+      { headers },
+    );
+    const { items: fresh, cursor } = diffByCursor(
+      releases,
+      integration.cursor,
+      (r) => String(r.tag_name),
+      5,
+    );
     return {
-      items: fresh.map((r) => ({ placeholders: { repo: path, event: "release", title: r.name || r.tag_name, author: r.author?.username || "", url: r._links?.self || `https://gitlab.com/${path}/-/releases` } })),
+      items: fresh.map((r) => ({
+        placeholders: {
+          repo: path,
+          event: "release",
+          title: r.name || r.tag_name,
+          author: r.author?.username || "",
+          url: r._links?.self || `https://gitlab.com/${path}/-/releases`,
+        },
+      })),
       cursor,
     };
   }
 
-  const events = await fetchJson(`https://gitlab.com/api/v4/projects/${enc}/events?per_page=30`, { headers });
-  const { items: fresh, cursor } = diffByCursor(events, integration.cursor, (e) => String(e.id), 8);
+  const events = await fetchJson(
+    `https://gitlab.com/api/v4/projects/${enc}/events?per_page=30`,
+    { headers },
+  );
+  const { items: fresh, cursor } = diffByCursor(
+    events,
+    integration.cursor,
+    (e) => String(e.id),
+    8,
+  );
   const items = [];
   for (const ev of fresh) {
     if (!glMatchesFilter(ev, filter)) continue;
@@ -284,10 +375,16 @@ async function resolveYoutubeChannelId(input) {
   // Resolve a handle / custom URL by scraping the channel page's canonical id.
   let url = raw;
   if (/^@[\w.-]+$/.test(raw)) url = `https://www.youtube.com/${raw}`;
-  else if (!/^https?:\/\//i.test(raw)) url = `https://www.youtube.com/@${raw.replace(/^@/, "")}`;
+  else if (!/^https?:\/\//i.test(raw))
+    url = `https://www.youtube.com/@${raw.replace(/^@/, "")}`;
   const html = await fetchText(url);
-  const m = /"channelId":"(UC[\w-]{20,})"/.exec(html) || /\/channel\/(UC[\w-]{20,})/.exec(html);
-  if (!m) throw new Error("Couldn't resolve that YouTube channel — paste its UC… id or /channel/ URL.");
+  const m =
+    /"channelId":"(UC[\w-]{20,})"/.exec(html) ||
+    /\/channel\/(UC[\w-]{20,})/.exec(html);
+  if (!m)
+    throw new Error(
+      "Couldn't resolve that YouTube channel — paste its UC… id or /channel/ URL.",
+    );
   ytChannelCache.set(raw, m[1]);
   return m[1];
 }
@@ -295,14 +392,27 @@ async function resolveYoutubeChannelId(input) {
 async function pollYoutube(integration) {
   const cfg = integration.config || {};
   const channelId = await resolveYoutubeChannelId(cfg.channel);
-  const xml = await fetchText(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`);
+  const xml = await fetchText(
+    `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`,
+  );
   const entries = parseFeed(xml);
   // The channel RSS feed can't distinguish a premiere/live from a normal upload,
   // so the `kind` filter (uploads/live/all) is treated as "announce new entries".
   const max = Number(cfg.limit) || 3;
-  const { items: fresh, cursor } = diffByCursor(entries, integration.cursor, (e) => String(e.id), max);
+  const { items: fresh, cursor } = diffByCursor(
+    entries,
+    integration.cursor,
+    (e) => String(e.id),
+    max,
+  );
   return {
-    items: fresh.map((e) => ({ placeholders: { author: e.author, title: e.title, url: e.videoId ? `https://youtu.be/${e.videoId}` : e.link } })),
+    items: fresh.map((e) => ({
+      placeholders: {
+        author: e.author,
+        title: e.title,
+        url: e.videoId ? `https://youtu.be/${e.videoId}` : e.link,
+      },
+    })),
     cursor,
   };
 }
@@ -315,27 +425,44 @@ async function getTwitchToken() {
   const id = process.env.TWITCH_CLIENT_ID;
   const secret = process.env.TWITCH_CLIENT_SECRET;
   if (!id || !secret) {
-    throw new Error("Twitch isn't configured on the bot — set TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET.");
+    throw new Error(
+      "Twitch isn't configured on the bot — set TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET.",
+    );
   }
-  if (twitchToken.value && Date.now() < twitchToken.expiresAt - 60000) return twitchToken.value;
-  const res = await fetch(`https://id.twitch.tv/oauth2/token?client_id=${id}&client_secret=${secret}&grant_type=client_credentials`, {
-    method: "POST",
-    headers: { "User-Agent": UA },
-  });
+  if (twitchToken.value && Date.now() < twitchToken.expiresAt - 60000)
+    return twitchToken.value;
+  const res = await fetch(
+    `https://id.twitch.tv/oauth2/token?client_id=${id}&client_secret=${secret}&grant_type=client_credentials`,
+    {
+      method: "POST",
+      headers: { "User-Agent": UA },
+    },
+  );
   if (!res.ok) throw new Error(`Twitch auth failed (${res.status}).`);
   const data = await res.json();
-  twitchToken = { value: data.access_token, expiresAt: Date.now() + (data.expires_in || 3600) * 1000 };
+  twitchToken = {
+    value: data.access_token,
+    expiresAt: Date.now() + (data.expires_in || 3600) * 1000,
+  };
   return twitchToken.value;
 }
 
 async function pollTwitch(integration) {
   const cfg = integration.config || {};
-  const login = String(cfg.channel || "").trim().toLowerCase();
+  const login = String(cfg.channel || "")
+    .trim()
+    .toLowerCase();
   if (!login) throw new Error("No Twitch channel configured.");
   const token = await getTwitchToken();
-  const data = await fetchJson(`https://api.twitch.tv/helix/streams?user_login=${encodeURIComponent(login)}`, {
-    headers: { "Client-Id": process.env.TWITCH_CLIENT_ID, Authorization: `Bearer ${token}` },
-  });
+  const data = await fetchJson(
+    `https://api.twitch.tv/helix/streams?user_login=${encodeURIComponent(login)}`,
+    {
+      headers: {
+        "Client-Id": process.env.TWITCH_CLIENT_ID,
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
   const stream = (data.data || [])[0];
   // Cursor holds the live stream id while live, "" while offline. A go-live posts
   // once when the id changes; going offline resets so the next stream alerts again.
@@ -348,7 +475,16 @@ async function pollTwitch(integration) {
   const baseline = integration.cursor == null; // never armed → don't alert for an already-live stream
   const items = baseline
     ? []
-    : [{ placeholders: { author: stream.user_name, title: stream.title || "Live now", game: stream.game_name || "", url: `https://twitch.tv/${login}` } }];
+    : [
+        {
+          placeholders: {
+            author: stream.user_name,
+            title: stream.title || "Live now",
+            game: stream.game_name || "",
+            url: `https://twitch.tv/${login}`,
+          },
+        },
+      ];
   return { items, cursor: stream.id };
 }
 
@@ -360,14 +496,34 @@ async function pollReddit(integration) {
   if (!sub) throw new Error("No subreddit configured.");
   if (!/^r\//i.test(sub)) sub = `r/${sub}`;
   const sort = cfg.sort || "new";
-  const keyword = String(cfg.keyword || "").trim().toLowerCase();
-  const data = await fetchJson(`https://www.reddit.com/${sub}/${sort}.json?limit=15&raw_json=1`);
+  const keyword = String(cfg.keyword || "")
+    .trim()
+    .toLowerCase();
+  const data = await fetchJson(
+    `https://www.reddit.com/${sub}/${sort}.json?limit=15&raw_json=1`,
+  );
   const posts = (data?.data?.children || []).map((c) => c.data).filter(Boolean);
-  const { items: fresh, cursor } = diffByCursor(posts, integration.cursor, (p) => String(p.name), 5);
+  const { items: fresh, cursor } = diffByCursor(
+    posts,
+    integration.cursor,
+    (p) => String(p.name),
+    5,
+  );
   const items = [];
   for (const p of fresh) {
-    if (keyword && !(`${p.title} ${p.selftext || ""}`.toLowerCase().includes(keyword))) continue;
-    items.push({ placeholders: { subreddit: sub, title: p.title, author: `u/${p.author}`, url: `https://www.reddit.com${p.permalink}` } });
+    if (
+      keyword &&
+      !`${p.title} ${p.selftext || ""}`.toLowerCase().includes(keyword)
+    )
+      continue;
+    items.push({
+      placeholders: {
+        subreddit: sub,
+        title: p.title,
+        author: `u/${p.author}`,
+        url: `https://www.reddit.com${p.permalink}`,
+      },
+    });
   }
   return { items, cursor };
 }
@@ -381,9 +537,21 @@ async function pollRss(integration) {
   const xml = await fetchText(url);
   const entries = parseFeed(xml);
   const max = Number(cfg.limit) || 1;
-  const { items: fresh, cursor } = diffByCursor(entries, integration.cursor, (e) => String(e.id), max);
+  const { items: fresh, cursor } = diffByCursor(
+    entries,
+    integration.cursor,
+    (e) => String(e.id),
+    max,
+  );
   return {
-    items: fresh.map((e) => ({ placeholders: { title: e.title, author: e.author, summary: e.summary, url: e.link } })),
+    items: fresh.map((e) => ({
+      placeholders: {
+        title: e.title,
+        author: e.author,
+        summary: e.summary,
+        url: e.link,
+      },
+    })),
     cursor,
   };
 }
@@ -395,7 +563,9 @@ const steamNameCache = new Map();
 async function steamGameName(appId) {
   if (steamNameCache.has(appId)) return steamNameCache.get(appId);
   try {
-    const data = await fetchJson(`https://store.steampowered.com/api/appdetails?appids=${appId}&filters=basic`);
+    const data = await fetchJson(
+      `https://store.steampowered.com/api/appdetails?appids=${appId}&filters=basic`,
+    );
     const name = data?.[appId]?.data?.name;
     if (name) steamNameCache.set(appId, name);
     return name || `App ${appId}`;
@@ -408,13 +578,22 @@ async function pollSteam(integration) {
   const cfg = integration.config || {};
   const appId = String(cfg.appId || "").trim();
   if (!appId) throw new Error("No Steam App ID configured.");
-  const data = await fetchJson(`https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${appId}&count=10&maxlength=300`);
+  const data = await fetchJson(
+    `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${appId}&count=10&maxlength=300`,
+  );
   const news = data?.appnews?.newsitems || [];
-  const { items: fresh, cursor } = diffByCursor(news, integration.cursor, (n) => String(n.gid), 5);
+  const { items: fresh, cursor } = diffByCursor(
+    news,
+    integration.cursor,
+    (n) => String(n.gid),
+    5,
+  );
   if (!fresh.length) return { items: [], cursor };
   const game = await steamGameName(appId);
   return {
-    items: fresh.map((n) => ({ placeholders: { game, title: n.title, url: n.url } })),
+    items: fresh.map((n) => ({
+      placeholders: { game, title: n.title, url: n.url },
+    })),
     cursor,
   };
 }
@@ -428,10 +607,15 @@ async function pollPatreon(integration) {
   if (cfg.notify === "patrons") {
     // Reading the patron list needs the identity[memberships] scope + member
     // enumeration, which this connection doesn't collect — surface it clearly.
-    throw new Error("New-patron alerts aren't supported yet — switch this connection to posts.");
+    throw new Error(
+      "New-patron alerts aren't supported yet — switch this connection to posts.",
+    );
   }
   const auth = { headers: { Authorization: `Bearer ${token}` } };
-  const campaigns = await fetchJson("https://www.patreon.com/api/oauth2/v2/campaigns", auth);
+  const campaigns = await fetchJson(
+    "https://www.patreon.com/api/oauth2/v2/campaigns",
+    auth,
+  );
   const campaignId = campaigns?.data?.[0]?.id;
   if (!campaignId) throw new Error("No Patreon campaign found for this token.");
   const posts = await fetchJson(
@@ -439,10 +623,22 @@ async function pollPatreon(integration) {
     auth,
   );
   const rows = (posts?.data || []).filter((p) => p.attributes?.published_at);
-  const { items: fresh, cursor } = diffByCursor(rows, integration.cursor, (p) => String(p.id), 5);
+  const { items: fresh, cursor } = diffByCursor(
+    rows,
+    integration.cursor,
+    (p) => String(p.id),
+    5,
+  );
   const author = String(cfg.campaign || "Patreon");
   return {
-    items: fresh.map((p) => ({ placeholders: { title: p.attributes?.title || "New post", author, action: "shared a new post", url: p.attributes?.url || "https://patreon.com" } })),
+    items: fresh.map((p) => ({
+      placeholders: {
+        title: p.attributes?.title || "New post",
+        author,
+        action: "shared a new post",
+        url: p.attributes?.url || "https://patreon.com",
+      },
+    })),
     cursor,
   };
 }
@@ -461,12 +657,16 @@ function eventEnabled(config, key) {
 
 async function pollJira(integration) {
   const cfg = integration.config || {};
-  const site = String(cfg.site || "").trim().replace(/\/$/, "");
+  const site = String(cfg.site || "")
+    .trim()
+    .replace(/\/$/, "");
   const project = String(cfg.project || "").trim();
   const email = String(cfg.email || "").trim();
   const token = String(cfg.token || "").trim();
-  if (!site || !project) throw new Error("Jira site URL and project key are required.");
-  if (!email || !token) throw new Error("Jira needs an account email + API token (open settings).");
+  if (!site || !project)
+    throw new Error("Jira site URL and project key are required.");
+  if (!email || !token)
+    throw new Error("Jira needs an account email + API token (open settings).");
 
   const basic = Buffer.from(`${email}:${token}`).toString("base64");
   const jql = encodeURIComponent(`project = ${project} ORDER BY updated DESC`);
@@ -480,7 +680,12 @@ async function pollJira(integration) {
   const issues = data?.issues || [];
   // Watermark on `updated` — a status change/edit advances the issue's updated
   // time, crossing the watermark and firing once (see watermarkDiff).
-  const { items: changed, cursor } = watermarkDiff(issues, integration.cursor, (i) => i.fields?.updated, 8);
+  const { items: changed, cursor } = watermarkDiff(
+    issues,
+    integration.cursor,
+    (i) => i.fields?.updated,
+    8,
+  );
   const items = [];
   for (const issue of changed) {
     const f = issue.fields || {};
@@ -516,11 +721,17 @@ async function pollTrello(integration) {
   const key = String(cfg.apiKey || "").trim();
   const token = String(cfg.token || "").trim();
   if (!board) throw new Error("No Trello board configured.");
-  if (!key || !token) throw new Error("Trello needs an API key + token (open settings).");
+  if (!key || !token)
+    throw new Error("Trello needs an API key + token (open settings).");
   const data = await fetchJson(
     `https://api.trello.com/1/boards/${board}/actions?key=${key}&token=${token}&limit=25&filter=createCard,updateCard,commentCard`,
   );
-  const { items: fresh, cursor } = diffByCursor(data || [], integration.cursor, (a) => String(a.id), 8);
+  const { items: fresh, cursor } = diffByCursor(
+    data || [],
+    integration.cursor,
+    (a) => String(a.id),
+    8,
+  );
   const items = [];
   for (const a of fresh) {
     const d = a.data || {};
@@ -546,7 +757,9 @@ async function pollTrello(integration) {
         list: (d.listAfter || d.list || {}).name || "",
         actor: a.memberCreator?.fullName || "Someone",
         action,
-        url: card.shortLink ? `https://trello.com/c/${card.shortLink}` : "https://trello.com",
+        url: card.shortLink
+          ? `https://trello.com/c/${card.shortLink}`
+          : "https://trello.com",
       },
     });
   }
@@ -559,7 +772,12 @@ function notionTitle(page) {
   const props = page.properties || {};
   for (const v of Object.values(props)) {
     if (v?.type === "title" && Array.isArray(v.title)) {
-      return v.title.map((t) => t.plain_text).join("").trim() || "Untitled";
+      return (
+        v.title
+          .map((t) => t.plain_text)
+          .join("")
+          .trim() || "Untitled"
+      );
     }
   }
   return "Untitled";
@@ -569,20 +787,32 @@ async function pollNotion(integration) {
   const cfg = integration.config || {};
   const database = String(cfg.database || "").trim();
   const token = String(cfg.token || "").trim();
-  if (!database || !token) throw new Error("Notion needs a database id + integration token.");
-  const data = await fetchJson(`https://api.notion.com/v1/databases/${database}/query`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Notion-Version": "2022-06-28",
-      "Content-Type": "application/json",
+  if (!database || !token)
+    throw new Error("Notion needs a database id + integration token.");
+  const data = await fetchJson(
+    `https://api.notion.com/v1/databases/${database}/query`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Notion-Version": "2022-06-28",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        page_size: 10,
+        sorts: [{ timestamp: "last_edited_time", direction: "descending" }],
+      }),
     },
-    body: JSON.stringify({ page_size: 10, sorts: [{ timestamp: "last_edited_time", direction: "descending" }] }),
-  });
+  );
   const pages = data?.results || [];
   // Watermark on `last_edited_time` — an edit advances it past the watermark and
   // fires once; immune to ordering/format drift (see watermarkDiff).
-  const { items: changed, cursor } = watermarkDiff(pages, integration.cursor, (p) => p.last_edited_time, 8);
+  const { items: changed, cursor } = watermarkDiff(
+    pages,
+    integration.cursor,
+    (p) => p.last_edited_time,
+    8,
+  );
   const items = [];
   for (const page of changed) {
     const created = new Date(page.created_time).getTime();
@@ -609,7 +839,10 @@ function formatWhen(ev) {
   if (!start) return "";
   const d = new Date(start);
   if (Number.isNaN(d.getTime())) return String(start);
-  return d.toLocaleString("en-US", { dateStyle: "medium", timeStyle: ev.start?.dateTime ? "short" : undefined });
+  return d.toLocaleString("en-US", {
+    dateStyle: "medium",
+    timeStyle: ev.start?.dateTime ? "short" : undefined,
+  });
 }
 
 // How far ahead a "starting soon" reminder fires, and how long a fired reminder
@@ -646,13 +879,17 @@ async function pollGoogleCalendar(integration) {
   const calendarId = String(cfg.calendarId || "").trim();
   const apiKey = String(cfg.apiKey || "").trim();
   if (!calendarId) throw new Error("No calendar configured.");
-  if (!apiKey) throw new Error("Google Calendar needs an API key (open settings).");
+  if (!apiKey)
+    throw new Error("Google Calendar needs an API key (open settings).");
   const enc = encodeURIComponent(calendarId);
   const base = `https://www.googleapis.com/calendar/v3/calendars/${enc}/events?key=${apiKey}&singleEvents=true`;
 
   const firstRun = integration.cursor == null;
-  const { u: updatedCursor, r: remindedRaw } = parseCalendarCursor(integration.cursor);
-  const wantCreatedUpdated = eventEnabled(cfg, "created") || eventEnabled(cfg, "updated");
+  const { u: updatedCursor, r: remindedRaw } = parseCalendarCursor(
+    integration.cursor,
+  );
+  const wantCreatedUpdated =
+    eventEnabled(cfg, "created") || eventEnabled(cfg, "updated");
   const wantReminder = eventEnabled(cfg, "reminder");
   const items = [];
   let newUpdatedCursor = updatedCursor;
@@ -663,7 +900,12 @@ async function pollGoogleCalendar(integration) {
     const events = (data?.items || []).filter((e) => e.status !== "cancelled");
     // Watermark on `updated` (see watermarkDiff) — an edit re-fires once; the
     // updated-stream cursor `u` is now the newest updated ISO.
-    const { items: changed, cursor } = watermarkDiff(events, updatedCursor, (e) => e.updated, 8);
+    const { items: changed, cursor } = watermarkDiff(
+      events,
+      updatedCursor,
+      (e) => e.updated,
+      8,
+    );
     newUpdatedCursor = cursor;
     for (const ev of changed) {
       const created = new Date(ev.created).getTime();
@@ -686,9 +928,15 @@ async function pollGoogleCalendar(integration) {
   if (wantReminder) {
     const now = Date.now();
     const timeMin = encodeURIComponent(new Date(now).toISOString());
-    const timeMax = encodeURIComponent(new Date(now + REMINDER_WINDOW_MS).toISOString());
-    const data = await fetchJson(`${base}&orderBy=startTime&timeMin=${timeMin}&timeMax=${timeMax}&maxResults=10`);
-    const upcoming = (data?.items || []).filter((e) => e.status !== "cancelled" && (e.start?.dateTime || e.start?.date));
+    const timeMax = encodeURIComponent(
+      new Date(now + REMINDER_WINDOW_MS).toISOString(),
+    );
+    const data = await fetchJson(
+      `${base}&orderBy=startTime&timeMin=${timeMin}&timeMax=${timeMax}&maxResults=10`,
+    );
+    const upcoming = (data?.items || []).filter(
+      (e) => e.status !== "cancelled" && (e.start?.dateTime || e.start?.date),
+    );
     const remindedSet = new Set(reminded);
     for (const ev of upcoming) {
       const startMs = eventStartMs(ev);
@@ -715,7 +963,10 @@ async function pollGoogleCalendar(integration) {
     });
   }
 
-  return { items, cursor: JSON.stringify({ u: newUpdatedCursor, r: reminded }) };
+  return {
+    items,
+    cursor: JSON.stringify({ u: newUpdatedCursor, r: reminded }),
+  };
 }
 
 // ── Registry ───────────────────────────────────────────────────────────────────
