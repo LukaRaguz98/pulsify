@@ -171,8 +171,10 @@ export async function runAIAnalysis(
       categories: verdict.categories,
       top_category: verdict.topCategory,
       confidence: verdict.confidence,
+      confidence_label: verdict.confidenceLabel,
       severity: verdict.severity,
       reasoning: verdict.reasoning,
+      signals: verdict.signals,
       status: verdict.violates ? 'pending' : 'dismissed',
       action_taken: 'none',
       action_meta: {},
@@ -244,6 +246,59 @@ export async function reviewModerationEvent(
 
   if (error) return { ok: false, error: `Failed to update event: ${error.message}` }
   return { ok: true }
+}
+
+export type ModeratorVerdict = 'correct' | 'incorrect'
+
+/**
+ * Record a moderator's judgement of whether Pulse Guard got a detection right.
+ * This is the override / feedback signal that drives the accuracy + false-
+ * positive analytics and, longer term, detector tuning. Passing the same
+ * verdict again clears it (toggle), so a mis-click is one click to undo.
+ *
+ * Marking a detection `incorrect` also moves a still-pending event to
+ * `dismissed` — a false positive shouldn't keep sitting in the review queue.
+ */
+export async function setModeratorVerdict(
+  guildId: string,
+  eventId: string,
+  verdict: ModeratorVerdict,
+): Promise<ActionResult<{ verdict: ModeratorVerdict | null }>> {
+  const auth = await authorizeGuildModerator(guildId)
+  if (!auth.ok) return { ok: false, error: auth.error }
+
+  const supabase = await createClient()
+  const { data: existing } = await supabase
+    .from('ai_moderation_events')
+    .select('moderator_verdict, status')
+    .eq('id', eventId)
+    .eq('guild_id', guildId)
+    .maybeSingle()
+
+  // Toggle off when the same verdict is re-applied.
+  const next: ModeratorVerdict | null = existing?.moderator_verdict === verdict ? null : verdict
+
+  const patch: Record<string, unknown> = {
+    moderator_verdict: next,
+    moderator_verdict_by: next ? auth.moderator.userId : null,
+    moderator_verdict_at: next ? new Date().toISOString() : null,
+  }
+  // A confirmed false positive that's still pending gets cleared from the queue.
+  if (next === 'incorrect' && existing?.status === 'pending') {
+    patch.status = 'dismissed'
+    patch.reviewer_id = auth.moderator.userId
+    patch.reviewer_name = auth.moderator.username
+    patch.reviewed_at = new Date().toISOString()
+  }
+
+  const { error } = await supabase
+    .from('ai_moderation_events')
+    .update(patch)
+    .eq('id', eventId)
+    .eq('guild_id', guildId)
+
+  if (error) return { ok: false, error: `Failed to record feedback: ${error.message}` }
+  return { ok: true, data: { verdict: next } }
 }
 
 export async function bulkReviewModerationEvents(

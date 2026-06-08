@@ -36,6 +36,8 @@ export type Feedback = {
   voteCount: number
   /** Only populated for operators (moderation queue); 0 otherwise. */
   reportCount: number
+  /** Operator-pinned to the landing page showcase. */
+  featured: boolean
   createdAt: string
   updatedAt: string
   /** True when the signed-in viewer authored this entry. */
@@ -57,6 +59,8 @@ export type FeedbackRow = {
   status: FeedbackStatus
   vote_count: number
   report_count: number
+  featured: boolean
+  featured_at: string | null
   created_at: string
   updated_at: string
 }

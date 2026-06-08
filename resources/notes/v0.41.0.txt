@@ -1,0 +1,33 @@
+**Pulsify v0.41.0 — Pulse Guard Intelligence**
+A major accuracy and transparency upgrade to Pulse Guard: smarter detection, fewer false positives, and clear reasons behind every decision so moderators can trust — and correct — what it does.
+
+**Works in every language**
+- **Truly multilingual** — Pulse Guard now judges messages by meaning in their own language (Croatian, Spanish, German, French, Portuguese, Turkish, Russian and more), applying the same standard everywhere. "Besplatni nitro za prvih 50!" is caught just like its English twin.
+- **Accent- and trick-proof** — detection folds away diacritics and look-alike characters, so "grátis", "gratis" and disguised spellings all match — without flagging normal words that merely contain a keyword.
+- **Consistent across languages** — a real admin saying "Ja sam admin, kako mogu pomoći?" is treated exactly like the English version: not a violation.
+
+**Smarter, more accurate detection**
+- **Deeper link analysis** — Pulse Guard now spots lookalike domains (discrod.gg), URL shorteners, raw IP links, punycode tricks and risky top-level domains, not just keywords.
+- **New threat categories** — dedicated **Impersonation** (people posing as staff or Discord) and **Suspicious link** detectors join the existing scam, phishing, spam, toxicity, harassment, mass-mention and NSFW coverage.
+- **Fewer false positives** — warning others about a scam, quoting a bad message, or sharing one community invite no longer gets you flagged, and context is weighed before acting.
+- **More resilient** — the AI pass now retries transient failures and times out cleanly, so a slow provider never silently disables scoring.
+
+**Confidence scoring**
+- **Low / Medium / High confidence** — every detection now carries a clear confidence band alongside severity, shown in the dashboard, history and Discord alerts.
+- **Stored with history** — confidence is recorded on every event so you can filter and analyse it over time.
+
+**See exactly why something was flagged**
+- **Detection signals** — each alert lists the specific signals that fired (e.g. "Lookalike Discord domain — 85%"), and whether each came from a rule or the Pulse Guard model.
+- **Clearer reasoning** — plain-language explanations on every flagged message, in the dashboard and in Discord.
+
+**Tell Pulse Guard when it's right (or wrong)**
+- **Moderator feedback** — mark any detection as **Correct** or **False positive** straight from the review queue.
+- **Accuracy you can measure** — a new Detection Performance panel tracks accuracy, override rate, false positives, confidence distribution and successful actions.
+
+**Upgraded alerts & investigation**
+- **Richer Pulse Guard embeds** — Pulse v2 alerts now show confidence, the triggered signals, an action summary, and a one-tap **Open in dashboard** button — all on your server's accent colour.
+- **Faster investigation** — jump from a flagged message straight to the member's moderation history.
+
+Pulse Guard now feels noticeably smarter, more transparent, and easier to trust.
+
+June 8, 2026

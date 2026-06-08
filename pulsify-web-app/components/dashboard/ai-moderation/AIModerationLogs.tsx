@@ -7,12 +7,12 @@ import {
   CATEGORY_COLORS,
   CATEGORY_IDS,
   CATEGORY_LABELS,
-  SEVERITY_COLORS,
   type CategoryId,
 } from '@/lib/ai-moderation'
 import type { AIModerationEventRow } from '@/app/api/guilds/[guildId]/ai-moderation/events/route'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Pagination } from '@/components/ui/pagination'
+import { ConfidenceBadge, rowConfidenceLabel } from './shared'
 
 type Props = {
   events: AIModerationEventRow[]
@@ -119,7 +119,6 @@ export function AIModerationLogs({ events }: Props) {
                 const cat = category ? CATEGORY_LABELS[category] : '—'
                 const catColor = category ? CATEGORY_COLORS[category] : '#94a3b8'
                 const status = STATUS_LABELS[e.status]
-                const severityColor = SEVERITY_COLORS[e.severity]
                 return (
                   <tr
                     key={e.id}
@@ -150,20 +149,33 @@ export function AIModerationLogs({ events }: Props) {
                       )}
                     </td>
                     <td className="px-4 py-3" data-label="Status">
-                      <span
-                        className="inline-flex whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-medium"
-                        style={{ background: `${status.color}1f`, color: status.color }}
-                      >
-                        {status.label}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span
+                          className="inline-flex whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-medium"
+                          style={{ background: `${status.color}1f`, color: status.color }}
+                        >
+                          {status.label}
+                        </span>
+                        {e.moderator_verdict && (
+                          <span
+                            className="inline-flex whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] font-medium"
+                            style={
+                              e.moderator_verdict === 'correct'
+                                ? { background: 'rgba(34,197,94,0.12)', color: '#22c55e' }
+                                : { background: 'rgba(248,113,113,0.12)', color: '#f87171' }
+                            }
+                            title="Moderator feedback on this detection"
+                          >
+                            {e.moderator_verdict === 'correct' ? 'Confirmed' : 'False positive'}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground text-xs" data-label="Action">
                       {AUTO_ACTION_LABELS[e.action_taken]}
                     </td>
                     <td className="px-4 py-3" data-label="Confidence">
-                      <span className="font-mono text-xs" style={{ color: severityColor }}>
-                        {Math.round(e.confidence * 100)}%
-                      </span>
+                      <ConfidenceBadge confidence={e.confidence} label={rowConfidenceLabel(e)} />
                     </td>
                     <td className="px-4 py-3 text-subtle text-xs font-mono" data-label="When">
                       {new Date(e.created_at).toLocaleString()}

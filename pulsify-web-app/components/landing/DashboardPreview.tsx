@@ -3,42 +3,42 @@ import {
   Wifi,
   Hash,
   Crown,
-  BarChart3,
+  BarChart2,
   Activity,
-  Shield,
-  ShieldAlert,
-  CalendarDays,
   LayoutGrid,
   Sparkles,
   TrendingUp,
+  LineChart,
+  Lightbulb,
+  UserCog,
+  Server,
+  TerminalSquare,
+  ShieldCheck,
+  ChevronRight,
 } from 'lucide-react'
 import { MockWindow } from './landing-ui'
 
-// Mirrors the real GuildSidebar: grouped nav with tiny uppercase group labels
-// and one active item highlighted in the accent.
+// Mirrors the real GuildSidebar: Overview sits standalone at the top, then the
+// grouped categories. We keep Analytics expanded to show sub-items and leave the
+// rest as collapsed headers — exactly how the real sidebar looks on the Overview
+// page — so the preview stays in step with the live app's navigation.
+const NAV_OVERVIEW = { label: 'Overview', icon: BarChart2 }
+
 const NAV_GROUPS = [
   {
     title: 'Analytics',
+    icon: LineChart,
+    expanded: true,
     items: [
-      { label: 'Overview', icon: BarChart3, active: true },
-      { label: 'Statistics', icon: Activity, active: false },
+      { label: 'Statistics', icon: Activity },
+      { label: 'Insights', icon: Lightbulb },
+      { label: 'Management', icon: UserCog },
     ],
   },
-  {
-    title: 'Server',
-    items: [
-      { label: 'Channels', icon: Hash, active: false },
-      { label: 'Roles', icon: Crown, active: false },
-      { label: 'Events', icon: CalendarDays, active: false },
-    ],
-  },
-  {
-    title: 'Safety',
-    items: [
-      { label: 'Moderation', icon: Shield, active: false },
-      { label: 'Pulse Guard', icon: ShieldAlert, active: false },
-    ],
-  },
+  { title: 'Server', icon: Server, expanded: false, items: [] },
+  { title: 'Pulse Bot', icon: TerminalSquare, expanded: false, items: [] },
+  { title: 'Engagement', icon: Sparkles, expanded: false, items: [] },
+  { title: 'Safety', icon: ShieldCheck, expanded: false, items: [] },
 ]
 
 // Mirrors the real "At a Glance" StatsCards on the Overview page.
@@ -115,27 +115,45 @@ export function DashboardPreview() {
                 <p className="text-[10px]" style={{ color: 'var(--text-3)' }}>24,318 members</p>
               </div>
             </div>
-            <div className="flex-1 space-y-3 p-2.5">
+            <div className="flex-1 space-y-1 p-2.5">
+              {/* Overview — standalone, active (matches the real sidebar) */}
+              <div
+                className="relative flex items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] font-semibold"
+                style={{ background: 'linear-gradient(90deg, var(--p-soft), transparent)', color: 'var(--text)', boxShadow: 'inset 0 0 0 1px var(--p-soft)' }}
+              >
+                <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r" style={{ background: 'var(--p-1)', boxShadow: '0 0 10px var(--p-glow)' }} />
+                <span style={{ color: 'var(--p-1)' }}><NAV_OVERVIEW.icon size={13} /></span>
+                {NAV_OVERVIEW.label}
+              </div>
+
+              {/* Grouped categories — Analytics expanded, the rest collapsed */}
               {NAV_GROUPS.map((g) => (
                 <div key={g.title}>
-                  <p className="px-2 text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
-                    {g.title}
-                  </p>
-                  <div className="mt-1 space-y-0.5">
-                    {g.items.map((it) => (
-                      <div
-                        key={it.label}
-                        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-medium"
-                        style={{
-                          background: it.active ? 'var(--p-soft)' : 'transparent',
-                          color: it.active ? 'var(--p-1)' : 'var(--text-3)',
-                        }}
-                      >
-                        <it.icon size={13} />
-                        {it.label}
-                      </div>
-                    ))}
+                  <div
+                    className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] font-semibold"
+                    style={{ color: 'var(--text-2)' }}
+                  >
+                    <span style={{ color: 'var(--text-3)' }}><g.icon size={13} /></span>
+                    <span className="flex-1">{g.title}</span>
+                    <ChevronRight
+                      size={11}
+                      style={{ color: 'var(--text-3)', transform: g.expanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s ease' }}
+                    />
                   </div>
+                  {g.expanded && g.items.length > 0 && (
+                    <div className="mt-0.5 space-y-0.5 pl-1">
+                      {g.items.map((it) => (
+                        <div
+                          key={it.label}
+                          className="flex items-center gap-2 rounded-md py-1 text-[11px] font-medium"
+                          style={{ paddingLeft: '1.5rem', color: 'var(--text-3)' }}
+                        >
+                          <it.icon size={12} />
+                          {it.label}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -193,7 +211,7 @@ export function DashboardPreview() {
                   <TrendingUp size={12} /> +18.4%
                 </span>
               </div>
-              <div className="h-28 w-full">
+              <div className="lp-chart h-28 w-full">
                 <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-full w-full">
                   <defs>
                     <linearGradient id="lpOverviewArea" x1="0" y1="0" x2="0" y2="1">
@@ -230,7 +248,7 @@ export function DashboardPreview() {
                 </p>
                 <div className="h-2 w-full rounded-full" style={{ background: 'var(--bg-2)' }}>
                   <div
-                    className="h-2 rounded-full"
+                    className="lp-bar h-2 rounded-full"
                     style={{ width: '64%', background: 'linear-gradient(90deg, #ff73fa, #c576ff)', boxShadow: '0 0 12px -2px rgba(255,115,250,0.55)' }}
                   />
                 </div>
@@ -249,7 +267,7 @@ export function DashboardPreview() {
                         <span style={{ fontFamily: 'var(--font-jetbrains-mono, monospace)', color: 'var(--text)' }}>{s.count}</span>
                       </div>
                       <div className="h-1.5 w-full rounded-full" style={{ background: 'var(--bg-2)' }}>
-                        <div className="h-1.5 rounded-full" style={{ width: `${(s.count / STRUCTURE_TOTAL) * 100}%`, background: s.color }} />
+                        <div className="lp-bar h-1.5 rounded-full" style={{ width: `${(s.count / STRUCTURE_TOTAL) * 100}%`, background: s.color }} />
                       </div>
                     </div>
                   ))}

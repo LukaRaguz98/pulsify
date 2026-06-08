@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Search, Plus, Loader2, MessageSquare, Star, CheckCircle2, ThumbsUp } from 'lucide-react'
+import { Search, Plus, Loader2, MessageSquare, Star, CheckCircle2, ThumbsUp, ChevronDown } from 'lucide-react'
 import {
   computeStats,
   FEEDBACK_SORTS,
@@ -37,6 +37,12 @@ export function FeedbackExplorer({
   const { signIn } = useDiscordSignIn('/feedback')
 
   const [items, setItems] = useState<Feedback[]>(initialItems)
+  // The stat strip (average + total) reflects the WHOLE community, so it reads
+  // from this unfiltered snapshot rather than the displayed `items` list — that
+  // way changing the rating/search filter never moves the average. Only the
+  // viewer's own add/edit/delete (and operator moderation) update it, since
+  // those are the only client actions that actually change the global figures.
+  const [baseItems, setBaseItems] = useState<Feedback[]>(initialItems)
   const [own, setOwn] = useState<Feedback | null>(initialOwn)
   const [sort, setSort] = useState<FeedbackSort>('top')
   const [ratingFilter, setRatingFilter] = useState<RatingFilter>(0)
@@ -48,7 +54,7 @@ export function FeedbackExplorer({
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Feedback | null>(null)
 
-  const stats = computeStats(items)
+  const stats = computeStats(baseItems)
 
   const flash = useCallback((msg: string) => {
     setToast(msg)
@@ -121,6 +127,19 @@ export function FeedbackExplorer({
       return copy
     })
 
+  // Keep the global stats snapshot in step with create/edit and removals. Votes
+  // deliberately don't touch it — a vote changes neither the average nor the
+  // review count.
+  const upsertBase = (next: Feedback) =>
+    setBaseItems((prev) => {
+      const i = prev.findIndex((f) => f.id === next.id)
+      if (i === -1) return [next, ...prev]
+      const copy = [...prev]
+      copy[i] = next
+      return copy
+    })
+  const removeBase = (id: string) => setBaseItems((prev) => prev.filter((f) => f.id !== id))
+
   const handleSubmit = async (input: FeedbackInput): Promise<{ ok: boolean; error?: string }> => {
     const isEdit = !!editing
     const url = isEdit ? `/api/feedback/${editing!.id}` : '/api/feedback'
@@ -132,6 +151,7 @@ export function FeedbackExplorer({
     const data = (await res.json().catch(() => ({}))) as { feedback?: Feedback; error?: string }
     if (!res.ok || !data.feedback) return { ok: false, error: data.error ?? 'Could not save feedback.' }
     upsertItem(data.feedback)
+    upsertBase(data.feedback)
     setOwn(data.feedback)
     setFormOpen(false)
     setEditing(null)
@@ -185,11 +205,47 @@ export function FeedbackExplorer({
       const res = await fetch(`/api/feedback/${f.id}`, { method: 'DELETE' })
       if (res.ok) {
         setItems((prev) => prev.filter((x) => x.id !== f.id))
+        removeBase(f.id)
         if (own?.id === f.id) setOwn(null)
         flash('Your feedback was deleted.')
       } else {
         flash('Could not delete your feedback.')
       }
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  // Operator-only: feature / unfeature on the landing page (max 3, enforced
+  // server-side). Optimistic, and mirrored into baseItems so the count + badges
+  // stay correct under the rating filter.
+  const FEATURE_LIMIT = 3
+  const featuredCount = baseItems.filter((f) => f.featured).length
+
+  const handleFeature = async (f: Feedback, next: boolean) => {
+    const optimistic = { ...f, featured: next }
+    upsertItem(optimistic)
+    upsertBase(optimistic)
+    setBusyId(f.id)
+    try {
+      const res = await fetch(`/api/feedback/${f.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ featured: next }),
+      })
+      const data = (await res.json().catch(() => ({}))) as { feedback?: Feedback; error?: string }
+      if (!res.ok || !data.feedback) {
+        upsertItem(f) // revert
+        upsertBase(f)
+        flash(data.error ?? 'Could not update the landing page.')
+      } else {
+        upsertItem(data.feedback)
+        upsertBase(data.feedback)
+        flash(next ? 'Added to the landing page.' : 'Removed from the landing page.')
+      }
+    } catch {
+      upsertItem(f)
+      upsertBase(f)
     } finally {
       setBusyId(null)
     }
@@ -205,6 +261,7 @@ export function FeedbackExplorer({
       })
       if (res.ok) {
         setItems((prev) => prev.filter((x) => x.id !== f.id))
+        removeBase(f.id)
         flash('Feedback hidden from the public wall.')
       } else {
         flash('Could not moderate this feedback.')
@@ -313,18 +370,35 @@ export function FeedbackExplorer({
           })}
         </div>
 
-        {/* Sort */}
-        <select
-          value={sort}
-          onChange={(e) => setSort(e.target.value as FeedbackSort)}
-          className="rounded-xl border bg-transparent px-3 py-2.5 text-sm font-medium text-foreground outline-none transition-colors focus:border-[var(--p-1)]"
-          style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}
-        >
-          {FEEDBACK_SORTS.map((s) => (
-            <option key={s.value} value={s.value}>{s.label}</option>
-          ))}
-        </select>
+        {/* Sort — native arrow removed (appearance-none) so we can place our own
+            chevron with a proper gap from the right edge. */}
+        <div className="relative w-full lg:w-auto">
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as FeedbackSort)}
+            className="w-full appearance-none rounded-xl border bg-transparent py-2.5 pl-3.5 pr-10 text-sm font-medium text-foreground outline-none transition-colors focus:border-[var(--p-1)]"
+            style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}
+          >
+            {FEEDBACK_SORTS.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+          <ChevronDown
+            size={15}
+            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
+            style={{ color: 'var(--text-3)' }}
+          />
+        </div>
       </div>
+
+      {/* Operator hint — current landing-showcase selection. */}
+      {viewer.isOperator && (
+        <p className="mt-4 text-xs" style={{ color: 'var(--text-3)' }}>
+          <span className="font-semibold" style={{ color: 'var(--text-2)' }}>Operator:</span>{' '}
+          {featuredCount}/{FEATURE_LIMIT} reviews featured on the landing page
+          {featuredCount === 0 && ' — the top-rated three are shown automatically until you pick some.'}
+        </p>
+      )}
 
       {/* List */}
       <div className="mt-8">
@@ -369,6 +443,8 @@ export function FeedbackExplorer({
                 onEdit={openEdit}
                 onDelete={handleDelete}
                 onModerate={handleModerate}
+                onFeature={handleFeature}
+                atFeatureLimit={featuredCount >= FEATURE_LIMIT}
                 busy={busyId === f.id}
               />
             ))}
