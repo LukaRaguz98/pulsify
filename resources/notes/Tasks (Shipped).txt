@@ -2902,3 +2902,107 @@ Acceptance Criteria
 	Mobile and desktop experiences feel polished
 	Platform feels production-ready and cohesive
 	Overall user experience is noticeably improved
+
+PULSIFY-41 — Pulse Guard: Detection Accuracy & Intelligence Upgrade (v0.41.0)
+
+Description
+	Upgrade the existing Pulse Guard AI Moderation system to improve detection accuracy, reduce false positives, provide better moderation context, and introduce advanced threat analysis capabilities.
+	The goal is to make Pulse Guard feel significantly smarter, more transparent, and more reliable for server administrators while improving overall moderation effectiveness.
+
+Goals
+	Improve AI moderation accuracy
+	Reduce false positives
+	Improve moderation transparency
+	Expand threat detection capabilities
+	Improve moderator trust in Pulse Guard decisions
+
+Tasks
+	Detection Engine Improvements
+		Review and improve existing Pulse Guard detection logic
+		Improve:
+			scam detection
+			toxicity detection
+			harassment detection
+			spam detection
+			phishing detection
+			malicious link detection
+		Reduce false positive rates
+		Improve contextual message analysis
+
+	AI Confidence Scoring
+		Introduce confidence scoring for detections
+		Display:
+			Low Confidence
+			Medium Confidence
+			High Confidence
+		Store confidence values in moderation history
+		Expose confidence information to moderators
+
+	Detection Reasoning
+		Generate detailed detection reasons
+		Explain why a message was flagged
+		Display triggered categories and signals
+		Improve moderation transparency
+
+	Pulse Guard Analytics
+		Add Pulse Guard performance metrics
+		Track:
+			detections
+			false positives
+			moderator overrides
+			successful actions
+			detection categories
+		Integrate with existing Analytics and Management views
+
+	Moderator Override System
+		Allow moderators to mark detections as:
+			Correct
+			Incorrect
+		Store feedback for future tuning
+		Track override rates
+
+	Threat Categorization
+		Improve categorization system
+		Support:
+			Scam
+			Phishing
+			Spam
+			Toxicity
+			Harassment
+			NSFW
+			Suspicious Links
+			Impersonation Attempts
+			Mass Mention Abuse
+		Display category-specific moderation actions
+
+	Pulse Guard Embeds
+		Upgrade Pulse Guard moderation embeds
+		Ensure consistency with latest Pulse v2 design standards
+		Improve:
+			readability
+			moderation details
+			confidence display
+			action summaries
+		Maintain custom branding support
+
+	Logging & Investigation
+		Improve Pulse Guard moderation logs
+		Add detection timeline information
+		Improve investigation workflow
+		Add links to related moderation history
+
+	Performance & Reliability
+		Optimize detection execution time
+		Improve handling of large messages
+		Improve queue processing
+		Improve resilience to API failures
+
+Acceptance Criteria
+	Detection accuracy improves across supported categories
+	False positives are reduced
+	Confidence scores are visible to moderators
+	Detection reasoning is displayed clearly
+	Pulse Guard embeds follow Pulse v2 standards
+	Analytics and logging integrate correctly
+	Moderator override system functions correctly
+	Pulse Guard provides a noticeably better moderation experience

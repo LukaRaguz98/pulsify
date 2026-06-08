@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import {
   Check,
   ShieldAlert,
@@ -10,13 +11,13 @@ import {
   Trash2,
   Clock,
   MessageSquareWarning,
+  ListTree,
   X,
 } from 'lucide-react'
 import {
   AUTO_ACTION_LABELS,
   CATEGORY_COLORS,
   CATEGORY_LABELS,
-  SEVERITY_COLORS,
   type AutoAction,
   type CategoryId,
 } from '@/lib/ai-moderation'
@@ -25,8 +26,10 @@ import {
   bulkReviewModerationEvents,
   executeModerationAction,
   reviewModerationEvent,
+  setModeratorVerdict,
 } from '@/app/dashboard/[guildId]/ai-moderation/actions'
 import { EmptyState } from '@/components/ui/empty-state'
+import { ConfidenceBadge, SignalList, VerdictFeedback, rowConfidenceLabel } from './shared'
 
 type Props = {
   guildId: string
@@ -39,6 +42,27 @@ export function AIModerationReviewQueue({ guildId, events, onChange }: Props) {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  // Optimistic override state so a "correct"/"false positive" tap reflects
+  // instantly while the server action runs (the refetch reconciles after).
+  const [verdicts, setVerdicts] = useState<Record<string, 'correct' | 'incorrect' | null>>({})
+
+  function handleVerdict(event: AIModerationEventRow, verdict: 'correct' | 'incorrect') {
+    const current = verdicts[event.id] ?? event.moderator_verdict
+    const optimistic = current === verdict ? null : verdict
+    setVerdicts((prev) => ({ ...prev, [event.id]: optimistic }))
+    setBusyId(event.id)
+    startTransition(async () => {
+      const res = await setModeratorVerdict(guildId, event.id, verdict)
+      setBusyId(null)
+      if (!res.ok) {
+        setError(res.error)
+        setVerdicts((prev) => ({ ...prev, [event.id]: current }))
+        return
+      }
+      // A confirmed false positive is dismissed server-side; refresh the queue.
+      if (optimistic === 'incorrect') onChange()
+    })
+  }
 
   function toggleSelect(id: string) {
     setSelected((prev) => {
@@ -166,8 +190,8 @@ export function AIModerationReviewQueue({ guildId, events, onChange }: Props) {
         {events.map((e) => {
           const isBusy = busyId === e.id
           const isSelected = selected.has(e.id)
-          const severityColor = SEVERITY_COLORS[e.severity]
           const category = (e.top_category as CategoryId | null) ?? null
+          const verdict = e.id in verdicts ? verdicts[e.id] : e.moderator_verdict
           return (
             <li
               key={e.id}
@@ -194,12 +218,7 @@ export function AIModerationReviewQueue({ guildId, events, onChange }: Props) {
                         <ShieldAlert size={11} /> {CATEGORY_LABELS[category]}
                       </span>
                     ) : null}
-                    <span
-                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-mono"
-                      style={{ background: `${severityColor}1f`, color: severityColor }}
-                    >
-                      {Math.round(e.confidence * 100)}% · {e.severity}
-                    </span>
+                    <ConfidenceBadge confidence={e.confidence} label={rowConfidenceLabel(e)} />
                     <span className="text-[11px] text-subtle">
                       {e.channel_name ? `#${e.channel_name}` : 'No channel'} ·{' '}
                       {e.author_name ?? e.author_id ?? 'unknown'}
@@ -220,6 +239,36 @@ export function AIModerationReviewQueue({ guildId, events, onChange }: Props) {
                       {e.reasoning}
                     </p>
                   )}
+
+                  {e.signals && e.signals.length > 0 && (
+                    <div className="mt-2 rounded-lg border px-3 py-2"
+                      style={{ borderColor: 'var(--line-strong)', background: 'var(--bg-2)' }}>
+                      <p className="mb-1.5 flex items-center gap-1 text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
+                        <ListTree size={11} /> Detection signals
+                      </p>
+                      <SignalList signals={e.signals} />
+                    </div>
+                  )}
+
+                  {/* Feedback + investigation row — separate from the action
+                      buttons so "was this right?" reads as a distinct task. */}
+                  <div className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3"
+                    style={{ borderColor: 'var(--line-strong)' }}>
+                    <VerdictFeedback
+                      verdict={verdict}
+                      busy={isBusy}
+                      onSet={(v) => handleVerdict(e, v)}
+                    />
+                    {e.author_id && (
+                      <Link
+                        href={`/dashboard/${guildId}/members/${e.author_id}`}
+                        className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition"
+                        style={{ borderColor: 'var(--line-strong)', color: 'var(--text-3)' }}
+                      >
+                        <ListTree size={11} /> Member history
+                      </Link>
+                    )}
+                  </div>
 
                   <div className="mt-3 flex flex-wrap gap-2">
                     <ActionBtn icon={<Trash2 size={12} />} label={AUTO_ACTION_LABELS.delete} disabled={isBusy || !e.message_id} onClick={() => handleAction(e, 'delete')} />

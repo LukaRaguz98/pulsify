@@ -5,6 +5,9 @@ import { validateFeedback, type FeedbackRow, type FeedbackStatus } from '@/lib/f
 
 const VALID_STATUS: FeedbackStatus[] = ['visible', 'hidden', 'removed']
 
+/** Max operator-curated entries shown on the landing page. */
+const MAX_FEATURED = 3
+
 /**
  * PATCH /api/feedback/[id]
  *
@@ -49,6 +52,38 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { data, error } = await supabase
       .from('feedback')
       .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('*')
+      .single()
+    if (error) return NextResponse.json({ error: 'Could not update feedback.' }, { status: 500 })
+    return NextResponse.json({ feedback: mapFeedback(data as FeedbackRow, viewer, new Set()) })
+  }
+
+  // Landing-showcase path: feature / unfeature is operator-only and capped at 3.
+  if (typeof body.featured === 'boolean') {
+    if (!viewer.isOperator) {
+      return NextResponse.json({ error: 'Only Pulsify operators can feature feedback.' }, { status: 403 })
+    }
+    const next = body.featured
+    if (next && !row.featured) {
+      const { count } = await supabase
+        .from('feedback')
+        .select('id', { count: 'exact', head: true })
+        .eq('featured', true)
+      if ((count ?? 0) >= MAX_FEATURED) {
+        return NextResponse.json(
+          { error: `You can feature at most ${MAX_FEATURED} reviews on the landing page. Unfeature one first.` },
+          { status: 400 },
+        )
+      }
+    }
+    const { data, error } = await supabase
+      .from('feedback')
+      .update({
+        featured: next,
+        featured_at: next ? new Date().toISOString() : null,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', id)
       .select('*')
       .single()

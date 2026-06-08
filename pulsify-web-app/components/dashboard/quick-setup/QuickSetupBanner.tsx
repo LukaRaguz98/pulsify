@@ -66,7 +66,9 @@ export function QuickSetupBanner({
           <X size={15} />
         </button>
 
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center">
+        {/* sm:pr-8 keeps the "Start quick setup" button clear of the absolute
+            dismiss (×) in the top-right corner. */}
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:pr-8">
           <span
             className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-white"
             style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))', boxShadow: '0 6px 20px -6px var(--p-glow)' }}

@@ -46,6 +46,7 @@ export function mapFeedback(
     voteCount: row.vote_count,
     // Report counts are a moderation signal — only operators see them.
     reportCount: viewer.isOperator ? row.report_count : 0,
+    featured: row.featured ?? false,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     isOwn: !!viewer.userId && row.user_id === viewer.userId,
@@ -65,26 +66,49 @@ async function getVotedIds(userId: string | null): Promise<Set<string>> {
 }
 
 /**
- * Top visible feedback for the landing showcase. Ordered by rating, then
- * helpful votes, then recency — the same ranking the "Highest rated" sort uses
- * (popularityScore). Returns [] on any error so the landing falls back to the
- * static illustrative testimonials.
+ * Top visible feedback for the landing showcase.
+ *
+ * Operator-curated picks come first: if an operator has featured any entries
+ * (see the /feedback "Feature on landing" control) those are shown, newest-
+ * featured first. Any remaining slots are filled with the automatic ranking
+ * (rating ▸ helpful votes ▸ recency, i.e. popularityScore) so the showcase is
+ * always full. When nothing is featured this is identical to the old behaviour.
+ *
+ * Returns [] on any error so the landing can fall back gracefully.
  */
 export async function getTopFeedback(limit = 3): Promise<Feedback[]> {
   try {
     const viewer = await getFeedbackViewer()
     const supabase = await createClient()
-    const { data, error } = await supabase
+
+    // 1) Operator-pinned picks.
+    const { data: featured } = await supabase
       .from('feedback')
       .select('*')
       .eq('status', 'visible')
-      .order('rating', { ascending: false })
-      .order('vote_count', { ascending: false })
-      .order('created_at', { ascending: false })
+      .eq('featured', true)
+      .order('featured_at', { ascending: false })
       .limit(limit)
-    if (error || !data) return []
+    let rows = (featured ?? []) as FeedbackRow[]
+
+    // 2) Fill any remaining slots with the automatic top-rated, de-duped.
+    if (rows.length < limit) {
+      const { data: top } = await supabase
+        .from('feedback')
+        .select('*')
+        .eq('status', 'visible')
+        .order('rating', { ascending: false })
+        .order('vote_count', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(limit + rows.length)
+      const pickedIds = new Set(rows.map((r) => r.id))
+      const fill = ((top ?? []) as FeedbackRow[]).filter((r) => !pickedIds.has(r.id))
+      rows = [...rows, ...fill].slice(0, limit)
+    }
+
+    if (rows.length === 0) return []
     const votedIds = await getVotedIds(viewer.userId)
-    return (data as FeedbackRow[]).map((r) => mapFeedback(r, viewer, votedIds))
+    return rows.map((r) => mapFeedback(r, viewer, votedIds))
   } catch {
     return []
   }

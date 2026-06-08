@@ -1,96 +1,118 @@
-PULSIFY-42 — Server Recovery & Backup System (v0.42.0)
+PULSIFY-43 — Ticket Applications Review Upgrade (v0.43.0)
 
 Description
-	Upgrade the existing Backup & Restore functionality to provide a complete server configuration backup solution with version history, restore previews, selective restores, and disaster recovery capabilities.
-	The goal is to make Pulsify the safest way to manage Discord communities by allowing administrators to quickly recover from accidental changes, moderation mistakes, or server misconfiguration.
+	Upgrade the existing Ticketing system by improving the Application submission flow inside Discord and adding a dedicated Applications review area inside Pulsify under Tickets.
+	Instead of creating a new Discord ticket channel for every application, submitted applications should be stored and sent to the Pulsify web app for administrative review.
 
 Goals
-	Improve server recovery capabilities
-	Reduce risk of accidental configuration loss
-	Improve administrator confidence
-	Expand premium-grade server management features
+	Improve the existing ticket application workflow
+	Reduce unnecessary Discord channel creation
+	Centralize application review inside Pulsify
+	Make applications easier for administrators to manage
+	Improve user experience when submitting applications
 
 Tasks
-	Backup Center
-		Create dedicated Backup & Restore dashboard
-		Display:
-			available backups
-			backup size
-			creation date
-			backup type
-			backup version
+	Discord Application Dialog Upgrade
+		Upgrade the existing Application dialog opened from a ticket
+		Add a combobox/select menu for application type
+		Allow users to select what they are applying for
+		Add predefined application options such as:
+			Staff
+			Moderator
+			Partner
+			Creator
+			Support Team
+			Event Team
+			Other
+		If "Other" is selected:
+			Display a manual text input field
+			Allow the user to write what they are applying for
+		Add application message/details input
+		Add validation for required fields
+		Add clear submit/cancel actions
+
+	Application Submission Flow
+		When the user submits an application:
+			Do not create a new Discord channel
+			Do not open a new discussion room
+			Save the application to the database
+			Show confirmation to the user
+			Inform the user that the application was received and is now under review
+		Add Pulse-styled confirmation embed/message
+		Handle submission errors gracefully
+
+	Pulsify Applications View
+		Add new Tickets > Applications subview inside the Pulsify web app
+		Display submitted applications
+		Show:
+			applicant
+			Discord username/avatar
+			application type
+			custom application type if "Other" was selected
+			application message/details
+			submission date
+			review status
+			assigned reviewer
 		Add search and filtering
+		Add loading/error/empty states
 
-	Automatic Backups
-		Add scheduled backup system
-		Support:
-			daily backups
-			weekly backups
-			manual backups
-		Add backup retention settings
+	Application Review Workflow
+		Allow administrators to review applications inside Pulsify
+		Add statuses:
+			Pending Review
+			Approved
+			Rejected
+			Needs More Info
+		Allow admins to:
+			approve application
+			reject application
+			request more information
+			add internal review notes
+			assign reviewer
+			update application status
+		Track review history
+		Store reviewer/admin actions
 
-	Extended Backup Coverage
-		Expand backup support for:
-			roles
-			channels
-			categories
-			permissions
-			onboarding settings
-			Pulse Guard settings
-			moderation configuration
-			automations
-			tickets configuration
-			giveaways configuration
-			events configuration
-			announcements configuration
+	User Notifications
+		Notify the user when application status changes
+		Send Pulse-styled Discord DM or channel message where appropriate
+		Notify user when:
+			application is received
+			application is approved
+			application is rejected
+			more information is requested
+		Add fallback handling if DMs are disabled
 
-	Restore Preview
-		Add restore preview functionality
-		Display:
-			changes that will occur
-			resources affected
-			resources added
-			resources removed
-		Allow confirmation before execution
+	Admin Notifications
+		Add optional notification channel for new applications
+		Send Pulse-styled admin notification embed when a new application is submitted
+		Add quick link/button to open the application in Pulsify
+		Respect ticket/application notification settings
 
-	Selective Restore
-		Allow restoring:
-			individual roles
-			channels
-			categories
-			automations
-			moderation settings
-			onboarding settings
-		Avoid full server restore when unnecessary
-
-	Backup Comparison
-		Compare two backups
-		Highlight:
-			added items
-			removed items
-			modified items
-		Display visual change summaries
-
-	Recovery Logs
-		Track:
-			backup creation history
-			restore history
-			restore initiator
-			restore success/failure
-		Add audit entries
+	Permissions & Validation
+		Validate that the user can submit an application
+		Prevent duplicate/spam submissions
+		Add cooldowns or limits per user
+		Validate admin permissions before reviewing applications
+		Ensure only authorized staff can access Tickets > Applications
 
 	UX Improvements
-		Add backup status indicators
-		Add restore warnings
-		Add progress tracking
-		Add loading/error/success states
-		Add responsive backup management views
+		Ensure application dialog is clean and readable
+		Use consistent Pulse v2 embed styling
+		Add responsive Applications review view
+		Add application detail drawer/modal
+		Add status badges
+		Add confirmation dialogs for approve/reject actions
+		Add success/error toast notifications
 
 Acceptance Criteria
-	Automatic backups generate successfully
-	Restore previews display accurate information
-	Selective restores function correctly
-	Backup comparison works correctly
-	Recovery logs are stored properly
-	Existing configurations can be restored safely
+	Application dialog includes a combobox/select menu for application type
+	Users can select a predefined application type or choose "Other" and enter a custom type
+	Submitting an application does not create a new Discord channel
+	User receives confirmation that the application is under review
+	Submitted applications appear in Pulsify under Tickets > Applications
+	Administrators can review, approve, reject, and update application status
+	Review notes and status history persist correctly
+	User notifications work when application status changes
+	Permissions and anti-spam validation work correctly
 	UI remains responsive and visually polished

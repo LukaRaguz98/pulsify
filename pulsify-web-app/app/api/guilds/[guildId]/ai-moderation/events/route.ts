@@ -14,11 +14,16 @@ export type AIModerationEventRow = {
   categories: { id: string; label: string; score: number }[]
   top_category: string | null
   confidence: number
+  confidence_label: 'low' | 'medium' | 'high' | null
   severity: 'low' | 'medium' | 'high'
   reasoning: string | null
+  signals: { source: 'heuristic' | 'ai'; category: string; label: string; weight: number }[]
   status: 'pending' | 'auto_actioned' | 'resolved' | 'dismissed'
   action_taken: 'none' | 'flag' | 'delete' | 'warn' | 'timeout'
   action_meta: Record<string, unknown>
+  moderator_verdict: 'correct' | 'incorrect' | null
+  moderator_verdict_by: string | null
+  moderator_verdict_at: string | null
   reviewer_id: string | null
   reviewer_name: string | null
   reviewed_at: string | null
@@ -49,7 +54,7 @@ export async function GET(
   let query = supabase
     .from('ai_moderation_events')
     .select(
-      'id, guild_id, message_id, channel_id, channel_name, author_id, author_name, author_username, content, categories, top_category, confidence, severity, reasoning, status, action_taken, action_meta, reviewer_id, reviewer_name, reviewed_at, notes, created_at',
+      'id, guild_id, message_id, channel_id, channel_name, author_id, author_name, author_username, content, categories, top_category, confidence, confidence_label, severity, reasoning, signals, status, action_taken, action_meta, moderator_verdict, moderator_verdict_by, moderator_verdict_at, reviewer_id, reviewer_name, reviewed_at, notes, created_at',
     )
     .eq('guild_id', guildId)
     .order('created_at', { ascending: false })

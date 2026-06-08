@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Plug, CheckCircle2, AlertCircle, X, Search, Pause, AlertTriangle, LayoutGrid, ScrollText, Sparkles, PackagePlus,
+  Plug, CheckCircle2, AlertCircle, X, Search, Pause, AlertTriangle, LayoutGrid, ScrollText, Sparkles, PackagePlus, Construction,
 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { CategorySection } from '@/components/ui/category-section'
@@ -177,6 +177,35 @@ export function IntegrationsContent({
           </div>
         }
       />
+
+      {/* Work-in-progress notice — Integrations is an actively-developed surface;
+          this sets expectations that more providers and capabilities are planned. */}
+      <div
+        className="mb-6 flex items-start gap-3 rounded-xl border px-4 py-3.5"
+        style={{ borderColor: 'color-mix(in srgb, var(--p-1) 35%, transparent)', background: 'var(--p-soft)' }}
+      >
+        <span
+          className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+          style={{ background: 'color-mix(in srgb, var(--p-1) 16%, transparent)', color: 'var(--p-1)' }}
+        >
+          <Construction size={16} />
+        </span>
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            Integrations is a work in progress!
+            <span
+              className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+              style={{ background: 'color-mix(in srgb, var(--p-1) 18%, transparent)', color: 'var(--p-1)' }}
+            >
+              In development
+            </span>
+          </p>
+          <p className="mt-1 text-xs leading-relaxed" style={{ color: 'var(--text-2)' }}>
+            This surface is actively being expanded — more providers, richer event types and deeper configuration are
+            planned. What&apos;s here works today & expect it to keep growing.
+          </p>
+        </div>
+      </div>
 
       {feedback && (
         <div

@@ -1,8 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import { useState } from 'react'
-import { ThumbsUp, Flag, Pencil, Trash2, EyeOff, ShieldAlert, Loader2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { ThumbsUp, Flag, Pencil, Trash2, EyeOff, ShieldAlert, Loader2, Pin } from 'lucide-react'
 import {
   authorDisplayName,
   authorInitial,
@@ -52,6 +52,10 @@ export type FeedbackCardProps = {
   onEdit: (f: Feedback) => void
   onDelete: (f: Feedback) => void
   onModerate: (f: Feedback, status: 'hidden' | 'removed') => void
+  /** Operator-only: pin / unpin this entry to the landing showcase. */
+  onFeature: (f: Feedback, next: boolean) => void
+  /** True when 3 entries are already featured (blocks featuring a 4th). */
+  atFeatureLimit: boolean
   /** Per-card pending flag, keyed by the caller, to disable buttons mid-request. */
   busy?: boolean
 }
@@ -66,9 +70,35 @@ export function FeedbackCard({
   onEdit,
   onDelete,
   onModerate,
+  onFeature,
+  atFeatureLimit,
   busy,
 }: FeedbackCardProps) {
   const canVote = signedIn && !f.isOwn
+
+  // Uniform card height: the message is clamped to MAX_LINES and a "Read more"
+  // toggle reveals the rest in place. The message box also reserves that height
+  // so short reviews don't produce shorter cards — every collapsed card matches.
+  const MAX_LINES = 6
+  const msgRef = useRef<HTMLParagraphElement>(null)
+  const [expanded, setExpanded] = useState(false)
+  const [canExpand, setCanExpand] = useState(false)
+
+  useEffect(() => {
+    const el = msgRef.current
+    if (!el) return
+    // scrollHeight reflects the full text even while line-clamped, so this read
+    // is valid in both the collapsed and expanded states.
+    const measure = () => {
+      const lh = parseFloat(getComputedStyle(el).lineHeight) || 22
+      setCanExpand(el.scrollHeight > lh * MAX_LINES + 2)
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [f.message])
+
   return (
     <article
       className="fb-card-in flex flex-col rounded-2xl border p-5"
@@ -87,6 +117,15 @@ export function FeedbackCard({
                 You
               </span>
             )}
+            {isOperator && f.featured && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                style={{ background: 'var(--p-soft)', color: 'var(--p-1)' }}
+                title="Shown on the landing page"
+              >
+                <Pin size={9} fill="currentColor" /> Featured
+              </span>
+            )}
           </div>
           <p className="text-xs" style={{ color: 'var(--text-3)' }}>
             {formatFeedbackDate(f.createdAt)}
@@ -95,10 +134,59 @@ export function FeedbackCard({
         <StarRating value={f.rating} size={15} animate />
       </header>
 
-      <h3 className="mt-4 text-base font-semibold text-foreground">{f.title}</h3>
-      <p className="mt-1.5 flex-1 text-sm leading-relaxed" style={{ color: 'var(--text-2)' }}>
+      {/* Title — clamped to 2 lines with the height reserved, so a one-line and
+          a two-line title still produce equal-height cards. */}
+      <h3
+        className="mt-4 text-base font-semibold text-foreground"
+        style={{
+          lineHeight: 1.35,
+          minHeight: '2.7em',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}
+      >
+        {f.title}
+      </h3>
+      {/* Message — clamped to 6 lines (collapsed) with that height reserved. */}
+      <p
+        ref={msgRef}
+        className="mt-1.5 text-sm"
+        style={{
+          color: 'var(--text-2)',
+          lineHeight: 1.625,
+          minHeight: `${1.625 * MAX_LINES}em`,
+          ...(expanded
+            ? {}
+            : {
+                display: '-webkit-box',
+                WebkitLineClamp: MAX_LINES,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+              }),
+        }}
+      >
         {f.message}
       </p>
+      {/* Toggle — the row height is reserved whether or not the button shows, so
+          cards with and without "Read more" stay the same height. */}
+      <div className="mt-1.5" style={{ minHeight: '1.25rem' }}>
+        {canExpand && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="text-xs font-semibold transition-colors hover:underline"
+            style={{ color: 'var(--p-1)' }}
+          >
+            {expanded ? 'Show less' : 'Read more'}
+          </button>
+        )}
+      </div>
+
+      {/* Spacer pins the footer to the bottom when a row is stretched by an
+          expanded sibling card. */}
+      <div className="flex-1" />
 
       <footer className="mt-5 flex flex-wrap items-center gap-2">
         <button
@@ -127,6 +215,31 @@ export function FeedbackCard({
         </button>
 
         <div className="ml-auto flex items-center gap-1.5">
+          {/* Operator-only: feature this entry on the landing page (max 3). */}
+          {isOperator && (
+            <button
+              type="button"
+              disabled={busy || (atFeatureLimit && !f.featured)}
+              onClick={() => onFeature(f, !f.featured)}
+              title={
+                f.featured
+                  ? 'Featured on the landing page — click to remove'
+                  : atFeatureLimit
+                    ? 'Already featuring 3 reviews — unfeature one first'
+                    : 'Feature on the landing page'
+              }
+              className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+              style={
+                f.featured
+                  ? { borderColor: 'var(--p-1)', background: 'var(--p-soft)', color: 'var(--p-1)' }
+                  : { borderColor: 'var(--line-strong)', color: 'var(--text-3)' }
+              }
+            >
+              <Pin size={13} fill={f.featured ? 'currentColor' : 'none'} />
+              <span className="hidden sm:inline">{f.featured ? 'Featured' : 'Feature'}</span>
+            </button>
+          )}
+
           {f.isOwn ? (
             <>
               <button

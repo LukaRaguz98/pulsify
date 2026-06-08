@@ -8,6 +8,7 @@ import {
   type AnalysisVerdict,
   type AutoAction,
   CATEGORY_LABELS,
+  CONFIDENCE_LABELS,
 } from '@/lib/ai-moderation'
 import {
   deleteChannelMessage,
@@ -205,8 +206,10 @@ export async function POST(req: Request) {
       categories: verdict.categories,
       top_category: verdict.topCategory,
       confidence: verdict.confidence,
+      confidence_label: verdict.confidenceLabel,
       severity: verdict.severity,
       reasoning: verdict.reasoning,
+      signals: verdict.signals,
       status: verdict.violates
         ? (executedAction === 'none' ? 'pending' : 'auto_actioned')
         : 'dismissed',
@@ -242,6 +245,8 @@ export async function POST(req: Request) {
           buildAlertContainer({
             verdict,
             executedAction,
+            guildId,
+            eventId: inserted.id,
             channelId: body.channel_id ?? null,
             channelName: body.channel_name ?? null,
             authorId: body.author_id ?? null,
@@ -365,6 +370,8 @@ async function runAction(
 function buildAlertContainer(ctx: {
   verdict: AnalysisVerdict
   executedAction: AutoAction
+  guildId: string
+  eventId: string
   channelId: string | null
   channelName: string | null
   authorId: string | null
@@ -380,6 +387,7 @@ function buildAlertContainer(ctx: {
   const severityLabel = SEVERITY_LABEL[verdict.severity]
   const actionLabel = ACTION_LABEL[executedAction]
   const pct = Math.round(verdict.confidence * 100)
+  const confidenceText = CONFIDENCE_LABELS[verdict.confidenceLabel]
 
   // Author — when we have the Discord user ID, render a real `<@id>` mention
   // so it's a clickable pill (shows the member's current display name). Append
@@ -410,7 +418,7 @@ function buildAlertContainer(ctx: {
   const headerLines = [
     { type: 10 as const, content: `**Pulse**` },
     { type: 10 as const, content: `# ${categoryLabel} detected` },
-    { type: 10 as const, content: `-# Pulse Guard · ${pct}% confidence` },
+    { type: 10 as const, content: `-# Pulse Guard · ${confidenceText} (${pct}%)` },
   ]
   if (ctx.hasIcon) {
     components.push({
@@ -426,13 +434,14 @@ function buildAlertContainer(ctx: {
     components.push(...headerLines)
   }
 
-  // Status row — severity + action. `:` delimiter, no emoji noise. The
-  // divider that used to sit between the header and this row was removed
-  // so the alert flows tighter from brand → status.
+  // Status row — severity + confidence + action. `:` delimiter, no emoji
+  // noise. The divider that used to sit between the header and this row was
+  // removed so the alert flows tighter from brand → status.
   components.push({
     type: 10,
     content:
       `**Severity:** ${severityLabel}\n` +
+      `**Confidence:** ${confidenceText} (${pct}%)\n` +
       `**Action:** ${actionLabel}`,
   })
 
@@ -469,6 +478,17 @@ function buildAlertContainer(ctx: {
     components.push({ type: 10, content: reasoningLines.join('\n') })
   }
 
+  // Signals — the structured evidence behind the verdict. Each is one bullet
+  // ("Lookalike Discord domain (discrod.gg) — 85%"), capped so the alert stays
+  // scannable. Heuristic vs model source is marked so mods can weigh it.
+  const topSignals = verdict.signals.slice(0, 4)
+  if (topSignals.length > 0) {
+    const lines = topSignals
+      .map((s) => `• ${s.label} — ${Math.round(s.weight * 100)}% (${s.source === 'ai' ? 'model' : 'rule'})`)
+      .join('\n')
+    components.push({ type: 10, content: `**Signals:**\n${lines.slice(0, 1500)}` })
+  }
+
   components.push({ type: 14, divider: true, spacing: 1 })
 
   // Quoted message — keeps moderators from chasing the original channel.
@@ -477,6 +497,24 @@ function buildAlertContainer(ctx: {
     type: 10,
     content: `**Message:**\n> ${snippet.replace(/\n/g, '\n> ')}`,
   })
+
+  // Investigation link — a single link button straight to the Pulse Guard
+  // review surface so a moderator can open the full event + member history in
+  // one tap. Best-effort: only added when APP_URL is configured.
+  const appUrl = process.env.APP_URL
+  if (appUrl) {
+    components.push({
+      type: 1,
+      components: [
+        {
+          type: 2,
+          style: 5,
+          label: 'Open in Pulse dashboard',
+          url: `${appUrl}/dashboard/${ctx.guildId}/ai-moderation`,
+        },
+      ],
+    })
+  }
 
   // Footer — V2 has no native footer, so a final subtext (`-#`) line plays
   // the role. `<t:UNIX:f>` lets Discord render the timestamp in each

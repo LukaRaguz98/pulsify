@@ -24,6 +24,7 @@ import {
 import { runAIAnalysis } from '@/app/dashboard/[guildId]/ai-moderation/actions'
 import type { AIModerationEventRow } from '@/app/api/guilds/[guildId]/ai-moderation/events/route'
 import { EmptyState } from '@/components/ui/empty-state'
+import { ConfidenceBadge, SignalList, rowConfidenceLabel } from './shared'
 
 type Props = {
   guildId: string
@@ -225,9 +226,7 @@ export function AIModerationOverview({
               >
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <CategoryPill category={(e.top_category as CategoryId | null) ?? undefined} />
-                  <span className="text-[11px] font-mono" style={{ color: SEVERITY_COLORS[e.severity] }}>
-                    {Math.round(e.confidence * 100)}% · {e.severity}
-                  </span>
+                  <ConfidenceBadge confidence={e.confidence} label={rowConfidenceLabel(e)} />
                 </div>
                 <p className="line-clamp-2 text-sm text-foreground">{e.content}</p>
                 <p className="mt-1.5 flex items-center justify-between gap-2 text-[11px] text-subtle">
@@ -319,9 +318,12 @@ function VerdictPanel({
             Sensitivity: <span className="font-mono">{sensitivity}</span> · Recommended action: <span className="font-semibold" style={{ color: 'var(--text-2)' }}>{AUTO_ACTION_LABELS[action]}</span>
           </p>
         </div>
-        <span className="font-mono text-sm" style={{ color: severityColor }}>
-          {Math.round(verdict.confidence * 100)}%
-        </span>
+        <div className="flex flex-col items-end gap-1">
+          <span className="font-mono text-sm" style={{ color: severityColor }}>
+            {verdict.severity} severity
+          </span>
+          <ConfidenceBadge confidence={verdict.confidence} label={verdict.confidenceLabel} />
+        </div>
       </div>
 
       {verdict.categories.length > 0 && (
@@ -351,6 +353,15 @@ function VerdictPanel({
           style={{ background: 'var(--panel)', color: 'var(--text-2)' }}>
           {verdict.reasoning}
         </p>
+      )}
+
+      {verdict.signals.length > 0 && (
+        <div className="mt-3 rounded-md px-3 py-2" style={{ background: 'var(--panel)' }}>
+          <p className="mb-1.5 text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
+            Triggered signals
+          </p>
+          <SignalList signals={verdict.signals} max={8} />
+        </div>
       )}
     </div>
   )
