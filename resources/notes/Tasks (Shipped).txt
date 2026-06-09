@@ -3103,3 +3103,122 @@ Acceptance Criteria
 	Recovery logs are stored properly
 	Existing configurations can be restored safely
 	UI remains responsive and visually polished
+
+PULSIFY-43 — Ticket Applications Review Upgrade (v0.43.0)
+
+Description
+	Upgrade the existing Ticketing system by improving the Application submission flow inside Discord and adding a dedicated Applications review area inside Pulsify under Tickets.
+	Instead of creating a new Discord ticket channel for every application, submitted applications should be stored and sent to the Pulsify web app for administrative review.
+
+Goals
+	Improve the existing ticket application workflow
+	Reduce unnecessary Discord channel creation
+	Centralize application review inside Pulsify
+	Make applications easier for administrators to manage
+	Improve user experience when submitting applications
+
+Tasks
+	Discord Application Dialog Upgrade
+		Upgrade the existing Application dialog opened from a ticket
+		Add a combobox/select menu for application type
+		Allow users to select what they are applying for
+		Add predefined application options such as:
+			Staff
+			Moderator
+			Partner
+			Creator
+			Support Team
+			Event Team
+			Other
+		If "Other" is selected:
+			Display a manual text input field
+			Allow the user to write what they are applying for
+		Add application message/details input
+		Add validation for required fields
+		Add clear submit/cancel actions
+
+	Application Submission Flow
+		When the user submits an application:
+			Do not create a new Discord channel
+			Do not open a new discussion room
+			Save the application to the database
+			Show confirmation to the user
+			Inform the user that the application was received and is now under review
+		Add Pulse-styled confirmation embed/message
+		Handle submission errors gracefully
+
+	Pulsify Applications View
+		Add new Tickets > Applications subview inside the Pulsify web app
+		Display submitted applications
+		Show:
+			applicant
+			Discord username/avatar
+			application type
+			custom application type if "Other" was selected
+			application message/details
+			submission date
+			review status
+			assigned reviewer
+		Add search and filtering
+		Add loading/error/empty states
+
+	Application Review Workflow
+		Allow administrators to review applications inside Pulsify
+		Add statuses:
+			Pending Review
+			Approved
+			Rejected
+			Needs More Info
+		Allow admins to:
+			approve application
+			reject application
+			request more information
+			add internal review notes
+			assign reviewer
+			update application status
+		Track review history
+		Store reviewer/admin actions
+
+	User Notifications
+		Notify the user when application status changes
+		Send Pulse-styled Discord DM or channel message where appropriate
+		Notify user when:
+			application is received
+			application is approved
+			application is rejected
+			more information is requested
+		Add fallback handling if DMs are disabled
+
+	Admin Notifications
+		Add optional notification channel for new applications
+		Send Pulse-styled admin notification embed when a new application is submitted
+		Add quick link/button to open the application in Pulsify
+		Respect ticket/application notification settings
+
+	Permissions & Validation
+		Validate that the user can submit an application
+		Prevent duplicate/spam submissions
+		Add cooldowns or limits per user
+		Validate admin permissions before reviewing applications
+		Ensure only authorized staff can access Tickets > Applications
+
+	UX Improvements
+		Ensure application dialog is clean and readable
+		Use consistent Pulse v2 embed styling
+		Add responsive Applications review view
+		Add application detail drawer/modal
+		Add status badges
+		Add confirmation dialogs for approve/reject actions
+		Add success/error toast notifications
+
+Acceptance Criteria
+	Application dialog includes a combobox/select menu for application type
+	Users can select a predefined application type or choose "Other" and enter a custom type
+	Submitting an application does not create a new Discord channel
+	User receives confirmation that the application is under review
+	Submitted applications appear in Pulsify under Tickets > Applications
+	Administrators can review, approve, reject, and update application status
+	Review notes and status history persist correctly
+	User notifications work when application status changes
+	Permissions and anti-spam validation work correctly
+	UI remains responsive and visually polished

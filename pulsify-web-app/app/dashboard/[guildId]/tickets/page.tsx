@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase-server'
 import { fetchGuild } from '@/lib/discord'
 import { TicketsContent } from '@/components/dashboard/tickets/TicketsContent'
 import { normaliseConfig, normaliseStatus, normalisePriority, type Ticket } from '@/lib/tickets'
+import { normaliseApplication, type Application } from '@/lib/applications'
 
 export default async function TicketsPage({
   params,
@@ -16,13 +17,20 @@ export default async function TicketsPage({
   } = await supabase.auth.getUser()
   if (!user) redirect('/')
 
-  const [guild, { data: configRow }, { data: ticketRows }] = await Promise.all([
+  const [guild, { data: configRow }, { data: ticketRows }, { data: applicationRows }] = await Promise.all([
     fetchGuild(guildId),
     supabase.from('ticket_configs').select('*').eq('guild_id', guildId).maybeSingle(),
     // Most-recent first; capped so very busy servers stay snappy. Analytics +
     // the list both derive from this set.
     supabase
       .from('tickets')
+      .select('*')
+      .eq('guild_id', guildId)
+      .order('created_at', { ascending: false })
+      .limit(500),
+    // Applications (channel-less submissions) reviewed under the Applications tab.
+    supabase
+      .from('ticket_applications')
       .select('*')
       .eq('guild_id', guildId)
       .order('created_at', { ascending: false })
@@ -56,12 +64,17 @@ export default async function TicketsPage({
     has_transcript: Boolean(r.transcript && String(r.transcript).length > 0),
   }))
 
+  const applications: Application[] = (applicationRows ?? []).map((r) =>
+    normaliseApplication(r as Record<string, unknown>),
+  )
+
   return (
     <TicketsContent
       guildId={guildId}
       guildName={guild?.name ?? ''}
       config={config}
       initialTickets={tickets}
+      initialApplications={applications}
     />
   )
 }

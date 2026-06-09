@@ -1,0 +1,31 @@
+**Pulsify v0.43.0 — Applications, reimagined**
+Recruiting staff, partners and creators no longer clutters your server with a channel for every applicant. Applications are now a clean, channel-less flow: members apply in a guided dialog, and every submission lands in one place inside Pulsify for your team to review.
+
+**A smarter application dialog**
+- **Pick what you're applying for** — a new dropdown lets members choose Staff, Moderator, Partner, Creator, Support Team, Event Team… or **Other** to type their own.
+- **Tell their story** — a details field captures the application message, with required-field validation and clear submit/cancel actions.
+- **No channel, no clutter** — submitting an application never creates a Discord channel or discussion room.
+- **Instant confirmation** — applicants get a Pulse-styled message confirming their application was received and is under review.
+
+**A dedicated review area — Tickets → Applications**
+- **Every application in one place** — see the applicant (with avatar), what they applied for (including custom "Other" types), their message, when they applied, the status and the assigned reviewer.
+- **Search & filter** — find any application fast and filter by status or type.
+- **Detail drawer** — open a full view with the application, decision note and complete review history.
+
+**A real review workflow**
+- **Clear statuses** — Pending review, Approved, Rejected and Needs more info, shown as colour-coded badges.
+- **Decide with confidence** — approve, reject or request more info from confirmation dialogs, with an optional note the applicant will see.
+- **Stay organised** — assign a reviewer, add internal staff notes (never shared with the applicant) and track a full audit trail of every action.
+
+**Applicants are always in the loop**
+- **DM notifications** — members are messaged when their application is received and whenever its status changes (approved, rejected, or more info needed), with graceful fallback if their DMs are closed.
+- **Your team, notified too** — an optional channel posts a Pulse-styled embed for every new application, with a one-click button to review it in Pulsify.
+
+**Built-in guardrails**
+- **Anti-spam** — one open application per type, plus a configurable per-member cooldown between submissions.
+- **Staff-only review** — only authorised moderators can review applications, decide outcomes or change settings.
+
+**Polished throughout**
+- Consistent Pulse v2 styling, status badges, confirmation dialogs, toast feedback, and loading/empty/error states across a fully responsive review view.
+
+June 9, 2026

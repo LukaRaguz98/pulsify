@@ -17,6 +17,11 @@ import {
   StickyNote,
   Trash2,
   LayoutPanelTop,
+  Clock,
+  XCircle,
+  HelpCircle,
+  Send,
+  RefreshCw,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -42,6 +47,11 @@ const ICONS: Record<string, LucideIcon> = {
   StickyNote,
   Trash2,
   LayoutPanelTop,
+  Clock,
+  XCircle,
+  HelpCircle,
+  Send,
+  RefreshCw,
 }
 
 export function TicketIcon({

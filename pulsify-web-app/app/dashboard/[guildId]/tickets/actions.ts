@@ -32,6 +32,7 @@ import {
   type TicketPriority,
   type TicketEventType,
 } from '@/lib/tickets'
+import { normaliseApplicationTypes } from '@/lib/applications'
 
 export type ActionResult<T = undefined> =
   | (T extends undefined ? { ok: true } : { ok: true; data: T })
@@ -158,10 +159,12 @@ export async function saveTicketConfig(
   // Never let a settings save rewind the monotonic ticket counter.
   const { data: existing } = await supabase
     .from('ticket_configs')
-    .select('ticket_counter')
+    .select('ticket_counter, application_counter')
     .eq('guild_id', guildId)
     .maybeSingle()
   const counter = Math.max(config.ticket_counter, (existing?.ticket_counter as number) ?? 0)
+  // Never let a settings save rewind the application counter either.
+  const applicationCounter = Math.max(config.application_counter, (existing?.application_counter as number) ?? 0)
 
   const { error } = await supabase.from('ticket_configs').upsert(
     {
@@ -179,6 +182,12 @@ export async function saveTicketConfig(
       per_user_limit: config.per_user_limit,
       ping_support: config.ping_support,
       ticket_counter: counter,
+      // Applications (PULSIFY-43): sanitise the editable type catalog here.
+      application_types: normaliseApplicationTypes(config.application_types),
+      application_channel_id: config.application_channel_id,
+      application_dm: config.application_dm,
+      application_cooldown: config.application_cooldown,
+      application_counter: applicationCounter,
       updated_at: new Date().toISOString(),
       updated_by: auth.moderator.userId,
     },
