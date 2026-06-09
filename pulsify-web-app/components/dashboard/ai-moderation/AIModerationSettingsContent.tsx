@@ -28,6 +28,7 @@ export function AIModerationSettingsContent({ guildId, channels, roles, initialS
     <div className="page-content">
       <PageHeader
         title="Pulse Guard settings"
+        helpId="pulse-guard-settings"
         description="Tune Pulse Guard — sensitivity, detectors, auto-actions and exclusions."
         action={
           <Link

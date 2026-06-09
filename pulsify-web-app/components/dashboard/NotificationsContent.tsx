@@ -132,6 +132,7 @@ export function NotificationsContent({ guildId }: Props) {
     <div className="page-content">
       <PageHeader
         title="Notifications"
+        helpId="notifications"
         description="Real-time activity feed for this server. New entries appear without refresh."
         action={
           <div className="flex items-center gap-2">

@@ -5,6 +5,7 @@
 
 import { Check } from 'lucide-react'
 import { THEMES } from '@/lib/themes'
+import { HelpTip } from '@/components/ui/help-tip'
 
 export type ChannelOpt = { id: string; name: string; type: number }
 export type RoleOpt = { id: string; name: string; color: number }
@@ -282,13 +283,16 @@ export function Toggle({
 }
 
 export function SubCard({
-  title, desc, right, children,
-}: { title: string; desc?: string; right?: React.ReactNode; children?: React.ReactNode }) {
+  title, desc, right, children, helpId,
+}: { title: string; desc?: string; right?: React.ReactNode; children?: React.ReactNode; helpId?: string }) {
   return (
     <div className="rounded-xl border p-4" style={{ borderColor: 'var(--line-strong)', background: 'var(--bg-2)' }}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h4 className="text-sm font-semibold text-foreground">{title}</h4>
+          <h4 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+            {title}
+            {helpId && <HelpTip id={helpId} iconSize={14} />}
+          </h4>
           {desc && <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>{desc}</p>}
         </div>
         {right && <div className="shrink-0">{right}</div>}

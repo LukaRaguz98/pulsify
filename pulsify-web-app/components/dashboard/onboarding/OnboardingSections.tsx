@@ -371,6 +371,7 @@ export function VerificationSection({ config, patch, roles }: SectionProps) {
   return (
     <SubCard
       title="Verify gate"
+      helpId="verification"
       desc="A button that grants a verified role and guides members through access."
       right={<Toggle checked={v.enabled} onChange={(val) => setV({ enabled: val })} />}
     >

@@ -524,7 +524,12 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           <CardItem card={welcomeCard} />
           <CardItem card={goodbyeCard} />
-          <CardItem card={rulesCard} />
+          {/* Rules spans the full row so it doesn't leave an empty half-cell as
+              the odd third card — and its expanded embed preview + content
+              editor read better at full width. */}
+          <div className="lg:col-span-2">
+            <CardItem card={rulesCard} />
+          </div>
         </div>
       </CategorySection>
 
@@ -930,100 +935,105 @@ function PulseContentExtra({
   onRepost: () => void
 }) {
   return (
-    <div className="mt-4 space-y-3 border-t pt-4" style={{ borderColor: 'var(--line-strong)' }}>
-      <div>
-        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Channel</label>
-        <select
-          value={channelId}
-          onChange={(e) => onChannelChange(e.target.value)}
-          className={selectClass}
-        >
-          <option value="">Select a channel</option>
-          {channels.map((c) => (
-            <option key={c.id} value={c.id}>#{c.name}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Pulse generate */}
-      <div
-        className="rounded-lg border p-3 flex items-center justify-between gap-3"
-        style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)' }}
-      >
-        <div className="flex items-center gap-2 min-w-0">
-          <Sparkles size={12} style={{ color: 'var(--p-1)' }} />
-          <p className="text-xs font-medium text-foreground truncate">Generate {genLabel} with Pulse</p>
-        </div>
-        <button
-          type="button"
-          onClick={onGenerate}
-          disabled={generatingSection !== null}
-          className="shrink-0 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-all disabled:opacity-50"
-          style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))' }}
-        >
-          {generatingSection === section
-            ? <><Loader2 size={11} className="animate-spin" /> Generating…</>
-            : <><Sparkles size={11} /> Generate</>
-          }
-        </button>
-      </div>
-      {pulseGenError && pulseGenErrorSection === section && (
-        <p className="text-xs" style={{ color: '#f87171' }}>{pulseGenError}</p>
-      )}
-
-      <AppEmbedPreview
-        title={title}
-        content={content}
-        color={accentHex}
-        icon={section === 'rules' ? '/pulse-rules.png' : section === 'onboarding' ? '/pulse-onboarding.png' : undefined}
-        footer={section === 'rules' ? 'Pulse · Server Rules' : section === 'onboarding' ? 'Pulse · Onboarding Guide' : undefined}
-      />
-
-      <div className="space-y-2">
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Embed Title</label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => onTitleChange(e.target.value)}
-            className={selectClass}
-          />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Edit content</label>
-          <textarea
-            value={content}
-            onChange={(e) => onContentChange(e.target.value)}
-            rows={5}
-            className={selectClass + ' resize-none' + (mono ? ' font-mono' : '')}
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        {applyResult === 'success' && (
-          <div className="flex items-center gap-2 text-xs" style={{ color: '#22c55e' }}>
-            <Check size={12} /> Posted to Discord successfully.
+    <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--line-strong)' }}>
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+        {/* Left: controls — channel, generation, title/content, post. */}
+        <div className="space-y-3">
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Channel</label>
+            <select
+              value={channelId}
+              onChange={(e) => onChannelChange(e.target.value)}
+              className={selectClass}
+            >
+              <option value="">Select a channel</option>
+              {channels.map((c) => (
+                <option key={c.id} value={c.id}>#{c.name}</option>
+              ))}
+            </select>
           </div>
-        )}
-        {applyResult === 'error' && (
-          <div className="flex items-center gap-2 text-xs" style={{ color: '#f87171' }}>
-            <AlertCircle size={12} /> {applyError}
-          </div>
-        )}
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={onRepost}
-            disabled={applying || !channelId}
-            className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold text-white transition-all disabled:opacity-50"
-            style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))' }}
+
+          {/* Pulse generate */}
+          <div
+            className="rounded-lg border p-3 flex items-center justify-between gap-3"
+            style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)' }}
           >
-            {applying
-              ? <><Loader2 size={11} className="animate-spin" /> Posting…</>
-              : <><Send size={11} /> Post to Discord</>
-            }
-          </button>
+            <div className="flex items-center gap-2 min-w-0">
+              <Sparkles size={12} style={{ color: 'var(--p-1)' }} />
+              <p className="text-xs font-medium text-foreground truncate">Generate {genLabel} with Pulse</p>
+            </div>
+            <button
+              type="button"
+              onClick={onGenerate}
+              disabled={generatingSection !== null}
+              className="shrink-0 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-all disabled:opacity-50"
+              style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))' }}
+            >
+              {generatingSection === section
+                ? <><Loader2 size={11} className="animate-spin" /> Generating…</>
+                : <><Sparkles size={11} /> Generate</>
+              }
+            </button>
+          </div>
+          {pulseGenError && pulseGenErrorSection === section && (
+            <p className="text-xs" style={{ color: '#f87171' }}>{pulseGenError}</p>
+          )}
+
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Embed Title</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => onTitleChange(e.target.value)}
+              className={selectClass}
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Edit content</label>
+            <textarea
+              value={content}
+              onChange={(e) => onContentChange(e.target.value)}
+              rows={8}
+              className={selectClass + ' resize-none' + (mono ? ' font-mono' : '')}
+            />
+          </div>
+
+          {applyResult === 'success' && (
+            <div className="flex items-center gap-2 text-xs" style={{ color: '#22c55e' }}>
+              <Check size={12} /> Posted to Discord successfully.
+            </div>
+          )}
+          {applyResult === 'error' && (
+            <div className="flex items-center gap-2 text-xs" style={{ color: '#f87171' }}>
+              <AlertCircle size={12} /> {applyError}
+            </div>
+          )}
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={onRepost}
+              disabled={applying || !channelId}
+              className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold text-white transition-all disabled:opacity-50"
+              style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))' }}
+            >
+              {applying
+                ? <><Loader2 size={11} className="animate-spin" /> Posting…</>
+                : <><Send size={11} /> Post to Discord</>
+              }
+            </button>
+          </div>
+        </div>
+
+        {/* Right: live preview. */}
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Preview</label>
+          <AppEmbedPreview
+            title={title}
+            content={content}
+            color={accentHex}
+            icon={section === 'rules' ? '/pulse-rules.png' : section === 'onboarding' ? '/pulse-onboarding.png' : undefined}
+            footer={section === 'rules' ? 'Pulse · Server Rules' : section === 'onboarding' ? 'Pulse · Onboarding Guide' : undefined}
+          />
         </div>
       </div>
     </div>

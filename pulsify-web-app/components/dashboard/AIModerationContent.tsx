@@ -133,6 +133,7 @@ export function AIModerationContent({ guildId, channels, initialSettings }: Prop
       <div className="page-content">
         <PageHeader
           title="Pulse Guard"
+          helpId="pulse-guard"
           description="Detect spam, scams, toxicity, and other harmful content automatically."
         />
         <div className="flex items-center justify-center py-24">
@@ -146,6 +147,7 @@ export function AIModerationContent({ guildId, channels, initialSettings }: Prop
     <div className="page-content">
       <PageHeader
         title="Pulse Guard"
+        helpId="pulse-guard"
         description="Detect spam, scams, toxicity, and other harmful content automatically."
         action={
           <div className="flex items-center gap-3">

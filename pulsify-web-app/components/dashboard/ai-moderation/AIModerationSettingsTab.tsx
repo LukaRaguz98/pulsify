@@ -213,6 +213,7 @@ export function AIModerationSettingsTab({
       <CategorySection
         icon={<ShieldAlert size={14} />}
         title="Detection"
+        helpId="pulse-guard-detection"
         description="How aggressive Pulse Guard is and which categories it watches for."
       >
       {/* Sensitivity */}
@@ -416,6 +417,7 @@ export function AIModerationSettingsTab({
       <CategorySection
         icon={<Users size={14} />}
         title="Exclusions"
+        helpId="pulse-guard-exclusions"
         description="Members, roles, and channels Pulse Guard never touches."
       >
       {/* Whitelists */}

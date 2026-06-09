@@ -33,6 +33,7 @@ export default async function AutomationsPage({
     <div className="page-content">
       <PageHeader
         title="Automations"
+        helpId="automations"
         description="Configure automated actions for your server. Changes take effect immediately via the Pulse bot."
         action={
           <Link

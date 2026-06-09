@@ -11,6 +11,7 @@ import { NotificationBell } from '@/components/dashboard/notifications/Notificat
 import { Toaster } from '@/components/dashboard/notifications/Toaster'
 import { PingIndicator } from '@/components/dashboard/PingIndicator'
 import { CommandPaletteProvider } from '@/components/dashboard/search/CommandPaletteProvider'
+import { DashboardTour, TourLauncher } from '@/components/dashboard/tour/DashboardTour'
 import { PlanProvider } from '@/components/billing/PlanProvider'
 import {
   getSubscriptionRow,
@@ -78,6 +79,7 @@ export default async function GuildLayout({
             <CornerDecorations />
             <DiscordCornerIcon guildId={guildId} />
             <NotificationBell guildId={guildId} />
+            <TourLauncher />
             <PingIndicator />
             {/* overflow-x-hidden: `overflow-y-auto` alone makes the browser
                 compute overflow-x to `auto`, turning this scroll container into a
@@ -92,6 +94,7 @@ export default async function GuildLayout({
               <Footer />
             </main>
             <Toaster />
+            <DashboardTour />
           </div>
         </PlanProvider>
       </CommandPaletteProvider>

@@ -34,6 +34,7 @@ export function MembersContent({ guildId, guildName }: Props) {
     <div className="page-content">
       <PageHeader
         title="Members"
+        helpId="members"
         description={
           <>
             Profiles, levels, reputation and activity for members of{' '}

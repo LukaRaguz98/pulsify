@@ -356,6 +356,7 @@ export function AISetupContent({ guildId, guildName }: Props) {
     <div className="page-content">
       <PageHeader
         title="Pulse - Discord Server Assistant"
+        helpId="ai-setup"
         description="Generate welcome messages, rules, onboarding guides and channel structures with AI."
       />
 

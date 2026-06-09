@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { CategorySection } from '@/components/ui/category-section'
+import { HelpTip } from '@/components/ui/help-tip'
 import { RefreshButton } from '@/components/dashboard/RefreshButton'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { createClient as createSupabase } from '@/lib/supabase'
@@ -216,6 +217,7 @@ export function BackupsContent({
     <div className="page-content">
       <PageHeader
         title="Backup & Restore"
+        helpId="backups"
         description={
           <>
             Versioned snapshots of <span className="font-medium text-foreground">{guildName}</span> — capture, compare,
@@ -335,6 +337,7 @@ export function BackupsContent({
         <CategorySection
           icon={<CalendarClock size={14} />}
           title="Automatic backups"
+          helpId="backups-automatic"
           description="Let Pulse capture and prune backups on a schedule."
         >
           <ScheduleCard guildId={guildId} schedule={schedule} />
@@ -342,7 +345,8 @@ export function BackupsContent({
 
         {/* Browse + recovery log — tabbed within one section */}
         <CategorySection icon={<Boxes size={14} />} title="Browse" description="Restore, compare and download backups — or review recovery activity.">
-          {/* In-section tab switcher */}
+          {/* In-section tab switcher — scrolls on narrow screens instead of overflowing. */}
+          <div className="max-w-full overflow-x-auto">
           <div className="inline-flex rounded-xl border p-1" style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)' }}>
             {([
               { id: 'backups' as Tab, label: 'Backups', icon: <Boxes size={15} /> },
@@ -353,7 +357,7 @@ export function BackupsContent({
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className="flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors"
+                  className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors"
                   style={active ? { background: 'var(--p-soft)', color: 'var(--text)', boxShadow: 'inset 0 0 0 1px var(--p-soft)' } : { color: 'var(--text-2)' }}
                 >
                   <span style={active ? { color: 'var(--p-1)' } : { color: 'var(--text-3)' }}>{t.icon}</span>
@@ -361,6 +365,7 @@ export function BackupsContent({
                 </button>
               )
             })}
+          </div>
           </div>
 
           {tab === 'backups' ? (
@@ -618,6 +623,7 @@ function BackupRow({
         >
           <RotateCcw size={12} /> Restore
         </button>
+        <HelpTip id="backups-restore" iconSize={14} side="bottom" />
         <IconButton title="Download / share" onClick={onExport}>
           <Download size={13} />
         </IconButton>

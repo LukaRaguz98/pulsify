@@ -3222,3 +3222,95 @@ Acceptance Criteria
 	User notifications work when application status changes
 	Permissions and anti-spam validation work correctly
 	UI remains responsive and visually polished
+
+PULSIFY-44 — Contextual Help & Interactive Guidance System (v0.44.0)
+
+Description
+	Implement a contextual help system across Pulsify that provides users with quick explanations, tips, and usage guidance directly within the interface.
+	The system should introduce information icons (ⓘ) on selected views, settings, forms, and features. When hovered, users should receive concise explanations and guidance on how the functionality works and when it should be used.
+	Users who are already familiar with Pulsify should be able to disable these helper tooltips globally through Preferences.
+
+Goals
+	Improve user onboarding and feature discoverability
+	Reduce confusion around advanced functionality
+	Provide contextual guidance without leaving the page
+	Improve overall user experience
+	Allow experienced users to disable guidance
+
+Tasks
+
+	Contextual Help System
+		Create reusable help tooltip component
+		Add support for:
+			hover interactions
+			click interactions (mobile devices)
+			rich descriptions
+			links to documentation where applicable
+		Ensure consistent styling throughout the application
+
+	Information Icons
+		Add ⓘ icons to selected views and features
+		Display concise guidance explaining:
+			what the feature does
+			when it should be used
+			important considerations
+			best practices
+		Position icons near page titles, cards, settings, and advanced options
+
+	Initial View Coverage
+		Review and add contextual help where appropriate, including:
+			Moderation
+			Pulse Guard
+			Analytics
+			Insights
+			Events
+			Giveaways
+			Tickets
+			Onboarding
+			Verification
+			Members
+			Reputation
+			Levels & XP
+			Automations
+			Announcements
+			Backup & Restore
+			Billing
+			Integrations
+			Other advanced views where needed
+
+	Advanced Guidance
+		Support longer help content for complex features
+		Add examples where appropriate
+		Explain feature dependencies and requirements
+		Highlight premium-plan functionality where relevant
+
+	Mobile Support
+		Ensure help tooltips work correctly on mobile devices
+		Support click/tap interactions
+		Ensure content remains readable on smaller screens
+
+	Preferences Integration
+		Add new preference inside:
+			Server Selector > Preferences
+		Add setting:
+			Show Contextual Help
+		Allow users to:
+			enable help tooltips
+			disable help tooltips
+		Persist preference between sessions
+
+	UX Improvements
+		Use subtle animations
+		Add accessibility support
+		Add loading/error fallbacks where needed
+		Ensure tooltips never obstruct critical functionality
+		Maintain visual consistency with Pulsify design language
+
+Acceptance Criteria
+	Information icons appear on supported views and features
+	Hovering or tapping an icon displays contextual guidance
+	Guidance helps users understand functionality without opening documentation
+	Tooltips work correctly on desktop and mobile devices
+	Users can disable contextual help through Preferences
+	Disabled state persists across sessions
+	UI remains responsive and visually polished

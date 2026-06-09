@@ -148,6 +148,7 @@ export function TemplatesContent({ guildId, guildName, savedTemplates, snapshot,
     <div className="page-content">
       <PageHeader
         title="Templates"
+        helpId="templates"
         description={
           <>
             Save, reuse and deploy proven configurations across your servers —{' '}
@@ -189,6 +190,7 @@ export function TemplatesContent({ guildId, guildName, savedTemplates, snapshot,
         <CategorySection icon={<Boxes size={14} />} title="Browse" description="Apply a template to this server or manage your library.">
           {/* Tabs + filters */}
           <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="max-w-full overflow-x-auto">
             <div className="inline-flex rounded-xl border p-1" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
               {([
                 { id: 'library' as Tab, label: 'My library', icon: <Library size={15} />, count: savedTemplates.length },
@@ -199,7 +201,7 @@ export function TemplatesContent({ guildId, guildName, savedTemplates, snapshot,
                   <button
                     key={t.id}
                     onClick={() => setTab(t.id)}
-                    className="flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors"
+                    className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors"
                     style={active ? { background: 'var(--p-soft)', color: 'var(--text)', boxShadow: 'inset 0 0 0 1px var(--p-soft)' } : { color: 'var(--text-2)' }}
                   >
                     <span style={active ? { color: 'var(--p-1)' } : { color: 'var(--text-3)' }}>{t.icon}</span>
@@ -208,6 +210,7 @@ export function TemplatesContent({ guildId, guildName, savedTemplates, snapshot,
                   </button>
                 )
               })}
+            </div>
             </div>
           </div>
 

@@ -52,7 +52,7 @@ export function NotesContent({ initialNotes, serverNames }: { initialNotes: Work
 
   return (
     <div className="page-content">
-      <PageHeader title="Notes" description="Shared staff and moderation notes. Tag teammates with @ to keep everyone in the loop." />
+      <PageHeader title="Notes" helpId="workspace-notes" description="Shared staff and moderation notes. Tag teammates with @ to keep everyone in the loop." />
       <FeedbackBanner feedback={feedback} onClose={() => setFeedback(null)} />
 
       <div className="space-y-8">

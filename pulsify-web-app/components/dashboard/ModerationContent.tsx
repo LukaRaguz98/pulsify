@@ -137,7 +137,7 @@ export function ModerationContent({ guildId }: Props) {
   if (loading) {
     return (
       <div className="page-content">
-        <PageHeader title="Moderation" description="Manage members, bans, and moderator activity for this server." />
+        <PageHeader title="Moderation" helpId="moderation" description="Manage members, bans, and moderator activity for this server." />
         <div className="flex items-center justify-center py-24">
           <Loader2 size={24} className="animate-spin text-muted-foreground" />
         </div>
@@ -149,6 +149,7 @@ export function ModerationContent({ guildId }: Props) {
     <div className="page-content">
       <PageHeader
         title="Moderation"
+        helpId="moderation"
         description="Manage members, bans, and moderator activity for this server."
         action={
           <div className="flex items-center gap-3">

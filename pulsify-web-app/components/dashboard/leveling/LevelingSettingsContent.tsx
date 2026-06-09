@@ -113,6 +113,7 @@ export function LevelingSettingsContent({ guildId, guildName, initialConfig, cha
     <div className="page-content">
       <PageHeader
         title="Level settings"
+        helpId="leveling"
         description={
           <>
             Configure XP, levels and rewards for{' '}
@@ -171,7 +172,7 @@ export function LevelingSettingsContent({ guildId, guildName, initialConfig, cha
         </CategorySection>
 
         {/* Curve */}
-        <CategorySection icon={<Trophy size={14} />} title="Level curve" description="The XP needed for each level. Higher values = slower progression.">
+        <CategorySection icon={<Trophy size={14} />} title="Level curve" helpId="leveling-curve" description="The XP needed for each level. Higher values = slower progression.">
           <div className="grid gap-5 lg:grid-cols-2">
             <div className="grid gap-4 sm:grid-cols-3">
               <NumberField label="Base" value={config.curve.base} onChange={(v) => setCurve('base', v)} min={1} max={100000} />
@@ -193,7 +194,7 @@ export function LevelingSettingsContent({ guildId, guildName, initialConfig, cha
         </CategorySection>
 
         {/* Ignored */}
-        <CategorySection icon={<Ban size={14} />} title="Ignored channels & roles" description="Activity in these channels, or by members with these roles, earns no XP.">
+        <CategorySection icon={<Ban size={14} />} title="Ignored channels & roles" helpId="leveling-ignored" description="Activity in these channels, or by members with these roles, earns no XP.">
           <div className="grid gap-5 lg:grid-cols-2">
             <TokenMultiSelect
               icon={<Hash size={14} />}
@@ -278,7 +279,7 @@ export function LevelingSettingsContent({ guildId, guildName, initialConfig, cha
         </CategorySection>
 
         {/* Reward roles */}
-        <CategorySection icon={<Award size={14} />} title="Reward roles" description="Automatically grant a role when a member reaches a level.">
+        <CategorySection icon={<Award size={14} />} title="Reward roles" helpId="leveling-rewards" description="Automatically grant a role when a member reaches a level.">
           <Toggle
             label="Stack reward roles"
             description="Keep every reward role earned (on) vs. only the highest, removing lower ones (off)."

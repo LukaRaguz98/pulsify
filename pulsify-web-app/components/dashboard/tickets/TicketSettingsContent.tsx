@@ -44,6 +44,7 @@ export function TicketSettingsContent({ guildId, guildName, config, channels, ca
     <div className="page-content">
       <PageHeader
         title="Ticket settings"
+        helpId="ticket-settings"
         description={
           <>
             Configure the ticket system for{' '}

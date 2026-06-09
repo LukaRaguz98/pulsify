@@ -15,6 +15,7 @@ type PreferencesContextType = {
   fontSize: FontSize
   ambientGlow: boolean
   pingIndicator: boolean
+  contextualHelp: boolean
   setTheme: (theme: ThemeId) => void
   setScheme: (scheme: ColorScheme) => void
   setDensity: (density: LayoutDensity) => void
@@ -25,6 +26,7 @@ type PreferencesContextType = {
   setFontSize: (size: FontSize) => void
   setAmbientGlow: (on: boolean) => void
   setPingIndicator: (on: boolean) => void
+  setContextualHelp: (on: boolean) => void
 }
 
 const PreferencesContext = createContext<PreferencesContextType>({
@@ -32,11 +34,12 @@ const PreferencesContext = createContext<PreferencesContextType>({
   scheme: 'dark',
   density: 'comfortable',
   animations: true,
-  cornerDeco: true,
+  cornerDeco: false,
   themeCustomColor: null,
   fontSize: 'medium',
   ambientGlow: true,
   pingIndicator: true,
+  contextualHelp: true,
   setTheme: () => {},
   setScheme: () => {},
   setDensity: () => {},
@@ -46,6 +49,7 @@ const PreferencesContext = createContext<PreferencesContextType>({
   setFontSize: () => {},
   setAmbientGlow: () => {},
   setPingIndicator: () => {},
+  setContextualHelp: () => {},
 })
 
 function saveCookie(key: string, value: string) {
@@ -79,11 +83,12 @@ export function ThemeProvider({
   initialScheme = 'dark',
   initialDensity = 'comfortable',
   initialAnimations = true,
-  initialCornerDeco = true,
+  initialCornerDeco = false,
   initialCustomColor = null,
   initialFontSize = 'medium',
   initialAmbientGlow = true,
   initialPingIndicator = true,
+  initialContextualHelp = true,
 }: {
   children: React.ReactNode
   initialTheme: ThemeId
@@ -95,6 +100,7 @@ export function ThemeProvider({
   initialFontSize?: FontSize
   initialAmbientGlow?: boolean
   initialPingIndicator?: boolean
+  initialContextualHelp?: boolean
 }) {
   const [theme, setThemeState] = useState<ThemeId>(initialTheme)
   const [scheme, setSchemeState] = useState<ColorScheme>(initialScheme)
@@ -105,6 +111,7 @@ export function ThemeProvider({
   const [fontSize, setFontSizeState] = useState<FontSize>(initialFontSize)
   const [ambientGlow, setAmbientGlowState] = useState<boolean>(initialAmbientGlow)
   const [pingIndicator, setPingIndicatorState] = useState<boolean>(initialPingIndicator)
+  const [contextualHelp, setContextualHelpState] = useState<boolean>(initialContextualHelp)
 
   const setTheme = (next: ThemeId) => {
     setThemeState(next)
@@ -166,12 +173,18 @@ export function ThemeProvider({
     saveCookie(PREF_COOKIES.pingIndicator, String(on))
   }
 
+  const setContextualHelp = (on: boolean) => {
+    setContextualHelpState(on)
+    document.documentElement.setAttribute('data-contextual-help', String(on))
+    saveCookie(PREF_COOKIES.contextualHelp, String(on))
+  }
+
   return (
     <PreferencesContext.Provider
       value={{
-        theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow, pingIndicator,
+        theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow, pingIndicator, contextualHelp,
         setTheme, setScheme, setDensity, setAnimations, setCornerDeco, setThemeCustomColor,
-        setFontSize, setAmbientGlow, setPingIndicator,
+        setFontSize, setAmbientGlow, setPingIndicator, setContextualHelp,
       }}
     >
       {children}

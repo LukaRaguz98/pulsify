@@ -66,6 +66,7 @@ export function WorkspaceSettings() {
     <CategorySection
       icon={<Sliders size={14} />}
       title="Settings"
+      helpId="workspace-settings"
       description="Branding, ownership and danger zone."
     >
       <FeedbackBanner feedback={feedback} onClose={() => setFeedback(null)} />

@@ -52,6 +52,7 @@ export function IncidentsContent({ initialIncidents, serverNames }: { initialInc
     <div className="page-content">
       <PageHeader
         title="Incidents"
+        helpId="workspace-incidents"
         description="Track and resolve cross-server incidents together with status, severity and a comment thread."
         action={canManage ? (
           <button type="button" onClick={() => setCreating(true)} className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold text-white transition" style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}>

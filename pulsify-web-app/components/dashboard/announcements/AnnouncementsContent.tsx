@@ -101,6 +101,7 @@ export function AnnouncementsContent({ guildId, guildName, initialAnnouncements,
     <div className="page-content">
       <PageHeader
         title="Announcements"
+        helpId="announcements"
         description={
           <>
             Write and publish announcements to{' '}

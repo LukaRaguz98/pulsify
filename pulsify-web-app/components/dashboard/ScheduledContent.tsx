@@ -201,6 +201,7 @@ export function ScheduledContent({ guildId, channels, roles, initialAutomations 
     <div className="page-content">
       <PageHeader
         title="Scheduled"
+        helpId="scheduled"
         description="Build recurring workflows — announcements, role sync, channel locks, reports and more — that Pulse runs on a schedule."
         action={
           <div className="flex items-center gap-3">

@@ -162,6 +162,7 @@ export function WorkspaceNotificationsContent({ workspaceId }: Props) {
     <div className="page-content">
       <PageHeader
         title="Notifications"
+        helpId="workspace-notifications"
         description="Activity feed across this workspace and its servers. Latest first."
         action={
           <div className="flex items-center gap-2">

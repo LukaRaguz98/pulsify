@@ -9,6 +9,8 @@ import { WorkspaceCommandPaletteProvider } from '@/components/workspace/search/W
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar'
 import { WorkspaceNotificationBell } from '@/components/workspace/WorkspaceNotificationBell'
 import { WorkspaceDiscordCornerIcon } from '@/components/workspace/WorkspaceDiscordCornerIcon'
+import { DashboardTour, TourLauncher } from '@/components/dashboard/tour/DashboardTour'
+import { PingIndicator } from '@/components/dashboard/PingIndicator'
 import { CornerDecorations } from '@/components/dashboard/CornerDecorations'
 import { Footer } from '@/components/Footer'
 
@@ -94,6 +96,8 @@ export default async function WorkspaceLayout({
         <CornerDecorations />
         <WorkspaceDiscordCornerIcon />
         <WorkspaceNotificationBell workspaceId={workspaceId} />
+        <PingIndicator />
+        <TourLauncher />
         {/* overflow-x-hidden: matches the guild dashboard — `overflow-y-auto`
             alone computes overflow-x to `auto`, which let pages drag sideways on
             mobile. Clip the cross-axis; wide children keep their own scroll. */}
@@ -101,6 +105,7 @@ export default async function WorkspaceLayout({
           <div className="flex-1 max-lg:pt-12">{children}</div>
           <Footer />
         </main>
+        <DashboardTour variant="workspace" />
       </div>
       </WorkspaceCommandPaletteProvider>
     </WorkspaceProvider>

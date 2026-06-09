@@ -10,6 +10,7 @@ import {
 import { getCurrentDiscordUser } from '@/lib/workspace-auth'
 import { effectivePlan, isEarlyAccess, EARLY_ACCESS_PLAN } from '@/lib/billing'
 import { BillingOverview } from '@/components/billing/BillingOverview'
+import { HelpTip } from '@/components/ui/help-tip'
 
 export const metadata: Metadata = {
   title: 'Billing · Pulsify',
@@ -48,7 +49,10 @@ export default async function BillingPage({
         <ArrowLeft size={14} /> Back to dashboard
       </Link>
       <header className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Billing &amp; subscription</h1>
+        <h1 className="flex items-center gap-1.5 text-3xl font-bold tracking-tight text-foreground">
+          Billing &amp; subscription
+          <HelpTip id="billing" iconSize={18} />
+        </h1>
         <p className="mt-1.5 text-sm" style={{ color: 'var(--text-2)' }}>
           Manage your plan, payment method and invoices. Billing changes sync automatically with your dashboard.
         </p>

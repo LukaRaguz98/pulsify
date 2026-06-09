@@ -1,129 +1,107 @@
-PULSIFY-45 — Global Economy, Reputation & Progression System (v0.45.0)
+PULSIFY-46 — Global Rewards Shop & Economy Marketplace (v0.46.0)
 
 Description
-	Implement a unified Economy and Reputation system that spans across all Discord servers using Pulse.
-	Users should have a global balance and global reputation profile shared across every server where Pulse is present, while Levels & XP remain server-specific.
-	This system should create a connected ecosystem where members can earn, spend, and build their identity across multiple communities while maintaining independent progression within each server.
+	Implement a Global Rewards Shop and Marketplace system powered by the Pulse Economy.
+	Users should be able to spend their global Pulse balance on rewards, perks, cosmetic profile items, and server-specific benefits while administrators can create and manage rewards available to their communities.
+	This feature should provide the first meaningful use case for the global economy introduced in v0.45.0.
 
 Goals
-	Create a shared Pulse economy across all servers
-	Introduce portable user progression through balance and reputation
-	Increase long-term user engagement
-	Provide server owners with economy-driven community features
-	Establish a foundation for future rewards, shops, and marketplace systems
+	Give users a reason to earn Pulse balance
+	Increase long-term engagement
+	Introduce economy-driven progression
+	Create value for global reputation and activity
+	Establish the foundation for future premium economy features
 
 Tasks
-	Global Balance System
-		Create global Pulse balance infrastructure
-		Assign every user a single balance shared across all servers
-		Allow balance to be:
-			earned
-			spent
-			transferred
-			rewarded
-		Ensure balance persists across all Pulse-connected servers
-		Add balance transaction history
-
-	Global Reputation System
-		Convert Reputation into a global user profile metric
-		Allow reputation to be earned across servers
-		Store reputation globally rather than per-server
-		Display global reputation in:
-			member profiles
-			reputation leaderboards
-			user profile cards
-		Track reputation history and sources
-
-	Server-Specific Levels & XP
-		Keep Levels & XP tied to individual servers
-		Users start at Level 1 on every server
-		XP earned on one server does not affect another server
-		Maintain existing level progression functionality
-		Clearly communicate the distinction between:
-			Global Balance
-			Global Reputation
-			Server Level
-
-	User Profiles
-		Create Global Pulse User Profile
+	Global Shop
+		Create a dedicated Economy > Shop view
 		Display:
-			global balance
-			global reputation
-			joined servers count
-			total achievements
-			server-specific levels
-		Add profile badges and statistics
+			featured rewards
+			available rewards
+			reward categories
+			reward cost
+			stock availability
+		Add search and filtering
 
-	Economy Transactions
-		Track:
-			balance rewards
-			balance spending
-			transfers
-			system rewards
+	Reward Categories
+		Support:
+			Profile Badges
+			Cosmetic Profile Items
+			Reputation Rewards
+			XP Boosters
+			Giveaway Entries
+			Event Rewards
+			Server Perks
+			Custom Rewards
+
+	Reward Purchases
+		Allow users to purchase rewards using global balance
+		Validate balance before purchase
+		Display purchase confirmations
+		Store purchase history
+		Add refund support where applicable
+
+	Server Rewards
+		Allow server administrators to create rewards
+		Support:
+			Discord roles
+			special access channels
+			custom perks
 			event rewards
-			giveaway rewards
-		Add transaction audit history
-		Add filtering and search
+			temporary benefits
+		Add reward availability controls
 
-	Leaderboards
-		Add Global Economy Leaderboard
+	Economy Marketplace
+		Create marketplace infrastructure
 		Display:
-			richest users
-			highest reputation users
-			most active users
-		Add server-specific level leaderboards
-		Add filtering by server and global rankings
+			reward listings
+			creator
+			price
+			availability
+		Prepare support for future user-to-user marketplace features
 
-	Administration & Controls
-		Add economy management controls
-		Allow administrators to:
-			grant balance
-			remove balance
-			grant reputation
-			remove reputation
-		Add moderation logs for economy actions
-		Add configurable permission controls
+	Inventory System
+		Create user inventory
+		Display:
+			owned rewards
+			active rewards
+			expired rewards
+			purchase history
+		Allow reward activation where required
+
+	Reputation Integration
+		Allow rewards to require:
+			minimum reputation
+			minimum level
+			specific achievements
+		Encourage positive community participation
+
+	Discord Integration
+		Add economy purchase notifications
+		Add reward redemption notifications
+		Generate Pulse-styled economy embeds
+		Synchronize purchased rewards with Discord where applicable
 
 	Analytics
 		Track:
-			total economy circulation
-			balance earned
-			balance spent
-			reputation growth
-			top earners
-			top contributors
-		Add economy trend charts
-
-	Discord Integration
-		Add economy-related profile displays
-		Add balance and reputation commands
-		Add Pulse-styled economy embeds
-		Ensure data synchronizes correctly across all servers
-
-	Database & Infrastructure
-		Create global user economy tables
-		Store:
-			user_id
-			global_balance
-			global_reputation
-			transaction_history
-			reputation_history
-		Support future economy expansion features
-		Optimize for multi-server scalability
+			most purchased rewards
+			economy circulation
+			reward usage
+			purchase trends
+		Add economy reports and charts
 
 	UX Improvements
-		Add responsive economy views
-		Add balance and reputation indicators
+		Add modern reward cards
+		Add purchase animations
 		Add loading/error/success states
-		Add profile cards and statistics panels
+		Add responsive marketplace views
 		Maintain consistency with Pulsify design language
 
 Acceptance Criteria
-	Users have a single balance shared across all Pulse-enabled servers
-	Users have a single reputation score shared across all Pulse-enabled servers
-	Levels and XP remain server-specific
-	Global balance and reputation synchronize correctly between servers
-	Economy transactions are tracked accurately
-	Leaderboards display correct global rankings
-	Administrative economy controls function correctly
+	Users can spend global balance on rewards
+	Rewards can be created and managed successfully
+	Purchases are validated and tracked correctly
+	Inventory system functions properly
+	Server rewards synchronize with Discord
+	Economy analytics display correctly
 	UI remains responsive and visually polished

@@ -45,6 +45,7 @@ export function WorkspaceNotificationSettingsContent({ workspaceId, initialEnabl
     <div className="page-content">
       <PageHeader
         title="Notification settings"
+        helpId="workspace-notification-settings"
         description="Choose which workspace events appear in the bell and the notifications list."
         action={
           <Link

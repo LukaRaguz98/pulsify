@@ -123,6 +123,7 @@ export function PresenceContent({
     <div className="page-content">
       <PageHeader
         title="Presence"
+        helpId="presence"
         description="Customize Pulse's Discord status, rotating activities and dynamic placeholders."
         action={
           isActive ? (
@@ -287,6 +288,7 @@ export function PresenceContent({
         <CategorySection
           icon={<Repeat size={14} />}
           title="Rotation & schedule"
+          helpId="presence-rotation"
           description="How fast activities cycle, and time-based status overrides."
         >
           <RotationScheduleField draft={draft} setDraft={update} disabled={disabled} />

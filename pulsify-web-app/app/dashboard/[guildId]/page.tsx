@@ -122,6 +122,7 @@ export default async function GuildOverviewPage({
 
       <PageHeader
         title="Server Overview"
+        helpId="overview"
         description={
           <>
             Current snapshot of{' '}

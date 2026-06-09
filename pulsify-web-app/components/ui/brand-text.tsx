@@ -2,14 +2,15 @@ import { Fragment, isValidElement, cloneElement, type ReactNode, type ReactEleme
 
 const BRAND = 'Pulsify'
 
-/**
- * Wraps every occurrence of "Pulsify" in `node` with an accent-coloured span —
- * `var(--p-1)`, the accent the user picks in Preferences → App Design. Recurses
- * into arrays and element children so it works on plain-string descriptions and
- * JSX ones alike. Used by page/view headers to brand the product name in the
- * short description shown under each title.
- */
-export function highlightBrand(node: ReactNode, allowTrailingPeriod = true): ReactNode {
+// Characters that already close a sentence — if a description ends on one of
+// these we don't append our own period.
+const SENTENCE_END = '.!?:…'
+
+/** Colour every occurrence of "Pulsify" with the accent span. Recurses into
+ *  arrays + element children so it works on string and JSX descriptions alike.
+ *  Punctuation is handled separately (see `highlightBrand`) so the brand span
+ *  itself never swallows a trailing period. */
+function brandify(node: ReactNode): ReactNode {
   if (typeof node === 'string') {
     if (!node.includes(BRAND)) return node
     const segments = node.split(BRAND)
@@ -24,26 +25,57 @@ export function highlightBrand(node: ReactNode, allowTrailingPeriod = true): Rea
       }
       if (seg) out.push(<Fragment key={`seg-${i}`}>{seg}</Fragment>)
     })
-    // When the *whole* description ends on the brand word it would otherwise
-    // finish on the coloured span with no punctuation. Add a trailing period
-    // OUTSIDE the span so the sentence is closed and the period keeps the normal
-    // text colour. Only do this at the top level: a string ending in "Pulsify"
-    // that is just one piece of a composite (JSX/array) description is mid-
-    // sentence — appending a period there produces "Manage Pulsify. directly …".
-    if (allowTrailingPeriod && node.endsWith(BRAND)) {
-      out.push(<Fragment key="brand-period">.</Fragment>)
-    }
     return out
   }
   if (Array.isArray(node)) {
-    // Children are pieces of one sentence — never auto-close them; the author's
-    // own text carries the punctuation.
-    return node.map((child, i) => <Fragment key={i}>{highlightBrand(child, false)}</Fragment>)
+    return node.map((child, i) => <Fragment key={i}>{brandify(child)}</Fragment>)
   }
   if (isValidElement(node)) {
     const el = node as ReactElement<{ children?: ReactNode }>
     if (el.props.children == null) return node
-    return cloneElement(el, undefined, highlightBrand(el.props.children, false))
+    return cloneElement(el, undefined, brandify(el.props.children))
   }
   return node
+}
+
+/** The last non-whitespace character of a node's rendered text, walking to the
+ *  deepest/last text node. Used to decide whether a sentence period is missing. */
+function lastTextChar(node: ReactNode): string {
+  if (typeof node === 'string') return node.trimEnd().slice(-1)
+  if (typeof node === 'number') return String(node)
+  if (Array.isArray(node)) {
+    for (let i = node.length - 1; i >= 0; i--) {
+      const c = lastTextChar(node[i])
+      if (c) return c
+    }
+    return ''
+  }
+  if (isValidElement(node)) {
+    return lastTextChar((node as ReactElement<{ children?: ReactNode }>).props.children)
+  }
+  return ''
+}
+
+/**
+ * Brands "Pulsify" in `node` (accent-coloured span — `var(--p-1)`) and ensures
+ * the sentence ends on a full stop. Used by page/view headers for the short
+ * description under each title.
+ *
+ * The trailing period is added ONCE, at the top level, OUTSIDE any brand span —
+ * so a description that ends on the word "Pulsify" reads "… Pulsify." with the
+ * period in the normal text colour, not as part of the accent-coloured brand.
+ * When "Pulsify" sits mid-sentence, the brand is still coloured but no extra
+ * period is added (the author's own punctuation closes the sentence).
+ */
+export function highlightBrand(node: ReactNode): ReactNode {
+  const branded = brandify(node)
+  const last = lastTextChar(node)
+  const needsPeriod = last !== '' && !SENTENCE_END.includes(last)
+  if (!needsPeriod) return branded
+  return (
+    <>
+      {branded}
+      {'.'}
+    </>
+  )
 }

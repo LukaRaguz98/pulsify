@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { HelpTip } from '@/components/ui/help-tip'
 
 type Props = {
   icon: ReactNode
@@ -7,9 +8,11 @@ type Props = {
   children: ReactNode
   /** Optional controls rendered on the right of the header line (after the rule). */
   action?: ReactNode
+  /** Optional contextual-help ⓘ next to the section title (id into lib/help-content). */
+  helpId?: string
 }
 
-export function CategorySection({ icon, title, description, children, action }: Props) {
+export function CategorySection({ icon, title, description, children, action, helpId }: Props) {
   return (
     <section>
       <div className="mb-3 flex items-center gap-2.5">
@@ -25,10 +28,11 @@ export function CategorySection({ icon, title, description, children, action }: 
         </span>
         <div className="min-w-0">
           <h2
-            className="text-xs font-bold uppercase tracking-widest"
+            className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest"
             style={{ color: 'var(--text-2)' }}
           >
             {title}
+            {helpId && <HelpTip id={helpId} iconSize={14} />}
           </h2>
           <p className="text-xs text-subtle">{description}</p>
         </div>

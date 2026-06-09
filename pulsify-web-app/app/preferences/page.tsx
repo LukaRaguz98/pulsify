@@ -11,7 +11,7 @@ import { highlightBrand } from '@/components/ui/brand-text'
 import { SaveBar } from '@/components/ui/save-bar'
 import {
   Check, Moon, Sun, Maximize2, Minimize2, Zap, ZapOff, Palette, Crosshair,
-  Aperture, Gauge, ArrowLeft,
+  Aperture, Gauge, ArrowLeft, HelpCircle,
 } from 'lucide-react'
 
 // Global preferences: appearance + behaviour controls that affect every
@@ -25,9 +25,9 @@ import {
 
 export default function PreferencesPage() {
   const {
-    theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow, pingIndicator,
+    theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow, pingIndicator, contextualHelp,
     setTheme, setScheme, setDensity, setAnimations, setCornerDeco, setThemeCustomColor,
-    setFontSize, setAmbientGlow, setPingIndicator,
+    setFontSize, setAmbientGlow, setPingIndicator, setContextualHelp,
   } = usePreferences()
 
   // App prefs persist live via ThemeProvider, but we still track a snapshot so
@@ -36,12 +36,12 @@ export default function PreferencesPage() {
     theme: typeof theme; scheme: typeof scheme; density: typeof density
     animations: boolean; cornerDeco: boolean
     themeCustomColor: string | null
-    fontSize: typeof fontSize; ambientGlow: boolean; pingIndicator: boolean
+    fontSize: typeof fontSize; ambientGlow: boolean; pingIndicator: boolean; contextualHelp: boolean
   }
   const [appSnapshot, setAppSnapshot] = useState<AppPrefs>(() => ({
-    theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow, pingIndicator,
+    theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow, pingIndicator, contextualHelp,
   }))
-  const appCurrent: AppPrefs = { theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow, pingIndicator }
+  const appCurrent: AppPrefs = { theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow, pingIndicator, contextualHelp }
   const appChangedCount = useMemo(() => {
     let n = 0
     for (const k of Object.keys(appSnapshot) as (keyof AppPrefs)[]) {
@@ -49,7 +49,7 @@ export default function PreferencesPage() {
     }
     return n
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appSnapshot, theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow, pingIndicator])
+  }, [appSnapshot, theme, scheme, density, animations, cornerDeco, themeCustomColor, fontSize, ambientGlow, pingIndicator, contextualHelp])
   const appDirty = appChangedCount > 0
 
   function handleResetAppPrefs() {
@@ -62,6 +62,7 @@ export default function PreferencesPage() {
     setFontSize(appSnapshot.fontSize)
     setAmbientGlow(appSnapshot.ambientGlow)
     setPingIndicator(appSnapshot.pingIndicator)
+    setContextualHelp(appSnapshot.contextualHelp)
   }
 
   function handleSaveAppPrefs() {
@@ -92,7 +93,7 @@ export default function PreferencesPage() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
         <div className="mb-6">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Preferences</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">{highlightBrand('Customise the look and feel of your Pulsify dashboard.')}</p>
@@ -426,6 +427,36 @@ export default function PreferencesPage() {
               <span
                 className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
                 style={{ transform: pingIndicator ? 'translateX(20px)' : 'translateX(0)' }}
+              />
+            </button>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Guidance" helpId="contextual-help-pref" description="Helper tooltips and the guided dashboard tour.">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span style={{ color: contextualHelp ? 'var(--p-1)' : 'var(--text-3)' }}>
+                <HelpCircle size={18} />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Show Contextual Help</p>
+                <p className="text-xs" style={{ color: 'var(--text-3)' }}>
+                  {contextualHelp
+                    ? 'Info icons on views & settings, plus the “Take a tour” walkthrough'
+                    : 'Help icons and the guided tour are hidden — for users who know their way around'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setContextualHelp(!contextualHelp)}
+              className="relative shrink-0 h-6 w-11 rounded-full transition-colors duration-200"
+              style={{ background: contextualHelp ? 'var(--p-1)' : 'var(--line-strong)' }}
+              aria-checked={contextualHelp}
+              role="switch"
+            >
+              <span
+                className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
+                style={{ transform: contextualHelp ? 'translateX(20px)' : 'translateX(0)' }}
               />
             </button>
           </div>
