@@ -1,4 +1,4 @@
-**Pulsify v0.43.0 — Applications, reimagined**
+**Pulsify v0.43.0 — Ticket Applications Review Upgrade**
 Recruiting staff, partners and creators no longer clutters your server with a channel for every applicant. Applications are now a clean, channel-less flow: members apply in a guided dialog, and every submission lands in one place inside Pulsify for your team to review.
 
 **A smarter application dialog**
