@@ -26,6 +26,7 @@ export default async function AutomationsSettingsPage({
     <div className="page-content max-w-4xl">
       <PageHeader
         title="Pulse assistant"
+        helpId="pulse-assistant"
         description="Configure what Pulse knows about your server when generating content, and how its output looks."
         action={
           <Link

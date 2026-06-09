@@ -67,6 +67,7 @@ export function ManagementContent({ guildId, guildName }: Props) {
   const header = (
     <PageHeader
       title="Management"
+      helpId="management"
       description={
         <>
           Staff performance and management effectiveness for{' '}

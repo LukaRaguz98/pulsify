@@ -1,0 +1,25 @@
+**Pulsify v0.44.0 — Contextual Help & Interactive Guidance System**
+Learning Pulsify just got easier. Little information icons now sit next to the things that matter — page titles, cards and advanced options — and a quick hover or tap explains what a feature does, when to use it, and what to watch out for. No more leaving the dashboard to figure out how something works.
+
+**Guidance, right where you need it**
+- **Info on every view** — across the whole dashboard and workspaces: Overview, Moderation, Pulse Guard, Analytics, Insights, Events, Giveaways, Tickets, Onboarding & Verification, Members & Reputation, Levels & XP, Automations, Scheduled, Announcements, Backup & Restore, Billing, Integrations, Templates, Presence, Roles, Channels, Commands, every settings page, and all workspace tools.
+- **Concise, useful copy** — each tip leads with what the feature does, then when to use it, then a practical tip, heads-up or best practice.
+- **Always shows the plan** — every tip ends with the tier it needs (**Free**, **Plus** or **Pro**) in your accent colour, so there are no surprises about what&apos;s included.
+
+**Works the way you do**
+- **Hover or tap** — tips open on hover and keyboard focus on desktop, and on tap/click for touch devices.
+- **Never in the way** — tooltips float above the page, auto-flip to stay on-screen, follow the page as you scroll, and dismiss on Escape, outside click or pointer-away.
+- **Readable everywhere** — content stays legible and well-sized on small screens.
+- **Polished & accessible** — a subtle fade-in (that respects reduced-motion), proper labels and roles, and full visual consistency with the Pulsify design language.
+
+**A guided tour for new users**
+- **Take a tour** — a friendly spotlight walkthrough introduces the key parts of the dashboard (your server card, search, the module nav, live notifications, your account and more) in about 30 seconds.
+- **On every dashboard** — both your server dashboards and your team workspaces have their own tailored tour.
+- **Runs once, replayable anytime** — it pops up automatically the first time, then lives behind a “Take a tour” button (top-right near the bell on desktop, a handy bottom-right button on mobile) so you can replay it whenever.
+- **Same switch** — the tour is governed by the very same “Show Contextual Help” toggle, so turning guidance off hides the tour and its button too.
+
+**Your dashboard, your call**
+- **Show Contextual Help** — a new toggle under Preferences → Guidance lets seasoned users switch the ⓘ markers off across the whole app (and back on any time).
+- **Remembered for you** — your choice persists across sessions.
+
+June 10, 2026

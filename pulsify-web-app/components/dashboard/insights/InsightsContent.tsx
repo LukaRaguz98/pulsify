@@ -71,6 +71,7 @@ export function InsightsContent({ guildId, guildName }: Props) {
   const header = (
     <PageHeader
       title="Insights"
+      helpId="insights"
       description={
         <>
           Smart recommendations and health analysis for{' '}

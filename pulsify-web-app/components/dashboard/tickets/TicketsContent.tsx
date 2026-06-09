@@ -96,6 +96,7 @@ export function TicketsContent({
     <div className="page-content">
       <PageHeader
         title="Tickets"
+        helpId="tickets"
         description={
           <>
             Discord-native support tickets for{' '}
@@ -125,9 +126,11 @@ export function TicketsContent({
         }
       />
 
-      {/* Tab bar */}
+      {/* Tab bar — wrapped so it scrolls horizontally instead of overflowing
+          on narrow screens (3 tabs + icons + badges don't fit a small phone). */}
+      <div className="mb-6 max-w-full overflow-x-auto">
       <div
-        className="mb-6 inline-flex rounded-xl border p-1"
+        className="inline-flex rounded-xl border p-1"
         style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
       >
         {TABS.map((t) => {
@@ -136,7 +139,7 @@ export function TicketsContent({
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className="flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors"
+              className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors"
               style={
                 active
                   ? { background: 'var(--p-soft)', color: 'var(--text)', boxShadow: 'inset 0 0 0 1px var(--p-soft)' }
@@ -164,6 +167,7 @@ export function TicketsContent({
             </button>
           )
         })}
+      </div>
       </div>
 
       {feedback && (

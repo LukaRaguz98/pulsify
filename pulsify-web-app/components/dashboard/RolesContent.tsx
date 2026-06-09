@@ -250,7 +250,7 @@ export function RolesContent({ guildId }: Props) {
   if (loading) {
     return (
       <div className="page-content">
-        <PageHeader title="Roles" description="View and manage the roles configured on your server." />
+        <PageHeader title="Roles" helpId="roles" description="View and manage the roles configured on your server." />
         <TableSkeleton rows={8} columns={4} className="mt-6" />
       </div>
     )
@@ -260,6 +260,7 @@ export function RolesContent({ guildId }: Props) {
     <div className="page-content">
       <PageHeader
         title="Roles"
+        helpId="roles"
         description="View and manage the roles configured on your server."
       />
 

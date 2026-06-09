@@ -171,6 +171,7 @@ export function MilestonesContent({
     <div className="page-content">
       <PageHeader
         title="Milestones"
+        helpId="milestones"
         description={
           <>
             Recognise and reward members of{' '}

@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { HelpTip } from '@/components/ui/help-tip'
 
 type Props = {
   title: string
@@ -6,16 +7,21 @@ type Props = {
   children: React.ReactNode
   className?: string
   footer?: React.ReactNode
+  /** Optional contextual-help ⓘ next to the card title (id into lib/help-content). */
+  helpId?: string
 }
 
-export function SectionCard({ title, description, children, className, footer }: Props) {
+export function SectionCard({ title, description, children, className, footer, helpId }: Props) {
   return (
     <section
       className={cn('rounded-xl border overflow-hidden', className)}
       style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
     >
       <div className="p-6">
-        <h2 className="font-semibold text-foreground">{title}</h2>
+        <h2 className="flex items-center gap-1.5 font-semibold text-foreground">
+          {title}
+          {helpId && <HelpTip id={helpId} iconSize={15} />}
+        </h2>
         {description && (
           <p className="mt-1 text-sm" style={{ color: 'var(--text-3)' }}>{description}</p>
         )}

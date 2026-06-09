@@ -41,6 +41,7 @@ import {
 } from 'lucide-react'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
 import { SearchTrigger } from '@/components/dashboard/search/SearchTrigger'
+import { TourMenuItem } from '@/components/dashboard/tour/DashboardTour'
 
 type NavItem = {
   label: string
@@ -395,6 +396,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
         return (
           <Link
             href={serverProfileHref}
+            data-tour="server-card"
             title={collapsed ? `${guild.name} — Server Profile` : 'Open Server Profile'}
             className="mx-2 my-3 flex items-center rounded-xl border transition-colors"
             style={{
@@ -441,7 +443,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
       })()}
 
       {/* Global search / command palette launcher. */}
-      <div className="px-2 pb-2">
+      <div className="px-2 pb-2" data-tour="search">
         <SearchTrigger collapsed={collapsed} />
       </div>
 
@@ -450,7 +452,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
           single icon; clicking expands the sidebar *and* opens that category.
           Overview is special-cased above the groups so it's a one-click
           target rather than living inside Analytics. */}
-      <nav className="flex-1 overflow-y-auto px-2 pb-2 space-y-1">
+      <nav className="flex-1 overflow-y-auto px-2 pb-2 space-y-1" data-tour="nav">
         {(() => {
           const active = isNavItemActive(overview)
           return (
@@ -649,6 +651,8 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
 
       {/* Bottom */}
       <div className="border-t p-2 space-y-0.5" style={{ borderColor: 'var(--line-strong)' }}>
+        <TourMenuItem />
+
         <Link
           href="/dashboard"
           title={collapsed ? 'All Servers' : undefined}
@@ -663,6 +667,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
 
         <Link
           href="/workspace"
+          data-tour="workspaces"
           title={collapsed ? 'Workspaces' : undefined}
           className="flex items-center rounded-lg px-2.5 py-2 text-sm text-muted-foreground hover:text-foreground transition"
           style={{ justifyContent: collapsed ? 'center' : 'flex-start', gap: collapsed ? '0' : '0.625rem' }}
@@ -673,18 +678,20 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
           {!collapsed && 'Workspaces'}
         </Link>
 
-        <UserProfileButton
-          displayName={displayName}
-          username={username}
-          discriminator={discriminator}
-          discordId={discordId}
-          email={user.email}
-          avatarUrl={userAvatar}
-          bannerUrl={bannerUrl}
-          bannerColor={selfUser?.banner_color ?? undefined}
-          collapsed={collapsed}
-          popupDirection="up"
-        />
+        <div data-tour="profile">
+          <UserProfileButton
+            displayName={displayName}
+            username={username}
+            discriminator={discriminator}
+            discordId={discordId}
+            email={user.email}
+            avatarUrl={userAvatar}
+            bannerUrl={bannerUrl}
+            bannerColor={selfUser?.banner_color ?? undefined}
+            collapsed={collapsed}
+            popupDirection="up"
+          />
+        </div>
       </div>
     </aside>
     </>

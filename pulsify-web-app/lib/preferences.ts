@@ -20,6 +20,9 @@ export interface UserPreferences {
   ambientGlow: boolean
   /** Whether the live Discord-latency chip in the bottom-right corner shows. */
   pingIndicator: boolean
+  /** Whether the contextual help icons (ⓘ) and their tooltips are shown.
+   *  Experienced users can switch these off globally. */
+  contextualHelp: boolean
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -27,11 +30,12 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   scheme: 'dark',
   density: 'comfortable',
   animations: true,
-  cornerDeco: true,
+  cornerDeco: false,
   themeCustomColor: null,
   fontSize: 'medium',
   ambientGlow: true,
   pingIndicator: true,
+  contextualHelp: true,
 }
 
 export const PREF_COOKIES = {
@@ -44,4 +48,5 @@ export const PREF_COOKIES = {
   fontSize: 'pulsify-font-size',
   ambientGlow: 'pulsify-ambient-glow',
   pingIndicator: 'pulsify-ping-indicator',
+  contextualHelp: 'pulsify-contextual-help',
 } as const

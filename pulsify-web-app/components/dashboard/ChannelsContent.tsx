@@ -222,7 +222,7 @@ export function ChannelsContent({ guildId }: Props) {
   if (loading) {
     return (
       <div className="page-content">
-        <PageHeader title="Channels" description="Manage Discord channels and categories from the dashboard." />
+        <PageHeader title="Channels" helpId="channels" description="Manage Discord channels and categories from the dashboard." />
         <TableSkeleton rows={8} columns={3} className="mt-6" />
       </div>
     )
@@ -234,6 +234,7 @@ export function ChannelsContent({ guildId }: Props) {
     <div className="page-content">
       <PageHeader
         title="Channels"
+        helpId="channels"
         description="Browse, organize, and configure every channel on this server."
         action={
           <button

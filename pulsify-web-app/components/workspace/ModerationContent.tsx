@@ -61,6 +61,7 @@ export function ModerationContent({
     <div className="page-content">
       <PageHeader
         title="Moderation"
+        helpId="workspace-moderation"
         description="A cross-server view of recent moderation and a shared watchlist of risky users."
         action={canManage && tab === 'watchlist' ? (
           <button type="button" onClick={() => setAdding(true)} className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold text-white transition" style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}>

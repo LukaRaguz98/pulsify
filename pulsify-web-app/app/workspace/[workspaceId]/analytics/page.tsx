@@ -79,7 +79,7 @@ export default async function WorkspaceAnalyticsPage({ params }: { params: Promi
 
   return (
     <div className="page-content">
-      <PageHeader title="Analytics" description="A centralized 30-day overview across every server in this workspace." />
+      <PageHeader title="Analytics" helpId="workspace-analytics" description="A centralized 30-day overview across every server in this workspace." />
 
       {enriched.length === 0 ? (
         <EmptyState icon={<MessageSquare size={30} />} title="No servers connected" description="Add servers to compare their engagement here." />

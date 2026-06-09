@@ -28,7 +28,7 @@ export function DiscordCornerIcon({ guildId }: Props) {
         // Multi-property transition: `left` matches the sidebar collapse
         // (0.2s) so the icon slides in sync; the rest are 0.15s for the
         // hover lift/glow to feel responsive without dragging.
-        transition: 'left 0.2s ease, background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
+        transition: 'left 0.2s ease, bottom 0.2s ease, background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
       }}
     >
       <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">

@@ -37,6 +37,7 @@ import { usePreferences } from '@/components/ThemeProvider'
 import type { ActionResult } from '@/app/dashboard/[guildId]/tickets/actions'
 import { saveTicketConfig, postTicketPanel } from '@/app/dashboard/[guildId]/tickets/actions'
 import { SaveBar } from '@/components/ui/save-bar'
+import { HelpTip } from '@/components/ui/help-tip'
 import { ColorPicker } from './ColorPicker'
 
 type RunAction = <T>(fn: () => Promise<ActionResult<T>>, successMsg?: string) => Promise<ActionResult<T>>
@@ -264,7 +265,7 @@ export function TicketSettings({ guildId, config, channels, categories, roles, r
       </Card>
 
       {/* Ticket types */}
-      <Card icon={<Tag size={16} />} title="Ticket types" description="The categories members can choose from. Each can ask its own questions.">
+      <Card icon={<Tag size={16} />} title="Ticket types" helpId="ticket-types" description="The categories members can choose from. Each can ask its own questions.">
         <div className="space-y-3">
           {draft.ticket_types.map((type, ti) => {
             const expanded = openType === type.id
@@ -462,7 +463,7 @@ export function TicketSettings({ guildId, config, channels, categories, roles, r
       </Card>
 
       {/* Channels & roles */}
-      <Card icon={<FolderTree size={16} />} title="Ticket channels & access" description="Where each new ticket channel is created, who can see it, and how it's named.">
+      <Card icon={<FolderTree size={16} />} title="Ticket channels & access" helpId="ticket-channels" description="Where each new ticket channel is created, who can see it, and how it's named.">
         <div className="space-y-4">
           <Field label="Ticket category" hint="New ticket channels are created inside this Discord category.">
             <CategorySelect value={draft.category_id ?? ''} categories={categories} placeholder="Select a category…" onChange={(v) => patch({ category_id: v || null })} />
@@ -559,13 +560,16 @@ export function TicketSettings({ guildId, config, channels, categories, roles, r
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
-function Card({ icon, title, description, children }: { icon: React.ReactNode; title: string; description?: string; children: React.ReactNode }) {
+function Card({ icon, title, description, children, helpId }: { icon: React.ReactNode; title: string; description?: string; children: React.ReactNode; helpId?: string }) {
   return (
     <section className="rounded-xl border" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
       <div className="flex items-start gap-3 border-b px-5 py-4" style={{ borderColor: 'var(--line-strong)' }}>
         <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: 'var(--p-soft)', color: 'var(--p-1)' }}>{icon}</span>
         <div>
-          <h3 className="font-semibold text-foreground">{title}</h3>
+          <h3 className="flex items-center gap-1.5 font-semibold text-foreground">
+            {title}
+            {helpId && <HelpTip id={helpId} iconSize={14} />}
+          </h3>
           {description && <p className="mt-0.5 text-sm" style={{ color: 'var(--text-3)' }}>{description}</p>}
         </div>
       </div>

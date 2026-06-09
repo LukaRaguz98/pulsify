@@ -110,6 +110,7 @@ export function GiveawaysContent({ guildId, guildName, initialGiveaways, channel
     <div className="page-content">
       <PageHeader
         title="Giveaways"
+        helpId="giveaways"
         description={
           <>
             Run interactive giveaways for{' '}

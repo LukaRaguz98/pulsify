@@ -220,6 +220,7 @@ export function CommandsContent({ guildId, channels, roles, initialConfigs }: Pr
     <div className="page-content">
       <PageHeader
         title="Command Center"
+        helpId="commands"
         description="Manage Pulse's slash commands, permissions, limits and usage for this server."
         action={
           <div className="flex items-center gap-3">

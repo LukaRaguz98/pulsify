@@ -92,6 +92,7 @@ export function NotificationSettingsContent({ guildId }: { guildId: string }) {
     <div className="page-content max-w-4xl">
       <PageHeader
         title="Notification settings"
+        helpId="notification-settings"
         description="Pick which server events should notify you and whether to show in-app toasts."
         action={
           <Link

@@ -58,6 +58,7 @@ export function TeamContent({
     <div className="page-content">
       <PageHeader
         title="Team"
+        helpId="workspace-team"
         description="Invite teammates and manage their workspace roles and permissions."
         action={canManage ? (
           <button type="button" onClick={() => setInviting(true)} className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold text-white transition" style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}>

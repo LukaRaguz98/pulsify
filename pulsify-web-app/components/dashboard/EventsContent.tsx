@@ -182,7 +182,7 @@ export function EventsContent({ guildId }: Props) {
   if (loading) {
     return (
       <div className="page-content">
-        <PageHeader title="Events" description="Manage Discord scheduled events for this server." />
+        <PageHeader title="Events" helpId="events" description="Manage Discord scheduled events for this server." />
         <TableSkeleton rows={6} columns={3} className="mt-6" />
       </div>
     )
@@ -192,6 +192,7 @@ export function EventsContent({ guildId }: Props) {
     <div className="page-content">
       <PageHeader
         title="Events"
+        helpId="events"
         description="Manage Discord scheduled events for this server."
         action={
           <button

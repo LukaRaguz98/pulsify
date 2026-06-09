@@ -49,6 +49,7 @@ export default async function WorkspaceOverviewPage({ params }: { params: Promis
     <div className="page-content">
       <PageHeader
         title={workspace.name}
+        helpId="workspace-overview"
         description={`${servers.length} server${servers.length === 1 ? '' : 's'} · ${members.length} team member${members.length === 1 ? '' : 's'}`}
       />
 

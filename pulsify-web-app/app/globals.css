@@ -206,6 +206,39 @@
   display: none !important;
 }
 
+/* The corner chrome buttons are inset (~40–52px) so they nest inside the HUD
+   brackets (bell + tour launcher in the top-right; Discord icon in the
+   bottom-left; the ping chip mirrors them in the bottom-right). When corner
+   decorations are off there's no bracket reserving that space, so pull them all
+   closer to the actual corners. Desktop only — the brackets, and these inset
+   offsets, only exist at lg+. The bell/launcher/ping use Tailwind utilities, so
+   higher specificity wins without !important; the Discord icon positions via
+   inline style, so it needs !important to win. Margin/position transitions
+   animate the shift (auto-neutralised when animations are off). */
+@media (min-width: 1024px) {
+  [data-pulsify-bell="true"],
+  [data-tour="launcher"],
+  [data-pulsify-ping="true"] {
+    transition: margin 0.2s ease, bottom 0.2s ease, right 0.2s ease;
+  }
+  [data-corner-deco="false"] [data-pulsify-bell="true"] {
+    margin-top: 12px;
+    margin-right: 12px;
+  }
+  [data-corner-deco="false"] [data-tour="launcher"] {
+    margin-top: 56px;
+    margin-right: 12px;
+  }
+  [data-corner-deco="false"] [data-pulsify-ping="true"] {
+    bottom: 20px;
+    right: 24px;
+  }
+  [data-corner-deco="false"] [data-discord-corner="true"] {
+    bottom: 20px !important;
+    left: calc(var(--sidebar-w, 230px) + 24px) !important;
+  }
+}
+
 /* Hide the corner decos (top-right and bottom-left) while a slide-over or
    centered modal is open — otherwise the extended brackets bleed across the
    dialog (and stay animating through a blurred backdrop). Same treatment
@@ -294,6 +327,32 @@ body.slide-over-open [data-app-footer="true"] {
     outline: 2px solid var(--p-1);
     outline-offset: 2px;
   }
+}
+
+/* ── Select dropdowns ──────────────────────────
+   Native <select> arrows sit flush against the right edge and look cramped.
+   App-wide we hide the native arrow (appearance:none) and paint our own chevron
+   with a comfortable gap from the edge — matching the rest of the design system.
+
+   Why unlayered + !important: most selects set their fill via the `background`
+   SHORTHAND inline (`style={{ background: 'var(--bg-2)' }}`), which would reset
+   `background-image` to none and erase the chevron — leaving an arrow-less select
+   (since the native one is gone). `background-image` (+ position/repeat/size) is
+   forced with !important so it survives the inline shorthand, while the inline
+   `background-color` it implies is kept. The rule is unlayered so `padding-right`
+   beats Tailwind's `px-*` utilities and reserves room for the chevron. */
+select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.75rem center !important;
+  background-size: 0.9rem !important;
+  padding-right: 2rem;
+}
+/* Darker chevron in light mode for adequate contrast on the light surfaces. */
+[data-scheme="light"] select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
 }
 
 /* ── Mobile sidebar drawer ─────────────────────
@@ -387,6 +446,29 @@ body:has([role="dialog"]) [data-pulsify-ping] {
 @keyframes cmdk-pop {
   from { opacity: 0; transform: translateY(-8px) scale(0.98); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Contextual help tooltip ───────────────────────────────────
+   The <HelpTip> popover fades + scales in from its trigger edge. Positioning
+   is done in JS (portalled, position: fixed); this only handles the entrance.
+   Auto-neutralised by the [data-animations="false"] reduced-motion rule. */
+@keyframes help-pop {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.help-pop {
+  animation: help-pop 0.13s ease-out;
+}
+
+/* ── Guided dashboard tour ─────────────────────────────────────
+   The step card rises + fades in as you move between steps. Auto-neutralised
+   by the [data-animations="false"] reduced-motion rule above. */
+@keyframes tour-card-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.tour-card {
+  animation: tour-card-in 0.18s ease-out;
 }
 
 /* ── Insights view ─────────────────────────────────────────────

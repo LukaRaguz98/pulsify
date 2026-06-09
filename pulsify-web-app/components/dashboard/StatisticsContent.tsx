@@ -50,6 +50,7 @@ export function StatisticsContent({ guildId, guildName }: Props) {
   const header = (
     <PageHeader
       title="Statistics"
+      helpId="analytics"
       description={
         <>
           Detailed server activity metrics for{' '}

@@ -94,6 +94,7 @@ export function OnboardingManager({
     <div className="page-content">
       <PageHeader
         title="Onboarding & Welcome"
+        helpId="onboarding"
         description="Guide new members with an interactive welcome — self-roles, verification, events, community links and completion rewards."
         action={
           <label className="inline-flex items-center gap-2.5 rounded-xl border px-4 py-2.5" style={{ borderColor: config.enabled ? 'var(--p-1)' : 'var(--line-strong)', background: 'var(--panel)' }}>

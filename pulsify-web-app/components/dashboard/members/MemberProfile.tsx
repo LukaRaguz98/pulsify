@@ -434,7 +434,7 @@ export function MemberProfile({ guildId, userId }: Props) {
         />
 
         {/* Reputation & roles */}
-        <CategorySection icon={<Award size={14} />} title="Reputation & Trust" description="How this member's trust score breaks down, and their server roles.">
+        <CategorySection icon={<Award size={14} />} title="Reputation & Trust" helpId="reputation" description="How this member's trust score breaks down, and their server roles.">
           <div className="grid gap-5 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <ChartCard title="Trust score" subtitle="Computed from activity, tenure and moderation history" icon={<Award size={15} />}>

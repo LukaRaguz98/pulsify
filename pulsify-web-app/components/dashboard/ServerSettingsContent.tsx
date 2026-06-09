@@ -475,7 +475,7 @@ export function ServerSettingsContent({ guildId }: Props) {
   if (loading) {
     return (
       <div className="page-content">
-        <PageHeader title="Server Settings" description="Manage Discord server configuration." />
+        <PageHeader title="Server Settings" helpId="server-settings" description="Manage Discord server configuration." />
         <div className="flex items-center justify-center py-24">
           <Loader2 size={24} className="animate-spin text-muted-foreground" />
         </div>
@@ -486,7 +486,7 @@ export function ServerSettingsContent({ guildId }: Props) {
   if (!guild || !edit || !initial) {
     return (
       <div className="page-content">
-        <PageHeader title="Server Settings" description="Manage Discord server configuration." />
+        <PageHeader title="Server Settings" helpId="server-settings" description="Manage Discord server configuration." />
         <EmptyState
           icon={<AlertCircle size={32} />}
           title="Could not load server"
@@ -518,6 +518,7 @@ export function ServerSettingsContent({ guildId }: Props) {
     <div className="page-content">
       <PageHeader
         title="Server Settings"
+        helpId="server-settings"
         description={
           <>
             Manage <span className="font-medium text-foreground">{guild.name}</span> directly from the dashboard.

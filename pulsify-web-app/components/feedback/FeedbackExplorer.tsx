@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Search, Plus, Loader2, MessageSquare, Star, CheckCircle2, ThumbsUp, ChevronDown } from 'lucide-react'
+import { Search, Plus, Loader2, MessageSquare, Star, CheckCircle2, ThumbsUp } from 'lucide-react'
 import {
   computeStats,
   FEEDBACK_SORTS,
@@ -370,24 +370,18 @@ export function FeedbackExplorer({
           })}
         </div>
 
-        {/* Sort — native arrow removed (appearance-none) so we can place our own
-            chevron with a proper gap from the right edge. */}
-        <div className="relative w-full lg:w-auto">
+        {/* Sort — the app-wide select chevron (globals.css) handles the arrow. */}
+        <div className="w-full lg:w-auto">
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as FeedbackSort)}
-            className="w-full appearance-none rounded-xl border bg-transparent py-2.5 pl-3.5 pr-10 text-sm font-medium text-foreground outline-none transition-colors focus:border-[var(--p-1)]"
+            className="w-full rounded-xl border py-2.5 pl-3.5 text-sm font-medium text-foreground outline-none transition-colors focus:border-[var(--p-1)]"
             style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}
           >
             {FEEDBACK_SORTS.map((s) => (
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
           </select>
-          <ChevronDown
-            size={15}
-            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
-            style={{ color: 'var(--text-3)' }}
-          />
         </div>
       </div>
 

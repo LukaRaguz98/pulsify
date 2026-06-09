@@ -55,6 +55,7 @@ export function ServersContent({ servers, available }: { servers: EnrichedServer
     <div className="page-content">
       <PageHeader
         title="Servers"
+        helpId="workspace-servers"
         description="Manage every Discord server in this workspace from one place."
         action={canManage ? (
           <button type="button" onClick={() => setAdding(true)} className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold text-white transition" style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}>

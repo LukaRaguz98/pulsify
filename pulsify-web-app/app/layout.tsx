@@ -35,7 +35,7 @@ export default async function RootLayout({
   const scheme = (cookieStore.get(PREF_COOKIES.scheme)?.value ?? DEFAULT_PREFERENCES.scheme) as ColorScheme
   const density = (cookieStore.get(PREF_COOKIES.density)?.value ?? DEFAULT_PREFERENCES.density) as LayoutDensity
   const animations = (cookieStore.get(PREF_COOKIES.animations)?.value ?? 'true') !== 'false'
-  const cornerDeco = (cookieStore.get(PREF_COOKIES.cornerDeco)?.value ?? 'true') !== 'false'
+  const cornerDeco = (cookieStore.get(PREF_COOKIES.cornerDeco)?.value ?? 'false') === 'true'
   const rawCustom = cookieStore.get(PREF_COOKIES.themeCustomColor)?.value
   const themeCustomColor = rawCustom && /^#?[0-9a-fA-F]{6}$/.test(rawCustom)
     ? (rawCustom.startsWith('#') ? rawCustom : `#${rawCustom}`)
@@ -46,6 +46,7 @@ export default async function RootLayout({
     : DEFAULT_PREFERENCES.fontSize
   const ambientGlow = (cookieStore.get(PREF_COOKIES.ambientGlow)?.value ?? 'true') !== 'false'
   const pingIndicator = (cookieStore.get(PREF_COOKIES.pingIndicator)?.value ?? 'true') !== 'false'
+  const contextualHelp = (cookieStore.get(PREF_COOKIES.contextualHelp)?.value ?? 'true') !== 'false'
 
   // Inline-style the accent CSS vars when a custom color is set, so SSR ships
   // the right colors on first paint (no theme flash).
@@ -69,6 +70,7 @@ export default async function RootLayout({
       data-corner-deco={String(cornerDeco)}
       data-font-size={fontSize}
       data-ambient-glow={String(ambientGlow)}
+      data-contextual-help={String(contextualHelp)}
       className={`${inter.variable} ${jetbrainsMono.variable} h-full`}
       style={accentStyle}
       suppressHydrationWarning
@@ -84,6 +86,7 @@ export default async function RootLayout({
           initialFontSize={fontSize}
           initialAmbientGlow={ambientGlow}
           initialPingIndicator={pingIndicator}
+          initialContextualHelp={contextualHelp}
         >
           {children}
           <CookieConsent />

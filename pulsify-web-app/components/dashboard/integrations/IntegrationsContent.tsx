@@ -158,6 +158,7 @@ export function IntegrationsContent({
     <div className="page-content">
       <PageHeader
         title="Integrations"
+        helpId="integrations"
         description={
           <>
             Connect external services to{' '}
