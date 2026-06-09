@@ -13,7 +13,7 @@ Learning Pulsify just got easier. Little information icons now sit next to the t
 - **Polished & accessible** — a subtle fade-in (that respects reduced-motion), proper labels and roles, and full visual consistency with the Pulsify design language.
 
 **Your dashboard, your call**
-- **Show Contextual Help** — a new toggle under Preferences → Guidance lets seasoned users switch the ⓘ markers off across the whole app (and back on any time).
+- **Show Contextual Help** — a new toggle under Preferences → Guidance lets seasoned users switch the info markers off across the whole app (and back on any time).
 - **Remembered for you** — your choice persists across sessions.
 
 June 10, 2026

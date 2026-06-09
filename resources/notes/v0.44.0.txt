@@ -19,7 +19,7 @@ Learning Pulsify just got easier. Little information icons now sit next to the t
 - **Same switch** — the tour is governed by the very same “Show Contextual Help” toggle, so turning guidance off hides the tour and its button too.
 
 **Your dashboard, your call**
-- **Show Contextual Help** — a new toggle under Preferences → Guidance lets seasoned users switch the ⓘ markers off across the whole app (and back on any time).
+- **Show Contextual Help** — a new toggle under Preferences → Guidance lets seasoned users switch the info markers off across the whole app (and back on any time).
 - **Remembered for you** — your choice persists across sessions.
 
 June 10, 2026
