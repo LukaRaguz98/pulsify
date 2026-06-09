@@ -15,6 +15,7 @@ import {
   Clock,
   ChevronDown,
   ChevronRight,
+  ClipboardList,
 } from 'lucide-react'
 import type { DiscordChannel, DiscordRole } from '@/lib/discord'
 import {
@@ -26,6 +27,11 @@ import {
   type TicketFormField,
   type PanelMode,
 } from '@/lib/tickets'
+import {
+  normaliseApplicationTypes,
+  APPLICATION_LIMITS,
+  type ApplicationType,
+} from '@/lib/applications'
 import { THEMES } from '@/lib/themes'
 import { usePreferences } from '@/components/ThemeProvider'
 import type { ActionResult } from '@/app/dashboard/[guildId]/tickets/actions'
@@ -79,6 +85,10 @@ export function TicketSettings({ guildId, config, channels, categories, roles, r
     if (cmp(draft.auto_close, snapshot.auto_close)) n++
     if (draft.per_user_limit !== snapshot.per_user_limit) n++
     if (draft.ping_support !== snapshot.ping_support) n++
+    if (cmp(draft.application_types, snapshot.application_types)) n++
+    if (draft.application_channel_id !== snapshot.application_channel_id) n++
+    if (draft.application_dm !== snapshot.application_dm) n++
+    if (draft.application_cooldown !== snapshot.application_cooldown) n++
     return n
   }, [draft, snapshot, dirty])
 
@@ -135,6 +145,31 @@ export function TicketSettings({ guildId, config, channels, categories, roles, r
     }))
   }
 
+  // ── Applications (channel-less) ──
+  // The editable type catalog is a typed view over the raw config JSON; it's
+  // re-normalised on save (saveTicketConfig → normaliseApplicationTypes).
+  const appTypes = useMemo<ApplicationType[]>(
+    () => normaliseApplicationTypes(draft.application_types),
+    [draft.application_types],
+  )
+  const hasApplicationType = useMemo(
+    () => draft.ticket_types.some((t) => t.kind === 'application' && t.enabled),
+    [draft.ticket_types],
+  )
+  function setAppTypes(next: ApplicationType[]) {
+    setDraft((d) => ({ ...d, application_types: next }))
+  }
+  function updateAppType(i: number, p: Partial<ApplicationType>) {
+    setAppTypes(appTypes.map((t, idx) => (idx === i ? { ...t, ...p } : t)))
+  }
+  function addAppType() {
+    if (appTypes.length >= APPLICATION_LIMITS.maxTypes) return
+    setAppTypes([...appTypes, { id: `app-${Date.now().toString(36)}`, label: 'New type', enabled: true }])
+  }
+  function removeAppType(i: number) {
+    setAppTypes(appTypes.filter((_, idx) => idx !== i))
+  }
+
   function handleReset() {
     setDraft(snapshot)
   }
@@ -175,16 +210,16 @@ export function TicketSettings({ guildId, config, channels, categories, roles, r
       </Card>
 
       {/* Panel */}
-      <Card icon={<LayoutPanelTop size={16} />} title="Ticket panel" description="The message members click to open a ticket.">
+      <Card icon={<LayoutPanelTop size={16} />} title="Ticket panel" description="The message Pulse posts in Discord that members click to open a ticket.">
         <div className="space-y-4">
-          <Field label="Panel channel">
-            <ChannelSelect
-              value={draft.panel.channel_id ?? ''}
-              channels={channels}
-              placeholder="Select a channel…"
-              onChange={(v) => patchPanel({ channel_id: v || null })}
-            />
-          </Field>
+          <ChannelField
+            label="Panel channel"
+            hint="Where the “Open a ticket” panel message is posted for members."
+            value={draft.panel.channel_id ?? ''}
+            channels={channels}
+            placeholder="Select a channel…"
+            onChange={(v) => patchPanel({ channel_id: v || null })}
+          />
           <Field label="Title">
             <input value={draft.panel.title} maxLength={100} onChange={(e) => patchPanel({ title: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm" style={inputStyle} />
           </Field>
@@ -263,12 +298,30 @@ export function TicketSettings({ guildId, config, channels, categories, roles, r
                       <Field label="Description">
                         <input value={type.description ?? ''} maxLength={100} onChange={(e) => updateType(ti, { description: e.target.value })} className="w-full rounded-md border px-2.5 py-1.5 text-sm" style={inputStyle} />
                       </Field>
-                      <Field label="Category override" hint="Where this type's channels are created.">
-                        <CategorySelect value={type.category_id ?? ''} categories={categories} placeholder="Use default category" onChange={(v) => updateType(ti, { category_id: v || null })} />
-                      </Field>
+                      {type.kind !== 'application' && (
+                        <Field label="Category override" hint="Where this type's channels are created.">
+                          <CategorySelect value={type.category_id ?? ''} categories={categories} placeholder="Use default category" onChange={(v) => updateType(ti, { category_id: v || null })} />
+                        </Field>
+                      )}
                     </div>
 
-                    {/* Form questions */}
+                    {/* Channel vs. channel-less application */}
+                    <div className="rounded-lg border px-3 py-2.5" style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}>
+                      <Toggle
+                        checked={type.kind === 'application'}
+                        onChange={(v) => updateType(ti, { kind: v ? 'application' : 'channel' })}
+                        label="Channel-less application"
+                        hint="Opens the application dialog and sends submissions to Applications instead of creating a channel."
+                      />
+                    </div>
+
+                    {/* Form questions — only for channel tickets; applications use the dialog. */}
+                    {type.kind === 'application' ? (
+                      <p className="text-xs" style={{ color: 'var(--text-3)' }}>
+                        Applications collect what the member is applying for + their details in the dialog. Configure the
+                        application types in the <span className="font-medium" style={{ color: 'var(--text-2)' }}>Applications</span> section below.
+                      </p>
+                    ) : (
                     <div>
                       <div className="mb-1.5 flex items-center justify-between">
                         <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>Form questions</p>
@@ -300,6 +353,7 @@ export function TicketSettings({ guildId, config, channels, categories, roles, r
                         </div>
                       )}
                     </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -311,10 +365,106 @@ export function TicketSettings({ guildId, config, channels, categories, roles, r
         </div>
       </Card>
 
-      {/* Channels & roles */}
-      <Card icon={<FolderTree size={16} />} title="Channels & access" description="Where ticket channels live and who can see every ticket.">
+      {/* Applications */}
+      <Card
+        icon={<ClipboardList size={16} />}
+        title="Applications"
+        description="The channel-less application flow: members pick what they're applying for and submit details for review in Pulsify."
+      >
         <div className="space-y-4">
-          <Field label="Ticket category" hint="New ticket channels are created under this category.">
+          {!hasApplicationType && (
+            <div
+              className="rounded-lg border px-3 py-2.5 text-xs"
+              style={{ borderColor: 'rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.08)', color: '#f59e0b' }}
+            >
+              No enabled ticket type uses the application flow yet. Turn on <strong>Channel-less application</strong> for a
+              ticket type above so members can apply.
+            </div>
+          )}
+
+          {/* Application type catalog */}
+          <div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <label className="block text-xs font-medium" style={{ color: 'var(--text-2)' }}>Application types</label>
+              <button
+                onClick={addAppType}
+                disabled={appTypes.length >= APPLICATION_LIMITS.maxTypes}
+                className="inline-flex items-center gap-1 text-xs font-medium disabled:opacity-40"
+                style={{ color: 'var(--p-1)' }}
+              >
+                <Plus size={12} /> Add type
+              </button>
+            </div>
+            <div className="space-y-2">
+              {appTypes.map((t, i) => (
+                <div key={t.id} className="flex items-center gap-2 rounded-lg border px-2 py-1.5" style={{ borderColor: 'var(--line-strong)', background: 'var(--bg-2)' }}>
+                  <Toggle checked={t.enabled} onChange={(v) => updateAppType(i, { enabled: v })} compact />
+                  <input
+                    value={t.emoji ?? ''}
+                    onChange={(e) => updateAppType(i, { emoji: e.target.value })}
+                    placeholder="🛡️"
+                    className="w-10 rounded-md border px-1.5 py-1 text-center text-sm"
+                    style={inputStyle}
+                  />
+                  <input
+                    value={t.label}
+                    onChange={(e) => updateAppType(i, { label: e.target.value })}
+                    className="w-32 rounded-md border px-2 py-1 text-sm font-medium"
+                    style={inputStyle}
+                  />
+                  <input
+                    value={t.description ?? ''}
+                    maxLength={100}
+                    onChange={(e) => updateAppType(i, { description: e.target.value })}
+                    placeholder="Short description"
+                    className="flex-1 rounded-md border px-2 py-1 text-sm"
+                    style={inputStyle}
+                  />
+                  <button onClick={() => removeAppType(i)} className="rounded p-1" style={{ color: '#f87171' }} aria-label="Remove application type">
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <p className="mt-1.5 text-xs" style={{ color: 'var(--text-3)' }}>
+              An <strong>Other</strong> option is always offered so members can enter a custom role.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ChannelField
+              label="Admin notification channel"
+              hint="A “new application” notice with a review link is posted here for your team."
+              value={draft.application_channel_id ?? ''}
+              channels={channels}
+              placeholder="None"
+              onChange={(v) => patch({ application_channel_id: v || null })}
+            />
+            <Field label="Cooldown (minutes)" hint="Minimum wait between submissions per member. 0 = no cooldown.">
+              <input
+                type="number"
+                min={0}
+                max={10080}
+                value={draft.application_cooldown}
+                onChange={(e) => patch({ application_cooldown: Number(e.target.value) })}
+                className="w-full rounded-lg border px-3 py-2 text-sm"
+                style={inputStyle}
+              />
+            </Field>
+          </div>
+          <Toggle
+            checked={draft.application_dm}
+            onChange={(v) => patch({ application_dm: v })}
+            label="DM the applicant on submission & decisions"
+            hint="Sends a Pulse-styled DM when an application is received and whenever its status changes."
+          />
+        </div>
+      </Card>
+
+      {/* Channels & roles */}
+      <Card icon={<FolderTree size={16} />} title="Ticket channels & access" description="Where each new ticket channel is created, who can see it, and how it's named.">
+        <div className="space-y-4">
+          <Field label="Ticket category" hint="New ticket channels are created inside this Discord category.">
             <CategorySelect value={draft.category_id ?? ''} categories={categories} placeholder="Select a category…" onChange={(v) => patch({ category_id: v || null })} />
           </Field>
           <Field label="Support roles" hint="Granted access to every ticket channel.">
@@ -354,14 +504,23 @@ export function TicketSettings({ guildId, config, channels, categories, roles, r
       </Card>
 
       {/* Logs & transcripts */}
-      <Card icon={<FileText size={16} />} title="Logs & transcripts" description="Where ticket activity and transcripts are mirrored.">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Transcript channel" hint="A summary is posted here when a ticket closes.">
-            <ChannelSelect value={draft.transcript_channel_id ?? ''} channels={channels} placeholder="None" onChange={(v) => patch({ transcript_channel_id: v || null })} />
-          </Field>
-          <Field label="Log channel" hint="Ticket lifecycle events are mirrored here.">
-            <ChannelSelect value={draft.log_channel_id ?? ''} channels={channels} placeholder="None" onChange={(v) => patch({ log_channel_id: v || null })} />
-          </Field>
+      <Card icon={<FileText size={16} />} title="Logs & transcripts" description="Two optional channels where Pulse mirrors ticket activity. Leave either as “None” to skip it.">
+        {/* Stacked (not side-by-side) so it's always clear which channel is which. */}
+        <div className="space-y-4">
+          <ChannelField
+            label="Transcript channel"
+            hint="When a ticket is closed, a summary with its full transcript is posted here."
+            value={draft.transcript_channel_id ?? ''}
+            channels={channels}
+            onChange={(v) => patch({ transcript_channel_id: v || null })}
+          />
+          <ChannelField
+            label="Activity log channel"
+            hint="Logs every ticket as it opens, is claimed, closed or reopened — a running audit trail."
+            value={draft.log_channel_id ?? ''}
+            channels={channels}
+            onChange={(v) => patch({ log_channel_id: v || null })}
+          />
         </div>
       </Card>
 
@@ -454,14 +613,41 @@ function Toggle({ checked, onChange, label, hint, compact }: { checked: boolean;
   )
 }
 
-function ChannelSelect({ value, channels, placeholder, onChange }: { value: string; channels: DiscordChannel[]; placeholder: string; onChange: (v: string) => void }) {
+/**
+ * A labelled channel picker. The channel options render as `#name`, and the
+ * field's own label + hint say exactly what the channel is for — so the several
+ * channel selections across these settings stay clearly distinct. Used for every
+ * standalone channel choice (panel, transcripts, logs, application notifications).
+ */
+function ChannelField({
+  label,
+  hint,
+  value,
+  channels,
+  onChange,
+  placeholder = 'None',
+}: {
+  label: string
+  hint?: string
+  value: string
+  channels: DiscordChannel[]
+  onChange: (v: string) => void
+  placeholder?: string
+}) {
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-sm" style={inputStyle}>
-      <option value="">{placeholder}</option>
-      {channels.map((c) => (
-        <option key={c.id} value={c.id}>#{c.name}</option>
-      ))}
-    </select>
+    <Field label={label} hint={hint}>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border px-3 py-2 text-sm"
+        style={inputStyle}
+      >
+        <option value="">{placeholder}</option>
+        {channels.map((c) => (
+          <option key={c.id} value={c.id}>#{c.name}</option>
+        ))}
+      </select>
+    </Field>
   )
 }
 

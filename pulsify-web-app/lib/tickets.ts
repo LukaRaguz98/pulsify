@@ -103,6 +103,15 @@ export type TicketFormField = {
 
 // ── Ticket types ────────────────────────────────────────────────────────────────
 
+/**
+ * How a ticket type behaves when a member picks it:
+ * - `channel` (default) — the classic flow: the bot creates a private channel.
+ * - `application` — the channel-less Applications flow (PULSIFY-43): the member
+ *   gets an application dialog and the submission is reviewed in Pulsify under
+ *   Tickets → Applications. See lib/applications.ts.
+ */
+export type TicketTypeKind = 'channel' | 'application'
+
 export type TicketType = {
   id: string
   label: string
@@ -112,6 +121,8 @@ export type TicketType = {
   /** Hex accent for the open-ticket embed; falls back to the panel colour. */
   color?: string
   enabled: boolean
+  /** Channel ticket vs. channel-less application. Defaults to 'channel'. */
+  kind?: TicketTypeKind
   /** Optional per-type category override (else config.category_id). */
   category_id?: string | null
   /** Optional per-type support roles (merged with config.support_role_ids). */
@@ -158,11 +169,11 @@ export const DEFAULT_TICKET_TYPES: TicketType[] = [
   },
   {
     id: 'application', label: 'Application', emoji: '📝', color: '#22c55e', enabled: false,
+    kind: 'application',
     description: 'Apply for a role or position.',
-    form: [
-      { id: 'role', label: 'What are you applying for?', style: 'short', required: true, max_length: 100 },
-      { id: 'why', label: 'Why should we pick you?', style: 'paragraph', required: true, max_length: 1000 },
-    ],
+    // Applications don't open a channel — the dialog asks for the type +
+    // details in lib/applications.ts, so this `form` is unused for this type.
+    form: [],
   },
 ]
 
@@ -254,6 +265,17 @@ export type TicketConfig = {
   per_user_limit: number
   ping_support: boolean
   ticket_counter: number
+  // ── Applications (PULSIFY-43) — see lib/applications.ts ──
+  /** Editable application TYPE catalog (raw JSON; normalise via applications.ts). */
+  application_types: unknown[]
+  /** Optional channel the bot posts a "new application" admin embed into. */
+  application_channel_id: string | null
+  /** DM the applicant on receipt + on every status change. */
+  application_dm: boolean
+  /** Minutes a member must wait between submissions. 0 = no cooldown. */
+  application_cooldown: number
+  /** Monotonic per-guild application number counter. */
+  application_counter: number
   updated_at?: string
 }
 
@@ -283,6 +305,12 @@ export function defaultTicketConfig(guildId: string): TicketConfig {
     per_user_limit: 1,
     ping_support: true,
     ticket_counter: 0,
+    // Empty catalog → the bot/dashboard fall back to DEFAULT_APPLICATION_TYPES.
+    application_types: [],
+    application_channel_id: null,
+    application_dm: true,
+    application_cooldown: 60,
+    application_counter: 0,
   }
 }
 
@@ -324,6 +352,11 @@ export function normaliseConfig(guildId: string, row: Record<string, unknown> | 
     per_user_limit: clampNum(row.per_user_limit, 0, 50, 1),
     ping_support: row.ping_support === undefined ? true : Boolean(row.ping_support),
     ticket_counter: clampNum(row.ticket_counter, 0, Number.MAX_SAFE_INTEGER, 0),
+    application_types: Array.isArray(row.application_types) ? (row.application_types as unknown[]) : [],
+    application_channel_id: (row.application_channel_id as string) ?? null,
+    application_dm: row.application_dm === undefined ? true : Boolean(row.application_dm),
+    application_cooldown: clampNum(row.application_cooldown, 0, 10_080, 60),
+    application_counter: clampNum(row.application_counter, 0, Number.MAX_SAFE_INTEGER, 0),
     updated_at: (row.updated_at as string) ?? undefined,
   }
 }
@@ -344,6 +377,7 @@ function normaliseType(raw: unknown): TicketType | null {
     description: typeof t.description === 'string' ? t.description.slice(0, 100) : undefined,
     color: isHexColor(t.color) ? (t.color as string) : undefined,
     enabled: t.enabled === undefined ? true : Boolean(t.enabled),
+    kind: t.kind === 'application' ? 'application' : 'channel',
     category_id: (t.category_id as string) ?? null,
     support_role_ids: toStringArray(t.support_role_ids),
     form,

@@ -2,29 +2,34 @@
 
 import { useCallback, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { LifeBuoy, Inbox, Settings, BarChart3, CheckCircle2, AlertCircle, X } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { LifeBuoy, Inbox, Settings, BarChart3, ClipboardList, CheckCircle2, AlertCircle, X } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
 import { RefreshButton } from '@/components/dashboard/RefreshButton'
 import { computeTicketStats, type Ticket, type TicketConfig } from '@/lib/tickets'
+import { isOpenStatus, type Application } from '@/lib/applications'
 import type { ActionResult } from '@/app/dashboard/[guildId]/tickets/actions'
 import { TicketList } from './TicketList'
 import { TicketDetail } from './TicketDetail'
 import { TicketAnalytics } from './TicketAnalytics'
+import { ApplicationList } from './ApplicationList'
+import { ApplicationDetail } from './ApplicationDetail'
 
 type Props = {
   guildId: string
   guildName: string
   config: TicketConfig
   initialTickets: Ticket[]
+  initialApplications: Application[]
 }
 
-type Tab = 'tickets' | 'analytics'
+type Tab = 'tickets' | 'applications' | 'analytics'
 export type Feedback = { kind: 'success' | 'error'; msg: string }
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'tickets', label: 'Tickets', icon: <Inbox size={15} /> },
+  { id: 'applications', label: 'Applications', icon: <ClipboardList size={15} /> },
   { id: 'analytics', label: 'Analytics', icon: <BarChart3 size={15} /> },
 ]
 
@@ -33,16 +38,33 @@ export function TicketsContent({
   guildName,
   config,
   initialTickets,
+  initialApplications,
 }: Props) {
   const router = useRouter()
-  const [tab, setTab] = useState<Tab>('tickets')
+  // The bot's "new application" admin embed deep-links to ?tab=applications&id=…
+  const searchParams = useSearchParams()
+  const initialTab: Tab = searchParams.get('tab') === 'applications' ? 'applications' : 'tickets'
+  const deepLinkId = searchParams.get('id')
+
+  const [tab, setTab] = useState<Tab>(initialTab)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(
+    initialTab === 'applications' ? deepLinkId : null,
+  )
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [pending, startTransition] = useTransition()
 
   const selected = useMemo(
     () => initialTickets.find((t) => t.id === selectedId) ?? null,
     [initialTickets, selectedId],
+  )
+  const selectedApplication = useMemo(
+    () => initialApplications.find((a) => a.id === selectedApplicationId) ?? null,
+    [initialApplications, selectedApplicationId],
+  )
+  const pendingApplications = useMemo(
+    () => initialApplications.filter((a) => isOpenStatus(a.status)).length,
+    [initialApplications],
   )
   const stats = useMemo(() => computeTicketStats(initialTickets), [initialTickets])
 
@@ -131,6 +153,14 @@ export function TicketsContent({
                   {stats.open}
                 </span>
               )}
+              {t.id === 'applications' && pendingApplications > 0 && (
+                <span
+                  className="ml-1 rounded-full px-1.5 text-[10px] font-bold"
+                  style={{ background: 'var(--bg-2)', color: 'var(--text-3)' }}
+                >
+                  {pendingApplications}
+                </span>
+              )}
             </button>
           )
         })}
@@ -185,6 +215,30 @@ export function TicketsContent({
           />
         ))}
 
+      {tab === 'applications' &&
+        (initialApplications.length === 0 ? (
+          <EmptyState
+            icon={<ClipboardList size={26} />}
+            title="No applications yet"
+            description={
+              config.enabled
+                ? 'When a member submits an application from your Discord panel, it will appear here for review.'
+                : 'Turn the ticket system on, enable an application type, and post a panel so members can apply.'
+            }
+            action={
+              <Link
+                href={`/dashboard/${guildId}/ticket-settings`}
+                className="rounded-lg px-3.5 py-2 text-sm font-semibold text-white"
+                style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))', boxShadow: '0 4px 14px -4px var(--p-glow)' }}
+              >
+                {config.enabled ? 'Open settings' : 'Set up applications'}
+              </Link>
+            }
+          />
+        ) : (
+          <ApplicationList applications={initialApplications} onSelect={(id) => setSelectedApplicationId(id)} />
+        ))}
+
       {tab === 'analytics' && <TicketAnalytics stats={stats} config={config} />}
 
       {selected && (
@@ -192,6 +246,15 @@ export function TicketsContent({
           guildId={guildId}
           ticket={selected}
           onClose={() => setSelectedId(null)}
+          runAction={runAction}
+        />
+      )}
+
+      {selectedApplication && (
+        <ApplicationDetail
+          guildId={guildId}
+          application={selectedApplication}
+          onClose={() => setSelectedApplicationId(null)}
           runAction={runAction}
         />
       )}

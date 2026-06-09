@@ -24,6 +24,19 @@ const {
 const { readFile } = require("node:fs/promises");
 const path = require("node:path");
 const { recordNotification } = require("./notifications");
+const {
+  APL,
+  OTHER_TYPE_ID,
+  APPLICATION_SELECT_ID,
+  APPLICATION_FIELD_MESSAGE,
+  APPLICATION_FIELD_CUSTOM_TYPE,
+  APPLICATION_LIMITS,
+  APPLICATION_STATUS_META,
+  normaliseApplicationTypes,
+  selectableTypes,
+  applicationModalId,
+  typeLabel: applicationTypeLabel,
+} = require("./applications");
 
 // ── Shared constants (mirror lib/tickets.ts) ────────────────────────────────
 const TKT = "tkt";
@@ -125,6 +138,12 @@ function normaliseConfig(row) {
     per_user_limit: Number.isFinite(Number(row.per_user_limit)) ? Number(row.per_user_limit) : 1,
     ping_support: row.ping_support === undefined ? true : Boolean(row.ping_support),
     ticket_counter: Number(row.ticket_counter) || 0,
+    // Applications (PULSIFY-43) — channel-less submissions reviewed in Pulsify.
+    application_types: Array.isArray(row.application_types) ? row.application_types : [],
+    application_channel_id: row.application_channel_id ?? null,
+    application_dm: row.application_dm === undefined ? true : Boolean(row.application_dm),
+    application_cooldown: Number.isFinite(Number(row.application_cooldown)) ? Number(row.application_cooldown) : 0,
+    application_counter: Number(row.application_counter) || 0,
   };
 }
 
@@ -223,6 +242,15 @@ function createTickets(client, supabase) {
         if (!row?.channel_id) return;
         if (row.status === "closed") openChannels.delete(row.channel_id);
         else openChannels.set(row.channel_id, { ticketId: row.id, guildId: row.guild_id });
+      })
+      .subscribe();
+
+    // Dashboard-driven application status changes append a `status_changed`
+    // event — we watch those to DM the applicant their decision.
+    supabase
+      .channel("application-events-watch")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "application_events" }, (payload) => {
+        if (payload.new) void onApplicationStatusEvent(payload.new);
       })
       .subscribe();
   }
@@ -364,6 +392,12 @@ function createTickets(client, supabase) {
     const type = config.ticket_types.find((t) => t.id === typeId && t.enabled);
     if (!type) {
       return interaction.reply({ content: "That ticket type is no longer available.", flags: MessageFlags.Ephemeral });
+    }
+
+    // Application types are CHANNEL-LESS: open the application dialog instead of
+    // creating a ticket channel (PULSIFY-43).
+    if (type.kind === "application") {
+      return handleApplicationStart(interaction, config, type);
     }
 
     // If the type asks questions, show the modal IMMEDIATELY (the interaction
@@ -531,6 +565,309 @@ function createTickets(client, supabase) {
       const msg = "Sorry — I couldn't create your ticket. The server may be missing the **Manage Channels** permission.";
       if (interaction.deferred || interaction.replied) await interaction.editReply({ content: msg }).catch(() => {});
       else await interaction.reply({ content: msg, flags: MessageFlags.Ephemeral }).catch(() => {});
+    }
+  }
+
+  // ── Applications (channel-less submissions, reviewed in Pulsify) ─────────────
+
+  /** Step 1: a member clicked an `application` ticket type — show the type select. */
+  async function handleApplicationStart(interaction, config, ticketType) {
+    const types = selectableTypes(normaliseApplicationTypes(config.application_types));
+    if (types.length === 0) {
+      return interaction.reply({ content: "No application types are available right now.", flags: MessageFlags.Ephemeral });
+    }
+    await interaction.reply({
+      flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+      components: [
+        {
+          type: 17,
+          accent_color: accentFor(interaction.guild.id),
+          components: [
+            td("**Pulse**"),
+            td(`# ${ticketType.label || "Apply"}`),
+            td("-# What are you applying for? Pick an option to continue."),
+            divider(),
+            {
+              type: 1,
+              components: [
+                {
+                  type: 3,
+                  custom_id: APPLICATION_SELECT_ID,
+                  placeholder: "Select what you're applying for…",
+                  options: types.slice(0, 25).map((t) => ({
+                    label: String(t.label).slice(0, 100),
+                    value: t.id,
+                    description: t.description ? String(t.description).slice(0, 100) : undefined,
+                    ...(t.emoji ? { emoji: { name: t.emoji } } : {}),
+                  })),
+                },
+              ],
+            },
+            td("-# Pulse · Application"),
+          ],
+        },
+      ],
+    });
+  }
+
+  /** Step 2: a type was picked — open the details modal (custom-type field for "Other"). */
+  async function handleApplicationTypeSelect(interaction) {
+    const typeId = interaction.values[0];
+    const config = configCache.get(interaction.guild?.id);
+    if (!config) return interaction.reply({ content: "Applications aren't configured here.", flags: MessageFlags.Ephemeral });
+    const types = normaliseApplicationTypes(config.application_types);
+    const isOther = typeId === OTHER_TYPE_ID;
+    const label = applicationTypeLabel(types, typeId);
+
+    const modal = new ModalBuilder().setCustomId(applicationModalId(typeId)).setTitle(`Apply · ${label}`.slice(0, 45));
+    if (isOther) {
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId(APPLICATION_FIELD_CUSTOM_TYPE)
+            .setLabel("What are you applying for?")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(APPLICATION_LIMITS.maxCustomTypeLength),
+        ),
+      );
+    }
+    modal.addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId(APPLICATION_FIELD_MESSAGE)
+          .setLabel("Your application")
+          .setStyle(TextInputStyle.Paragraph)
+          .setRequired(true)
+          .setPlaceholder("Tell us about yourself and why you're a good fit…")
+          .setMaxLength(APPLICATION_LIMITS.maxMessageLength),
+      ),
+    );
+    await interaction.showModal(modal);
+  }
+
+  /** Step 3: details submitted — validate, save, confirm + notify. No channel. */
+  async function handleApplicationModalSubmit(interaction, typeId) {
+    const guild = interaction.guild;
+    const config = configCache.get(guild?.id);
+    if (!config) return interaction.reply({ content: "Applications aren't configured here.", flags: MessageFlags.Ephemeral });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    try {
+      const types = normaliseApplicationTypes(config.application_types);
+      const isOther = typeId === OTHER_TYPE_ID;
+      const customType = isOther
+        ? (interaction.fields.getTextInputValue(APPLICATION_FIELD_CUSTOM_TYPE) || "").trim().slice(0, APPLICATION_LIMITS.maxCustomTypeLength)
+        : null;
+      const message = (interaction.fields.getTextInputValue(APPLICATION_FIELD_MESSAGE) || "").trim().slice(0, APPLICATION_LIMITS.maxMessageLength);
+      const label = applicationTypeLabel(types, typeId);
+
+      // Anti-spam: one open application per type + per-user cooldown.
+      const block = await checkApplicationLimit(guild.id, interaction.user.id, typeId, config);
+      if (block) return interaction.editReply({ content: block });
+
+      // Reserve the next application number (read-modify-write on the counter).
+      const number = (config.application_counter || 0) + 1;
+      config.application_counter = number;
+      await supabase.from("ticket_configs").update({ application_counter: number }).eq("guild_id", guild.id);
+
+      const applicantName = interaction.member?.displayName ?? interaction.user.globalName ?? interaction.user.username;
+      const { data: inserted, error } = await supabase
+        .from("ticket_applications")
+        .insert({
+          guild_id: guild.id,
+          number,
+          type_id: typeId,
+          type_label: label,
+          custom_type: customType,
+          applicant_id: interaction.user.id,
+          applicant_name: applicantName,
+          applicant_avatar: interaction.user.avatar ?? null,
+          message,
+          status: "pending",
+        })
+        .select("id")
+        .single();
+      if (error) throw new Error(error.message);
+
+      const appId = inserted.id;
+      const displayType = isOther && customType ? customType : label;
+      await logApplicationEvent(appId, guild.id, "submitted", interaction.member ?? interaction.user, displayType);
+
+      const accent = accentFor(guild.id);
+      await interaction.editReply({
+        flags: MessageFlags.IsComponentsV2,
+        components: [
+          noticeContainer(
+            accent,
+            [
+              "# Application received",
+              `Thanks <@${interaction.user.id}> — your **${displayType}** application (#${number}) is now under review.`,
+              "-# We'll let you know as soon as there's an update.",
+            ],
+            "Application",
+          ),
+        ],
+      });
+
+      // DM the applicant a copy (best-effort; respect the DM toggle).
+      if (config.application_dm) {
+        await sendApplicantDM(interaction.user, guild, accent, [
+          "# Application received",
+          `Your **${displayType}** application to **${guild.name}** is now under review.`,
+          "-# You'll get a message here when the team makes a decision.",
+        ]);
+      }
+
+      await notifyAdminsOfApplication(guild, config, {
+        id: appId,
+        number,
+        displayType,
+        applicantName,
+        applicantId: interaction.user.id,
+      });
+    } catch (err) {
+      console.error(`[Pulse] Failed to save application in guild ${guild?.id}:`, err.message);
+      const msg = "Sorry — I couldn't submit your application. Please try again in a moment.";
+      if (interaction.deferred || interaction.replied) await interaction.editReply({ content: msg }).catch(() => {});
+      else await interaction.reply({ content: msg, flags: MessageFlags.Ephemeral }).catch(() => {});
+    }
+  }
+
+  /** Returns a block message if the member can't submit right now, else null. */
+  async function checkApplicationLimit(guildId, userId, typeId, config) {
+    // One open application of a given type at a time.
+    const { count: openCount } = await supabase
+      .from("ticket_applications")
+      .select("id", { count: "exact", head: true })
+      .eq("guild_id", guildId)
+      .eq("applicant_id", userId)
+      .eq("type_id", typeId)
+      .in("status", ["pending", "needs_info"]);
+    if ((openCount ?? 0) > 0) {
+      return "You already have an application of this type under review — please wait for a decision before applying again.";
+    }
+    // Cooldown between submissions (any type).
+    const cooldownMin = Number(config.application_cooldown) || 0;
+    if (cooldownMin > 0) {
+      const since = new Date(Date.now() - cooldownMin * 60_000).toISOString();
+      const { count: recent } = await supabase
+        .from("ticket_applications")
+        .select("id", { count: "exact", head: true })
+        .eq("guild_id", guildId)
+        .eq("applicant_id", userId)
+        .gte("created_at", since);
+      if ((recent ?? 0) > 0) {
+        return "You're submitting applications too quickly — please wait a little while before trying again.";
+      }
+    }
+    return null;
+  }
+
+  async function logApplicationEvent(appId, guildId, type, actor, detail, metadata) {
+    try {
+      await supabase.from("application_events").insert({
+        application_id: appId,
+        guild_id: guildId,
+        type,
+        actor_id: actor?.id ?? null,
+        actor_name: actor ? actor.displayName ?? actor.globalName ?? actor.username ?? null : null,
+        detail: detail ? String(detail).slice(0, 1000) : null,
+        metadata: metadata ?? {},
+      });
+    } catch (err) {
+      console.warn("[Pulse] application_events insert threw:", err.message);
+    }
+  }
+
+  /** Send a Pulse V2 notice as a DM (best-effort; no-ops if the user's DMs are closed). */
+  async function sendApplicantDM(user, guild, accent, lines) {
+    try {
+      await user.send({
+        flags: MessageFlags.IsComponentsV2,
+        components: [noticeContainer(accent, lines, guild?.name ? `${guild.name} · Application` : "Application")],
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Optional admin embed for a new application, with a deep link into Pulsify. */
+  async function notifyAdminsOfApplication(guild, config, app) {
+    const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+    const dashLink = `/dashboard/${guild.id}/tickets?tab=applications&id=${app.id}`;
+
+    if (config.application_channel_id) {
+      const channel = await guild.channels.fetch(config.application_channel_id).catch(() => null);
+      if (channel?.isTextBased?.()) {
+        await channel
+          .send({
+            flags: MessageFlags.IsComponentsV2,
+            components: [
+              {
+                type: 17,
+                accent_color: accentFor(guild.id),
+                components: [
+                  td("**Pulse**"),
+                  td(`# New application · #${app.number}`),
+                  td(`**${app.displayType}** — from <@${app.applicantId}> (${app.applicantName})`),
+                  divider(),
+                  { type: 1, components: [{ type: 2, style: 5, label: "Review in Pulsify", url: `${appUrl}${dashLink}` }] },
+                  td("-# Pulse · Application"),
+                ],
+              },
+            ],
+            allowedMentions: { parse: [] },
+          })
+          .catch(() => {});
+      }
+    }
+
+    await recordNotification(supabase, {
+      guildId: guild.id,
+      type: "application_submitted",
+      title: `New ${app.displayType} application #${app.number}`,
+      body: `From ${app.applicantName}`,
+      link: dashLink,
+      actorId: app.applicantId,
+      actorName: app.applicantName,
+      metadata: { application_id: app.id, type: app.displayType },
+    });
+  }
+
+  // Status-change DMs are dashboard-driven: an admin updates an application in
+  // Pulsify, which appends a `status_changed` event — we watch for those (the
+  // row UPDATE itself wouldn't carry the OLD status under Postgres' default
+  // replica identity) and DM the applicant.
+  async function onApplicationStatusEvent(eventRow) {
+    try {
+      if (!eventRow || eventRow.type !== "status_changed") return;
+      const { data: app } = await supabase
+        .from("ticket_applications")
+        .select("*")
+        .eq("id", eventRow.application_id)
+        .maybeSingle();
+      if (!app) return;
+      const config = configCache.get(app.guild_id);
+      if (config && config.application_dm === false) return;
+      const guild = client.guilds.cache.get(app.guild_id);
+      const status = eventRow.metadata?.status || app.status;
+      const meta = APPLICATION_STATUS_META[status] ?? APPLICATION_STATUS_META.pending;
+      const displayType = app.type_id === OTHER_TYPE_ID && app.custom_type ? app.custom_type : app.type_label || "application";
+      const note = eventRow.metadata?.note || app.decision_note;
+      const serverName = guild?.name ?? "the server";
+
+      const lines = [`# Application ${meta.label.toLowerCase()}`];
+      if (status === "approved") lines.push(`Good news — your **${displayType}** application to **${serverName}** was approved! 🎉`);
+      else if (status === "rejected") lines.push(`Your **${displayType}** application to **${serverName}** wasn't successful this time.`);
+      else if (status === "needs_info") lines.push(`We need a bit more information about your **${displayType}** application to **${serverName}**.`);
+      else lines.push(`Your **${displayType}** application status is now **${meta.label}**.`);
+      if (note) lines.push(`-# Note from the team: ${String(note).slice(0, 500)}`);
+
+      const user = await client.users.fetch(app.applicant_id).catch(() => null);
+      if (user) await sendApplicantDM(user, guild, accentFor(app.guild_id), lines);
+    } catch (err) {
+      console.warn("[Pulse] application status DM failed:", err.message);
     }
   }
 
@@ -769,6 +1106,8 @@ function createTickets(client, supabase) {
     try {
       if (interaction.isButton() || interaction.isStringSelectMenu()) {
         const id = interaction.customId;
+        // Application type select (step 2 of the channel-less application flow).
+        if (id === APPLICATION_SELECT_ID) return handleApplicationTypeSelect(interaction);
         if (!id.startsWith(`${TKT}:`)) return;
         const [, action, arg] = id.split(":");
         if (action === "menu") return handleOpenRequest(interaction, interaction.values[0]);
@@ -782,6 +1121,7 @@ function createTickets(client, supabase) {
       }
       if (interaction.isModalSubmit()) {
         const id = interaction.customId;
+        if (id.startsWith(`${APL}:form:`)) return handleApplicationModalSubmit(interaction, id.slice(`${APL}:form:`.length));
         if (id.startsWith(`${TKT}:form:`)) return handleModalSubmit(interaction, id.slice(`${TKT}:form:`.length));
         if (id.startsWith(`${TKT}:closemodal:`)) {
           const ticketId = id.slice(`${TKT}:closemodal:`.length);
