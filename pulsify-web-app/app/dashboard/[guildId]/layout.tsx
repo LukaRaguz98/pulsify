@@ -88,9 +88,13 @@ export default async function GuildLayout({
         <DiscordCornerIcon guildId={guildId} />
         {!memberExperience && <NotificationBell guildId={guildId} />}
         {!memberExperience && <TourLauncher />}
-        {/* Operator-only entry into the Member View preview. Hidden while the
-            preview is active — the MemberViewBanner owns "Exit Member View". */}
-        {isOperator && !access.memberView && <ViewSwitcher guildId={guildId} />}
+        {/* Operator entry into the Member View preview — only when the operator
+            is a real admin here (a plain-member operator already sees the member
+            view). Hidden while the preview is active — the MemberViewBanner owns
+            "Exit Member View". */}
+        {isOperator && access.role === 'admin' && !access.memberView && (
+          <ViewSwitcher guildId={guildId} />
+        )}
         <PingIndicator />
         {/* overflow-x-hidden: `overflow-y-auto` alone makes the browser
             compute overflow-x to `auto`, turning this scroll container into a

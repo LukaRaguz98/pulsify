@@ -30,7 +30,8 @@ export type GuildRole = 'admin' | 'member'
 export type GuildAccess = {
   /** The viewer's Discord user id. */
   userId: string
-  /** Real role on this guild (operators are always at least admin). */
+  /** Real role on this guild. Operators get admin only on guilds they aren't a
+   *  member of (support access); inside their own guilds their real role wins. */
   role: GuildRole
   isOperator: boolean
   /** Operator-only Member View preview is active. */
@@ -72,8 +73,13 @@ export const getGuildAccess = cache(
       }
     }
 
-    // Operators always have full access, even to guilds they aren't in.
-    if (operator) role = 'admin'
+    // Operator override: grants admin access to guilds the operator is NOT a
+    // member of (support access to any server). Inside a guild they actually
+    // belong to, their REAL Discord role governs — so an operator who is only
+    // a member there gets the member experience, not a forced admin view.
+    // `role` is null here only when they're not in the guild (or the lookup
+    // failed), which is exactly when the support override should kick in.
+    if (operator && !role) role = 'admin'
     if (!role) return null
 
     // Member View: operator-only preview of the member experience.
