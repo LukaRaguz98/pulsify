@@ -21,7 +21,7 @@ import {
   connectIntegration,
   updateIntegration,
   testConnection,
-} from '@/app/dashboard/[guildId]/integrations/actions'
+} from '@/app/dashboard/[guildId]/(management)/integrations/actions'
 import { IntegrationIcon } from './icons'
 
 type Channel = { id: string; name: string }

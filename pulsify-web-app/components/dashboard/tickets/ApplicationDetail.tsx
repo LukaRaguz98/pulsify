@@ -25,7 +25,7 @@ import {
   type Application,
   type ApplicationEvent,
 } from '@/lib/applications'
-import type { ActionResult } from '@/app/dashboard/[guildId]/tickets/actions'
+import type { ActionResult } from '@/app/dashboard/[guildId]/(management)/tickets/actions'
 import {
   setApplicationStatus,
   assignApplicationReviewer,

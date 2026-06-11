@@ -10,7 +10,7 @@ import {
   type BackupFrequency,
   type BackupSectionKey,
 } from '@/lib/backups'
-import { updateSchedule } from '@/app/dashboard/[guildId]/backups/actions'
+import { updateSchedule } from '@/app/dashboard/[guildId]/(management)/backups/actions'
 import { LocalTime } from './LocalTime'
 
 export function ScheduleCard({ guildId, schedule }: { guildId: string; schedule: BackupSchedule }) {

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
+import { getGuildAccess } from '@/lib/guild-access'
 import { fetchGuild, fetchGuildChannels, fetchGuildRoles, snowflakeToDate } from '@/lib/discord'
 import { StatsCard } from '@/components/dashboard/StatsCard'
 import { PageHeader } from '@/components/ui/page-header'
@@ -70,6 +71,11 @@ export default async function GuildOverviewPage({
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) redirect('/')
+
+  // Overview is a management surface — members land on their profile instead.
+  const access = await getGuildAccess(guildId)
+  if (!access) redirect('/dashboard')
+  if (access.effectiveRole !== 'admin') redirect(`/dashboard/${guildId}/profile`)
 
   const [guild, channels, roles, templatesCount] = await Promise.all([
     fetchGuild(guildId),

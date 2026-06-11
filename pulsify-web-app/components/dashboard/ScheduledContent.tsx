@@ -27,7 +27,7 @@ import {
   toggleAutomation,
   deleteAutomation,
   runAutomationNow,
-} from '@/app/dashboard/[guildId]/scheduled/actions'
+} from '@/app/dashboard/[guildId]/(management)/scheduled/actions'
 import { AutomationList } from '@/components/dashboard/scheduled/AutomationList'
 import { AutomationEditPanel } from '@/components/dashboard/scheduled/AutomationEditPanel'
 import { AutomationTemplates } from '@/components/dashboard/scheduled/AutomationTemplates'

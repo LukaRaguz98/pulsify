@@ -10,7 +10,7 @@ import {
   type TemplateCategory,
   type ServerTemplate,
 } from '@/lib/templates'
-import { updateTemplateMeta } from '@/app/dashboard/[guildId]/templates/actions'
+import { updateTemplateMeta } from '@/app/dashboard/[guildId]/(management)/templates/actions'
 import { Modal } from './Modal'
 import { TemplateIcon, TEMPLATE_ICON_CHOICES } from './icons'
 

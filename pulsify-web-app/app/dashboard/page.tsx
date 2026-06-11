@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Activity, Unplug, Building2, SlidersHorizontal } from 'lucide-react'
+import { Activity, Unplug, Building2, SlidersHorizontal, UsersRound } from 'lucide-react'
 import { createClient } from '@/lib/supabase-server'
 import { getValidDiscordToken } from '@/lib/discord-session'
 import { fetchUserGuilds, fetchSelfUser, hasManageGuild, userBannerUrl, type DiscordGuild } from '@/lib/discord'
@@ -12,7 +12,7 @@ import { highlightBrand } from '@/components/ui/brand-text'
 import { Footer } from '@/components/Footer'
 import { ReconnectDiscordButton } from '@/components/ReconnectDiscordButton'
 
-type GuildWithBot = DiscordGuild & { botInstalled: boolean }
+type GuildWithBot = DiscordGuild & { botInstalled: boolean; canManage: boolean }
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -51,9 +51,16 @@ export default async function DashboardPage() {
     if (allResult.status === 'fulfilled') {
       const all = allResult.value
       const syncedIds = new Set((syncedRows ?? []).map((r: { guild_id: string }) => r.guild_id))
+      // Pulsify is no longer admin-only (PULSIFY-45): manageable servers are
+      // listed as before, and servers where the user is just a member show up
+      // too (read-only member experience) — but only once Pulse is installed.
       guilds = all
-        .filter((g) => hasManageGuild(g.permissions))
-        .map((g) => ({ ...g, botInstalled: syncedIds.has(g.id) }))
+        .map((g) => ({
+          ...g,
+          botInstalled: syncedIds.has(g.id),
+          canManage: hasManageGuild(g.permissions),
+        }))
+        .filter((g) => g.canManage || g.botInstalled)
     } else {
       discordError = true
     }
@@ -72,8 +79,11 @@ export default async function DashboardPage() {
   const bannerUrl = selfUser?.banner ? userBannerUrl(selfUser.id, selfUser.banner) : ''
   const bannerColor = selfUser?.banner_color ?? undefined
 
-  const active = guilds.filter((g) => g.botInstalled)
-  const notConnected = guilds.filter((g) => !g.botInstalled)
+  const active = guilds.filter((g) => g.botInstalled && g.canManage)
+  const notConnected = guilds.filter((g) => !g.botInstalled && g.canManage)
+  // Servers the user belongs to without management permissions — the
+  // read-only member experience (profile, leaderboards, economy, …).
+  const communities = guilds.filter((g) => g.botInstalled && !g.canManage)
 
   return (
     // flex-col + main with flex-1 pins the Footer to the viewport bottom on
@@ -182,6 +192,22 @@ export default async function DashboardPage() {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {active.map((guild) => (
                   <ServerCard key={guild.id} guild={guild} />
+                ))}
+              </div>
+            </CategorySection>
+          </div>
+        )}
+
+        {communities.length > 0 && (
+          <div className="mb-10">
+            <CategorySection
+              icon={<UsersRound size={14} />}
+              title="Your Communities"
+              description={`${communities.length} server${communities.length === 1 ? '' : 's'} you're a member of — view your profile, reputation, leaderboards and more.`}
+            >
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {communities.map((guild) => (
+                  <ServerCard key={guild.id} guild={guild} memberAccess />
                 ))}
               </div>
             </CategorySection>

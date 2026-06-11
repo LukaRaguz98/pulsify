@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Loader2, AlertTriangle, GitCompareArrows, ArrowRight } from 'lucide-react'
 import type { ServerBackup } from '@/lib/backups'
-import { compareBackups, type CompareResult } from '@/app/dashboard/[guildId]/backups/actions'
+import { compareBackups, type CompareResult } from '@/app/dashboard/[guildId]/(management)/backups/actions'
 import { DiffView } from './DiffView'
 
 export function CompareDialog({

@@ -28,7 +28,7 @@ import {
   deleteIntegration,
   testConnection,
   type ActionResult,
-} from '@/app/dashboard/[guildId]/integrations/actions'
+} from '@/app/dashboard/[guildId]/(management)/integrations/actions'
 import { IntegrationCard, ProviderCard } from './IntegrationCard'
 import { IntegrationWizard } from './IntegrationWizard'
 import { IntegrationLogs } from './IntegrationLogs'

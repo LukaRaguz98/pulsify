@@ -9,7 +9,7 @@ import {
   sectionKeysPresent,
   type ImportResult,
 } from '@/lib/templates'
-import { importTemplate } from '@/app/dashboard/[guildId]/templates/actions'
+import { importTemplate } from '@/app/dashboard/[guildId]/(management)/templates/actions'
 import { Modal } from './Modal'
 import { TemplateIcon } from './icons'
 

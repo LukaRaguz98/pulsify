@@ -1,0 +1,48 @@
+**Pulsify v0.45.0 — Global Economy, Reputation & Progression System**
+Pulsify is now bigger than a single server. With v0.45.0, Pulse Coins and reputation follow members across every Discord server using Pulse — while levels and XP stay proudly server-specific. One connected identity, independent progression everywhere.
+
+**A global currency: Pulse Coins**
+- **One balance everywhere** — every member now has a single Pulse Coin balance shared across all Pulse-enabled servers. Earn coins in one community and carry them to every other.
+- **Earned by being active** — chatting, hanging out in voice and using commands all pay coins alongside XP, with the same anti-spam cooldowns and channel/role exclusions your server already uses.
+- **Bonuses that add up** — level-ups pay a scaling coin bonus, and giveaway wins, milestones and completing onboarding all top up your balance.
+- **Send coins with /pay** — transfer coins to another member: atomic, refused if you can't afford it, and recorded in both members' history with an optional note.
+- **Every coin tracked** — a full transaction ledger records what was earned, spent, transferred and granted, where it happened and why.
+
+**Reputation, now global**
+- **The same trust score, everywhere** — reputation is the familiar 0–100 trust score (activity, tenure and moderation history), only now it's computed from a member's activity across EVERY Pulse server instead of one. One reputation, shown the same on every server.
+- **One number on the profile** — a member's profile shows a single reputation with its label (Newcomer → Trusted), at the top alongside their level and in the Pulse Profile section.
+- **Levels stay local** — XP and levels remain per-server: joining a new community means starting fresh on that server's ladder, exactly as before. The profile spells out what's global (balance, reputation) and what's server-specific (level).
+
+**Right in Discord**
+- **/wallet** — check any member's global balance, reputation and recent activity in a polished Pulse embed.
+- **/pay** — send Pulse Coins straight from chat, public by default so the recipient sees it land.
+- **/profile, upgraded** — now leads with the global reputation and coin balance alongside the server level, and makes the global-vs-server distinction clear.
+
+**A new Economy section on the dashboard**
+- **Its own place in the navigation** — Economy is now a top-level category with room to grow: Overview, Marketplace and Controls.
+- **Overview** — coins in circulation, earned, spent and transfers, daily trend charts, the window's top earners, the global leaderboards (richest, most active, this-server) and the full transaction ledger with scope and kind filters, name search and pagination — all in one view.
+- **Marketplace (preview)** — a future-ready home for spending Pulse Coins: server shops, items and member trading. Empty today; every coin earned now carries over the day it opens.
+- **Controls (operator only)** — its own lock-marked view: grant or remove coins with a reason, recorded in a dedicated economy moderation log. Because the economy is bot-wide, this is reserved for the Pulsify operator rather than individual server admins.
+- **Global Pulse Profile** — each member's detail page shows their cross-server identity: balance, reputation, global balance rank, total achievements and their level in every Pulse server they're part of.
+
+**Pulsify for every member — not just admins**
+- **Members can sign in too** — anyone in a server running Pulse can now open the dashboard and get a read-only experience: their profile, reputation, leaderboards, statistics, economy, events, giveaways and announcements.
+- **A navigation built for members** — management modules (moderation, Pulse Guard, roles, channels, automations, settings, billing, integrations, templates, tickets) are completely hidden for members, and every management route and API is enforced server-side — direct URLs included.
+- **Your Profile & Reputation pages** — members get their own home: server level progress, the global trust score with a full "how it's calculated" breakdown, and their cross-server Pulse identity.
+- **Your Communities** — the server picker now lists servers you're a member of alongside the ones you manage.
+
+**Leaderboards, upgraded**
+- **Global Reputation board** — Members › Leaderboard (and the new member-facing Leaderboards view) now ranks by the global 0–100 trust score, next to Server Level, Server XP and Most Active.
+- **Global vs server, always labelled** — every board, row and metric says which scope it measures, and each entry carries both its server level badge and its global reputation chip.
+
+**Operator Member View**
+- **See exactly what members see** — operators can flip the dashboard into Member View from the sidebar (lock-marked, operator-only) and back. A clear banner shows while the preview is active.
+
+**Built to scale**
+- **Atomic everything** — balance changes and transfers run through race-safe database functions, so concurrent awards never lose a coin and ledgers always match balances.
+- **Live everywhere** — wallets, ledgers and leaderboards update in real time across all servers.
+- **Future-ready foundation** — this release lays the groundwork for rewards, shops, inventories and marketplace systems.
+
+This is the first step towards a connected Pulse ecosystem where members can earn, build their reputation, and carry their identity across every community they participate in.
+
+June 11, 2026

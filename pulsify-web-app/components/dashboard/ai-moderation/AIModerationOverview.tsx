@@ -21,7 +21,7 @@ import {
   SEVERITY_COLORS,
   type CategoryId,
 } from '@/lib/ai-moderation'
-import { runAIAnalysis } from '@/app/dashboard/[guildId]/ai-moderation/actions'
+import { runAIAnalysis } from '@/app/dashboard/[guildId]/(management)/ai-moderation/actions'
 import type { AIModerationEventRow } from '@/app/api/guilds/[guildId]/ai-moderation/events/route'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ConfidenceBadge, SignalList, rowConfidenceLabel } from './shared'

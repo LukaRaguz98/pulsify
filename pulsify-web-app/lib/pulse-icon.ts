@@ -32,6 +32,10 @@ export const PULSE_ICONS = {
   announcement: 'pulse-annoucement.png',
   /** Milestone glyph — the member-milestone embed posted on completion. */
   milestone: 'pulse-milestone.png',
+  /** Stats glyph — the bot's /rank and /leaderboard replies. */
+  stats: 'pulse-stats.png',
+  /** Coin glyph — the global-economy embeds (/wallet, /pay). */
+  money: 'pulse-money.png',
 } as const
 
 export type PulseIconName = keyof typeof PULSE_ICONS

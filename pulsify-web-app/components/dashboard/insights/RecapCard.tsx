@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Send, Loader2, Check, AlertCircle, Hash } from 'lucide-react'
-import { postInsightsRecap } from '@/app/dashboard/[guildId]/insights/actions'
+import { postInsightsRecap } from '@/app/dashboard/[guildId]/(management)/insights/actions'
 import type { RecapItem } from '@/lib/insights'
 
 type Props = {

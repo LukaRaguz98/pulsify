@@ -29,7 +29,7 @@ import {
   type TicketEvent,
   type TicketPriority,
 } from '@/lib/tickets'
-import type { ActionResult } from '@/app/dashboard/[guildId]/tickets/actions'
+import type { ActionResult } from '@/app/dashboard/[guildId]/(management)/tickets/actions'
 import {
   claimTicket,
   unclaimTicket,
@@ -44,7 +44,7 @@ import {
   deleteTicket,
   getTicketEvents,
   getTicketTranscript,
-} from '@/app/dashboard/[guildId]/tickets/actions'
+} from '@/app/dashboard/[guildId]/(management)/tickets/actions'
 import { StatusBadge } from './badges'
 import { TicketIcon } from './icons'
 

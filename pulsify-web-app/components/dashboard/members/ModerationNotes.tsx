@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { StickyNote, Trash2, Loader2, Plus, AlertCircle } from 'lucide-react'
 import type { ModerationNote } from '@/lib/member-profile'
-import { addMemberNote, deleteMemberNote } from '@/app/dashboard/[guildId]/members/actions'
+import { addMemberNote, deleteMemberNote } from '@/app/dashboard/[guildId]/(management)/members/actions'
 
 type Props = {
   guildId: string

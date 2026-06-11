@@ -4,6 +4,8 @@
 
 import type { DiscordMember, DiscordRole } from '@/lib/discord'
 import type { LevelCurve } from '@/lib/leveling'
+import type { Reputation } from '@/lib/reputation'
+import type { EconomyUser } from '@/lib/economy'
 
 /** Per-member infraction tallies (mirrors get_guild_members_infractions). */
 export type MemberInfractions = {
@@ -161,6 +163,12 @@ export type MemberProfileBundle = {
   level: MemberLevel | null
   /** The guild's XP curve, for the level-progress card. */
   curve: LevelCurve
+  /**
+   * The member's GLOBAL reputation — the 0-100 trust score computed from their
+   * activity aggregated across every Pulse server (PULSIFY-45). This is the one
+   * canonical reputation shown on the profile.
+   */
+  globalReputation: Reputation
 }
 
 // ── Leaderboard bundle ──────────────────────────────────────────────────────
@@ -174,7 +182,7 @@ export type LeaderboardEntry = {
   avatar: string
   level: number
   xp: number
-  /** 0–100 reputation (all-time). */
+  /** 0–100 GLOBAL reputation — computed across every Pulse server (PULSIFY-45). */
   reputation: number
   /** Messages in the selected timeframe (drives the "Most active" board). */
   messages: number
@@ -186,6 +194,9 @@ export type LeaderboardKey = 'level' | 'xp' | 'reputation' | 'active'
 
 export type LeaderboardResponse = {
   boards: Record<LeaderboardKey, LeaderboardEntry[]>
+  /** Top global wallets by Pulse Coin balance — the "Richest" board, moved
+   *  here from the Economy view so all leaderboards live in one place. */
+  richest: EconomyUser[]
   /** Members grouped into level brackets, for the distribution chart. */
   distribution: { label: string; count: number }[]
   totals: { tracked: number; totalXp: number; avgLevel: number; topLevel: number }

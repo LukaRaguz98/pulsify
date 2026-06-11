@@ -10,7 +10,7 @@ import {
   type MilestoneCompletion,
   type MilestoneMetric,
 } from '@/lib/milestones'
-import type { MemberMetricRow } from '@/app/dashboard/[guildId]/milestones/page'
+import type { MemberMetricRow } from '@/app/dashboard/[guildId]/(management)/milestones/page'
 import { MilestoneIcon } from './icons'
 
 // join_age has no per-member value in the metrics RPC (it's derived bot-side

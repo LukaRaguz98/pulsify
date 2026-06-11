@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+import { requireGuildRole } from '@/lib/guild-access'
 import {
   fetchGuildMember,
   fetchGuildRoles,
@@ -23,6 +24,7 @@ import {
   type MemberLevel,
 } from '@/lib/member-profile'
 import { normaliseLevelingSettings } from '@/lib/leveling'
+import { computeReputation, daysSince } from '@/lib/reputation'
 
 // Window for the contribution heatmap + activity timeline.
 const HEATMAP_DAYS = 119
@@ -41,13 +43,16 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ guildId: string; userId: string }> },
 ) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
   const { guildId, userId } = await params
+  // The full profile bundle includes moderation history — admins can open any
+  // member; a regular member may only load THEIR OWN profile.
+  const auth = await requireGuildRole(guildId, 'member')
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
+  if (auth.access.role !== 'admin' && userId !== auth.access.userId) {
+    return NextResponse.json({ error: 'You can only view your own profile.' }, { status: 403 })
+  }
+
+  const supabase = await createClient()
   const dailySince = new Date(Date.now() - HEATMAP_DAYS * 86_400_000).toISOString()
 
   const [
@@ -66,6 +71,7 @@ export async function GET(
     notesRes,
     levelRes,
     levelSettingsRes,
+    globalRepRes,
   ] = await Promise.all([
     fetchGuildMember(guildId, userId),
     fetchGuildRoles(guildId),
@@ -115,6 +121,9 @@ export async function GET(
       .eq('user_id', userId)
       .maybeSingle(),
     supabase.from('leveling_settings').select('enabled, settings').eq('guild_id', guildId).maybeSingle(),
+    // GLOBAL reputation inputs — activity + infractions aggregated across EVERY
+    // guild, so the trust score reflects the whole Pulse network (PULSIFY-45).
+    supabase.rpc('get_global_member_reputation', { p_user_id: userId }),
   ])
 
   if (!member) {
@@ -184,6 +193,25 @@ export async function GET(
     : null
   const curve = normaliseLevelingSettings(levelSettingsRes.data ?? null).curve
 
+  // GLOBAL reputation: the existing 0-100 trust score, computed from the
+  // member's activity aggregated across every Pulse server (plus account age
+  // from the snowflake). Assignable roles are per-guild / live-from-Discord, so
+  // they're omitted globally (a minor factor) — passed as 0.
+  const grRow = (globalRepRes.data?.[0] ?? null) as Record<string, unknown> | null
+  const globalReputation = computeReputation({
+    accountAgeDays: daysSince(accountCreated ? accountCreated.toISOString() : null),
+    tenureDays: daysSince((grRow?.first_seen as string | null) ?? null),
+    messages: Number(grRow?.message_count ?? 0),
+    voiceSeconds: Number(grRow?.voice_seconds ?? 0),
+    commands: Number(grRow?.command_count ?? 0),
+    activeChannels: Number(grRow?.active_channels ?? 0),
+    assignableRoles: 0,
+    warnings: Number(grRow?.warnings ?? 0),
+    timeouts: Number(grRow?.timeouts ?? 0),
+    kicks: Number(grRow?.kicks ?? 0),
+    bans: Number(grRow?.bans ?? 0),
+  })
+
   const bundle: MemberProfileBundle = {
     guildId,
     member,
@@ -203,6 +231,7 @@ export async function GET(
     ban: { banned: ban !== null, reason: ban?.reason ?? null },
     level,
     curve,
+    globalReputation,
   }
 
   return NextResponse.json(bundle)

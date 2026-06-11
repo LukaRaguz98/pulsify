@@ -17,7 +17,7 @@ import {
 } from '@/lib/quick-setup'
 import {
   createQuickSetupTemplate, type ApplySummary,
-} from '@/app/dashboard/[guildId]/templates/actions'
+} from '@/app/dashboard/[guildId]/(management)/templates/actions'
 
 type Props = { guildId: string; guildName: string; onClose: () => void }
 

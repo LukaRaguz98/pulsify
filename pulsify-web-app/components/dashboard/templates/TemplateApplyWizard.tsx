@@ -20,8 +20,8 @@ import {
   type TemplateSectionKey,
   type TemplateRole,
 } from '@/lib/templates'
-import { applyTemplate, type ApplySummary } from '@/app/dashboard/[guildId]/templates/actions'
-import type { GuildConfigSnapshot } from '@/app/dashboard/[guildId]/templates/page'
+import { applyTemplate, type ApplySummary } from '@/app/dashboard/[guildId]/(management)/templates/actions'
+import type { GuildConfigSnapshot } from '@/app/dashboard/[guildId]/(management)/templates/page'
 import { Modal } from './Modal'
 import { TemplateIcon } from './icons'
 

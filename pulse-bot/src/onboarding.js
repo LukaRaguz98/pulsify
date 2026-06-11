@@ -60,7 +60,7 @@ function toEmoji(raw) {
   return { name: raw.trim() };
 }
 
-function createOnboarding(client, supabase, leveling = null) {
+function createOnboarding(client, supabase, leveling = null, economy = null) {
   // ── Config + progress helpers ───────────────────────────────────────────────
 
   async function getConfig(guildId) {
@@ -577,6 +577,12 @@ function createOnboarding(client, supabase, leveling = null) {
         );
       if (rewards.reputation > 0)
         rewardLines.push(`**${rewards.reputation} reputation**`);
+      // Completion also pays into the GLOBAL coin economy (PULSIFY-45):
+      // fixed welcome coins. Reputation is the computed global trust score, not
+      // a grantable value, so it's not awarded here. Fire-and-forget.
+      if (economy?.awardOnboarding) {
+        void economy.awardOnboarding(ctx.member.guild, ctx.member);
+      }
     }
 
     await supabase.from("onboarding_member_progress").upsert(

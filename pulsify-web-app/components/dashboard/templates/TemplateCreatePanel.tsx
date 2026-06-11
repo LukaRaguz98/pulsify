@@ -14,7 +14,7 @@ import {
   type TemplateSectionKey,
   type TemplateDraft,
 } from '@/lib/templates'
-import { captureTemplate } from '@/app/dashboard/[guildId]/templates/actions'
+import { captureTemplate } from '@/app/dashboard/[guildId]/(management)/templates/actions'
 import { Modal } from './Modal'
 import { TemplateIcon, TEMPLATE_ICON_CHOICES } from './icons'
 

@@ -12,7 +12,7 @@ import {
   type PresencePreset,
 } from '@/lib/presence'
 import type { ChangelogRelease } from '@/lib/release-notes-types'
-import { savePresenceConfig, setActivePresence, clearActivePresence } from '@/app/dashboard/[guildId]/presence/actions'
+import { savePresenceConfig, setActivePresence, clearActivePresence } from '@/app/dashboard/[guildId]/(management)/presence/actions'
 import { StatusActivitiesField, RotationScheduleField, MaintenanceField } from './PresenceEditor'
 import { PresencePreview } from './PresencePreview'
 import { PresencePresets } from './PresencePresets'

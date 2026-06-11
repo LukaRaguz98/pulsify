@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
-import { fetchGuildMembers, fetchGuildRoles, avatarUrl, type DiscordMember } from '@/lib/discord'
-import { memberReputation } from '@/lib/member-metrics'
+import { requireGuildRole } from '@/lib/guild-access'
+import { fetchGuildMembers, avatarUrl, snowflakeToDate, type DiscordMember } from '@/lib/discord'
+import { computeReputation, daysSince } from '@/lib/reputation'
 import { normaliseLevelingSettings, levelForXp } from '@/lib/leveling'
+import { normaliseEconomyUser } from '@/lib/economy'
 import {
   EMPTY_ACTIVITY,
-  EMPTY_INFRACTIONS,
   type MemberActivityStats,
-  type MemberInfractions,
   type LeaderboardEntry,
   type LeaderboardKey,
   type LeaderboardResponse,
@@ -41,46 +41,49 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ guildId: string }> },
 ) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
   const { guildId } = await params
+  // Leaderboards are part of the read-only member experience — any member of
+  // the guild may view them (no management data is exposed here).
+  const auth = await requireGuildRole(guildId, 'member')
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+  const supabase = await createClient()
   const url = new URL(req.url)
   const window = url.searchParams.get('window') ?? '30d'
   const since = windowToSince(window)
 
-  const [members, roles, levelsRes, infrRes, settingsRes, statsAllRes, statsWindowRes] =
+  const [members, levelsRes, settingsRes, statsAllRes, statsWindowRes, richestRes] =
     await Promise.all([
       fetchGuildMembers(guildId, 1000),
-      fetchGuildRoles(guildId),
       supabase.from('member_levels').select('user_id, xp, level').eq('guild_id', guildId),
-      supabase.rpc('get_guild_members_infractions', { p_guild_id: guildId }),
       supabase.from('leveling_settings').select('enabled, settings').eq('guild_id', guildId).maybeSingle(),
-      // All-time activity drives reputation; the windowed pass drives "Most active".
+      // All-time activity feeds the totals; the windowed pass drives "Most active".
       supabase.rpc('get_guild_members_stats', { p_guild_id: guildId, p_since: null }),
       since
         ? supabase.rpc('get_guild_members_stats', { p_guild_id: guildId, p_since: since })
         : Promise.resolve({ data: null as unknown }),
+      // "Richest" board — GLOBAL wallet ranking by balance (window-independent),
+      // consolidated here from the Economy view.
+      supabase.from('economy_users').select('*').order('balance', { ascending: false }).limit(TOP_N),
     ])
+
+  // GLOBAL reputation for everyone on the board (PULSIFY-45): one batched RPC
+  // aggregates each member's activity + infractions across EVERY guild, so the
+  // reputation column matches the profile page and the bot's /wallet.
+  const humanIds = members.filter((m) => !m.user.bot).map((m) => m.user.id)
+  const { data: globalRepRows } = humanIds.length
+    ? await supabase.rpc('get_global_members_reputation', { p_user_ids: humanIds })
+    : { data: [] as unknown }
+  const globalRepById = new Map<string, Record<string, unknown>>()
+  for (const r of (globalRepRows ?? []) as Record<string, unknown>[]) {
+    globalRepById.set(String(r.user_id), r)
+  }
 
   const curve = normaliseLevelingSettings(settingsRes.data ?? null).curve
 
   const levelsByUser = new Map<string, { xp: number; level: number }>()
   for (const r of (levelsRes.data ?? []) as Record<string, unknown>[]) {
     levelsByUser.set(String(r.user_id), { xp: Number(r.xp ?? 0), level: Number(r.level ?? 0) })
-  }
-
-  const statsAll = new Map<string, MemberActivityStats>()
-  for (const r of (statsAllRes.data ?? []) as Record<string, unknown>[]) {
-    statsAll.set(String(r.user_id), {
-      message_count: Number(r.message_count ?? 0),
-      command_count: Number(r.command_count ?? 0),
-      voice_seconds: Number(r.voice_seconds ?? 0),
-      last_active: (r.last_active as string | null) ?? null,
-    })
   }
 
   // When the window is "all", the windowed numbers are the all-time numbers.
@@ -95,29 +98,28 @@ export async function GET(
     })
   }
 
-  const infrByUser = new Map<string, MemberInfractions>()
-  for (const r of (infrRes.data ?? []) as Record<string, unknown>[]) {
-    infrByUser.set(String(r.user_id), {
-      warnings: Number(r.warnings ?? 0),
-      active_warnings: Number(r.active_warnings ?? 0),
-      timeouts: Number(r.timeouts ?? 0),
-      kicks: Number(r.kicks ?? 0),
-      bans: Number(r.bans ?? 0),
-      total_infractions: Number(r.total_infractions ?? 0),
-      last_infraction_at: (r.last_infraction_at as string | null) ?? null,
-    })
-  }
-
   // Build one row per human member (bots are excluded from community boards).
   type Row = { entry: LeaderboardEntry; member: DiscordMember }
   const rows: Row[] = []
   for (const m of members) {
     if (m.user.bot) continue
     const lvl = levelsByUser.get(m.user.id) ?? { xp: 0, level: 0 }
-    const activityAll = statsAll.get(m.user.id) ?? EMPTY_ACTIVITY
-    const infractions = infrByUser.get(m.user.id) ?? EMPTY_INFRACTIONS
     const activityWindow = statsWindow.get(m.user.id) ?? EMPTY_ACTIVITY
-    const reputation = memberReputation(m, roles, activityAll, infractions)
+    // Global reputation — same maths as the profile page / bot /wallet.
+    const g = globalRepById.get(m.user.id)
+    const reputation = computeReputation({
+      accountAgeDays: daysSince(snowflakeToDate(m.user.id)?.toISOString() ?? null),
+      tenureDays: daysSince((g?.first_seen as string | null) ?? null),
+      messages: Number(g?.message_count ?? 0),
+      voiceSeconds: Number(g?.voice_seconds ?? 0),
+      commands: Number(g?.command_count ?? 0),
+      activeChannels: Number(g?.active_channels ?? 0),
+      assignableRoles: 0, // per-guild / live-from-Discord — omitted globally
+      warnings: Number(g?.warnings ?? 0),
+      timeouts: Number(g?.timeouts ?? 0),
+      kicks: Number(g?.kicks ?? 0),
+      bans: Number(g?.bans ?? 0),
+    })
     rows.push({
       member: m,
       entry: {
@@ -160,8 +162,13 @@ export async function GET(
     ? Math.round(([...levelsByUser.values()].reduce((s, v) => s + v.level, 0) / tracked) * 10) / 10
     : 0
 
+  const richest = (richestRes.data ?? []).map((r) =>
+    normaliseEconomyUser(r as Record<string, unknown>),
+  )
+
   const response: LeaderboardResponse = {
     boards,
+    richest,
     distribution,
     totals: { tracked, totalXp, avgLevel, topLevel },
     window,

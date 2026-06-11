@@ -291,7 +291,7 @@ async function loadMilestoneBanner(colorHex, name) {
 
 const SWEEP_MS = 5 * 60 * 1000; // re-evaluate members against milestones every 5 min
 
-function createMilestones(client, supabase) {
+function createMilestones(client, supabase, economy = null) {
   // guildId -> Milestone[] (all definitions; the sweep filters enabled)
   const configs = new Map();
   let sweepTimer = null;
@@ -443,6 +443,12 @@ function createMilestones(client, supabase) {
         console.warn("[Pulse] milestone insert failed:", error.message);
       }
       return false;
+    }
+
+    // Milestones feed the global economy: a completion earns coins +
+    // reputation (fire-and-forget — recognition never blocks on the economy).
+    if (economy?.awardMilestone) {
+      void economy.awardMilestone(guild, member.id, member.displayName, milestone.name);
     }
 
     await applyRewardRoles(member, milestone);

@@ -28,7 +28,7 @@ import {
   SENSITIVITY_LEVELS,
 } from '@/lib/ai-moderation'
 import { THEMES } from '@/lib/themes'
-import { saveAIModerationSettings } from '@/app/dashboard/[guildId]/ai-moderation/actions'
+import { saveAIModerationSettings } from '@/app/dashboard/[guildId]/(management)/ai-moderation/actions'
 import { SaveBar } from '@/components/ui/save-bar'
 
 type Props = {

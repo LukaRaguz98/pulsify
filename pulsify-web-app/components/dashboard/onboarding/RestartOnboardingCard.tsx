@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { RotateCcw, Loader2, Rocket } from 'lucide-react'
 import { CategorySection } from '@/components/ui/category-section'
 import { SectionCard } from '@/components/ui/section-card'
-import { resetOnboarding } from '@/app/dashboard/[guildId]/onboarding/actions'
+import { resetOnboarding } from '@/app/dashboard/[guildId]/(management)/onboarding/actions'
 
 /**
  * Settings entry to re-run the guided setup. Clears onboarding state (so the

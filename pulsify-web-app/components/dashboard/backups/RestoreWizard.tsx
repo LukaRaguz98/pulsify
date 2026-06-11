@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
+import { useCallback, useEffect, useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Loader2, AlertTriangle, RotateCcw, Check, ShieldQuestion } from 'lucide-react'
 import {
@@ -10,7 +10,7 @@ import {
   type ServerBackup,
   type BackupSectionKey,
 } from '@/lib/backups'
-import { previewRestore, restoreBackup, type RestorePreview, type RestoreSummary } from '@/app/dashboard/[guildId]/backups/actions'
+import { previewRestore, restoreBackup, type RestorePreview, type RestoreSummary } from '@/app/dashboard/[guildId]/(management)/backups/actions'
 import { BackupIcon } from './icons'
 import { DiffView } from './DiffView'
 

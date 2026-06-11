@@ -15,7 +15,7 @@ import {
   removeMemberRole,
   type ActionResult,
   type ActionTarget,
-} from '@/app/dashboard/[guildId]/moderation/actions'
+} from '@/app/dashboard/[guildId]/(management)/moderation/actions'
 
 type ActionKind =
   | 'timeout'
