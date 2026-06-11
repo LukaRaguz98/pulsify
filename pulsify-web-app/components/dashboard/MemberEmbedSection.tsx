@@ -6,7 +6,7 @@ import {
   ChevronDown, ChevronUp, RefreshCw,
 } from 'lucide-react'
 import { DiscordEmbedPreview, type EmbedData } from '@/components/dashboard/DiscordEmbedPreview'
-import { applyWelcomeEmbed, applyGoodbyeEmbed } from '@/app/dashboard/[guildId]/ai-setup/actions'
+import { applyWelcomeEmbed, applyGoodbyeEmbed } from '@/app/dashboard/[guildId]/(management)/ai-setup/actions'
 
 type EmbedResult = {
   color: string

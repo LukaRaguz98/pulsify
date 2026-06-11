@@ -220,7 +220,7 @@ function progressBar(pct, width = 14) {
 
 const VOICE_TICK_MS = 60 * 1000; // award voice XP once a minute
 
-function createLeveling(client, supabase) {
+function createLeveling(client, supabase, economy = null) {
   // guildId -> normalised config (seeded on start, kept fresh via realtime)
   const configs = new Map();
   // `${guildId}:${userId}` -> last message-XP timestamp (anti-spam, in-memory)
@@ -339,6 +339,12 @@ function createLeveling(client, supabase) {
     }
     if (!Number.isFinite(newXp)) return;
 
+    // Global economy rides the XP hook: every successful award also pays Pulse
+    // Coins (from the PRE-multiplier amount, so a guild's local multiplier
+    // can't inflate the global economy) and may earn daily-activity reputation.
+    // Fire-and-forget — the economy must never slow or break XP tracking.
+    if (economy?.awardActivity) void economy.awardActivity(guild, member, Math.max(0, rawAmount));
+
     // oldXp is derivable (we know exactly how much we just added), so detecting
     // a level-up costs no extra read — the atomic RPC already serialised the add.
     const oldLevel = levelForXp(newXp - amount, cfg.curve);
@@ -353,6 +359,9 @@ function createLeveling(client, supabase) {
       .eq("user_id", member.id);
 
     if (newLevel <= oldLevel) return; // a curve change lowered it — no celebration
+
+    // Level-up bonus: global coins + reputation (server level itself stays local).
+    if (economy?.awardLevelUp) void economy.awardLevelUp(guild, member, newLevel);
 
     const earnedNow = newlyEarnedRewards(oldLevel, newLevel, cfg.rewards);
     await applyRewardRoles(member, cfg, newLevel);

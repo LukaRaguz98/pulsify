@@ -10,6 +10,7 @@ import {
   CalendarPlus, Plus, AlertCircle, Clock, LineChart, RefreshCw, Compass,
   Bot, Volume2, Folder, Megaphone, Radio, MessagesSquare, Image as ImageIcon,
   Lightbulb, LifeBuoy, Gift, Trophy, Plug, Award, LayoutTemplate, Upload, UserCog,
+  Coins, Store, Crown,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -21,7 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
   warnMember, timeoutMember,
   type ActionResult, type ActionTarget,
-} from '@/app/dashboard/[guildId]/moderation/actions'
+} from '@/app/dashboard/[guildId]/(management)/moderation/actions'
 import { triggerGuildSync } from '@/app/dashboard/[guildId]/search/actions'
 import { useCommandPalette, type RecentOpened } from './CommandPaletteProvider'
 
@@ -31,6 +32,7 @@ const ICONS: Record<string, LucideIcon> = {
   CalendarPlus, Plus, AlertCircle, Clock, LineChart, RefreshCw, Compass, History,
   Bot, Volume2, Folder, Megaphone, Radio, MessagesSquare, Image: ImageIcon,
   Lightbulb, LifeBuoy, Gift, Trophy, Plug, Award, LayoutTemplate, Upload, UserCog,
+  Coins, Store, Crown,
 }
 
 function Icon({ name, size = 16 }: { name: string; size?: number }) {

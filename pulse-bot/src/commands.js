@@ -20,7 +20,7 @@ const {
   getDashboardUrl,
   getInviteUrl,
 } = require("./version");
-const { computeReputation, daysSince } = require("./reputation");
+const { daysSince } = require("./reputation");
 const { fetchImageCached } = require("./image-cache");
 
 const PERMISSION = {
@@ -43,6 +43,10 @@ const ICON_FILES = {
   help: "pulse-help.png",
   announcement: "pulse-annoucement.png",
   milestone: "pulse-milestone.png",
+  // Leveling (/rank, /leaderboard) header glyph.
+  stats: "pulse-stats.png",
+  // Global economy (/wallet, /pay) header glyph.
+  money: "pulse-money.png",
 };
 const localIconCache = {};
 
@@ -641,7 +645,7 @@ const COMMANDS = [
           .setDescription("The member to look up (defaults to you)")
           .setRequired(false),
       ),
-    async execute({ interaction, guild, supabase, leveling, milestones, ephemeral }) {
+    async execute({ interaction, guild, supabase, leveling, milestones, economy, ephemeral }) {
       // Defer up front: looking up another member adds REST fetches (user +
       // member) on top of the image generation, which can blow past Discord's
       // 3s window ("Application did not respond"). Deferring extends it.
@@ -654,8 +658,9 @@ const COMMANDS = [
       const isSelf = user.id === interaction.user.id;
 
       // Pull everything in parallel to stay inside the interaction window: full
-      // user (for the banner), the member, level/rank, and reputation inputs.
-      const [full, member, levelInfo, metrics] = await Promise.all([
+      // user (for the banner), the member, level/rank, activity metrics, and
+      // the member's GLOBAL wallet (balance + reputation, PULSIFY-45).
+      const [full, member, levelInfo, metrics, wallet] = await Promise.all([
         user.fetch().catch(() => null),
         guild.members.fetch(user.id).catch(() => null),
         leveling?.getLevelInfo
@@ -664,6 +669,9 @@ const COMMANDS = [
               .catch(() => null)
           : Promise.resolve(null),
         fetchMemberMetrics(supabase, guild.id, user.id),
+        economy?.getWallet
+          ? economy.getWallet(user.id, user.createdTimestamp).catch(() => null)
+          : Promise.resolve(null),
       ]);
 
       const displayName =
@@ -685,23 +693,11 @@ const COMMANDS = [
         ? full.bannerURL({ size: 4096 })
         : null;
 
-      // Reputation from the same inputs the dashboard uses (mirror).
-      const assignableRoles = member
-        ? member.roles.cache.filter((r) => r.id !== guild.id && !r.managed).size
-        : 0;
-      const rep = computeReputation({
-        accountAgeDays: daysSince(user.createdTimestamp),
-        tenureDays: daysSince(member?.joinedTimestamp),
-        messages: metrics.messages,
-        voiceSeconds: metrics.voiceSeconds,
-        commands: metrics.commands,
-        activeChannels: metrics.activeChannels,
-        assignableRoles,
-        warnings: metrics.warnings,
-        timeouts: metrics.timeouts,
-        kicks: metrics.kicks,
-        bans: metrics.bans,
-      });
+      // GLOBAL reputation: the existing 0-100 trust score, now computed from
+      // activity across every Pulse server. Balance is the global coin balance.
+      // Levels stay per-server.
+      const rep = wallet?.reputation ?? { score: 0, tier: "At risk" };
+      const balance = wallet?.balance ?? 0;
 
       const prog = levelInfo?.prog ?? {
         level: 0,
@@ -732,6 +728,7 @@ const COMMANDS = [
       if (member?.premiumSinceTimestamp)
         cards.push({ l: "Boosting", v: relAge(member.premiumSinceTimestamp) });
       if (topRole) cards.push({ l: "Top role", v: topRole.name });
+      cards.push({ l: "Balance", v: `${balance.toLocaleString()} coins` });
       cards.push({
         l: "Messages",
         v: `${metrics.messages.toLocaleString()} message${metrics.messages === 1 ? "" : "s"}`,
@@ -801,6 +798,11 @@ const COMMANDS = [
           );
         }
       }
+      body.push(
+        text(
+          "-# Balance & reputation are global across every Pulse server · level is specific to this server",
+        ),
+      );
 
       // Identity + activity field cards (image), or a plain text fallback.
       body.push(divider());
@@ -961,6 +963,74 @@ const COMMANDS = [
         return;
       }
       await milestones.handleMilestonesCommand({ interaction, guild, ephemeral });
+    },
+  },
+  {
+    name: "wallet",
+    category: "information",
+    defaultPermission: PERMISSION.EVERYONE,
+    data: new SlashCommandBuilder()
+      .setName("wallet")
+      .setDescription(
+        "Show a member's global Pulse balance and reputation",
+      )
+      .addUserOption((o) =>
+        o
+          .setName("user")
+          .setDescription("The member to look up (defaults to you)")
+          .setRequired(false),
+      ),
+    async execute({ interaction, guild, economy, ephemeral }) {
+      if (!economy?.handleWalletCommand) {
+        await interaction.reply({
+          content: "The Pulse economy isn't available right now.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      await economy.handleWalletCommand({ interaction, guild, ephemeral });
+    },
+  },
+  {
+    name: "pay",
+    category: "utility",
+    defaultPermission: PERMISSION.EVERYONE,
+    // Public by default so the recipient sees the transfer land.
+    defaultEphemeral: false,
+    data: new SlashCommandBuilder()
+      .setName("pay")
+      .setDescription(
+        "Send Pulse Coins from your global balance to another member",
+      )
+      .addUserOption((o) =>
+        o
+          .setName("user")
+          .setDescription("Who receives the coins")
+          .setRequired(true),
+      )
+      .addIntegerOption((o) =>
+        o
+          .setName("amount")
+          .setDescription("How many coins to send")
+          .setRequired(true)
+          .setMinValue(1),
+      )
+      .addStringOption((o) =>
+        o
+          .setName("note")
+          .setDescription("Optional note shown with the transfer")
+          .setRequired(false)
+          .setMaxLength(300),
+      ),
+    async execute({ interaction, guild, economy, ephemeral }) {
+      if (!economy?.handlePayCommand) {
+        await interaction.reply({
+          content: "The Pulse economy isn't available right now.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      await economy.handlePayCommand({ interaction, guild, ephemeral });
     },
   },
 ];

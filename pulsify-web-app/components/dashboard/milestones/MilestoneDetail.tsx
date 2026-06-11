@@ -26,7 +26,7 @@ import {
   deleteMilestone,
   testMilestone,
   type ActionResult,
-} from '@/app/dashboard/[guildId]/milestones/actions'
+} from '@/app/dashboard/[guildId]/(management)/milestones/actions'
 import { MilestoneIcon } from './icons'
 
 type Channel = { id: string; name: string }

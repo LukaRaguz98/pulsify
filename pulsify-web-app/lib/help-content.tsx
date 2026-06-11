@@ -153,6 +153,36 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
       </>
     ),
   },
+  economy: {
+    title: 'Global Economy',
+    plan: 'free',
+    body: (
+      <>
+        <p>One Pulse identity everywhere: members carry a single coin balance and reputation across every server running Pulse, earned through activity, level-ups, giveaways, milestones and onboarding. Levels &amp; XP stay specific to each server.</p>
+        <p><strong>Tip:</strong> The Overview combines analytics, leaderboards and the full transaction ledger. Reputation is computed, never granted — only coins can be adjusted, by operators, under Economy › Controls.</p>
+      </>
+    ),
+  },
+  marketplace: {
+    title: 'Marketplace',
+    plan: 'free',
+    body: (
+      <>
+        <p>The future home of spending Pulse Coins — server shops, items and member-to-member trading, built on the global economy.</p>
+        <p><strong>Heads up:</strong> Nothing is purchasable yet; balances earned today carry over when the Marketplace opens.</p>
+      </>
+    ),
+  },
+  'economy-controls': {
+    title: 'Economy Controls',
+    plan: 'free',
+    body: (
+      <>
+        <p>Grant or remove global Pulse Coins for any member. Every adjustment is recorded in the economy moderation log with the acting operator&apos;s name.</p>
+        <p><strong>Heads up:</strong> The economy is bot-wide, so this surface is operator-only — server admins can view the economy but not mint coins. Reputation has no controls: it&apos;s computed, never granted.</p>
+      </>
+    ),
+  },
   leveling: {
     title: 'Levels & XP',
     plan: 'free',

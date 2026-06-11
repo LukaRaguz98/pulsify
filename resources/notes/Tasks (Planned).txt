@@ -1,107 +1,118 @@
-PULSIFY-46 — Global Rewards Shop & Economy Marketplace (v0.46.0)
+PULSIFY-47 — Economy Rewards & Earning System (v0.47.0)
 
 Description
-	Implement a Global Rewards Shop and Marketplace system powered by the Pulse Economy.
-	Users should be able to spend their global Pulse balance on rewards, perks, cosmetic profile items, and server-specific benefits while administrators can create and manage rewards available to their communities.
-	This feature should provide the first meaningful use case for the global economy introduced in v0.45.0.
+	Implement a configurable Economy Rewards system that allows server owners to define how users earn Pulse Balance and Reputation through participation, activity, events, giveaways, onboarding, and community contributions.
+	This release introduces the primary earning mechanisms for the Global Economy, transforming Pulse Balance from a static value into a meaningful progression system.
 
 Goals
-	Give users a reason to earn Pulse balance
-	Increase long-term engagement
-	Introduce economy-driven progression
-	Create value for global reputation and activity
-	Establish the foundation for future premium economy features
+	Give users meaningful ways to earn Pulse Balance
+	Increase community engagement
+	Reward positive participation
+	Create sustainable economy circulation
+	Expand the usefulness of Global Reputation
 
 Tasks
-	Global Shop
-		Create a dedicated Economy > Shop view
-		Display:
-			featured rewards
-			available rewards
-			reward categories
-			reward cost
-			stock availability
-		Add search and filtering
+	Reward Configuration Center
+		Create Economy > Rewards view
+		Display all configured reward sources
+		Allow enabling/disabling reward sources
+		Add reward previews
+		Add reward simulation tools
 
-	Reward Categories
+	Activity Rewards
+		Allow users to earn Pulse Balance and Reputation through:
+			messages sent
+			voice activity
+			active days
+			community participation
+			reactions received
+			helpful contributions
+		Add configurable reward amounts
+
+	Event Rewards
+		Allow rewards for:
+			event participation
+			event attendance
+			event completion
+			event hosting
+		Support both Balance and Reputation rewards
+
+	Giveaway Rewards
+		Allow rewards for:
+			giveaway participation
+			giveaway wins
+			giveaway hosting
+		Add configurable reward multipliers
+
+	Onboarding Rewards
+		Reward users for:
+			onboarding completion
+			profile completion
+			verification completion
+			role selection
+		Encourage proper community onboarding
+
+	Reputation Rewards
+		Create automatic reputation rewards for:
+			positive engagement
+			active participation
+			community contributions
+			milestone achievements
+		Add anti-abuse protection
+
+	Daily & Weekly Rewards
 		Support:
-			Profile Badges
-			Cosmetic Profile Items
-			Reputation Rewards
-			XP Boosters
-			Giveaway Entries
-			Event Rewards
-			Server Perks
-			Custom Rewards
+			daily rewards
+			weekly rewards
+			streak rewards
+			loyalty rewards
+		Track streak history and progression
 
-	Reward Purchases
-		Allow users to purchase rewards using global balance
-		Validate balance before purchase
-		Display purchase confirmations
-		Store purchase history
-		Add refund support where applicable
+	Multipliers & Bonuses
+		Allow configurable multipliers:
+			reputation multiplier
+			event multiplier
+			server booster multiplier
+			premium multiplier
+			seasonal multiplier
 
-	Server Rewards
-		Allow server administrators to create rewards
-		Support:
-			Discord roles
-			special access channels
-			custom perks
-			event rewards
-			temporary benefits
-		Add reward availability controls
-
-	Economy Marketplace
-		Create marketplace infrastructure
-		Display:
-			reward listings
-			creator
-			price
-			availability
-		Prepare support for future user-to-user marketplace features
-
-	Inventory System
-		Create user inventory
-		Display:
-			owned rewards
-			active rewards
-			expired rewards
-			purchase history
-		Allow reward activation where required
-
-	Reputation Integration
-		Allow rewards to require:
-			minimum reputation
-			minimum level
-			specific achievements
-		Encourage positive community participation
-
-	Discord Integration
-		Add economy purchase notifications
-		Add reward redemption notifications
-		Generate Pulse-styled economy embeds
-		Synchronize purchased rewards with Discord where applicable
+	Anti-Abuse Protection
+		Implement:
+			reward cooldowns
+			spam protection
+			farming prevention
+			duplicate activity detection
+		Ensure economy integrity
 
 	Analytics
 		Track:
-			most purchased rewards
-			economy circulation
-			reward usage
-			purchase trends
-		Add economy reports and charts
+			balance generated
+			rewards distributed
+			most valuable activities
+			top earners
+			reward source breakdown
+		Add economy circulation insights
+
+	Discord Integration
+		Add:
+			reward notifications
+			reward summary embeds
+			balance earned messages
+			milestone notifications
+		Use Pulse v2 embed styling
 
 	UX Improvements
-		Add modern reward cards
-		Add purchase animations
+		Add reward cards
+		Add reward calculators
+		Add responsive layouts
 		Add loading/error/success states
-		Add responsive marketplace views
 		Maintain consistency with Pulsify design language
 
 Acceptance Criteria
-	Users can spend global balance on rewards
-	Rewards can be created and managed successfully
-	Purchases are validated and tracked correctly
-	Inventory system functions properly
-	Server rewards synchronize with Discord
-	Economy analytics display correctly
+	Users can earn Pulse Balance through configured activities
+	Reputation rewards function correctly
+	Reward sources are configurable
+	Anti-abuse protections prevent exploitation
+	Analytics track economy generation accurately
+	Discord notifications display correctly
 	UI remains responsive and visually polished

@@ -29,7 +29,7 @@ import {
 import type { Timeframe } from '@/lib/analytics'
 import type { CommandAnalytics as CommandAnalyticsData } from '@/app/api/guilds/[guildId]/commands/analytics/route'
 import type { CommandLogRow } from '@/app/api/guilds/[guildId]/commands/logs/route'
-import { saveCommandConfig, bulkSetCommandsEnabled } from '@/app/dashboard/[guildId]/commands/actions'
+import { saveCommandConfig, bulkSetCommandsEnabled } from '@/app/dashboard/[guildId]/(management)/commands/actions'
 import { CommandList, type ResolvedCommand } from '@/components/dashboard/commands/CommandList'
 import { CommandEditPanel } from '@/components/dashboard/commands/CommandEditPanel'
 import { CommandAnalytics } from '@/components/dashboard/commands/CommandAnalytics'

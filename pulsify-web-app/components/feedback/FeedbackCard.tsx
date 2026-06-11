@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
-import { ThumbsUp, Flag, Pencil, Trash2, EyeOff, ShieldAlert, Loader2, Pin } from 'lucide-react'
+import { ThumbsUp, Flag, Pencil, Trash2, EyeOff, ShieldAlert, Loader2, Pin, Lock } from 'lucide-react'
 import {
   authorDisplayName,
   authorInitial,
@@ -40,6 +40,24 @@ function AuthorAvatar({ f, size = 40 }: { f: Feedback; size?: number }) {
     >
       {authorInitial(f)}
     </div>
+  )
+}
+
+/**
+ * Small accent lock badge pinned to an operator-only control's top-right
+ * corner, marking it as visible/usable to Pulsify operators alone (no text —
+ * the icon carries the meaning). Wrap the control in a `relative` element.
+ */
+function OperatorLock() {
+  return (
+    <span
+      className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full border"
+      style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
+      aria-label="Operator-only"
+      title="Operator-only"
+    >
+      <Lock size={8} style={{ color: 'var(--p-1)' }} />
+    </span>
   )
 }
 
@@ -209,27 +227,30 @@ export function FeedbackCard({
         <div className="ml-auto flex items-center gap-1.5">
           {/* Operator-only: feature this entry on the landing page (max 3). */}
           {isOperator && (
-            <button
-              type="button"
-              disabled={busy || (atFeatureLimit && !f.featured)}
-              onClick={() => onFeature(f, !f.featured)}
-              title={
-                f.featured
-                  ? 'Featured on the landing page — click to remove'
-                  : atFeatureLimit
-                    ? 'Already featuring 3 reviews — unfeature one first'
-                    : 'Feature on the landing page'
-              }
-              className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-              style={
-                f.featured
-                  ? { borderColor: 'var(--p-1)', background: 'var(--p-soft)', color: 'var(--p-1)' }
-                  : { borderColor: 'var(--line-strong)', color: 'var(--text-3)' }
-              }
-            >
-              <Pin size={13} fill={f.featured ? 'currentColor' : 'none'} />
-              <span className="hidden sm:inline">Pin</span>
-            </button>
+            <span className="relative inline-flex">
+              <button
+                type="button"
+                disabled={busy || (atFeatureLimit && !f.featured)}
+                onClick={() => onFeature(f, !f.featured)}
+                title={
+                  f.featured
+                    ? 'Featured on the landing page — click to remove'
+                    : atFeatureLimit
+                      ? 'Already featuring 3 reviews — unfeature one first'
+                      : 'Feature on the landing page'
+                }
+                className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                style={
+                  f.featured
+                    ? { borderColor: 'var(--p-1)', background: 'var(--p-soft)', color: 'var(--p-1)' }
+                    : { borderColor: 'var(--line-strong)', color: 'var(--text-3)' }
+                }
+              >
+                <Pin size={13} fill={f.featured ? 'currentColor' : 'none'} />
+                <span className="hidden sm:inline">Pin</span>
+              </button>
+              <OperatorLock />
+            </span>
           )}
 
           {f.isOwn ? (
@@ -280,16 +301,19 @@ export function FeedbackCard({
                   <ShieldAlert size={13} /> {f.reportCount}
                 </span>
               )}
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => onModerate(f, 'hidden')}
-                title="Hide from the public wall"
-                className="inline-flex items-center justify-center rounded-lg border p-1.5 transition-colors disabled:opacity-60"
-                style={{ borderColor: 'var(--line-strong)', color: 'var(--amber)' }}
-              >
-                {busy ? <Loader2 size={13} className="animate-spin" /> : <EyeOff size={13} />}
-              </button>
+              <span className="relative inline-flex">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onModerate(f, 'hidden')}
+                  title="Hide from the public wall"
+                  className="inline-flex items-center justify-center rounded-lg border p-1.5 transition-colors disabled:opacity-60"
+                  style={{ borderColor: 'var(--line-strong)', color: 'var(--amber)' }}
+                >
+                  {busy ? <Loader2 size={13} className="animate-spin" /> : <EyeOff size={13} />}
+                </button>
+                <OperatorLock />
+              </span>
             </>
           )}
         </div>

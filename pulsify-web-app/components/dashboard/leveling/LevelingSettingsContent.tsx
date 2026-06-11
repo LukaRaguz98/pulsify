@@ -30,7 +30,7 @@ import {
   type LevelupAnnounce,
   type LevelReward,
 } from '@/lib/leveling'
-import { saveLevelingSettings } from '@/app/dashboard/[guildId]/leveling-settings/actions'
+import { saveLevelingSettings } from '@/app/dashboard/[guildId]/(management)/leveling-settings/actions'
 
 type Option = { id: string; name: string; color?: number }
 type Props = {

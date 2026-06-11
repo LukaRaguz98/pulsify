@@ -25,7 +25,7 @@ import {
   type ApplicationEvent,
   type ApplicationEventType,
 } from '@/lib/applications'
-import type { ActionResult } from '@/app/dashboard/[guildId]/tickets/actions'
+import type { ActionResult } from '@/app/dashboard/[guildId]/(management)/tickets/actions'
 
 function revalidate(guildId: string) {
   revalidatePath(`/dashboard/${guildId}/tickets`)

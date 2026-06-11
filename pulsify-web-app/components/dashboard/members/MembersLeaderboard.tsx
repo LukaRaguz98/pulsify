@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Trophy, Sparkles, Zap, Award, Activity, AlertCircle, Users, BarChart3 } from 'lucide-react'
+import { Trophy, Sparkles, Zap, Activity, AlertCircle, Users, BarChart3, Globe, Server, Coins } from 'lucide-react'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CategorySection } from '@/components/ui/category-section'
@@ -11,16 +11,35 @@ import { StatsCard } from '@/components/dashboard/StatsCard'
 import { RefreshButton } from '@/components/dashboard/RefreshButton'
 import { createClient as createSupabase } from '@/lib/supabase'
 import { formatDuration } from '@/lib/analytics'
+import { formatCoins, type EconomyUser } from '@/lib/economy'
 import type { LeaderboardEntry, LeaderboardKey, LeaderboardResponse } from '@/lib/member-profile'
 import { LevelBadge } from '@/components/dashboard/members/badges'
+import { RankBadge } from '@/components/dashboard/RankBadge'
 
-type Props = { guildId: string }
+type Props = {
+  guildId: string
+  /** Row click opens the admin member profile — disable for the read-only
+   *  member experience (members can't open other members' profiles). */
+  linkToProfiles?: boolean
+}
 
-const BOARDS: { key: LeaderboardKey; label: string; icon: React.ReactNode }[] = [
-  { key: 'level', label: 'Highest level', icon: <Sparkles size={15} /> },
-  { key: 'xp', label: 'Most XP', icon: <Zap size={15} /> },
-  { key: 'reputation', label: 'Best reputation', icon: <Award size={15} /> },
-  { key: 'active', label: 'Most active', icon: <Activity size={15} /> },
+// UI board id: the data boards (level/reputation/active) plus "richest", the
+// global wallet ranking sourced from the economy. ("Server XP" was folded into
+// "Server level" — that board already shows XP next to the level.)
+type BoardId = 'level' | 'reputation' | 'active' | 'richest'
+
+// Each board is explicitly scoped: level/activity are SERVER metrics, while
+// reputation and richest are GLOBAL — shared across every Pulse server.
+const BOARDS: {
+  key: BoardId
+  label: string
+  icon: React.ReactNode
+  scope: 'server' | 'global'
+}[] = [
+  { key: 'level', label: 'Server level', icon: <Sparkles size={15} />, scope: 'server' },
+  { key: 'reputation', label: 'Global reputation', icon: <Globe size={15} />, scope: 'global' },
+  { key: 'active', label: 'Most active', icon: <Activity size={15} />, scope: 'server' },
+  { key: 'richest', label: 'Richest', icon: <Coins size={15} />, scope: 'global' },
 ]
 
 const WINDOWS: { key: string; label: string }[] = [
@@ -30,17 +49,16 @@ const WINDOWS: { key: string; label: string }[] = [
   { key: 'all', label: 'All time' },
 ]
 
-const MEDALS = ['🥇', '🥈', '🥉']
-
-// Primary + secondary metric shown per board.
+// Primary + secondary metric shown per board. The sub-line always names the
+// metric's scope so global reputation can't be misread as a server stat.
 function metric(board: LeaderboardKey, e: LeaderboardEntry): { value: string; sub: string } {
   switch (board) {
     case 'level':
-      return { value: `Lvl ${e.level}`, sub: `${e.xp.toLocaleString()} XP` }
+      return { value: `Lvl ${e.level}`, sub: `${e.xp.toLocaleString()} XP · this server` }
     case 'xp':
-      return { value: `${e.xp.toLocaleString()} XP`, sub: `Level ${e.level}` }
+      return { value: `${e.xp.toLocaleString()} XP`, sub: `Level ${e.level} · this server` }
     case 'reputation':
-      return { value: `${e.reputation}/100`, sub: `Level ${e.level}` }
+      return { value: `${e.reputation}/100`, sub: 'Global · all Pulse servers' }
     case 'active':
       return {
         value: `${e.messages.toLocaleString()} msg`,
@@ -49,13 +67,53 @@ function metric(board: LeaderboardKey, e: LeaderboardEntry): { value: string; su
   }
 }
 
-export function MembersLeaderboard({ guildId }: Props) {
+/**
+ * "Richest" board — global Pulse Coin wallets ranked by balance. These are
+ * GLOBAL wallets (the holder may not be a member of this guild), so rows carry
+ * no avatar and aren't clickable, unlike the server-member boards above.
+ */
+function RichestBoard({ rows }: { rows: EconomyUser[] }) {
+  if (rows.length === 0) {
+    return (
+      <EmptyState
+        icon={<Coins size={36} />}
+        title="No wallets yet"
+        description="Members start earning Pulse Coins the moment they're active in any server running Pulse."
+      />
+    )
+  }
+  return (
+    <div className="space-y-2">
+      {rows.map((u, i) => (
+        <div
+          key={u.user_id}
+          className="leaderboard-row flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left"
+          style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}
+        >
+          <RankBadge rank={i + 1} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-medium text-foreground">{u.user_name ?? u.user_id}</p>
+            <p className="mt-0.5 text-[11px] text-subtle">
+              {formatCoins(u.lifetime_earned)} earned all-time
+            </p>
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="font-mono text-sm font-bold text-foreground">{formatCoins(u.balance)}</p>
+            <p className="text-[11px] text-subtle">Pulse Coins</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export function MembersLeaderboard({ guildId, linkToProfiles = true }: Props) {
   const router = useRouter()
   const [data, setData] = useState<LeaderboardResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [board, setBoard] = useState<LeaderboardKey>('level')
+  const [board, setBoard] = useState<BoardId>('level')
   const [window, setWindow] = useState('30d')
 
   const load = useCallback(
@@ -125,18 +183,18 @@ export function MembersLeaderboard({ guildId }: Props) {
     )
   }
 
-  const entries = data.boards[board]
+  const entries = board === 'richest' ? [] : data.boards[board]
   const maxDist = Math.max(1, ...data.distribution.map((d) => d.count))
 
   return (
     <div className="space-y-8">
       {/* Analytics */}
-      <CategorySection icon={<BarChart3 size={14} />} title="Engagement" description="XP and level analytics across your membership.">
+      <CategorySection icon={<BarChart3 size={14} />} title="Engagement" description="XP and level analytics for this server's membership (server-specific progression).">
         <div className="mb-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatsCard label="Members tracked" value={data.totals.tracked} sub="Have earned XP" icon={<Users size={16} />} accent="var(--p-1)" />
-          <StatsCard label="Total XP" value={data.totals.totalXp.toLocaleString()} sub="Earned server-wide" icon={<Zap size={16} />} accent="var(--cyan)" />
+          <StatsCard label="Members tracked" value={data.totals.tracked} sub="Have earned XP here" icon={<Users size={16} />} accent="var(--p-1)" />
+          <StatsCard label="Total XP" value={data.totals.totalXp.toLocaleString()} sub="Earned in this server" icon={<Zap size={16} />} accent="var(--cyan)" />
           <StatsCard label="Average level" value={data.totals.avgLevel} sub="Across tracked members" icon={<Sparkles size={16} />} accent="var(--amber)" />
-          <StatsCard label="Top level" value={data.totals.topLevel} sub="Highest reached" icon={<Trophy size={16} />} accent="var(--green)" />
+          <StatsCard label="Top level" value={data.totals.topLevel} sub="Highest reached here" icon={<Trophy size={16} />} accent="var(--green)" />
         </div>
 
         <div className="rounded-xl border p-5" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
@@ -161,7 +219,7 @@ export function MembersLeaderboard({ guildId }: Props) {
       </CategorySection>
 
       {/* Leaderboard */}
-      <CategorySection icon={<Trophy size={14} />} title="Leaderboard" description="Rank members by progression, reputation and recent activity.">
+      <CategorySection icon={<Trophy size={14} />} title="Leaderboard" description="Rank members by server progression (level & XP), global reputation, recent activity and Pulse Coin wealth.">
         <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="inline-flex flex-wrap rounded-xl border p-1" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
             {BOARDS.map((b) => {
@@ -200,11 +258,35 @@ export function MembersLeaderboard({ guildId }: Props) {
           </div>
         </div>
 
-        {board !== 'active' && (
-          <p className="mb-3 text-xs text-subtle">Level, XP and reputation are all-time totals — the timeframe only filters the “Most active” board.</p>
-        )}
+        {/* Scope line: spell out global vs server so the two never blur. */}
+        <p className="mb-3 flex flex-wrap items-center gap-1.5 text-xs text-subtle">
+          {board === 'reputation' ? (
+            <>
+              <Globe size={12} style={{ color: 'var(--p-1)' }} />
+              <span className="font-medium text-muted-foreground">Global metric</span>
+              — the 0–100 trust score each member carries across every server running Pulse.
+            </>
+          ) : board === 'richest' ? (
+            <>
+              <Globe size={12} style={{ color: 'var(--p-1)' }} />
+              <span className="font-medium text-muted-foreground">Global metric</span>
+              — Pulse Coin balances ranked across every server running Pulse.
+            </>
+          ) : (
+            <>
+              <Server size={12} style={{ color: 'var(--p-1)' }} />
+              <span className="font-medium text-muted-foreground">Server metric</span>
+              — {board === 'active' ? 'activity tracked in this server only.' : 'XP and levels are earned in this server only.'}
+            </>
+          )}
+          {board !== 'active' && (
+            <span>Totals are all-time — the timeframe only filters the “Most active” board.</span>
+          )}
+        </p>
 
-        {entries.length === 0 ? (
+        {board === 'richest' ? (
+          <RichestBoard rows={data.richest} />
+        ) : entries.length === 0 ? (
           <EmptyState
             icon={<Trophy size={36} />}
             title="Nothing to rank yet"
@@ -214,6 +296,42 @@ export function MembersLeaderboard({ guildId }: Props) {
           <div className="space-y-2">
             {entries.map((e, i) => {
               const m = metric(board, e)
+              const interactive = linkToProfiles
+              const row = (
+                <>
+                  <RankBadge rank={i + 1} />
+                  <Image src={e.avatar} alt={e.name} width={36} height={36} unoptimized className="shrink-0 rounded-full" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-foreground">{e.name}</p>
+                    <div className="mt-0.5 flex items-center gap-1.5">
+                      <LevelBadge level={e.level} size="sm" />
+                      <span
+                        className="inline-flex items-center gap-1 rounded px-1 py-0.5 text-[10px] font-medium"
+                        style={{ background: 'var(--bg-2)', color: 'var(--text-3)' }}
+                        title="Global reputation — shared across every Pulse server"
+                      >
+                        <Globe size={9} />
+                        {e.reputation}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="font-mono text-sm font-bold text-foreground">{m.value}</p>
+                    <p className="text-[11px] text-subtle">{m.sub}</p>
+                  </div>
+                </>
+              )
+              if (!interactive) {
+                return (
+                  <div
+                    key={e.userId}
+                    className="leaderboard-row flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left"
+                    style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}
+                  >
+                    {row}
+                  </div>
+                )
+              }
               return (
                 <button
                   key={e.userId}
@@ -223,20 +341,7 @@ export function MembersLeaderboard({ guildId }: Props) {
                   onMouseEnter={(ev) => { ev.currentTarget.style.background = 'var(--bg-2)' }}
                   onMouseLeave={(ev) => { ev.currentTarget.style.background = 'var(--panel)' }}
                 >
-                  <span className="w-8 shrink-0 text-center font-mono text-sm font-bold" style={{ color: i < 3 ? 'var(--p-1)' : 'var(--text-3)' }}>
-                    {MEDALS[i] ?? i + 1}
-                  </span>
-                  <Image src={e.avatar} alt={e.name} width={36} height={36} unoptimized className="shrink-0 rounded-full" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-foreground">{e.name}</p>
-                    <div className="mt-0.5">
-                      <LevelBadge level={e.level} size="sm" />
-                    </div>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p className="font-mono text-sm font-bold text-foreground">{m.value}</p>
-                    <p className="text-[11px] text-subtle">{m.sub}</p>
-                  </div>
+                  {row}
                 </button>
               )
             })}

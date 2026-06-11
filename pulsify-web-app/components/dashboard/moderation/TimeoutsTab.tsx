@@ -7,7 +7,7 @@ import { avatarUrl, type DiscordMember } from '@/lib/discord'
 import {
   removeMemberTimeout,
   type ActionTarget,
-} from '@/app/dashboard/[guildId]/moderation/actions'
+} from '@/app/dashboard/[guildId]/(management)/moderation/actions'
 import type { TimeoutMeta } from '@/app/api/discord/guild/[guildId]/moderation/timeout-meta/route'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { EmptyState } from '@/components/ui/empty-state'

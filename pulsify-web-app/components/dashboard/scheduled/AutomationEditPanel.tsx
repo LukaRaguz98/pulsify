@@ -38,7 +38,7 @@ import {
   type ActionFieldDef,
 } from '@/lib/automations'
 import { ActionIcon } from './icons'
-import { saveAutomation, runAutomationNow } from '@/app/dashboard/[guildId]/scheduled/actions'
+import { saveAutomation, runAutomationNow } from '@/app/dashboard/[guildId]/(management)/scheduled/actions'
 
 type Props = {
   guildId: string

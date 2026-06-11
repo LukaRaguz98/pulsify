@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+import { requireGuildRole } from '@/lib/guild-access'
 import {
   timeframeSince,
   timeframeBucket,
@@ -22,6 +23,9 @@ export async function GET(
 
   const { guildId } = await params
 
+  // Part of the read-only member experience — any guild member may view.
+  const auth = await requireGuildRole(guildId, 'member')
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
   const tfParam = new URL(req.url).searchParams.get('timeframe') as Timeframe | null
   const timeframe: Timeframe =
     tfParam && VALID_TIMEFRAMES.includes(tfParam) ? tfParam : '7d'

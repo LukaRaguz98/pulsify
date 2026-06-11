@@ -7,7 +7,7 @@ import { ArrowLeft, CheckCircle2, AlertCircle, X } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import type { DiscordChannel, DiscordRole } from '@/lib/discord'
 import type { TicketConfig } from '@/lib/tickets'
-import type { ActionResult } from '@/app/dashboard/[guildId]/tickets/actions'
+import type { ActionResult } from '@/app/dashboard/[guildId]/(management)/tickets/actions'
 import { TicketSettings } from './TicketSettings'
 
 type Props = {

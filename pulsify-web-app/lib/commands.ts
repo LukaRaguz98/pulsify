@@ -95,6 +95,33 @@ export const COMMAND_CATALOG: CommandDefinition[] = [
     detail:
       'Lists the recognition milestones a member has earned (time in server, messages, voice, events, giveaways, XP/level) and how close they are to the next ones. Milestones are configured in the dashboard under Engagement › Milestones. Defaults to your own.',
   },
+  {
+    name: 'wallet',
+    description: "Show a member's global Pulse balance and reputation",
+    category: 'information',
+    defaultPermission: 'everyone',
+    options: [
+      { name: 'user', description: 'The member to look up (defaults to you)', type: 'user' },
+    ],
+    examples: ['/wallet', '/wallet user:@username'],
+    detail:
+      'Shows the global Pulse wallet — coin balance, reputation tier, global ranks and recent activity. Balance and reputation are shared across every server running Pulse; levels stay per-server. Defaults to your own.',
+  },
+  {
+    name: 'pay',
+    description: 'Send Pulse Coins from your global balance to another member',
+    category: 'utility',
+    defaultPermission: 'everyone',
+    defaultEphemeral: false,
+    options: [
+      { name: 'user', description: 'Who receives the coins', type: 'user', required: true },
+      { name: 'amount', description: 'How many coins to send', type: 'integer', required: true },
+      { name: 'note', description: 'Optional note shown with the transfer', type: 'string' },
+    ],
+    examples: ['/pay user:@username amount:100', '/pay user:@username amount:50 note:thanks!'],
+    detail:
+      'Transfers Pulse Coins between global balances — the transfer is atomic, refused if the sender cannot afford it, and recorded in both members’ transaction history. Public by default so the recipient sees it land.',
+  },
 ]
 
 export const CATALOG_BY_NAME: Record<string, CommandDefinition> = Object.fromEntries(

@@ -33,7 +33,7 @@ import {
   type CommandCategory,
   type ConfigPermissionLevel,
 } from '@/lib/commands'
-import { saveCommandConfig } from '@/app/dashboard/[guildId]/commands/actions'
+import { saveCommandConfig } from '@/app/dashboard/[guildId]/(management)/commands/actions'
 import { PermissionBadge } from './badges'
 
 type Props = {

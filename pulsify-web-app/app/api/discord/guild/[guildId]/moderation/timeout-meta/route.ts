@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+import { requireGuildRole } from '@/lib/guild-access'
 import { fetchGuildAuditLog, AUDIT_LOG_ACTION } from '@/lib/discord'
 
 export type TimeoutMeta = {
@@ -30,6 +31,9 @@ export async function GET(
 
   const { guildId } = await params
 
+  // Management data — requires Manage Server / Administrator on this guild.
+  const auth = await requireGuildRole(guildId, 'admin')
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
   const [auditLog, modLogs] = await Promise.all([
     fetchGuildAuditLog(guildId, AUDIT_LOG_ACTION.MEMBER_UPDATE, 100),
     supabase

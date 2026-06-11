@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Hash, Loader2, Send, AlertCircle, CheckCircle2, Eye, Lock } from 'lucide-react'
 import type { ChangelogRelease } from '@/lib/release-notes-types'
-import { publishChangelog } from '@/app/dashboard/[guildId]/presence/actions'
+import { publishChangelog } from '@/app/dashboard/[guildId]/(management)/presence/actions'
 
 type Channel = { id: string; name: string }
 

@@ -27,15 +27,15 @@ import {
   type MilestoneCompletion,
   type MilestoneMetric,
 } from '@/lib/milestones'
-import type { ActionResult } from '@/app/dashboard/[guildId]/milestones/actions'
-import type { MemberMetricRow } from '@/app/dashboard/[guildId]/milestones/page'
+import type { ActionResult } from '@/app/dashboard/[guildId]/(management)/milestones/actions'
+import type { MemberMetricRow } from '@/app/dashboard/[guildId]/(management)/milestones/page'
 import { MilestoneCard } from './MilestoneCard'
 import { MilestoneDetail } from './MilestoneDetail'
 import { MilestoneEditPanel } from './MilestoneEditPanel'
 import { MilestoneAnalytics } from './MilestoneAnalytics'
 import { EligibleMembers } from './EligibleMembers'
 import { MilestoneIcon } from './icons'
-import { toggleMilestone } from '@/app/dashboard/[guildId]/milestones/actions'
+import { toggleMilestone } from '@/app/dashboard/[guildId]/(management)/milestones/actions'
 
 type Channel = { id: string; name: string }
 type Role = { id: string; name: string; color: number }

@@ -7,7 +7,7 @@ import {
   SlidersHorizontal, Globe, Palette, Users, Smile, AlignLeft,
 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
-import { applyWelcomeMessage, applyRules, applyOnboarding, applyChannelsReference } from '@/app/dashboard/[guildId]/ai-setup/actions'
+import { applyWelcomeMessage, applyRules, applyOnboarding, applyChannelsReference } from '@/app/dashboard/[guildId]/(management)/ai-setup/actions'
 import { MemberEmbedSection } from '@/components/dashboard/MemberEmbedSection'
 import { AppEmbedPreview } from '@/components/dashboard/AppEmbedPreview'
 import { usePreferences } from '@/components/ThemeProvider'

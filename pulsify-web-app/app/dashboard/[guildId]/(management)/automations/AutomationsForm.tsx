@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition, type ReactNode } from 'react'
 import { saveAutomations, removePulseContent, type AutomationSettings } from './actions'
-import { applyRules, applyChannelsReference } from '@/app/dashboard/[guildId]/ai-setup/actions'
+import { applyRules, applyChannelsReference } from '@/app/dashboard/[guildId]/(management)/ai-setup/actions'
 import type { DiscordChannel, DiscordRole } from '@/lib/discord'
 import { AppEmbedPreview } from '@/components/dashboard/AppEmbedPreview'
 import { DiscordEmbedPreview, type EmbedData } from '@/components/dashboard/DiscordEmbedPreview'

@@ -4,8 +4,8 @@ import { useEffect, useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Loader2, AlertTriangle, DatabaseBackup, Check } from 'lucide-react'
 import { SECTION_META, type BackupSectionKey } from '@/lib/backups'
-import type { CaptureSnapshot } from '@/app/dashboard/[guildId]/backups/page'
-import { createBackup } from '@/app/dashboard/[guildId]/backups/actions'
+import type { CaptureSnapshot } from '@/app/dashboard/[guildId]/(management)/backups/page'
+import { createBackup } from '@/app/dashboard/[guildId]/(management)/backups/actions'
 import { BackupIcon } from './icons'
 
 export function CreateBackupDialog({

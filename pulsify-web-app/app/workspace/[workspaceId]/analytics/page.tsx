@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
-import { MessageSquare, UserPlus, UserMinus, Shield, Users, Mic, TrendingUp, BarChart3 } from 'lucide-react'
+import { MessageSquare, UserPlus, UserMinus, Shield, Users, Mic, TrendingUp, BarChart3, Trophy, Globe, Coins } from 'lucide-react'
+import { formatCoins } from '@/lib/economy'
 import { createClient } from '@/lib/supabase-server'
 import { guildIconUrl } from '@/lib/discord'
 import { authorizeWorkspaceMember } from '@/lib/workspace-auth'
@@ -67,6 +68,36 @@ export default async function WorkspaceAnalyticsPage({ params }: { params: Promi
 
   const maxMessages = Math.max(1, ...perServer.map((s) => s.messages))
   const ranked = [...perServer].sort((a, b) => b.messages - a.messages)
+
+  // Cross-server progression (PULSIFY-45): per-server XP ladders are LOCAL,
+  // while the coin economy is GLOBAL — surface both, clearly labelled.
+  const guildIds = enriched.map((s) => s.guild_id)
+  const [progressionRes, economyTotalsRes] = await Promise.all([
+    guildIds.length
+      ? supabase.rpc('get_guild_progression_totals', { p_guild_ids: guildIds })
+      : Promise.resolve({ data: [] as unknown }),
+    supabase.rpc('economy_totals'),
+  ])
+  const progressionByGuild = new Map<string, { tracked: number; totalXp: number; topLevel: number }>()
+  for (const r of (progressionRes.data ?? []) as Record<string, unknown>[]) {
+    progressionByGuild.set(String(r.guild_id), {
+      tracked: n(r.tracked),
+      totalXp: n(r.total_xp),
+      topLevel: n(r.top_level),
+    })
+  }
+  const economyTotalsRow = Array.isArray(economyTotalsRes.data)
+    ? economyTotalsRes.data[0]
+    : economyTotalsRes.data
+  const circulation = n((economyTotalsRow as Record<string, unknown> | null | undefined)?.circulation)
+  const progression = enriched.map((s) => ({
+    guildId: s.guild_id,
+    name: s.name,
+    icon: s.icon,
+    ...(progressionByGuild.get(s.guild_id) ?? { tracked: 0, totalXp: 0, topLevel: 0 }),
+  }))
+  const maxXp = Math.max(1, ...progression.map((s) => s.totalXp))
+  const rankedProgression = [...progression].sort((a, b) => b.totalXp - a.totalXp)
 
   const stats = [
     { label: 'Messages', value: totals.messages, icon: <MessageSquare size={16} /> },
@@ -136,6 +167,56 @@ export default async function WorkspaceAnalyticsPage({ params }: { params: Promi
               })}
             </div>
           </section>
+          </CategorySection>
+
+          <CategorySection
+            icon={<Trophy size={14} />}
+            title="Cross-server progression"
+            description="Each server's XP ladder is local — members start fresh on every server. Coins & reputation are global and identical everywhere."
+          >
+            <div
+              className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border px-4 py-3 text-sm"
+              style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
+            >
+              <Globe size={15} style={{ color: 'var(--p-1)' }} />
+              <span className="font-medium text-foreground">Global economy:</span>
+              <span className="inline-flex items-center gap-1" style={{ color: 'var(--text-2)' }}>
+                <Coins size={13} style={{ color: 'var(--p-1)' }} />
+                {formatCoins(circulation)} coins in circulation across all Pulse servers
+              </span>
+              <span className="text-xs" style={{ color: 'var(--text-3)' }}>
+                — shared, not per-server
+              </span>
+            </div>
+            <section className="rounded-xl border" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
+              <div className="divide-y" style={{ borderColor: 'var(--line-strong)' }}>
+                {rankedProgression.map((s) => {
+                  const icon = guildIconUrl(s.guildId, s.icon, 40)
+                  const pct = Math.round((s.totalXp / maxXp) * 100)
+                  return (
+                    <div key={s.guildId} className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        {icon ? (
+                          <Image src={icon} alt={s.name} width={28} height={28} className="h-7 w-7 rounded-lg" unoptimized />
+                        ) : (
+                          <div className="flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold text-white" style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}>{s.name.charAt(0)}</div>
+                        )}
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{s.name}</span>
+                        <span className="text-sm font-semibold text-foreground">{s.totalXp.toLocaleString()} XP</span>
+                      </div>
+                      <div className="mt-2 h-2 overflow-hidden rounded-full" style={{ background: 'var(--bg-2)' }}>
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, var(--p-1), var(--p-2))' }} />
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
+                        <span>{s.tracked.toLocaleString()} members levelling</span>
+                        <span>top level {s.topLevel}</span>
+                        <span>server-specific ladder</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
           </CategorySection>
         </div>
       )}

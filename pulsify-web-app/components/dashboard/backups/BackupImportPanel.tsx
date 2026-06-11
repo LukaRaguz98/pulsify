@@ -9,7 +9,7 @@ import {
   sectionKeysPresent,
   type BackupImportResult,
 } from '@/lib/backups'
-import { importBackup } from '@/app/dashboard/[guildId]/backups/actions'
+import { importBackup } from '@/app/dashboard/[guildId]/(management)/backups/actions'
 import { BackupIcon } from './icons'
 
 export function BackupImportPanel({

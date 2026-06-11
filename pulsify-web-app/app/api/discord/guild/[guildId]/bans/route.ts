@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+import { requireGuildRole } from '@/lib/guild-access'
 import {
   fetchGuildBans,
   fetchGuildAuditLog,
@@ -17,6 +18,9 @@ export async function GET(
 
   const { guildId } = await params
 
+  // Management data — requires Manage Server / Administrator on this guild.
+  const auth = await requireGuildRole(guildId, 'admin')
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
   // Pull bans, recent ban audit-log entries, and any dashboard-issued bans in parallel.
   const [bans, auditLog, modLogs] = await Promise.all([
     fetchGuildBans(guildId),

@@ -185,7 +185,7 @@ function pickWinners(entrantIds, count, exclude = []) {
   return pool.slice(0, Math.max(0, count));
 }
 
-function createGiveaways(client, supabase, leveling = null) {
+function createGiveaways(client, supabase, leveling = null, economy = null) {
   // id -> giveaway row (scheduled + active only; ended ones drop out of cache)
   const cache = new Map();
   // id -> last-seen draw_requested_at (so each dashboard request fires once)
@@ -491,6 +491,12 @@ function createGiveaways(client, supabase, leveling = null) {
 
       if (winnerIds.length > 0) {
         await supabase.from("giveaway_entries").update({ is_winner: true }).eq("giveaway_id", g.id).in("user_id", winnerIds);
+        // Winners earn a global economy bonus (coins + reputation). Fire-and-
+        // forget — never let it delay the winner announcement.
+        if (economy?.awardGiveawayWin) {
+          const guild = client.guilds.cache.get(fresh.guild_id) ?? { id: fresh.guild_id, name: null };
+          void economy.awardGiveawayWin(guild, winners, fresh.prize);
+        }
       }
 
       // Edit the original message to its settled state and announce winners.

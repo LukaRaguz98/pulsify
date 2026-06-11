@@ -12,6 +12,12 @@ Learning Pulsify just got easier. Little information icons now sit next to the t
 - **Readable everywhere** — content stays legible and well-sized on small screens.
 - **Polished & accessible** — a subtle fade-in (that respects reduced-motion), proper labels and roles, and full visual consistency with the Pulsify design language.
 
+**A guided tour for new users**
+- **Take a tour** — a friendly spotlight walkthrough introduces the key parts of the dashboard (your server card, search, the module nav, live notifications, your account and more) in about 30 seconds.
+- **On every dashboard** — both your server dashboards and your team workspaces have their own tailored tour.
+- **Runs once, replayable anytime** — it pops up automatically the first time, then lives behind a “Take a tour” button (top-right near the bell on desktop, a handy bottom-right button on mobile) so you can replay it whenever.
+- **Same switch** — the tour is governed by the very same “Show Contextual Help” toggle, so turning guidance off hides the tour and its button too.
+
 **Your dashboard, your call**
 - **Show Contextual Help** — a new toggle under Preferences → Guidance lets seasoned users switch the info markers off across the whole app (and back on any time).
 - **Remembered for you** — your choice persists across sessions.

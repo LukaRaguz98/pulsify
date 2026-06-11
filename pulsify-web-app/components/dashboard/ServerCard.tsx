@@ -4,9 +4,12 @@ import { guildIconUrl, botInviteUrl, type DiscordGuild } from '@/lib/discord'
 
 type Props = {
   guild: DiscordGuild & { botInstalled: boolean }
+  /** The viewer is a regular member (no Manage Server) — the CTA opens the
+   *  read-only member experience instead of "Manage". */
+  memberAccess?: boolean
 }
 
-export function ServerCard({ guild }: Props) {
+export function ServerCard({ guild, memberAccess = false }: Props) {
   const icon = guildIconUrl(guild.id, guild.icon, 128)
   const memberCount = guild.approximate_member_count ?? 0
 
@@ -54,7 +57,7 @@ export function ServerCard({ guild }: Props) {
               boxShadow: '0 4px 14px -4px var(--p-glow)',
             }}
           >
-            Manage
+            {memberAccess ? 'View' : 'Manage'}
           </Link>
         ) : (
           <a

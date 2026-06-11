@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
@@ -41,9 +41,9 @@ import {
 } from '@/lib/discord'
 import { formatDuration, formatHourLabel } from '@/lib/analytics'
 import { createClient as createSupabase } from '@/lib/supabase'
-import { computeReputation, daysSince, type Reputation } from '@/lib/reputation'
+import { daysSince, type Reputation } from '@/lib/reputation'
 import { progressInLevel } from '@/lib/leveling'
-import { assignableRoleCount, memberRisk } from '@/lib/member-metrics'
+import { memberRisk } from '@/lib/member-metrics'
 import type { MemberProfileBundle } from '@/lib/member-profile'
 import { ReputationBadge, RiskBadge, LevelBadge, XpProgress } from '@/components/dashboard/members/badges'
 import { ReputationPanel } from '@/components/dashboard/members/ReputationPanel'
@@ -52,6 +52,7 @@ import { ModerationHistory } from '@/components/dashboard/members/ModerationHist
 import { ModerationNotes } from '@/components/dashboard/members/ModerationNotes'
 import { MemberQuickActions } from '@/components/dashboard/members/MemberQuickActions'
 import { MemberMilestones } from '@/components/dashboard/members/MemberMilestones'
+import { GlobalPulseProfile } from '@/components/dashboard/members/GlobalPulseProfile'
 
 type Props = { guildId: string; userId: string }
 
@@ -163,22 +164,10 @@ export function MemberProfile({ guildId, userId }: Props) {
     return () => clearTimeout(t)
   }, [toast])
 
-  const reputation: Reputation | null = useMemo(() => {
-    if (!bundle) return null
-    return computeReputation({
-      accountAgeDays: daysSince(bundle.accountCreatedAt),
-      tenureDays: daysSince(bundle.member.joined_at),
-      messages: bundle.stats.message_count,
-      voiceSeconds: bundle.stats.voice_seconds,
-      commands: bundle.stats.command_count,
-      activeChannels: bundle.stats.active_channels,
-      assignableRoles: assignableRoleCount(bundle.member, bundle.roles),
-      warnings: bundle.infractions.active_warnings,
-      timeouts: bundle.infractions.timeouts,
-      kicks: bundle.infractions.kicks,
-      bans: bundle.infractions.bans,
-    })
-  }, [bundle])
+  // The member's GLOBAL reputation — the 0-100 trust score computed server-side
+  // from activity aggregated across every Pulse server (PULSIFY-45). One
+  // canonical reputation, shown here and in the Pulse Profile section below.
+  const reputation: Reputation | null = bundle?.globalReputation ?? null
 
   const searchParams = useSearchParams()
   const from = searchParams.get('from')
@@ -418,6 +407,11 @@ export function MemberProfile({ guildId, userId }: Props) {
             </div>
           </ChartCard>
         </CategorySection>
+
+        {/* Pulse Profile — server progression sits alongside the member's
+            cross-server global standing (related data, one toggle). Placed
+            right under Progression since the "this server" tab continues it. */}
+        <GlobalPulseProfile guildId={guildId} userId={userId} reputation={reputation} />
 
         {/* Achievements — milestones this member has earned / is working toward.
             Renders nothing for servers without milestones. */}

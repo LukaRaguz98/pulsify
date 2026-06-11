@@ -207,8 +207,8 @@
 }
 
 /* The corner chrome buttons are inset (~40–52px) so they nest inside the HUD
-   brackets (bell + tour launcher in the top-right; Discord icon in the
-   bottom-left; the ping chip mirrors them in the bottom-right). When corner
+   brackets (bell + tour launcher + view switcher in the top-right; Discord
+   icon in the bottom-left; the ping chip mirrors them in the bottom-right). When corner
    decorations are off there's no bracket reserving that space, so pull them all
    closer to the actual corners. Desktop only — the brackets, and these inset
    offsets, only exist at lg+. The bell/launcher/ping use Tailwind utilities, so
@@ -218,6 +218,7 @@
 @media (min-width: 1024px) {
   [data-pulsify-bell="true"],
   [data-tour="launcher"],
+  [data-view-switcher="true"],
   [data-pulsify-ping="true"] {
     transition: margin 0.2s ease, bottom 0.2s ease, right 0.2s ease;
   }
@@ -227,6 +228,10 @@
   }
   [data-corner-deco="false"] [data-tour="launcher"] {
     margin-top: 56px;
+    margin-right: 12px;
+  }
+  [data-corner-deco="false"] [data-view-switcher="true"] {
+    margin-top: 100px;
     margin-right: 12px;
   }
   [data-corner-deco="false"] [data-pulsify-ping="true"] {

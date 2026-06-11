@@ -2,8 +2,9 @@ import Link from 'next/link'
 import Image from 'next/image'
 import {
   Server, Users, ShieldAlert, ListChecks, ArrowRight,
-  Activity as ActivityIcon, TrendingUp, Building2,
+  Activity as ActivityIcon, TrendingUp, Building2, Coins, Globe, Wallet,
 } from 'lucide-react'
+import { formatCoins, normaliseEconomyUser } from '@/lib/economy'
 import { createClient } from '@/lib/supabase-server'
 import { guildIconUrl } from '@/lib/discord'
 import { getWorkspace, getWorkspaceMembers, getWorkspaceServers, enrichWorkspaceServers } from '@/lib/workspace-data'
@@ -27,16 +28,27 @@ export default async function WorkspaceOverviewPage({ params }: { params: Promis
   ])
   if (!workspace) return null
 
-  const [enriched, incidentsRes, tasksRes, activityRes] = await Promise.all([
+  const [enriched, incidentsRes, tasksRes, activityRes, economyTotalsRes, richestRes] = await Promise.all([
     enrichWorkspaceServers(servers),
     supabase.from('workspace_incidents').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId).in('status', ['open', 'investigating']),
     supabase.from('workspace_tasks').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId).neq('status', 'done'),
     supabase.from('workspace_activity').select('*').eq('workspace_id', workspaceId).order('created_at', { ascending: false }).limit(8),
+    // Global economy snapshot (PULSIFY-45): one Pulse-wide coin pool — these
+    // numbers are GLOBAL by design, identical from every workspace.
+    supabase.rpc('economy_totals'),
+    supabase.from('economy_users').select('*').order('balance', { ascending: false }).limit(5),
   ])
 
   const roleCounts = countRoles(members)
   const activity = (activityRes.data ?? []) as WorkspaceActivityRow[]
   const base = `/workspace/${workspaceId}`
+
+  const economyTotalsRow = Array.isArray(economyTotalsRes.data)
+    ? economyTotalsRes.data[0]
+    : economyTotalsRes.data
+  const circulation = Number(economyTotalsRow?.circulation ?? 0)
+  const walletCount = Number(economyTotalsRow?.user_count ?? 0)
+  const richest = (richestRes.data ?? []).map((r) => normaliseEconomyUser(r as Record<string, unknown>))
 
   const stats = [
     { label: 'Servers', value: servers.length, icon: <Server size={16} />, href: `${base}/servers` },
@@ -68,6 +80,49 @@ export default async function WorkspaceOverviewPage({ params }: { params: Promis
               <p className="mt-3 text-3xl font-bold text-foreground">{s.value}</p>
             </Link>
           ))}
+        </div>
+      </CategorySection>
+
+      <CategorySection
+        icon={<Globe size={14} />}
+        title="Global economy"
+        description="Pulse Coins and reputation are GLOBAL — one balance and one trust score per member across every server, including all servers in this workspace. Levels & XP stay per-server (see Analytics)."
+      >
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="rounded-xl border p-5" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
+            <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-3)' }}>
+              <Coins size={16} style={{ color: 'var(--p-1)' }} />Coins in circulation
+            </div>
+            <p className="mt-3 text-3xl font-bold text-foreground">{formatCoins(circulation)}</p>
+            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>Global — shared across all Pulse servers</p>
+          </div>
+          <div className="rounded-xl border p-5" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
+            <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-3)' }}>
+              <Wallet size={16} style={{ color: 'var(--p-1)' }} />Wallets
+            </div>
+            <p className="mt-3 text-3xl font-bold text-foreground">{walletCount.toLocaleString()}</p>
+            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>Members holding a global balance</p>
+          </div>
+          <div className="rounded-xl border p-5" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
+            <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-3)' }}>
+              <TrendingUp size={16} style={{ color: 'var(--p-1)' }} />Top global balances
+            </div>
+            {richest.length === 0 ? (
+              <p className="mt-3 text-sm" style={{ color: 'var(--text-3)' }}>No wallets yet — members earn coins the moment they&apos;re active.</p>
+            ) : (
+              <ul className="mt-3 space-y-1.5">
+                {richest.map((u, i) => (
+                  <li key={u.user_id} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="min-w-0 truncate text-muted-foreground">
+                      <span className="mr-1.5 font-mono text-xs" style={{ color: 'var(--text-3)' }}>{i + 1}.</span>
+                      {u.user_name ?? u.user_id}
+                    </span>
+                    <span className="shrink-0 font-mono text-xs text-foreground">{formatCoins(u.balance)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </CategorySection>
 

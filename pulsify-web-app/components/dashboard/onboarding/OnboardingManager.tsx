@@ -10,7 +10,7 @@ import { SaveBar } from '@/components/ui/save-bar'
 import {
   ONBOARDING_PRESETS, type MemberOnboardingConfig, type OnboardingStats,
 } from '@/lib/onboarding'
-import { saveMemberOnboarding } from '@/app/dashboard/[guildId]/onboarding/actions'
+import { saveMemberOnboarding } from '@/app/dashboard/[guildId]/(management)/onboarding/actions'
 import { Toggle, type ChannelOpt, type RoleOpt, type EventOpt } from './parts'
 import {
   FlowSection, WelcomeSection, RolesSection, EventsSection, CommunitySection,

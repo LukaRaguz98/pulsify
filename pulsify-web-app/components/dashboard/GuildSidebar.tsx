@@ -36,8 +36,14 @@ import {
   LayoutTemplate,
   DatabaseBackup,
   Rocket,
+  Coins,
+  Lock,
   Menu,
   X,
+  Star,
+  Trophy,
+  Store,
+  Crown,
 } from 'lucide-react'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
 import { SearchTrigger } from '@/components/dashboard/search/SearchTrigger'
@@ -54,6 +60,12 @@ type NavItem = {
    * so the sidebar stays in context instead of de-highlighting everything.
    */
   matchPrefixes?: string[]
+  /** Marks an operator-only item — renders a lock indicator so the operator
+   *  knows it's visible to them alone (others never see the item). */
+  locked?: boolean
+  /** Match this item on path equality only (for parents of sibling routes,
+   *  e.g. Economy › Overview at /economy vs /economy/marketplace). */
+  exact?: boolean
 }
 
 type NavGroup = {
@@ -84,9 +96,20 @@ type Props = {
   bannerUrl?: string
   /** Bot operators see operator-only nav items (e.g. Presence). */
   isOperator?: boolean
+  /** What the viewer should see: full management nav ('admin') or the
+   *  read-only member nav ('member'). Defaults to admin. */
+  viewerRole?: 'admin' | 'member'
 }
 
-export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOperator }: Props) {
+export function GuildSidebar({
+  guild,
+  guildId,
+  user,
+  selfUser,
+  bannerUrl,
+  isOperator,
+  viewerRole = 'admin',
+}: Props) {
   const [collapsed, setCollapsed] = useState(false)
   // Mobile-only: the sidebar is an off-canvas drawer below `lg`. `mobileOpen`
   // drives the slide (via the `.guild-sidebar[data-mobile-open]` CSS) and the
@@ -108,16 +131,17 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
   }, [mobileOpen])
 
   const base = `/dashboard/${guildId}`
+  const isMember = viewerRole === 'member'
 
   // Overview lives at the bare `base` path, so it matches only on equality;
   // other items use prefix matching so nested routes still highlight.
-  const isItemActive = (href: string) =>
-    href === base ? pathname === base : pathname.startsWith(href)
+  const isItemActive = (href: string, exact = false) =>
+    href === base || exact ? pathname === href : pathname.startsWith(href)
 
   // Item-aware variant: also honours `matchPrefixes` so a feature's sibling
   // settings route (e.g. /ticket-settings) keeps its module highlighted.
   const isNavItemActive = (item: NavItem): boolean =>
-    isItemActive(item.href) ||
+    isItemActive(item.href, item.exact) ||
     (item.matchPrefixes?.some((p) => pathname.startsWith(`${base}${p}`)) ?? false)
 
   // Nav is grouped by what the admin is *trying to do*, top-down:
@@ -134,10 +158,55 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
   //   • New server entity (Members deep-dive, etc.) → Server
   //   • New chart / report                          → Analytics
   // Overview is the dashboard's "home" — it sits standalone at the top of the
-  // nav, above any collapsible groups, so it's always one click away.
-  const overview: NavItem = { label: 'Overview', href: base, icon: <BarChart2 size={16} /> }
+  // nav, above any collapsible groups, so it's always one click away. Members
+  // have no Overview (it's a management surface); their home is Profile,
+  // inside the "You" group.
+  const overview: NavItem | null = isMember
+    ? null
+    : { label: 'Overview', href: base, icon: <BarChart2 size={16} /> }
 
-  const groups: NavGroup[] = [
+  // The Economy category is shared by both navs: the economy is global and
+  // read-oriented, so members see it too. Controls is the operator-only
+  // exception (adjusting the global economy), locked like Presence.
+  const economyGroup: NavGroup = {
+    title: 'Economy',
+    icon: <Coins size={16} />,
+    items: [
+      { label: 'Overview', href: `${base}/economy`, icon: <Coins size={16} />, exact: true },
+      { label: 'Marketplace', href: `${base}/economy/marketplace`, icon: <Store size={16} /> },
+      ...(isOperator && !isMember
+        ? [{ label: 'Controls', href: `${base}/economy/controls`, icon: <Crown size={16} />, locked: true }]
+        : []),
+    ],
+  }
+
+  // Member nav: only the community-facing, read-only surfaces. Management
+  // modules (moderation, config, billing, …) are absent entirely — and their
+  // routes are enforced server-side, so this is presentation, not security.
+  const memberGroups: NavGroup[] = [
+    {
+      title: 'You',
+      icon: <UserRound size={16} />,
+      items: [
+        { label: 'Profile', href: `${base}/profile`, icon: <UserRound size={16} /> },
+        { label: 'Reputation', href: `${base}/reputation`, icon: <Star size={16} /> },
+      ],
+    },
+    {
+      title: 'Community',
+      icon: <Sparkles size={16} />,
+      items: [
+        { label: 'Leaderboards', href: `${base}/leaderboard`, icon: <Trophy size={16} /> },
+        { label: 'Statistics', href: `${base}/statistics`, icon: <Activity size={16} /> },
+        { label: 'Events', href: `${base}/events`, icon: <CalendarDays size={16} /> },
+        { label: 'Giveaways', href: `${base}/giveaways`, icon: <Gift size={16} /> },
+        { label: 'Announcements', href: `${base}/announcements`, icon: <Megaphone size={16} /> },
+      ],
+    },
+    economyGroup,
+  ]
+
+  const adminGroups: NavGroup[] = [
     {
       title: 'Analytics',
       icon: <LineChart size={16} />,
@@ -153,7 +222,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
       items: [
         { label: 'Onboarding', href: `${base}/onboarding`, icon: <Rocket size={16} /> },
         { label: 'Channels', href: `${base}/channels`, icon: <Hash size={16} /> },
-        { label: 'Members', href: `${base}/members`, icon: <UserRound size={16} />, matchPrefixes: ['/leveling-settings'] },
+        { label: 'Members', href: `${base}/members`, icon: <UserRound size={16} />, matchPrefixes: ['/leveling-settings', '/leaderboard', '/profile', '/reputation'] },
         { label: 'Roles', href: `${base}/roles`, icon: <Users size={16} /> },
         { label: 'Templates', href: `${base}/templates`, icon: <LayoutTemplate size={16} /> },
         { label: 'Backups', href: `${base}/backups`, icon: <DatabaseBackup size={16} /> },
@@ -169,7 +238,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
         // Presence is a bot-wide, operator-only surface — hide it from everyone
         // else (the page itself re-checks operator status server-side).
         ...(isOperator
-          ? [{ label: 'Presence', href: `${base}/presence`, icon: <Radio size={16} /> }]
+          ? [{ label: 'Presence', href: `${base}/presence`, icon: <Radio size={16} />, locked: true }]
           : []),
       ],
     },
@@ -184,6 +253,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
         { label: 'Milestones', href: `${base}/milestones`, icon: <Award size={16} /> },
       ],
     },
+    economyGroup,
     {
       title: 'Safety',
       icon: <ShieldCheck size={16} />,
@@ -201,6 +271,8 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
     // settings still live with their features (Pulse → Pulse Bot, Tickets →
     // Tickets, …) inside their respective groups above.
   ]
+
+  const groups = isMember ? memberGroups : adminGroups
 
   // Default: expand any group containing the currently-active route, so the
   // user always lands with their current section open. Manual toggles
@@ -243,7 +315,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
   // closed it's the only "where am I" cue, so mirror the active sidebar item
   // (prefixed with its section) as a breadcrumb — Section › Page.
   const serverSettingsHref = `${base}/server-settings`
-  const activeItem = [overview, ...groups.flatMap((g) => g.items)].find(isNavItemActive)
+  const activeItem = [...(overview ? [overview] : []), ...groups.flatMap((g) => g.items)].find(isNavItemActive)
   const activeSectionTitle = groups.find((g) => g.items.some(isNavItemActive))?.title
   const mobileCrumbSection = activeItem && activeItem !== overview ? activeSectionTitle : undefined
   const mobileCrumbTitle = isItemActive(serverSettingsHref)
@@ -389,30 +461,13 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
       {/* Server card — doubles as the entry point to the Server Profile
           (server-settings) page. Replaces the old nav item under "Server"
           so the affordance lives where users actually look first. Highlights
-          when that route is active, same as any other nav link. */}
+          when that route is active, same as any other nav link. Members get a
+          static card — Server Profile is a management surface. */}
       {(() => {
         const serverProfileHref = `${base}/server-settings`
-        const profileActive = isItemActive(serverProfileHref)
-        return (
-          <Link
-            href={serverProfileHref}
-            data-tour="server-card"
-            title={collapsed ? `${guild.name} — Server Profile` : 'Open Server Profile'}
-            className="mx-2 my-3 flex items-center rounded-xl border transition-colors"
-            style={{
-              background: profileActive ? 'var(--p-soft)' : 'var(--panel)',
-              borderColor: profileActive ? 'var(--p-1)' : 'var(--line-strong)',
-              padding: collapsed ? '0.5rem' : '0.625rem',
-              justifyContent: collapsed ? 'center' : 'flex-start',
-              gap: collapsed ? '0' : '0.625rem',
-            }}
-            onMouseEnter={(e) => {
-              if (!profileActive) e.currentTarget.style.background = 'var(--bg-2)'
-            }}
-            onMouseLeave={(e) => {
-              if (!profileActive) e.currentTarget.style.background = 'var(--panel)'
-            }}
-          >
+        const profileActive = !isMember && isItemActive(serverProfileHref)
+        const cardBody = (
+          <>
             {icon ? (
               <Image
                 src={icon}
@@ -438,14 +493,53 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
                 )}
               </div>
             )}
+          </>
+        )
+        const cardStyle: React.CSSProperties = {
+          background: profileActive ? 'var(--p-soft)' : 'var(--panel)',
+          borderColor: profileActive ? 'var(--p-1)' : 'var(--line-strong)',
+          padding: collapsed ? '0.5rem' : '0.625rem',
+          justifyContent: collapsed ? 'center' : 'flex-start',
+          gap: collapsed ? '0' : '0.625rem',
+        }
+        if (isMember) {
+          return (
+            <div
+              data-tour="server-card"
+              title={guild.name}
+              className="mx-2 my-3 flex items-center rounded-xl border"
+              style={cardStyle}
+            >
+              {cardBody}
+            </div>
+          )
+        }
+        return (
+          <Link
+            href={serverProfileHref}
+            data-tour="server-card"
+            title={collapsed ? `${guild.name} — Server Profile` : 'Open Server Profile'}
+            className="mx-2 my-3 flex items-center rounded-xl border transition-colors"
+            style={cardStyle}
+            onMouseEnter={(e) => {
+              if (!profileActive) e.currentTarget.style.background = 'var(--bg-2)'
+            }}
+            onMouseLeave={(e) => {
+              if (!profileActive) e.currentTarget.style.background = 'var(--panel)'
+            }}
+          >
+            {cardBody}
           </Link>
         )
       })()}
 
-      {/* Global search / command palette launcher. */}
-      <div className="px-2 pb-2" data-tour="search">
-        <SearchTrigger collapsed={collapsed} />
-      </div>
+      {/* Global search / command palette launcher — management-only chrome
+          (the palette indexes admin routes & actions). */}
+      {!isMember && (
+        <div className="px-2 pb-2" data-tour="search">
+          <SearchTrigger collapsed={collapsed} />
+        </div>
+      )}
 
       {/* Nav — categories are the primary level. Click a category header to
           toggle its sub-items. In collapsed-sidebar mode each category is a
@@ -453,7 +547,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
           Overview is special-cased above the groups so it's a one-click
           target rather than living inside Analytics. */}
       <nav className="flex-1 overflow-y-auto px-2 pb-2 space-y-1" data-tour="nav">
-        {(() => {
+        {overview && (() => {
           const active = isNavItemActive(overview)
           return (
             <Link
@@ -638,6 +732,14 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
                             {item.badge}
                           </span>
                         )}
+                        {item.locked && (
+                          <Lock
+                            size={12}
+                            className="ml-auto shrink-0"
+                            style={{ color: 'var(--p-1)' }}
+                            aria-label="Operator-only"
+                          />
+                        )}
                       </Link>
                     )
                   })}
@@ -651,7 +753,7 @@ export function GuildSidebar({ guild, guildId, user, selfUser, bannerUrl, isOper
 
       {/* Bottom */}
       <div className="border-t p-2 space-y-0.5" style={{ borderColor: 'var(--line-strong)' }}>
-        <TourMenuItem />
+        {!isMember && <TourMenuItem />}
 
         <Link
           href="/dashboard"

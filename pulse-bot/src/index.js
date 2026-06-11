@@ -33,6 +33,7 @@ const { createPresence } = require("./presence");
 const { createIntegrations } = require("./integrations");
 const { createOnboarding } = require("./onboarding");
 const { createBackups } = require("./backups");
+const { createEconomy } = require("./economy");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -64,18 +65,26 @@ const scheduler = createScheduler(client, supabase);
 // never collides with the slash-command handler below).
 const tickets = createTickets(client, supabase);
 
+// The global economy (PULSIFY-45) owns the cross-server coin balance +
+// reputation. Constructed FIRST so every system that awards (leveling,
+// giveaways, milestones, onboarding) can be handed it. It registers no
+// listeners of its own — activity earning rides the leveling hooks, and the
+// /wallet + /pay slash commands route through the command handler below.
+const economy = createEconomy(client, supabase);
+
 // The leveling system awards XP for member activity, detects level-ups, assigns
 // reward roles and announces them. Constructed BEFORE giveaways so it can be
 // handed in — a giveaway entry awards XP too. It registers no interaction
 // listener (the /rank + /leaderboard slash commands are routed through the
 // command handler below); it only runs a once-a-minute voice-XP tick.
-const leveling = createLeveling(client, supabase);
+// `economy` is passed so every XP award also pays global coins.
+const leveling = createLeveling(client, supabase, economy);
 
 // The giveaway system likewise registers its own interaction listener (only
 // `gw:` buttons) plus a once-a-minute lifecycle tick that starts scheduled
 // giveaways and draws winners when they end. `leveling` is passed so a Join
-// awards engagement XP.
-const giveaways = createGiveaways(client, supabase, leveling);
+// awards engagement XP; `economy` so winners earn global coins + reputation.
+const giveaways = createGiveaways(client, supabase, leveling, economy);
 
 // The milestones system recognises members for crossing activity / tenure
 // thresholds. Like leveling it owns its table (member_milestones): a periodic
@@ -83,7 +92,7 @@ const giveaways = createGiveaways(client, supabase, leveling);
 // reward roles, announces, and records a notification. It registers no
 // interaction listener — /milestones routes through the command handler below,
 // and event participation is fed in from the GuildScheduledEventUserAdd handler.
-const milestones = createMilestones(client, supabase);
+const milestones = createMilestones(client, supabase, economy);
 
 // The presence system owns the bot's global Discord status. It reads the
 // "active" guild's presence config (bot_presence_state → guild_presence),
@@ -104,7 +113,7 @@ const integrations = createIntegrations(client, supabase);
 // Registers its own `ob:` interaction listener; posting is driven from
 // GuildMemberAdd below. Passed `leveling` so completion XP routes through the
 // same atomic RPC the rest of the levelling system uses.
-const onboarding = createOnboarding(client, supabase, leveling);
+const onboarding = createOnboarding(client, supabase, leveling, economy);
 
 // Server Recovery & Backup System (PULSIFY-42): the dashboard owns manual
 // backups + restores; this worker is the WRITER of SCHEDULED backups. An hourly
@@ -1036,6 +1045,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       getAllowedCommands,
       leveling,
       milestones,
+      economy,
       ephemeral: verdict.ephemeral,
     });
     verdict.commit();

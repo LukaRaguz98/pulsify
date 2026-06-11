@@ -40,8 +40,8 @@ import {
   type RecoveryLogEntry,
   type BackupType,
 } from '@/lib/backups'
-import type { CaptureSnapshot } from '@/app/dashboard/[guildId]/backups/page'
-import { deleteBackup, loadRecoveryLogs } from '@/app/dashboard/[guildId]/backups/actions'
+import type { CaptureSnapshot } from '@/app/dashboard/[guildId]/(management)/backups/page'
+import { deleteBackup, loadRecoveryLogs } from '@/app/dashboard/[guildId]/(management)/backups/actions'
 import { BackupIcon } from './icons'
 import { CreateBackupDialog } from './CreateBackupDialog'
 import { BackupImportPanel } from './BackupImportPanel'

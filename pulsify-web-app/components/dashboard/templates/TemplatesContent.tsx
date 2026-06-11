@@ -28,8 +28,8 @@ import {
   type TemplateCategory,
   type TemplateSectionKey,
 } from '@/lib/templates'
-import type { GuildConfigSnapshot } from '@/app/dashboard/[guildId]/templates/page'
-import { deleteTemplate } from '@/app/dashboard/[guildId]/templates/actions'
+import type { GuildConfigSnapshot } from '@/app/dashboard/[guildId]/(management)/templates/page'
+import { deleteTemplate } from '@/app/dashboard/[guildId]/(management)/templates/actions'
 import { TemplateCard } from './TemplateCard'
 import { TemplateCreatePanel } from './TemplateCreatePanel'
 import { TemplateApplyWizard } from './TemplateApplyWizard'

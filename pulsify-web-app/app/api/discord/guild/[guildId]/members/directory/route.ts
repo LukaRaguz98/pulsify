@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+import { requireGuildRole } from '@/lib/guild-access'
 import { fetchGuildMembers, fetchGuildRoles, fetchGuild, type DiscordRole } from '@/lib/discord'
 import {
   EMPTY_ACTIVITY,
@@ -45,6 +46,9 @@ export async function GET(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { guildId } = await params
+  // Management data — requires Manage Server / Administrator on this guild.
+  const auth = await requireGuildRole(guildId, 'admin')
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
   const url = new URL(req.url)
   const limit = Math.min(Math.max(Number(url.searchParams.get('limit') ?? 1000), 1), 1000)
 

@@ -27,7 +27,7 @@ import {
   executeModerationAction,
   reviewModerationEvent,
   setModeratorVerdict,
-} from '@/app/dashboard/[guildId]/ai-moderation/actions'
+} from '@/app/dashboard/[guildId]/(management)/ai-moderation/actions'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ConfidenceBadge, SignalList, VerdictFeedback, rowConfidenceLabel } from './shared'
 

@@ -30,7 +30,7 @@ import {
   type Milestone,
   type AnnounceMode,
 } from '@/lib/milestones'
-import { createMilestone, updateMilestone, testMilestone } from '@/app/dashboard/[guildId]/milestones/actions'
+import { createMilestone, updateMilestone, testMilestone } from '@/app/dashboard/[guildId]/(management)/milestones/actions'
 import { MilestoneIcon, MILESTONE_ICON_CHOICES } from './icons'
 
 type Channel = { id: string; name: string }
