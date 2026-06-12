@@ -172,6 +172,21 @@ export function avatarUrl(userId: string, avatar: string | null, discriminator =
   return `https://cdn.discordapp.com/avatars/${userId}/${avatar}.${ext}?size=${size}`
 }
 
+/**
+ * Default avatar for a user we only know by ID (e.g. global wallet holders who
+ * aren't members of the current guild). Mirrors Discord's new-username default:
+ * `(id >> 22) % 6` — used so the "Richest" board can still show a profile icon.
+ */
+export function defaultAvatarUrl(userId: string): string {
+  let index = 0
+  try {
+    index = Number((BigInt(userId) >> 22n) % 6n)
+  } catch {
+    index = 0
+  }
+  return `https://cdn.discordapp.com/embed/avatars/${index}.png`
+}
+
 export function roleColor(color: number): string {
   if (color === 0) return '#99aab5'
   return `#${color.toString(16).padStart(6, '0')}`

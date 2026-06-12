@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { requireGuildRole } from '@/lib/guild-access'
-import { fetchGuildMembers, avatarUrl, snowflakeToDate, type DiscordMember } from '@/lib/discord'
+import { fetchGuildMembers, avatarUrl, defaultAvatarUrl, snowflakeToDate, type DiscordMember } from '@/lib/discord'
 import { computeReputation, daysSince } from '@/lib/reputation'
 import { normaliseLevelingSettings, levelForXp } from '@/lib/leveling'
 import { normaliseEconomyUser } from '@/lib/economy'
@@ -162,9 +162,17 @@ export async function GET(
     ? Math.round(([...levelsByUser.values()].reduce((s, v) => s + v.level, 0) / tracked) * 10) / 10
     : 0
 
-  const richest = (richestRes.data ?? []).map((r) =>
-    normaliseEconomyUser(r as Record<string, unknown>),
-  )
+  // Resolve an avatar for each wallet holder: prefer their guild-member avatar
+  // (so it matches the member boards) and fall back to the Discord default when
+  // the holder isn't a member of this guild.
+  const memberAvatarById = new Map<string, string>()
+  for (const m of members) {
+    memberAvatarById.set(m.user.id, avatarUrl(m.user.id, m.user.avatar))
+  }
+  const richest = (richestRes.data ?? []).map((r) => {
+    const u = normaliseEconomyUser(r as Record<string, unknown>)
+    return { ...u, avatar: memberAvatarById.get(u.user_id) ?? defaultAvatarUrl(u.user_id) }
+  })
 
   const response: LeaderboardResponse = {
     boards,

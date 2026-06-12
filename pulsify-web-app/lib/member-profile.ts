@@ -192,11 +192,16 @@ export type LeaderboardEntry = {
 
 export type LeaderboardKey = 'level' | 'xp' | 'reputation' | 'active'
 
+/** A "Richest" board row — a global wallet plus a resolved avatar URL. The
+ *  holder may not be a member of this guild, so the avatar falls back to the
+ *  Discord default when we don't have their member record. */
+export type RichestEntry = EconomyUser & { avatar: string }
+
 export type LeaderboardResponse = {
   boards: Record<LeaderboardKey, LeaderboardEntry[]>
   /** Top global wallets by Pulse Coin balance — the "Richest" board, moved
    *  here from the Economy view so all leaderboards live in one place. */
-  richest: EconomyUser[]
+  richest: RichestEntry[]
   /** Members grouped into level brackets, for the distribution chart. */
   distribution: { label: string; count: number }[]
   totals: { tracked: number; totalXp: number; avgLevel: number; topLevel: number }

@@ -82,6 +82,23 @@ function tierForScore(score: number): ReputationTier {
 }
 
 /**
+ * Build a display-only Reputation from a precomputed score — for surfaces (like
+ * the leaderboard) that already have the global score but not the full input,
+ * so they can render the same `<ReputationBadge>` as the members table.
+ */
+export function reputationFromScore(score: number): Reputation {
+  const clamped = Math.max(0, Math.min(100, Math.round(score)))
+  const tier = tierForScore(clamped)
+  return {
+    score: clamped,
+    tier,
+    label: TIER_META[tier].label,
+    color: TIER_META[tier].color,
+    breakdown: [],
+  }
+}
+
+/**
  * Compute a member's reputation. Positive components sum to ~85 on top of a
  * 15-point baseline (so an established lurker isn't a zero); infractions
  * subtract. The result is clamped to 0-100.

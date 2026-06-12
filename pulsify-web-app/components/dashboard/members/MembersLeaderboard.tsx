@@ -11,9 +11,10 @@ import { StatsCard } from '@/components/dashboard/StatsCard'
 import { RefreshButton } from '@/components/dashboard/RefreshButton'
 import { createClient as createSupabase } from '@/lib/supabase'
 import { formatDuration } from '@/lib/analytics'
-import { formatCoins, type EconomyUser } from '@/lib/economy'
-import type { LeaderboardEntry, LeaderboardKey, LeaderboardResponse } from '@/lib/member-profile'
-import { LevelBadge } from '@/components/dashboard/members/badges'
+import { formatCoins } from '@/lib/economy'
+import { reputationFromScore } from '@/lib/reputation'
+import type { LeaderboardEntry, LeaderboardResponse, RichestEntry } from '@/lib/member-profile'
+import { LevelBadge, ReputationBadge } from '@/components/dashboard/members/badges'
 import { RankBadge } from '@/components/dashboard/RankBadge'
 
 type Props = {
@@ -51,60 +52,139 @@ const WINDOWS: { key: string; label: string }[] = [
   { key: 'all', label: 'All time' },
 ]
 
-// Primary + secondary metric shown per board. The sub-line always names the
-// metric's scope so global reputation can't be misread as a server stat.
-function metric(board: LeaderboardKey, e: LeaderboardEntry): { value: string; sub: string } {
-  switch (board) {
-    case 'level':
-      return { value: `Lvl ${e.level}`, sub: `${e.xp.toLocaleString()} XP · this server` }
-    case 'xp':
-      return { value: `${e.xp.toLocaleString()} XP`, sub: `Level ${e.level} · this server` }
-    case 'reputation':
-      return { value: `${e.reputation}/100`, sub: 'Global · all Pulse servers' }
-    case 'active':
-      return {
-        value: `${e.messages.toLocaleString()} msg`,
-        sub: e.voiceSeconds > 0 ? `${formatDuration(e.voiceSeconds)} voice` : 'No voice',
-      }
-  }
+// The metric column the active board ranks by — accented in the header so the
+// table makes the ranking dimension obvious (the order is server-driven, so
+// these headers aren't sortable like the Members directory's).
+const BOARD_PRIMARY: Record<BoardId, string> = {
+  level: 'level',
+  reputation: 'reputation',
+  active: 'messages',
+  richest: '',
+}
+
+// Member-board columns — the same dimensions the Members directory surfaces, so
+// the two tables read identically.
+const MEMBER_COLS: { key: string; label: string }[] = [
+  { key: 'level', label: 'Level' },
+  { key: 'xp', label: 'XP' },
+  { key: 'reputation', label: 'Reputation' },
+  { key: 'messages', label: 'Messages' },
+  { key: 'voice', label: 'Voice' },
+]
+
+function headerCellStyle(active: boolean): React.CSSProperties {
+  return active ? { color: 'var(--p-1)' } : { color: 'var(--text-3)' }
+}
+
+// Fixed width for the leading rank ("#") column. Pinning it to the same value in
+// every board table means the Member column always starts at the same x-position
+// — so it never shifts when you switch between boards.
+const RANK_COL_WIDTH = 64
+const RANK_HEADER_STYLE: React.CSSProperties = { width: RANK_COL_WIDTH, color: 'var(--text-3)' }
+const RANK_CELL_STYLE: React.CSSProperties = { width: RANK_COL_WIDTH }
+
+/**
+ * Member boards (level / reputation / most-active) rendered in the same table
+ * chrome as the Members directory: bordered container, stacked header, hover
+ * rows that open the member's profile.
+ */
+function MemberBoardTable({
+  entries,
+  board,
+  linkToProfiles,
+  onOpen,
+}: {
+  entries: LeaderboardEntry[]
+  board: BoardId
+  linkToProfiles: boolean
+  onOpen: (userId: string) => void
+}) {
+  const primary = BOARD_PRIMARY[board]
+  return (
+    <div className="rounded-xl border overflow-x-auto" style={{ borderColor: 'var(--line-strong)' }}>
+      <table className="w-full min-w-[760px] text-sm table-stack">
+        <thead>
+          <tr className="border-b" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
+            <th className="px-4 py-3 text-left text-xs font-medium" style={RANK_HEADER_STYLE}>#</th>
+            <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--text-3)' }}>Member</th>
+            {MEMBER_COLS.map((c) => (
+              <th key={c.key} className="px-4 py-3 text-left text-xs font-medium" style={headerCellStyle(c.key === primary)}>
+                {c.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((e, i) => {
+            const interactive = linkToProfiles
+            return (
+              <tr
+                key={e.userId}
+                onClick={interactive ? () => onOpen(e.userId) : undefined}
+                className={`border-b transition-colors${interactive ? ' cursor-pointer' : ''}`}
+                style={{ borderColor: 'var(--line-strong)', background: 'color-mix(in srgb, var(--panel) 50%, transparent)' }}
+                onMouseEnter={interactive ? (ev) => { ev.currentTarget.style.background = 'var(--bg-2)' } : undefined}
+                onMouseLeave={interactive ? (ev) => { ev.currentTarget.style.background = 'color-mix(in srgb, var(--panel) 50%, transparent)' } : undefined}
+              >
+                <td className="px-4 py-3" data-label="" style={RANK_CELL_STYLE}><RankBadge rank={i + 1} /></td>
+                <td className="px-4 py-3" data-label="">
+                  <div className="flex items-center gap-3">
+                    <Image src={e.avatar} alt={e.name} width={30} height={30} unoptimized className="rounded-full shrink-0" />
+                    <p className="truncate font-medium text-foreground">{e.name}</p>
+                  </div>
+                </td>
+                <td className="px-4 py-3" data-label="Level"><LevelBadge level={e.level} size="sm" /></td>
+                <td className="px-4 py-3 font-mono text-xs text-muted-foreground" data-label="XP">{e.xp.toLocaleString()}</td>
+                <td className="px-4 py-3" data-label="Reputation"><ReputationBadge reputation={reputationFromScore(e.reputation)} size="sm" /></td>
+                <td className="px-4 py-3 font-mono text-xs text-foreground" data-label="Messages">{e.messages.toLocaleString()}</td>
+                <td className="px-4 py-3 font-mono text-xs text-muted-foreground" data-label="Voice">{e.voiceSeconds > 0 ? formatDuration(e.voiceSeconds) : '—'}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
 }
 
 /**
- * "Richest" board — global Pulse Coin wallets ranked by balance. These are
- * GLOBAL wallets (the holder may not be a member of this guild), so rows carry
- * no avatar and aren't clickable, unlike the server-member boards above.
+ * "Richest" board — global Pulse Coin wallets ranked by balance. Rendered in the
+ * same table chrome as the member boards, now with a profile icon (the holder's
+ * guild avatar when they're a member here, otherwise the Discord default). These
+ * are GLOBAL wallets, so rows aren't clickable through to a server profile.
  */
-function RichestBoard({ rows }: { rows: EconomyUser[] }) {
-  if (rows.length === 0) {
-    return (
-      <EmptyState
-        icon={<Coins size={36} />}
-        title="No wallets yet"
-        description="Members start earning Pulse Coins the moment they're active in any server running Pulse."
-      />
-    )
-  }
+function RichestTable({ rows }: { rows: RichestEntry[] }) {
   return (
-    <div className="space-y-2">
-      {rows.map((u, i) => (
-        <div
-          key={u.user_id}
-          className="leaderboard-row flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left"
-          style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}
-        >
-          <RankBadge rank={i + 1} />
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-medium text-foreground">{u.user_name ?? u.user_id}</p>
-            <p className="mt-0.5 text-[11px] text-subtle">
-              {formatCoins(u.lifetime_earned)} earned all-time
-            </p>
-          </div>
-          <div className="shrink-0 text-right">
-            <p className="font-mono text-sm font-bold text-foreground">{formatCoins(u.balance)}</p>
-            <p className="text-[11px] text-subtle">Pulse Coins</p>
-          </div>
-        </div>
-      ))}
+    <div className="rounded-xl border overflow-x-auto" style={{ borderColor: 'var(--line-strong)' }}>
+      <table className="w-full min-w-[520px] text-sm table-stack">
+        <thead>
+          <tr className="border-b" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
+            <th className="px-4 py-3 text-left text-xs font-medium" style={RANK_HEADER_STYLE}>#</th>
+            <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--text-3)' }}>Member</th>
+            <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--text-3)' }}>Earned all-time</th>
+            <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--p-1)' }}>Balance</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((u, i) => (
+            <tr
+              key={u.user_id}
+              className="border-b"
+              style={{ borderColor: 'var(--line-strong)', background: 'color-mix(in srgb, var(--panel) 50%, transparent)' }}
+            >
+              <td className="px-4 py-3" data-label="" style={RANK_CELL_STYLE}><RankBadge rank={i + 1} /></td>
+              <td className="px-4 py-3" data-label="">
+                <div className="flex items-center gap-3">
+                  <Image src={u.avatar} alt={u.user_name ?? u.user_id} width={30} height={30} unoptimized className="rounded-full shrink-0" />
+                  <p className="truncate font-medium text-foreground">{u.user_name ?? u.user_id}</p>
+                </div>
+              </td>
+              <td className="px-4 py-3 font-mono text-xs text-muted-foreground" data-label="Earned all-time">{formatCoins(u.lifetime_earned)}</td>
+              <td className="px-4 py-3 font-mono text-sm font-bold text-foreground" data-label="Balance">{formatCoins(u.balance)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }
@@ -287,7 +367,15 @@ export function MembersLeaderboard({ guildId, linkToProfiles = true, profileBase
         </p>
 
         {board === 'richest' ? (
-          <RichestBoard rows={data.richest} />
+          data.richest.length === 0 ? (
+            <EmptyState
+              icon={<Coins size={36} />}
+              title="No wallets yet"
+              description="Members start earning Pulse Coins the moment they're active in any server running Pulse."
+            />
+          ) : (
+            <RichestTable rows={data.richest} />
+          )
         ) : entries.length === 0 ? (
           <EmptyState
             icon={<Trophy size={36} />}
@@ -295,59 +383,12 @@ export function MembersLeaderboard({ guildId, linkToProfiles = true, profileBase
             description={board === 'active' ? 'No tracked activity in this timeframe.' : 'No members have earned XP yet — activity will populate the board.'}
           />
         ) : (
-          <div className="space-y-2">
-            {entries.map((e, i) => {
-              const m = metric(board, e)
-              const interactive = linkToProfiles
-              const row = (
-                <>
-                  <RankBadge rank={i + 1} />
-                  <Image src={e.avatar} alt={e.name} width={36} height={36} unoptimized className="shrink-0 rounded-full" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-foreground">{e.name}</p>
-                    <div className="mt-0.5 flex items-center gap-1.5">
-                      <LevelBadge level={e.level} size="sm" />
-                      <span
-                        className="inline-flex items-center gap-1 rounded px-1 py-0.5 text-[10px] font-medium"
-                        style={{ background: 'var(--bg-2)', color: 'var(--text-3)' }}
-                        title="Global reputation — shared across every Pulse server"
-                      >
-                        <Globe size={9} />
-                        {e.reputation}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p className="font-mono text-sm font-bold text-foreground">{m.value}</p>
-                    <p className="text-[11px] text-subtle">{m.sub}</p>
-                  </div>
-                </>
-              )
-              if (!interactive) {
-                return (
-                  <div
-                    key={e.userId}
-                    className="leaderboard-row flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left"
-                    style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}
-                  >
-                    {row}
-                  </div>
-                )
-              }
-              return (
-                <button
-                  key={e.userId}
-                  onClick={() => router.push(`/dashboard/${guildId}/${profileBasePath}/${e.userId}`)}
-                  className="leaderboard-row flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors"
-                  style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}
-                  onMouseEnter={(ev) => { ev.currentTarget.style.background = 'var(--bg-2)' }}
-                  onMouseLeave={(ev) => { ev.currentTarget.style.background = 'var(--panel)' }}
-                >
-                  {row}
-                </button>
-              )
-            })}
-          </div>
+          <MemberBoardTable
+            entries={entries}
+            board={board}
+            linkToProfiles={linkToProfiles}
+            onOpen={(userId) => router.push(`/dashboard/${guildId}/${profileBasePath}/${userId}`)}
+          />
         )}
       </CategorySection>
     </div>
