@@ -18,12 +18,14 @@ function load(): Promise<string[]> {
   inflight = fetch('/api/me/cosmetics', { cache: 'no-store' })
     .then((r) => (r.ok ? r.json() : { effects: [] }))
     .then((j) => {
-      cache = Array.isArray(j.effects) ? j.effects : []
-      return cache
+      const effects: string[] = Array.isArray(j.effects) ? j.effects : []
+      cache = effects
+      return effects
     })
     .catch(() => {
-      cache = []
-      return cache
+      const effects: string[] = []
+      cache = effects
+      return effects
     })
     .finally(() => {
       inflight = null
