@@ -19,9 +19,12 @@ export async function GET(
   { params }: { params: Promise<{ guildId: string }> },
 ) {
   const { guildId } = await params // guild-scoped for auth-shape; payload is global
-  // Members may read it (it powers their own Pulse Profile); admins use it on
-  // the member detail pages. Members may only query THEMSELVES — the global
-  // wallet of an arbitrary member is admin-surface data.
+  // Any member may read it — this powers leaderboard click-through to ANY
+  // profile, global or local. Balance, rank, reputation, achievements and
+  // cosmetics are already public on the leaderboards, so they're returned for
+  // everyone. The one privacy-sensitive piece — WHICH other Pulse servers the
+  // user belongs to — is revealed only to the user themselves (see redaction
+  // below); for everyone else the per-server breakdown is trimmed to this guild.
   const auth = await requireGuildRole(guildId, 'member')
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
@@ -30,9 +33,7 @@ export async function GET(
   if (!userId || !/^\d{5,25}$/.test(userId)) {
     return NextResponse.json({ error: 'A valid user id is required.' }, { status: 400 })
   }
-  if (auth.access.role !== 'admin' && userId !== auth.access.userId) {
-    return NextResponse.json({ error: 'You can only view your own Pulse profile.' }, { status: 403 })
-  }
+  const isSelf = userId === auth.access.userId
 
   const [walletRes, levelsRes, milestonesRes, cosmeticsRes] = await Promise.all([
     supabase.from('economy_users').select('*').eq('user_id', userId).maybeSingle(),
@@ -71,8 +72,13 @@ export async function GET(
     balanceRank = (richer ?? 0) + 1
   }
 
-  // Resolve server names for the per-server level list.
-  const levels = levelsRes.data ?? []
+  // Resolve server names for the per-server level list. Privacy: a user's
+  // membership across OTHER Pulse servers is only theirs to see — for anyone
+  // else we keep the accurate total count but trim the breakdown to this guild.
+  const allLevels = levelsRes.data ?? []
+  const serverCount = allLevels.length
+  const levels = isSelf ? allLevels : allLevels.filter((l) => l.guild_id === guildId)
+  const serversRedacted = !isSelf && serverCount > levels.length
   let nameById = new Map<string, string>()
   if (levels.length > 0) {
     const { data: guilds } = await supabase
@@ -95,6 +101,10 @@ export async function GET(
       level: Number(l.level ?? 0),
       xp: Number(l.xp ?? 0),
     })),
+    // True total across every Pulse server (the `servers` list above may be
+    // redacted for non-self viewers); `serversRedacted` flags that trim.
+    serverCount,
+    serversRedacted,
     achievements: milestonesRes.count ?? 0,
     cosmetics,
   })

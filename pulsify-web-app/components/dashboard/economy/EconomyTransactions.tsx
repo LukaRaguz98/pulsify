@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { AlertCircle, Coins, ReceiptText, Search } from 'lucide-react'
+import { Activity, AlertCircle, Coins, ReceiptText, Search } from 'lucide-react'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Pagination } from '@/components/ui/pagination'
 import { TableSkeleton } from '@/components/ui/table-skeleton'
@@ -57,6 +57,9 @@ function describeRow(t: EconomyTransaction): string {
 export function EconomyTransactions({ guildId }: Props) {
   const [scope, setScope] = useState<Scope>('guild')
   const [kind, setKind] = useState('')
+  // Per-message / per-voice-minute earnings are hidden by default — they bury
+  // the meaningful rows (rewards, spends, transfers, level-ups, admin actions).
+  const [includeActivity, setIncludeActivity] = useState(false)
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [page, setPage] = useState(1)
@@ -82,6 +85,7 @@ export function EconomyTransactions({ guildId }: Props) {
         limit: String(pageSize),
       })
       if (kind) params.set('kind', kind)
+      if (includeActivity) params.set('activity', '1')
       if (debouncedQuery) params.set('q', debouncedQuery)
       const res = await fetch(`/api/guilds/${guildId}/economy/transactions?${params}`, {
         cache: 'no-store',
@@ -98,7 +102,7 @@ export function EconomyTransactions({ guildId }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [guildId, scope, kind, debouncedQuery, page, pageSize])
+  }, [guildId, scope, kind, includeActivity, debouncedQuery, page, pageSize])
 
   useEffect(() => {
     load()
@@ -107,7 +111,7 @@ export function EconomyTransactions({ guildId }: Props) {
   // Any filter change snaps back to page 1.
   useEffect(() => {
     setPage(1)
-  }, [scope, kind, debouncedQuery, pageSize])
+  }, [scope, kind, includeActivity, debouncedQuery, pageSize])
 
   const segment = (active: boolean): React.CSSProperties =>
     active ? { background: 'var(--p-soft)', color: 'var(--text)' } : { color: 'var(--text-2)' }
@@ -148,6 +152,20 @@ export function EconomyTransactions({ guildId }: Props) {
           ))}
         </select>
 
+        <button
+          onClick={() => setIncludeActivity((v) => !v)}
+          className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors"
+          style={
+            includeActivity
+              ? { background: 'var(--p-soft)', borderColor: 'var(--p-1)', color: 'var(--p-1)' }
+              : { background: 'var(--panel)', borderColor: 'var(--line-strong)', color: 'var(--text-3)' }
+          }
+          title="Per-message and per-voice-minute coin earnings are hidden by default to keep the ledger readable. Toggle to include them."
+        >
+          <Activity size={13} />
+          {includeActivity ? 'Activity earnings: on' : 'Activity earnings: off'}
+        </button>
+
         <div className="relative ml-auto w-full sm:w-64">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle" />
           <input
@@ -175,9 +193,11 @@ export function EconomyTransactions({ guildId }: Props) {
           icon={<ReceiptText size={22} />}
           title="No transactions match"
           description={
-            scope === 'guild'
-              ? 'Nothing recorded from this server for these filters yet — try the all-servers scope.'
-              : 'Nothing in the economy matches these filters yet.'
+            !includeActivity
+              ? 'No standout transactions for these filters. Per-message and per-voice-minute earnings are hidden — turn on “Activity earnings” to include them.'
+              : scope === 'guild'
+                ? 'Nothing recorded from this server for these filters yet — try the all-servers scope.'
+                : 'Nothing in the economy matches these filters yet.'
           }
           variant="muted"
         />

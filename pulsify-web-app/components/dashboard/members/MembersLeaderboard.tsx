@@ -168,10 +168,9 @@ function MemberBoardTable({
  * "Richest" board — global Pulse Coin wallets ranked by balance. Rendered in the
  * same table chrome as the member boards, with a profile icon (the holder's
  * guild avatar when they're a member here, otherwise their global Discord
- * avatar). The board is GLOBAL, so a holder can live on another Pulse server:
- * rows open the member's profile on click, but only for holders who are members
- * of THIS guild (`inGuild`) — outsiders have no profile here, so their row isn't
- * clickable.
+ * avatar). The board is GLOBAL, so a holder can live on another Pulse server —
+ * every row is clickable: members open their full server profile, outsiders open
+ * their global Pulse profile (`inGuild` just flags the "Other server" badge).
  */
 function RichestTable({
   rows,
@@ -199,12 +198,12 @@ function RichestTable({
         </thead>
         <tbody>
           {rows.map((u, i) => {
-            const interactive = linkToProfiles && u.inGuild
+            const interactive = linkToProfiles
             return (
               <tr
                 key={u.user_id}
                 onClick={interactive ? () => onOpen(u.user_id) : undefined}
-                title={!u.inGuild ? 'Not a member of this server' : undefined}
+                title={!u.inGuild ? 'On another Pulse server — opens their global profile' : undefined}
                 className={`border-b transition-colors${interactive ? ' cursor-pointer' : ''}`}
                 style={{ borderColor: 'var(--line-strong)', background: 'color-mix(in srgb, var(--panel) 50%, transparent)' }}
                 onMouseEnter={interactive ? (ev) => { ev.currentTarget.style.background = 'var(--bg-2)' } : undefined}

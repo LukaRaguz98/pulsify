@@ -12,6 +12,8 @@ const MAX_LIMIT = 100
  *   &q=text                  matches member / counterparty / actor name or note
  *   &user=discord_id         a single member's history
  *   &audit=1                 only administrative adjustments (economy mod log)
+ *   &activity=1              include the per-message/per-voice-minute earnings
+ *                            (hidden by default — they flood the ledger)
  *   &offset=0&limit=50       pagination (exact total returned)
  *
  * Paged, filterable read over the coin ledger — the Transactions tab and the
@@ -50,6 +52,14 @@ export async function GET(
   if (kind) query = query.eq('kind', kind)
   if (reason) query = query.eq('reason', reason)
   if (userId) query = query.eq('user_id', userId)
+  // Per-message / per-voice-minute activity earnings are written one row each, so
+  // they swamp the ledger (thousands of tiny grants). Hide them by default;
+  // `activity=1` opts them back in. Skipped when a specific reason is requested
+  // or in the admin audit view, so those stay exact.
+  const includeActivity = sp.get('activity') === '1'
+  if (!includeActivity && !reason && sp.get('audit') !== '1') {
+    query = query.neq('reason', 'activity')
+  }
   if (q) {
     // Escape PostgREST or() syntax characters so a search term can't break
     // the filter expression.

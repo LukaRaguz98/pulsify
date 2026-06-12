@@ -140,6 +140,11 @@ export type BanInfo = {
 /** Everything the profile page needs in a single fetch. */
 export type MemberProfileBundle = {
   guildId: string
+  /** False when the user isn't a member of THIS guild — the profile then falls
+   *  back to a global view (identity + global reputation + cross-server Pulse
+   *  standing), and the guild-specific sections are hidden. Lets any leaderboard
+   *  row — including global wallet holders from other servers — open a profile. */
+  isMember: boolean
   member: DiscordMember
   roles: DiscordRole[]
   /** CDN URL for the member's profile banner image, or null when unset. */

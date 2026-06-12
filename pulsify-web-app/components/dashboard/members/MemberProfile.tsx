@@ -26,6 +26,7 @@ import {
   StickyNote,
   History,
   Sparkles,
+  Globe,
 } from 'lucide-react'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -250,7 +251,7 @@ export function MemberProfile({ guildId, userId, viewerRole = 'admin', backHref,
     )
   }
 
-  const { member, roles, stats, infractions } = bundle
+  const { member, roles, stats, infractions, isMember } = bundle
   const risk = memberRisk(infractions)
   const levelData = bundle.level ?? { xp: 0, level: 0 }
   const levelProgress = progressInLevel(levelData.xp, bundle.curve)
@@ -350,16 +351,21 @@ export function MemberProfile({ guildId, userId, viewerRole = 'admin', backHref,
                     <Crown size={10} /> Owner
                   </span>
                 )}
+                {!isMember && (
+                  <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase" style={{ background: 'var(--bg-2)', color: 'var(--text-3)' }} title="This user isn't a member of this server — showing their global Pulse profile">
+                    <Globe size={10} /> Global profile
+                  </span>
+                )}
               </div>
               <p className="mt-0.5 text-sm text-subtle">@{member.user.username}</p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <ReputationBadge reputation={reputation} />
-              {isAdmin && <RiskBadge risk={risk} alwaysShow />}
+              {isAdmin && isMember && <RiskBadge risk={risk} alwaysShow />}
             </div>
           </div>
 
-          {isAdmin && bundle.ban.banned && (
+          {isAdmin && isMember && bundle.ban.banned && (
             <div className="mt-4 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm" style={{ borderColor: 'rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.08)', color: '#f87171' }}>
               <Ban size={14} />
               <span>This member is banned{bundle.ban.reason ? `: ${bundle.ban.reason}` : '.'}</span>
@@ -368,9 +374,11 @@ export function MemberProfile({ guildId, userId, viewerRole = 'admin', backHref,
 
           {/* Meta chips */}
           <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-subtle">
-            <span className="inline-flex items-center gap-1.5">
-              <Calendar size={13} /> Joined {new Date(member.joined_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })} · {formatAgeLong(tenureDays)} ago
-            </span>
+            {isMember && (
+              <span className="inline-flex items-center gap-1.5">
+                <Calendar size={13} /> Joined {new Date(member.joined_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })} · {formatAgeLong(tenureDays)} ago
+              </span>
+            )}
             <span className="inline-flex items-center gap-1.5">
               <Clock size={13} /> Account {bundle.accountCreatedAt ? `${formatAgeLong(accountAgeDays)} old` : 'age unknown'}
             </span>
@@ -384,8 +392,8 @@ export function MemberProfile({ guildId, userId, viewerRole = 'admin', backHref,
             </button>
           </div>
 
-          {/* Quick actions — admin only */}
-          {isAdmin && !member.user.bot && (
+          {/* Quick actions — admin only, and only for actual members of this server */}
+          {isAdmin && isMember && !member.user.bot && (
             <div className="mt-5 border-t pt-4" style={{ borderColor: 'var(--line-strong)' }}>
               <MemberQuickActions
                 guildId={guildId}
@@ -400,7 +408,20 @@ export function MemberProfile({ guildId, userId, viewerRole = 'admin', backHref,
       </div>
 
       <div className="mt-8 space-y-8">
-        {/* Overview cards */}
+        {/* Global profile note — this user isn't a member here, so the
+            server-specific sections (activity, server level, roles, moderation)
+            don't apply and are omitted; their global standing is shown instead. */}
+        {!isMember && (
+          <div className="flex items-start gap-2.5 rounded-xl border p-4 text-sm" style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}>
+            <Globe size={16} className="mt-0.5 shrink-0" style={{ color: 'var(--p-1)' }} />
+            <p className="text-muted-foreground">
+              This user isn’t a member of this server. You’re viewing their <span className="font-medium text-foreground">global Pulse profile</span> — identity, reputation and cross-server standing. Server-specific activity, levels and roles aren’t available here.
+            </p>
+          </div>
+        )}
+
+        {/* Overview cards — server activity (members only) */}
+        {isMember && (
         <CategorySection icon={<Activity size={14} />} title="Overview" description="Lifetime activity and standing for this member.">
           <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
             <StatsCard label="Messages" value={stats.message_count} sub={`Last active ${relativeTime(stats.last_active)}`} icon={<MessageSquare size={16} />} accent="var(--p-1)" />
@@ -412,8 +433,10 @@ export function MemberProfile({ guildId, userId, viewerRole = 'admin', backHref,
             {isAdmin && <StatsCard label="Infractions" value={infractions.total_infractions} sub={`${infractions.active_warnings} active warning${infractions.active_warnings === 1 ? '' : 's'}`} icon={<ShieldAlert size={16} />} accent="var(--red)" />}
           </div>
         </CategorySection>
+        )}
 
-        {/* Progression — level + XP earned from activity */}
+        {/* Progression — level + XP earned from activity (members only) */}
+        {isMember && (
         <CategorySection icon={<Sparkles size={14} />} title="Progression" description="Level and XP earned from this member's activity in the server.">
           <ChartCard title="Level & XP" subtitle="Earned from messages, voice, commands, giveaways and events" icon={<Sparkles size={15} />}>
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
@@ -435,52 +458,59 @@ export function MemberProfile({ guildId, userId, viewerRole = 'admin', backHref,
             </div>
           </ChartCard>
         </CategorySection>
+        )}
 
         {/* Pulse Profile — server progression sits alongside the member's
-            cross-server global standing (related data, one toggle). Placed
-            right under Progression since the "this server" tab continues it. */}
-        <GlobalPulseProfile guildId={guildId} userId={userId} reputation={reputation} />
+            cross-server global standing (related data, one toggle). For
+            non-members it opens straight to the global standing tab. */}
+        <GlobalPulseProfile guildId={guildId} userId={userId} reputation={reputation} defaultTab={isMember ? 'server' : 'global'} />
 
-        {/* Achievements — milestones this member has earned / is working toward.
-            Renders nothing for servers without milestones. */}
-        <MemberMilestones
-          guildId={guildId}
-          userId={userId}
-          base={{
-            join_age_days: tenureDays,
-            messages: stats.message_count,
-            voice_minutes: Math.floor(stats.voice_seconds / 60),
-            xp: levelData.xp,
-            level: levelProgress.level,
-          }}
-        />
+        {/* Achievements — milestones this member has earned / is working toward
+            (server-scoped; members only). */}
+        {isMember && (
+          <MemberMilestones
+            guildId={guildId}
+            userId={userId}
+            base={{
+              join_age_days: tenureDays,
+              messages: stats.message_count,
+              voice_minutes: Math.floor(stats.voice_seconds / 60),
+              xp: levelData.xp,
+              level: levelProgress.level,
+            }}
+          />
+        )}
 
-        {/* Reputation & roles */}
-        <CategorySection icon={<Award size={14} />} title="Reputation & Trust" helpId="reputation" description="How this member's trust score breaks down, and their server roles.">
-          <div className="grid gap-5 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <ChartCard title="Trust score" subtitle="Computed from activity, tenure and moderation history" icon={<Award size={15} />}>
+        {/* Reputation & trust — the trust score is GLOBAL, so it shows for
+            everyone; the roles card is server-specific (members only). */}
+        <CategorySection icon={<Award size={14} />} title="Reputation & Trust" helpId="reputation" description={isMember ? "How this member's trust score breaks down, and their server roles." : "How this user's global trust score breaks down."}>
+          <div className={`grid gap-5 ${isMember ? 'lg:grid-cols-3' : ''}`}>
+            <div className={isMember ? 'lg:col-span-2' : ''}>
+              <ChartCard title="Trust score" subtitle="Computed from activity, tenure and moderation history across every Pulse server" icon={<Award size={15} />}>
                 <ReputationPanel reputation={reputation} risk={risk} />
               </ChartCard>
             </div>
-            <ChartCard title="Roles" subtitle={`${memberRoles.length} role${memberRoles.length === 1 ? '' : 's'}`} icon={<Users size={15} />}>
-              {memberRoles.length === 0 ? (
-                <p className="py-2 text-sm text-subtle">No roles assigned.</p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {memberRoles.map((r) => (
-                    <span key={r.id} className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs" style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ background: roleColor(r.color) }} />
-                      {r.name}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </ChartCard>
+            {isMember && (
+              <ChartCard title="Roles" subtitle={`${memberRoles.length} role${memberRoles.length === 1 ? '' : 's'}`} icon={<Users size={15} />}>
+                {memberRoles.length === 0 ? (
+                  <p className="py-2 text-sm text-subtle">No roles assigned.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {memberRoles.map((r) => (
+                      <span key={r.id} className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs" style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ background: roleColor(r.color) }} />
+                        {r.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </ChartCard>
+            )}
           </div>
         </CategorySection>
 
-        {/* Activity */}
+        {/* Activity — server-scoped (members only) */}
+        {isMember && (
         <CategorySection icon={<Activity size={14} />} title="Activity" description="When and where this member is active.">
           <div className="grid gap-5 lg:grid-cols-2">
             <ToggleableChart
@@ -515,9 +545,10 @@ export function MemberProfile({ guildId, userId, viewerRole = 'admin', backHref,
             </ChartCard>
           </div>
         </CategorySection>
+        )}
 
-        {/* Moderation — admin only */}
-        {isAdmin && (
+        {/* Moderation — admin only, and only for members of this server */}
+        {isAdmin && isMember && (
           <CategorySection icon={<ShieldAlert size={14} />} title="Moderation" description="Infraction history and private moderator notes.">
             <div className="grid gap-5 lg:grid-cols-2">
               <ChartCard title="History" subtitle="Warnings, timeouts, kicks and bans" icon={<History size={15} />}>

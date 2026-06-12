@@ -9,6 +9,7 @@ import {
   fetchDiscordUser,
   userBannerUrl,
   snowflakeToDate,
+  type DiscordMember,
 } from '@/lib/discord'
 import {
   EMPTY_INFRACTIONS,
@@ -134,11 +135,29 @@ export async function GET(
     supabase.rpc('get_global_member_reputation', { p_user_id: userId }),
   ])
 
-  if (!member) {
-    return NextResponse.json(
-      { error: 'This user is not currently a member of the server.' },
-      { status: 404 },
-    )
+  // The profile is GLOBAL: a leaderboard row (e.g. a global wallet holder from
+  // another Pulse server) may point at someone who isn't a member of THIS guild.
+  // Rather than 404, fall back to a global profile — synthesise a member shell
+  // from their Discord account so identity + global reputation + cross-server
+  // standing still render; the guild-specific sections are hidden client-side
+  // via `isMember`. We only 404 when Discord can't resolve the account at all.
+  const isMember = member !== null
+  if (!member && !fullUser) {
+    return NextResponse.json({ error: 'This user could not be found.' }, { status: 404 })
+  }
+  const resolvedMember: DiscordMember = member ?? {
+    user: {
+      id: userId,
+      username: fullUser!.username,
+      avatar: fullUser!.avatar,
+      global_name: fullUser!.global_name,
+      bot: false,
+    },
+    nick: null,
+    avatar: null,
+    roles: [],
+    joined_at: '',
+    communication_disabled_until: null,
   }
 
   const statRow = (statsRes.data?.[0] ?? null) as Record<string, unknown> | null
@@ -222,7 +241,8 @@ export async function GET(
 
   const bundle: MemberProfileBundle = {
     guildId,
-    member,
+    isMember,
+    member: resolvedMember,
     roles,
     bannerUrl: fullUser?.banner ? userBannerUrl(userId, fullUser.banner, 600) : null,
     accentColor: fullUser?.accent_color ?? null,

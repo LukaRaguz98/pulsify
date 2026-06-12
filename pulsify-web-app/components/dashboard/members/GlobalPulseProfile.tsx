@@ -16,12 +16,19 @@ type Props = {
   /** The member's global 0-100 trust score (same value shown at the top of the
    *  profile) — passed in so there is exactly one reputation on the page. */
   reputation: Reputation | null
+  /** Which tab opens first. Non-members of this guild open on 'global', since
+   *  the 'This server' tab is empty for them. Defaults to 'server'. */
+  defaultTab?: Tab
 }
 
 type ProfileData = {
   wallet: EconomyUser | null
   ranks: { balance: number | null }
   servers: { guild_id: string; guild_name: string | null; level: number; xp: number }[]
+  /** True total across every Pulse server (the `servers` list may be redacted). */
+  serverCount: number
+  /** True when `servers` was trimmed for privacy (viewing someone else). */
+  serversRedacted: boolean
   achievements: number
   cosmetics: OwnedCosmetic[]
 }
@@ -68,8 +75,8 @@ function Stat({ label, value, sub, icon }: { label: string; value: string; sub?:
  * The coin side is fetched here; reputation is passed in so there's one
  * canonical reputation on the page.
  */
-export function GlobalPulseProfile({ guildId, userId, reputation }: Props) {
-  const [tab, setTab] = useState<Tab>('server')
+export function GlobalPulseProfile({ guildId, userId, reputation, defaultTab = 'server' }: Props) {
+  const [tab, setTab] = useState<Tab>(defaultTab)
   const [data, setData] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -216,7 +223,7 @@ export function GlobalPulseProfile({ guildId, userId, reputation }: Props) {
                 />
                 <Stat
                   label="Servers"
-                  value={String(data.servers.length || 0)}
+                  value={String(data.serverCount || 0)}
                   sub="Pulse servers with tracked progression"
                   icon={<Server size={13} />}
                 />
@@ -250,24 +257,36 @@ export function GlobalPulseProfile({ guildId, userId, reputation }: Props) {
             disableLandscape
           >
             {data.servers.length === 0 ? (
-              <p className="py-2 text-sm text-subtle">No tracked levels yet.</p>
+              <p className="py-2 text-sm text-subtle">
+                {data.serversRedacted
+                  ? `Active in ${data.serverCount} Pulse server${data.serverCount === 1 ? '' : 's'} — the breakdown is private.`
+                  : 'No tracked levels yet.'}
+              </p>
             ) : (
-              <ul className="space-y-2.5">
-                {data.servers.slice(0, 8).map((s) => (
-                  <li key={s.guild_id} className="flex items-center justify-between gap-3 text-sm">
-                    <span className="truncate text-muted-foreground">
-                      {s.guild_id === guildId ? (
-                        <span className="font-medium text-foreground">{s.guild_name ?? 'This server'}</span>
-                      ) : (
-                        s.guild_name ?? `Server ${s.guild_id.slice(0, 6)}…`
-                      )}
-                    </span>
-                    <span className="shrink-0 font-mono text-xs text-foreground">
-                      Lvl {s.level} · {s.xp.toLocaleString()} XP
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul className="space-y-2.5">
+                  {data.servers.slice(0, 8).map((s) => (
+                    <li key={s.guild_id} className="flex items-center justify-between gap-3 text-sm">
+                      <span className="truncate text-muted-foreground">
+                        {s.guild_id === guildId ? (
+                          <span className="font-medium text-foreground">{s.guild_name ?? 'This server'}</span>
+                        ) : (
+                          s.guild_name ?? `Server ${s.guild_id.slice(0, 6)}…`
+                        )}
+                      </span>
+                      <span className="shrink-0 font-mono text-xs text-foreground">
+                        Lvl {s.level} · {s.xp.toLocaleString()} XP
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {data.serversRedacted && (
+                  <p className="mt-3 flex items-center gap-1.5 text-xs text-subtle">
+                    <Globe size={11} />
+                    Active in {data.serverCount} servers total — other servers are private.
+                  </p>
+                )}
+              </>
             )}
           </ChartCard>
         </div>
