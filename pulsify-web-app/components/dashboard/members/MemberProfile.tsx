@@ -54,7 +54,17 @@ import { MemberQuickActions } from '@/components/dashboard/members/MemberQuickAc
 import { MemberMilestones } from '@/components/dashboard/members/MemberMilestones'
 import { GlobalPulseProfile } from '@/components/dashboard/members/GlobalPulseProfile'
 
-type Props = { guildId: string; userId: string }
+type Props = {
+  guildId: string
+  userId: string
+  /** 'member' renders the read-only, member-safe profile (no moderation,
+   *  quick-actions, risk or infractions). Defaults to the full admin profile. */
+  viewerRole?: 'admin' | 'member'
+  /** Back-link target: `null` hides it (own profile), a string overrides the
+   *  default admin Members/Moderation link, `undefined` uses the admin default. */
+  backHref?: string | null
+  backLabel?: string
+}
 
 // Spelled-out age ("9 years and 1 month", "26 days") used for the joined/account
 // lines on the profile card, where full words read clearer than a compact badge.
@@ -105,7 +115,8 @@ function fillDaily(daily: { day: string; messages: number; voice_seconds: number
   return out
 }
 
-export function MemberProfile({ guildId, userId }: Props) {
+export function MemberProfile({ guildId, userId, viewerRole = 'admin', backHref, backLabel }: Props) {
+  const isAdmin = viewerRole === 'admin'
   const [bundle, setBundle] = useState<MemberProfileBundle | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -144,11 +155,17 @@ export function MemberProfile({ guildId, userId }: Props) {
         load()
       }, delay)
     }
-    const channel = supabase
-      .channel(`member-profile:${guildId}:${userId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'moderation_logs', filter: `target_user_id=eq.${userId}` }, () => scheduleRefresh(400))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_warnings', filter: `user_id=eq.${userId}` }, () => scheduleRefresh(400))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'moderation_notes', filter: `user_id=eq.${userId}` }, () => scheduleRefresh(400))
+    let chan = supabase.channel(`member-profile:${guildId}:${userId}`)
+    // Moderation realtime is ADMIN-ONLY: the websocket delivers the row payload
+    // to the client (even though the callback only triggers a refetch), so a
+    // member must not subscribe to moderation tables or it would leak that data.
+    if (isAdmin) {
+      chan = chan
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'moderation_logs', filter: `target_user_id=eq.${userId}` }, () => scheduleRefresh(400))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_warnings', filter: `user_id=eq.${userId}` }, () => scheduleRefresh(400))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'moderation_notes', filter: `user_id=eq.${userId}` }, () => scheduleRefresh(400))
+    }
+    const channel = chan
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'analytics_events', filter: `user_id=eq.${userId}` }, () => scheduleRefresh(4000))
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'voice_sessions', filter: `user_id=eq.${userId}` }, () => scheduleRefresh(4000))
       .subscribe()
@@ -156,7 +173,7 @@ export function MemberProfile({ guildId, userId }: Props) {
       if (timer) clearTimeout(timer)
       supabase.removeChannel(channel)
     }
-  }, [guildId, userId, load])
+  }, [guildId, userId, load, isAdmin])
 
   useEffect(() => {
     if (!toast) return
@@ -171,22 +188,28 @@ export function MemberProfile({ guildId, userId }: Props) {
 
   const searchParams = useSearchParams()
   const from = searchParams.get('from')
-  const backLink = from === 'moderation'
+  const defaultBackLink = from === 'moderation'
     ? `/dashboard/${guildId}/moderation`
     : `/dashboard/${guildId}/members`
-  const backLabel = from === 'moderation' ? 'Back to Moderation' : 'Back to Members'
+  const defaultBackLabel = from === 'moderation' ? 'Back to Moderation' : 'Back to Members'
+  const hideBack = backHref === null
+  const resolvedBackHref = typeof backHref === 'string' ? backHref : defaultBackLink
+  const resolvedBackLabel = backLabel ?? (typeof backHref === 'string' ? 'Back' : defaultBackLabel)
+  const backButton = hideBack ? null : (
+    <Link
+      href={resolvedBackHref}
+      className="mb-4 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors"
+      style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
+    >
+      <ArrowLeft size={12} />
+      {resolvedBackLabel}
+    </Link>
+  )
 
   if (loading) {
     return (
       <div className="page-content">
-        <Link
-          href={backLink}
-          className="mb-4 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors"
-          style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
-        >
-          <ArrowLeft size={12} />
-          {backLabel}
-        </Link>
+        {backButton}
         <Skeleton className="mb-6 h-[180px]" />
         <div className="mb-6 grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
           {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-[112px]" />)}
@@ -199,14 +222,7 @@ export function MemberProfile({ guildId, userId }: Props) {
   if (error || !bundle || !reputation) {
     return (
       <div className="page-content">
-        <Link
-          href={backLink}
-          className="mb-4 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors"
-          style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
-        >
-          <ArrowLeft size={12} />
-          {backLabel}
-        </Link>
+        {backButton}
         <EmptyState
           icon={<AlertCircle size={36} />}
           title="Couldn’t load this profile"
@@ -257,14 +273,7 @@ export function MemberProfile({ guildId, userId }: Props) {
 
   return (
     <div className="page-content">
-      <Link
-        href={backLink}
-        className="mb-4 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors"
-        style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
-      >
-        <ArrowLeft size={12} />
-        {backLabel}
-      </Link>
+      {backButton}
 
       {toast && (
         <div
@@ -327,11 +336,11 @@ export function MemberProfile({ guildId, userId }: Props) {
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <ReputationBadge reputation={reputation} />
-              <RiskBadge risk={risk} alwaysShow />
+              {isAdmin && <RiskBadge risk={risk} alwaysShow />}
             </div>
           </div>
 
-          {bundle.ban.banned && (
+          {isAdmin && bundle.ban.banned && (
             <div className="mt-4 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm" style={{ borderColor: 'rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.08)', color: '#f87171' }}>
               <Ban size={14} />
               <span>This member is banned{bundle.ban.reason ? `: ${bundle.ban.reason}` : '.'}</span>
@@ -356,8 +365,8 @@ export function MemberProfile({ guildId, userId }: Props) {
             </button>
           </div>
 
-          {/* Quick actions */}
-          {!member.user.bot && (
+          {/* Quick actions — admin only */}
+          {isAdmin && !member.user.bot && (
             <div className="mt-5 border-t pt-4" style={{ borderColor: 'var(--line-strong)' }}>
               <MemberQuickActions
                 guildId={guildId}
@@ -381,7 +390,7 @@ export function MemberProfile({ guildId, userId }: Props) {
             <StatsCard label="Channels" value={stats.active_channels} sub="Channels posted in" icon={<Hash size={16} />} accent="#8b5cf6" />
             <StatsCard label="Level" value={levelProgress.level} sub={`${levelData.xp.toLocaleString()} XP total`} icon={<Sparkles size={16} />} accent="var(--p-1)" />
             <StatsCard label="Reputation" value={reputation.score} sub={reputation.label} icon={<Award size={16} />} accent={reputation.color} />
-            <StatsCard label="Infractions" value={infractions.total_infractions} sub={`${infractions.active_warnings} active warning${infractions.active_warnings === 1 ? '' : 's'}`} icon={<ShieldAlert size={16} />} accent="var(--red)" />
+            {isAdmin && <StatsCard label="Infractions" value={infractions.total_infractions} sub={`${infractions.active_warnings} active warning${infractions.active_warnings === 1 ? '' : 's'}`} icon={<ShieldAlert size={16} />} accent="var(--red)" />}
           </div>
         </CategorySection>
 
@@ -488,17 +497,19 @@ export function MemberProfile({ guildId, userId }: Props) {
           </div>
         </CategorySection>
 
-        {/* Moderation */}
-        <CategorySection icon={<ShieldAlert size={14} />} title="Moderation" description="Infraction history and private moderator notes.">
-          <div className="grid gap-5 lg:grid-cols-2">
-            <ChartCard title="History" subtitle="Warnings, timeouts, kicks and bans" icon={<History size={15} />}>
-              <ModerationHistory warnings={bundle.warnings} modLogs={bundle.modLogs} />
-            </ChartCard>
-            <ChartCard title="Moderator notes" subtitle="Private — never shown to the member" icon={<StickyNote size={15} />}>
-              <ModerationNotes guildId={guildId} userId={userId} notes={bundle.notes} onChanged={load} />
-            </ChartCard>
-          </div>
-        </CategorySection>
+        {/* Moderation — admin only */}
+        {isAdmin && (
+          <CategorySection icon={<ShieldAlert size={14} />} title="Moderation" description="Infraction history and private moderator notes.">
+            <div className="grid gap-5 lg:grid-cols-2">
+              <ChartCard title="History" subtitle="Warnings, timeouts, kicks and bans" icon={<History size={15} />}>
+                <ModerationHistory warnings={bundle.warnings} modLogs={bundle.modLogs} />
+              </ChartCard>
+              <ChartCard title="Moderator notes" subtitle="Private — never shown to the member" icon={<StickyNote size={15} />}>
+                <ModerationNotes guildId={guildId} userId={userId} notes={bundle.notes} onChanged={load} />
+              </ChartCard>
+            </div>
+          </CategorySection>
+        )}
       </div>
     </div>
   )

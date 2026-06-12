@@ -35,7 +35,7 @@ type Props = {
 /**
  * Economy › Overview. The Economy section is nav-driven (PULSIFY-45 follow-up):
  * Overview (this — analytics, leaderboards and the full transaction ledger),
- * Marketplace (/economy/marketplace, future) and the operator-only Controls
+ * the Shop + Inventory (PULSIFY-46) and the operator-only Controls
  * (/economy/controls) are separate routes under the "Economy" nav category.
  * Everything here is a read of the GLOBAL economy, so members see it too.
  */

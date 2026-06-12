@@ -425,6 +425,49 @@ export function pickWinners(
   return pool.slice(0, Math.max(0, count))
 }
 
+export type WeightedEntrant = { id: string; weight: number }
+
+/**
+ * Weighted winner pick (sampling WITHOUT replacement). Each entrant's `weight`
+ * (≥1; the shop "giveaway entries" reward raises it — see 20260614) scales its
+ * odds, but a member can still only win once. Winners are drawn one at a time
+ * proportional to the remaining pool's weights. Mirrors pickWeightedWinners in
+ * pulse-bot/src/giveaways.js — keep in sync.
+ */
+export function pickWeightedWinners(
+  entrants: WeightedEntrant[],
+  count: number,
+  exclude: string[] = [],
+  rng: () => number = Math.random,
+): string[] {
+  const excludeSet = new Set(exclude)
+  // Dedupe by id (entrants are already unique, but be defensive), keeping the
+  // largest weight, and drop excluded / non-positive-weight entrants.
+  const byId = new Map<string, number>()
+  for (const e of entrants) {
+    if (!e?.id || excludeSet.has(e.id)) continue
+    const w = Math.max(1, Math.floor(Number(e.weight) || 1))
+    const cur = byId.get(e.id)
+    if (cur === undefined || w > cur) byId.set(e.id, w)
+  }
+  const pool: WeightedEntrant[] = [...byId.entries()].map(([id, weight]) => ({ id, weight }))
+
+  const winners: string[] = []
+  const n = Math.max(0, Math.min(count, pool.length))
+  for (let k = 0; k < n; k++) {
+    const total = pool.reduce((s, e) => s + e.weight, 0)
+    let r = rng() * total
+    let idx = 0
+    for (; idx < pool.length - 1; idx++) {
+      r -= pool[idx].weight
+      if (r < 0) break
+    }
+    winners.push(pool[idx].id)
+    pool.splice(idx, 1)
+  }
+  return winners
+}
+
 // ── Analytics (pure, derived from the loaded rows) ────────────────────────────
 
 export type GiveawayStats = {

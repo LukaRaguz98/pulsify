@@ -5,6 +5,7 @@ import { isCurrentUserOperator, getOperators } from '@/lib/operator'
 import { fetchGuild } from '@/lib/discord'
 import { PageHeader } from '@/components/ui/page-header'
 import { EconomyControls } from '@/components/dashboard/economy/EconomyControls'
+import { GlobalCatalogueManager } from '@/components/dashboard/economy/GlobalCatalogueManager'
 
 /**
  * Economy › Controls — operator-only (lock-marked in the nav, like Presence).
@@ -42,6 +43,10 @@ export default async function EconomyControlsPage({
         }
       />
       <EconomyControls guildId={guildId} operators={operators} />
+
+      <div className="mt-8">
+        <GlobalCatalogueManager guildId={guildId} />
+      </div>
     </div>
   )
 }

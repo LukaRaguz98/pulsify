@@ -1,6 +1,7 @@
 'use client'
 
-import { usePreferences } from '@/components/ThemeProvider'
+import { useOwnedCosmeticEffects } from '@/lib/use-cosmetics'
+import { COSMETIC_EFFECT } from '@/lib/shop'
 
 // Keyframes for the animated corner brackets. _cd draws and erases the whole
 // 480-unit L (60+180 doubled) so the line "travels" through the corner in one
@@ -223,8 +224,11 @@ function CornerDeco({ pos }: { pos: 'tr' | 'bl' }) {
 }
 
 export function CornerDecorations() {
-  const { cornerDeco } = usePreferences()
-  if (!cornerDeco) return null
+  const { effects } = useOwnedCosmeticEffects()
+  // The corner HUD is a paid global cosmetic (PULSIFY-46) toggled from the
+  // member's Inventory: show it only when they own an ENABLED corner_hud
+  // (useOwnedCosmeticEffects reflects the per-purchase enabled flag).
+  if (!effects.includes(COSMETIC_EFFECT.CORNER_HUD)) return null
 
   return (
     <>

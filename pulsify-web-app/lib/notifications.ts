@@ -55,6 +55,8 @@ export const NOTIFICATION_TYPES = [
   'level_up',
   // milestones
   'milestone_reached',
+  // economy
+  'reward_purchased',
   // bot
   'bot_warning',
   'bot_error',
@@ -76,6 +78,7 @@ export type NotificationCategory =
   | 'integrations'
   | 'leveling'
   | 'milestones'
+  | 'economy'
   | 'bot'
 
 export type NotificationSeverity = 'info' | 'success' | 'warning' | 'error'
@@ -112,6 +115,7 @@ export const TYPE_TO_CATEGORY: Record<NotificationType, NotificationCategory> = 
   integration_error: 'integrations',
   level_up: 'leveling',
   milestone_reached: 'milestones',
+  reward_purchased: 'economy',
   bot_warning: 'bot',
   bot_error: 'bot',
 }
@@ -148,6 +152,7 @@ export const TYPE_TO_SEVERITY: Record<NotificationType, NotificationSeverity> = 
   integration_error: 'error',
   level_up: 'success',
   milestone_reached: 'success',
+  reward_purchased: 'success',
   bot_warning: 'warning',
   bot_error: 'error',
 }
@@ -166,6 +171,7 @@ export const CATEGORY_LABELS: Record<NotificationCategory, string> = {
   integrations: 'Integrations',
   leveling: 'Levels & XP',
   milestones: 'Milestones',
+  economy: 'Economy',
   bot: 'Bot Status',
 }
 
@@ -200,6 +206,7 @@ export const TYPE_LABELS: Record<NotificationType, string> = {
   integration_error: 'Integration error',
   level_up: 'Member level-up',
   milestone_reached: 'Milestone reached',
+  reward_purchased: 'Reward purchased',
   bot_warning: 'Bot warnings',
   bot_error: 'Bot errors',
 }
@@ -236,6 +243,7 @@ export const TYPE_DESCRIPTIONS: Record<NotificationType, string> = {
   integration_error: 'An integration connection or sync failed.',
   level_up: 'A member reaches a new level.',
   milestone_reached: 'A member earns a recognition milestone.',
+  reward_purchased: 'A member buys a reward from the shop.',
   bot_warning: 'Recoverable issues like failed welcome messages.',
   bot_error: 'Critical bot failures that need attention.',
 }

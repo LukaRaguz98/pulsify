@@ -234,6 +234,12 @@
     margin-top: 100px;
     margin-right: 12px;
   }
+  /* When the tour launcher is hidden (contextual help off) the switcher takes
+     its slot — same corner offset as the launcher would have had. Higher
+     specificity than the rule above so it wins. */
+  [data-corner-deco="false"] [data-view-switcher="true"][data-vs-guide="off"] {
+    margin-top: 56px;
+  }
   [data-corner-deco="false"] [data-pulsify-ping="true"] {
     bottom: 20px;
     right: 24px;

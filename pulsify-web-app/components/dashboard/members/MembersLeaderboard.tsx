@@ -18,9 +18,11 @@ import { RankBadge } from '@/components/dashboard/RankBadge'
 
 type Props = {
   guildId: string
-  /** Row click opens the admin member profile — disable for the read-only
-   *  member experience (members can't open other members' profiles). */
+  /** Whether rows are clickable through to a profile. */
   linkToProfiles?: boolean
+  /** Which profile route a row opens: `members` = admin detail (default),
+   *  `profile` = the read-only member-facing profile. */
+  profileBasePath?: 'members' | 'profile'
 }
 
 // UI board id: the data boards (level/reputation/active) plus "richest", the
@@ -107,7 +109,7 @@ function RichestBoard({ rows }: { rows: EconomyUser[] }) {
   )
 }
 
-export function MembersLeaderboard({ guildId, linkToProfiles = true }: Props) {
+export function MembersLeaderboard({ guildId, linkToProfiles = true, profileBasePath = 'members' }: Props) {
   const router = useRouter()
   const [data, setData] = useState<LeaderboardResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -335,7 +337,7 @@ export function MembersLeaderboard({ guildId, linkToProfiles = true }: Props) {
               return (
                 <button
                   key={e.userId}
-                  onClick={() => router.push(`/dashboard/${guildId}/members/${e.userId}`)}
+                  onClick={() => router.push(`/dashboard/${guildId}/${profileBasePath}/${e.userId}`)}
                   className="leaderboard-row flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors"
                   style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}
                   onMouseEnter={(ev) => { ev.currentTarget.style.background = 'var(--bg-2)' }}

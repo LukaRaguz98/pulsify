@@ -44,13 +44,13 @@ export async function GET(
   { params }: { params: Promise<{ guildId: string; userId: string }> },
 ) {
   const { guildId, userId } = await params
-  // The full profile bundle includes moderation history — admins can open any
-  // member; a regular member may only load THEIR OWN profile.
+  // Any member may open ANY current member's profile (read-only). The moderation
+  // slice — warnings, mod-logs, infractions, notes, ban — is ADMIN-ONLY: those
+  // queries are skipped entirely for non-admins so the data never leaves the
+  // server, and the member-facing profile UI hides those sections.
   const auth = await requireGuildRole(guildId, 'member')
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
-  if (auth.access.role !== 'admin' && userId !== auth.access.userId) {
-    return NextResponse.json({ error: 'You can only view your own profile.' }, { status: 403 })
-  }
+  const isAdmin = auth.access.role === 'admin'
 
   const supabase = await createClient()
   const dailySince = new Date(Date.now() - HEATMAP_DAYS * 86_400_000).toISOString()
@@ -76,7 +76,7 @@ export async function GET(
     fetchGuildMember(guildId, userId),
     fetchGuildRoles(guildId),
     fetchGuild(guildId),
-    fetchGuildBan(guildId, userId),
+    isAdmin ? fetchGuildBan(guildId, userId) : Promise.resolve(null),
     fetchDiscordUser(userId),
     supabase.rpc('get_member_profile_stats', { p_guild_id: guildId, p_user_id: userId, p_since: null }),
     supabase.rpc('get_member_channel_breakdown', {
@@ -91,29 +91,37 @@ export async function GET(
       p_since: dailySince,
     }),
     supabase.rpc('get_member_hourly_activity', { p_guild_id: guildId, p_user_id: userId, p_since: null }),
-    supabase
-      .from('guild_warnings')
-      .select('id, reason, moderator_username, active, created_at')
-      .eq('guild_id', guildId)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(100),
-    supabase
-      .from('moderation_logs')
-      .select('id, action, reason, moderator_username, moderator_id, metadata, created_at')
-      .eq('guild_id', guildId)
-      .eq('target_user_id', userId)
-      .neq('action', 'warn')
-      .order('created_at', { ascending: false })
-      .limit(100),
-    supabase.rpc('get_guild_members_infractions', { p_guild_id: guildId }),
-    supabase
-      .from('moderation_notes')
-      .select('id, body, author_id, author_username, created_at')
-      .eq('guild_id', guildId)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(100),
+    isAdmin
+      ? supabase
+          .from('guild_warnings')
+          .select('id, reason, moderator_username, active, created_at')
+          .eq('guild_id', guildId)
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(100)
+      : Promise.resolve({ data: [] }),
+    isAdmin
+      ? supabase
+          .from('moderation_logs')
+          .select('id, action, reason, moderator_username, moderator_id, metadata, created_at')
+          .eq('guild_id', guildId)
+          .eq('target_user_id', userId)
+          .neq('action', 'warn')
+          .order('created_at', { ascending: false })
+          .limit(100)
+      : Promise.resolve({ data: [] }),
+    isAdmin
+      ? supabase.rpc('get_guild_members_infractions', { p_guild_id: guildId })
+      : Promise.resolve({ data: [] }),
+    isAdmin
+      ? supabase
+          .from('moderation_notes')
+          .select('id, body, author_id, author_username, created_at')
+          .eq('guild_id', guildId)
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(100)
+      : Promise.resolve({ data: [] }),
     supabase
       .from('member_levels')
       .select('xp, level')

@@ -32,6 +32,7 @@ const TYPE_TO_CATEGORY = {
   giveaway_rerolled: 'giveaways',
   level_up: 'leveling',
   milestone_reached: 'milestones',
+  reward_purchased: 'economy',
   bot_warning: 'bot',
   bot_error: 'bot',
 };
@@ -62,6 +63,7 @@ const TYPE_TO_SEVERITY = {
   giveaway_rerolled: 'info',
   level_up: 'success',
   milestone_reached: 'success',
+  reward_purchased: 'success',
   bot_warning: 'warning',
   bot_error: 'error',
 };

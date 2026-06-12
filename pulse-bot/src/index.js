@@ -34,6 +34,7 @@ const { createIntegrations } = require("./integrations");
 const { createOnboarding } = require("./onboarding");
 const { createBackups } = require("./backups");
 const { createEconomy } = require("./economy");
+const { createShop } = require("./shop");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -72,13 +73,22 @@ const tickets = createTickets(client, supabase);
 // /wallet + /pay slash commands route through the command handler below.
 const economy = createEconomy(client, supabase);
 
+// The rewards shop (PULSIFY-46) is the spend side of the economy. Purchases
+// happen in the dashboard (atomic RPC + REST role grant); this worker owns the
+// gateway side: DMing purchase receipts, recording a dashboard notification,
+// a sweep that pulls expired timed roles back off members, and the live
+// XP-booster registry. Constructed BEFORE leveling so the booster multiplier
+// can be handed in (leveling reads it on its hot per-message XP path).
+const shop = createShop(client, supabase);
+
 // The leveling system awards XP for member activity, detects level-ups, assigns
 // reward roles and announces them. Constructed BEFORE giveaways so it can be
 // handed in — a giveaway entry awards XP too. It registers no interaction
 // listener (the /rank + /leaderboard slash commands are routed through the
 // command handler below); it only runs a once-a-minute voice-XP tick.
-// `economy` is passed so every XP award also pays global coins.
-const leveling = createLeveling(client, supabase, economy);
+// `economy` is passed so every XP award also pays global coins; `shop` so a
+// member's active XP booster multiplies their award.
+const leveling = createLeveling(client, supabase, economy, shop);
 
 // The giveaway system likewise registers its own interaction listener (only
 // `gw:` buttons) plus a once-a-minute lifecycle tick that starts scheduled
@@ -364,6 +374,10 @@ client.once(Events.ClientReady, async (readyClient) => {
   // Milestones system: load per-guild milestone definitions, subscribe to
   // changes, and start the recognition sweep.
   await milestones.start();
+
+  // Rewards shop: subscribe to new purchases (receipt DM + notification) and
+  // start the timed-reward expiry sweep.
+  await shop.start();
 
   // Presence system: take over the bot's global status from the static default
   // set above. Loads the active guild's config and starts the rotation; if no

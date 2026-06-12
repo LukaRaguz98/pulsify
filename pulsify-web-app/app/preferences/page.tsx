@@ -10,7 +10,7 @@ import { CategorySection } from '@/components/ui/category-section'
 import { highlightBrand } from '@/components/ui/brand-text'
 import { SaveBar } from '@/components/ui/save-bar'
 import {
-  Check, Moon, Sun, Maximize2, Minimize2, Zap, ZapOff, Palette, Crosshair,
+  Check, Moon, Sun, Maximize2, Minimize2, Zap, ZapOff, Palette,
   Aperture, Gauge, ArrowLeft, HelpCircle,
 } from 'lucide-react'
 
@@ -341,35 +341,6 @@ export default function PreferencesPage() {
                 <span
                   className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
                   style={{ transform: animations ? 'translateX(20px)' : 'translateX(0)' }}
-                />
-              </button>
-            </div>
-
-            <div
-              className="flex items-center justify-between py-4 border-b"
-              style={{ borderColor: 'var(--line-strong)' }}
-            >
-              <div className="flex items-center gap-3">
-                <span style={{ color: cornerDeco ? 'var(--p-1)' : 'var(--text-3)' }}>
-                  <Crosshair size={18} />
-                </span>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Corner Decorations</p>
-                  <p className="text-xs" style={{ color: 'var(--text-3)' }}>
-                    {cornerDeco ? 'Animated HUD lines visible in dashboard corners' : 'Corner decorations hidden'}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setCornerDeco(!cornerDeco)}
-                className="relative shrink-0 h-6 w-11 rounded-full transition-colors duration-200"
-                style={{ background: cornerDeco ? 'var(--p-1)' : 'var(--line-strong)' }}
-                aria-checked={cornerDeco}
-                role="switch"
-              >
-                <span
-                  className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
-                  style={{ transform: cornerDeco ? 'translateX(20px)' : 'translateX(0)' }}
                 />
               </button>
             </div>
