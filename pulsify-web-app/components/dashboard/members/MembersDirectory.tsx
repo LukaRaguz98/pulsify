@@ -25,7 +25,7 @@ import { SortableHeader, nextSort, type SortDirection } from '@/components/ui/so
 import { createClient as createSupabase } from '@/lib/supabase'
 import { avatarUrl, roleColor, type DiscordMember } from '@/lib/discord'
 import { formatDuration } from '@/lib/analytics'
-import { memberReputation, memberRisk } from '@/lib/member-metrics'
+import { memberRisk } from '@/lib/member-metrics'
 import type { Reputation, RiskAssessment } from '@/lib/reputation'
 import type { DirectoryMember, DirectoryResponse } from '@/lib/member-profile'
 import { ReputationBadge, RiskBadge, LevelBadge } from '@/components/dashboard/members/badges'
@@ -179,7 +179,9 @@ export function MembersDirectory({ guildId }: Props) {
     if (!data) return []
     return data.members.map((dm) => ({
       dm,
-      reputation: memberReputation(dm.member, data.roles, dm.activity, dm.infractions),
+      // GLOBAL reputation — computed server-side so the directory matches the
+      // profile page and the leaderboard (was the old per-guild score before).
+      reputation: dm.globalReputation,
       risk: memberRisk(dm.infractions),
       displayName: memberDisplayName(dm.member),
       isActive: isRecentlyActive(dm.activity.last_active),

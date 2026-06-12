@@ -63,6 +63,12 @@ export type DirectoryMember = {
   infractions: MemberInfractions
   /** Stored XP + level, or null when the member has earned no XP yet. */
   level: MemberLevel | null
+  /**
+   * The member's GLOBAL 0-100 trust score — computed from activity aggregated
+   * across every Pulse server (PULSIFY-45), exactly like the profile page and
+   * leaderboard. The single canonical reputation, so the directory matches them.
+   */
+  globalReputation: Reputation
   /** Highest assignable-role position; drives the role/staff sort + filter. */
   topRolePosition: number
   isStaff: boolean
