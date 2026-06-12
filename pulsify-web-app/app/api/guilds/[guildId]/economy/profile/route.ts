@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { requireGuildRole } from '@/lib/guild-access'
 import { normaliseEconomyUser } from '@/lib/economy'
+import { normalisePurchase, ownedCosmetics } from '@/lib/shop'
 
 /**
  * GET /api/guilds/[guildId]/economy/profile?user=<discordId>
@@ -33,7 +34,7 @@ export async function GET(
     return NextResponse.json({ error: 'You can only view your own Pulse profile.' }, { status: 403 })
   }
 
-  const [walletRes, levelsRes, milestonesRes] = await Promise.all([
+  const [walletRes, levelsRes, milestonesRes, cosmeticsRes] = await Promise.all([
     supabase.from('economy_users').select('*').eq('user_id', userId).maybeSingle(),
     supabase
       .from('member_levels')
@@ -45,6 +46,15 @@ export async function GET(
       .from('member_milestones')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId),
+    // Owned badge/cosmetic rewards (global — the member's Pulse identity travels
+    // with them, so no guild filter). Newest first so dedupe keeps the latest.
+    supabase
+      .from('reward_purchases')
+      .select('id, reward_snapshot, status, enabled, created_at')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(200),
   ])
 
   const wallet = walletRes.data
@@ -72,6 +82,10 @@ export async function GET(
     nameById = new Map((guilds ?? []).map((g) => [g.guild_id, g.name as string]))
   }
 
+  const cosmetics = ownedCosmetics(
+    (cosmeticsRes.data ?? []).map((r) => normalisePurchase(r as Record<string, unknown>)),
+  )
+
   return NextResponse.json({
     wallet,
     ranks: { balance: balanceRank },
@@ -82,5 +96,6 @@ export async function GET(
       xp: Number(l.xp ?? 0),
     })),
     achievements: milestonesRes.count ?? 0,
+    cosmetics,
   })
 }

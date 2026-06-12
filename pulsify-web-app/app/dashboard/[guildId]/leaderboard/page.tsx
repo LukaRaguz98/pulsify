@@ -6,9 +6,9 @@ import { MembersLeaderboard } from '@/components/dashboard/members/MembersLeader
 
 /**
  * Standalone Leaderboards page — the member experience's ranking view
- * (admins have the same boards as a tab inside Members). Read-only: rows
- * never link to the admin member profiles unless the viewer manages the
- * server, and the API behind it only exposes community-safe fields.
+ * (admins have the same boards as a tab inside Members). Rows are clickable
+ * through to a profile: admins open the full member detail, members open the
+ * read-only member-facing profile (`/profile/[userId]`).
  */
 export default async function LeaderboardPage({
   params,
@@ -34,7 +34,11 @@ export default async function LeaderboardPage({
           </>
         }
       />
-      <MembersLeaderboard guildId={guildId} linkToProfiles={access.effectiveRole === 'admin'} />
+      <MembersLeaderboard
+        guildId={guildId}
+        linkToProfiles
+        profileBasePath={access.effectiveRole === 'admin' ? 'members' : 'profile'}
+      />
     </div>
   )
 }

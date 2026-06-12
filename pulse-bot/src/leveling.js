@@ -220,7 +220,7 @@ function progressBar(pct, width = 14) {
 
 const VOICE_TICK_MS = 60 * 1000; // award voice XP once a minute
 
-function createLeveling(client, supabase, economy = null) {
+function createLeveling(client, supabase, economy = null, shop = null) {
   // guildId -> normalised config (seeded on start, kept fresh via realtime)
   const configs = new Map();
   // `${guildId}:${userId}` -> last message-XP timestamp (anti-spam, in-memory)
@@ -317,7 +317,13 @@ function createLeveling(client, supabase, economy = null) {
   // ── Core: award XP, detect level-up ──────────────────────────────────────────
 
   async function addXp(guild, member, rawAmount, cfg, sourceChannel) {
-    const amount = Math.floor(Math.max(0, rawAmount) * (cfg.xp_multiplier || 1));
+    // Two distinct multipliers stack: the guild's configured xp_multiplier and
+    // the member's personal shop XP booster (a temporary purchase, looked up
+    // from the shop's in-memory registry — no DB hit on this hot path). The
+    // booster is applied to XP only; coins ride rawAmount below, so a booster
+    // never inflates the global economy.
+    const boost = shop?.getBoosterMultiplier ? shop.getBoosterMultiplier(guild.id, member.id) : 1;
+    const amount = Math.floor(Math.max(0, rawAmount) * (cfg.xp_multiplier || 1) * (boost || 1));
     if (amount <= 0) return;
 
     let newXp;

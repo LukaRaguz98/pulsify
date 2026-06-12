@@ -7,6 +7,8 @@ import { ChartCard } from '@/components/dashboard/charts/ChartCard'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatCoins, type EconomyUser } from '@/lib/economy'
 import type { Reputation } from '@/lib/reputation'
+import type { OwnedCosmetic } from '@/lib/shop'
+import { CategoryIcon } from '@/components/dashboard/economy/category-icons'
 
 type Props = {
   guildId: string
@@ -21,9 +23,27 @@ type ProfileData = {
   ranks: { balance: number | null }
   servers: { guild_id: string; guild_name: string | null; level: number; xp: number }[]
   achievements: number
+  cosmetics: OwnedCosmetic[]
 }
 
 type Tab = 'server' | 'global'
+
+const FALLBACK_COSMETIC = 'var(--p-1)'
+
+/** A single owned badge/cosmetic pill, tinted by its display colour. */
+function CosmeticChip({ cosmetic }: { cosmetic: OwnedCosmetic }) {
+  const color = cosmetic.color ?? FALLBACK_COSMETIC
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium"
+      style={{ background: `color-mix(in srgb, ${color} 14%, transparent)`, color }}
+      title={cosmetic.description ?? cosmetic.name}
+    >
+      <CategoryIcon category={cosmetic.category} size={12} />
+      {cosmetic.name}
+    </span>
+  )
+}
 
 function Stat({ label, value, sub, icon }: { label: string; value: string; sub?: string; icon: React.ReactNode }) {
   return (
@@ -124,6 +144,22 @@ export function GlobalPulseProfile({ guildId, userId, reputation }: Props) {
 
   return section(
     <div>
+      {/* Owned badges & cosmetics — the member's global Pulse identity (bought
+          from the rewards shop), shown regardless of the active tab. */}
+      {data.cosmetics.length > 0 && (
+        <div className="mb-4 rounded-xl border p-4" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
+          <p className="mb-2 flex items-center gap-1.5 text-xs text-subtle">
+            <Sparkles size={12} style={{ color: 'var(--p-1)' }} />
+            Badges &amp; cosmetics
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {data.cosmetics.map((c) => (
+              <CosmeticChip key={c.id} cosmetic={c} />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="mb-4">{toggle}</div>
 
       {tab === 'server' ? (

@@ -3444,3 +3444,111 @@ Acceptance Criteria
 	Leaderboards display correct global rankings
 	Administrative economy controls function correctly
 	UI remains responsive and visually polished
+
+PULSIFY-46 — Global Rewards Shop & Economy Marketplace (v0.46.0)
+
+Description
+	Implement a Global Rewards Shop and Marketplace system powered by the Pulse Economy.
+	Users should be able to spend their global Pulse balance on rewards, perks, cosmetic profile items, and server-specific benefits while administrators can create and manage rewards available to their communities.
+	This feature should provide the first meaningful use case for the global economy introduced in v0.45.0.
+
+Goals
+	Give users a reason to earn Pulse balance
+	Increase long-term engagement
+	Introduce economy-driven progression
+	Create value for global reputation and activity
+	Establish the foundation for future premium economy features
+
+Tasks
+	Global Shop
+		Create a dedicated Economy > Shop view
+		Display:
+			featured rewards
+			available rewards
+			reward categories
+			reward cost
+			stock availability
+		Add search and filtering
+
+	Reward Categories
+		Support:
+			Profile Badges
+			Cosmetic Profile Items
+			Reputation Rewards
+			XP Boosters
+			Giveaway Entries
+			Event Rewards
+			Server Perks
+			Custom Rewards
+
+	Reward Purchases
+		Allow users to purchase rewards using global balance
+		Validate balance before purchase
+		Display purchase confirmations
+		Store purchase history
+		Add refund support where applicable
+
+	Server Rewards
+		Allow server administrators to create rewards
+		Support:
+			Discord roles
+			special access channels
+			custom perks
+			event rewards
+			temporary benefits
+		Add reward availability controls
+
+	Economy Marketplace
+		Create marketplace infrastructure
+		Display:
+			reward listings
+			creator
+			price
+			availability
+		Prepare support for future user-to-user marketplace features
+
+	Inventory System
+		Create user inventory
+		Display:
+			owned rewards
+			active rewards
+			expired rewards
+			purchase history
+		Allow reward activation where required
+
+	Reputation Integration
+		Allow rewards to require:
+			minimum reputation
+			minimum level
+			specific achievements
+		Encourage positive community participation
+
+	Discord Integration
+		Add economy purchase notifications
+		Add reward redemption notifications
+		Generate Pulse-styled economy embeds
+		Synchronize purchased rewards with Discord where applicable
+
+	Analytics
+		Track:
+			most purchased rewards
+			economy circulation
+			reward usage
+			purchase trends
+		Add economy reports and charts
+
+	UX Improvements
+		Add modern reward cards
+		Add purchase animations
+		Add loading/error/success states
+		Add responsive marketplace views
+		Maintain consistency with Pulsify design language
+
+Acceptance Criteria
+	Users can spend global balance on rewards
+	Rewards can be created and managed successfully
+	Purchases are validated and tracked correctly
+	Inventory system functions properly
+	Server rewards synchronize with Discord
+	Economy analytics display correctly
+	UI remains responsive and visually polished

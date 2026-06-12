@@ -248,25 +248,26 @@ function linkButtonRow(guildId) {
 }
 
 function helpLinkButtonRow(guildId, member) {
+  // "Open Dashboard" points at the guild root, which routes by role server-side
+  // (admins → Overview, members → their member-facing Profile), so everyone
+  // gets it. "Manage Commands" is an admin-only management deep link.
   const links = [
     { type: 2, style: 5, label: "Invite Pulse", url: getInviteUrl(guildId) },
+    {
+      type: 2,
+      style: 5,
+      label: "Open Dashboard",
+      url: getDashboardUrl(guildId),
+    },
   ];
 
   if (memberIsAdmin(member)) {
-    links.push(
-      {
-        type: 2,
-        style: 5,
-        label: "Open Dashboard",
-        url: getDashboardUrl(guildId),
-      },
-      {
-        type: 2,
-        style: 5,
-        label: "Manage Commands",
-        url: `${getDashboardUrl(guildId)}/commands`,
-      },
-    );
+    links.push({
+      type: 2,
+      style: 5,
+      label: "Manage Commands",
+      url: `${getDashboardUrl(guildId)}/commands`,
+    });
   }
 
   return { type: 1, components: links };
@@ -509,6 +510,41 @@ async function fetchMemberMetrics(supabase, guildId, userId) {
   }
 }
 
+/**
+ * The member's owned profile cosmetics (badges) for /profile — GLOBAL, so no
+ * guild filter. Mirrors lib/shop.ts ownedCosmetics: active purchases whose
+ * snapshot category is 'cosmetic' (or legacy 'badge'), deduped by name. Returns
+ * [{ name }]. Best-effort — never throws so /profile always renders.
+ */
+async function fetchOwnedCosmetics(supabase, userId) {
+  try {
+    const { data } = await supabase
+      .from("reward_purchases")
+      .select("reward_snapshot, status, enabled, created_at")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    const seen = new Set();
+    const out = [];
+    for (const row of data ?? []) {
+      // Respect the member's Inventory on/off toggle (reward_purchases.enabled).
+      if (row.enabled === false) continue;
+      const snap = row.reward_snapshot ?? {};
+      if (snap.category !== "cosmetic" && snap.category !== "badge") continue;
+      const name = String(snap.name ?? "Cosmetic");
+      const key = name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ name });
+    }
+    return out;
+  } catch (err) {
+    console.warn(`[Pulse] fetchOwnedCosmetics failed for ${userId}:`, err.message);
+    return [];
+  }
+}
+
 const CATEGORY_LABELS = {
   utility: "Utility",
   information: "Information",
@@ -660,7 +696,7 @@ const COMMANDS = [
       // Pull everything in parallel to stay inside the interaction window: full
       // user (for the banner), the member, level/rank, activity metrics, and
       // the member's GLOBAL wallet (balance + reputation, PULSIFY-45).
-      const [full, member, levelInfo, metrics, wallet] = await Promise.all([
+      const [full, member, levelInfo, metrics, wallet, cosmetics] = await Promise.all([
         user.fetch().catch(() => null),
         guild.members.fetch(user.id).catch(() => null),
         leveling?.getLevelInfo
@@ -672,6 +708,7 @@ const COMMANDS = [
         economy?.getWallet
           ? economy.getWallet(user.id, user.createdTimestamp).catch(() => null)
           : Promise.resolve(null),
+        fetchOwnedCosmetics(supabase, user.id),
       ]);
 
       const displayName =
@@ -815,6 +852,17 @@ const COMMANDS = [
         body.push(text(cards.map((c) => `**${c.l}:** ${c.v}`).join("\n")));
       }
 
+      // Owned badges & cosmetics from the rewards shop — part of the global
+      // Pulse identity, shown to everyone viewing the profile.
+      if (cosmetics.length > 0) {
+        body.push(divider());
+        body.push(
+          text(
+            `**Badges & cosmetics**\n${cosmetics.map((c) => `\`${c.name}\``).join(" · ")}`,
+          ),
+        );
+      }
+
       // The member's profile banner, centred + full-width at the very bottom (if
       // they have one) — no divider above it. Prefer the normalised framed image;
       // fall back to the raw CDN URL (which Discord fetches itself) if the frame
@@ -856,8 +904,10 @@ const COMMANDS = [
           url: bannerOriginalUrl,
         });
       }
-      // Admins also get a link straight to this member's dashboard detail page
-      // (Members › Details). Hidden entirely for non-admins.
+      // A dashboard link sized to the VIEWER: admins jump straight to this
+      // member's management detail page (Members › Details); everyone else gets
+      // "Open Dashboard", whose guild root routes them to their own member-facing
+      // Profile (the root redirects non-admins there server-side).
       if (
         interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
       ) {
@@ -866,6 +916,13 @@ const COMMANDS = [
           style: 5,
           label: "Manage on Pulsify",
           url: `${getDashboardUrl(guild.id)}/members/${user.id}`,
+        });
+      } else {
+        profileLinks.push({
+          type: 2,
+          style: 5,
+          label: "Open Dashboard",
+          url: getDashboardUrl(guild.id),
         });
       }
       body.push({ type: 1, components: profileLinks });

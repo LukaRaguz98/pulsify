@@ -3,6 +3,7 @@
 import { useTransition } from 'react'
 import { Eye, Loader2, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { usePreferences } from '@/components/ThemeProvider'
 import { setMemberView } from '@/app/dashboard/[guildId]/view-actions'
 
 /**
@@ -12,25 +13,35 @@ import { setMemberView } from '@/app/dashboard/[guildId]/view-actions'
  * "Exit Member View". The toggle is enforced server-side too.
  *
  * Floating icon in the top-right chrome, directly below the tour launcher
- * (bell mt-[40px] → tour mt-[84px] → this mt-[128px], 44px steps). Like the
- * bell/launcher, the inset assumes the HUD corner bracket — when corner
- * decorations are off, the [data-view-switcher] rule in globals.css pulls it
- * to the corner in step with them. On mobile the chrome corners belong to
- * the top bar (bell + ping), so it drops just below the bar instead.
+ * (bell mt-[40px] → tour mt-[84px] → this mt-[128px], 44px steps). The tour
+ * launcher only renders when contextual help is ON, so when it's OFF this drops
+ * into the launcher's slot (mt-[84px]) — staying right under whatever's above it
+ * rather than floating with a gap. Like the bell/launcher, the inset assumes the
+ * HUD corner bracket; when corner decorations are off, the [data-view-switcher]
+ * rules in globals.css pull it to the corner (100px with the guide, 56px
+ * without). On mobile the chrome corners belong to the top bar (bell + ping),
+ * so it drops just below the bar instead.
  */
 export function ViewSwitcher({ guildId }: { guildId: string }) {
   const [pending, startTransition] = useTransition()
+  // The tour launcher (guide) shares the `contextualHelp` gate. When it's
+  // hidden there's no slot-2 icon, so take its place instead of leaving a gap.
+  const { contextualHelp } = usePreferences()
 
   return (
     <button
       type="button"
       data-view-switcher="true"
+      data-vs-guide={contextualHelp ? 'on' : 'off'}
       disabled={pending}
       onClick={() => startTransition(() => setMemberView(guildId, true))}
       title="Operator-only — preview the dashboard exactly as a regular member sees it (read-only nav, no management modules)."
       aria-label="Preview the dashboard as a member"
       className={cn(
-        'relative flex fixed z-[9] top-2 right-3 mt-[128px] mr-[40px] h-9 w-9 items-center justify-center',
+        'relative flex fixed z-[9] top-2 right-3 mr-[40px] h-9 w-9 items-center justify-center',
+        // Slot 3 (under the guide) when contextual help is on; slot 2 (under the
+        // bell) when the guide is hidden. Corner-deco-off offsets live in globals.
+        contextualHelp ? 'mt-[128px]' : 'mt-[84px]',
         'max-lg:top-[56px] max-lg:mt-0 max-lg:mr-0',
         'rounded-md border bg-[var(--panel)] border-[var(--line-strong)] text-[var(--p-1)]',
         'transition-all duration-150 disabled:opacity-60 hover:bg-[var(--p-soft)] hover:border-[var(--p-1)]',

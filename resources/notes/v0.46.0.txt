@@ -1,0 +1,23 @@
+**Pulsify v0.46.0 — Global Rewards Shop**
+Your Pulse Coins finally have a purpose — spend the balance you earn across every server on real rewards in a shop your admins build.
+
+**Shop & rewards**
+- **Spend your global balance** — buy rewards with coins earned anywhere; admins set the cost, stock, limits and requirements.
+- **Five reward types** — Discord roles (timed or permanent), XP boosters, giveaway entries, custom perks and profile cosmetics.
+- **Global + server** — a Pulse-wide catalogue (badges and the Animated Corner HUD) sits alongside each server's own rewards, with a live preview before you buy.
+
+**Your inventory**
+- **Everything you own** — activate boosters, redeem perks and review your history across every Pulse server.
+- **Show or hide cosmetics** — a simple switch turns each owned badge or decoration on or off.
+
+**In Discord**
+- **It just works** — purchase receipts in your DMs, timed rewards removed on expiry, boosters that multiply your XP and giveaway entries that weight your odds.
+- **Badges on /profile** — owned cosmetics show on your global Pulse profile, in the dashboard and in Discord.
+
+**More for members**
+- **Your full profile** — the rich admin-style layout (banner, stats, progression, reputation, activity), read-only.
+- **Visit other members** — click anyone on a leaderboard to open their profile, and jump to your dashboard from Discord.
+
+This is the first real way to spend in the Pulse economy — with marketplace and trading still to come.
+
+June 12, 2026

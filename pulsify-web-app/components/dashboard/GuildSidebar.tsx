@@ -42,7 +42,8 @@ import {
   X,
   Star,
   Trophy,
-  Store,
+  ShoppingBag,
+  Backpack,
   Crown,
 } from 'lucide-react'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
@@ -64,7 +65,7 @@ type NavItem = {
    *  knows it's visible to them alone (others never see the item). */
   locked?: boolean
   /** Match this item on path equality only (for parents of sibling routes,
-   *  e.g. Economy › Overview at /economy vs /economy/marketplace). */
+   *  e.g. Economy › Overview at /economy vs /economy/shop). */
   exact?: boolean
 }
 
@@ -173,7 +174,13 @@ export function GuildSidebar({
     icon: <Coins size={16} />,
     items: [
       { label: 'Overview', href: `${base}/economy`, icon: <Coins size={16} />, exact: true },
-      { label: 'Marketplace', href: `${base}/economy/marketplace`, icon: <Store size={16} /> },
+      { label: 'Shop', href: `${base}/economy/shop`, icon: <ShoppingBag size={16} /> },
+      { label: 'Inventory', href: `${base}/economy/inventory`, icon: <Backpack size={16} /> },
+      // Reward management is admin-only (server rewards); members get the
+      // read-only Shop. Global cosmetics are operator-managed in Controls.
+      ...(!isMember
+        ? [{ label: 'Rewards', href: `${base}/economy-rewards`, icon: <Gift size={16} /> }]
+        : []),
       ...(isOperator && !isMember
         ? [{ label: 'Controls', href: `${base}/economy/controls`, icon: <Crown size={16} />, locked: true }]
         : []),

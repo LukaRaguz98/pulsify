@@ -185,6 +185,37 @@ function pickWinners(entrantIds, count, exclude = []) {
   return pool.slice(0, Math.max(0, count));
 }
 
+// Weighted winner pick (sampling WITHOUT replacement). `entrants` are
+// { id, weight }; the shop "giveaway entries" reward raises weight (see
+// 20260614) to improve a member's odds while still letting them win only once.
+// Mirror of pickWeightedWinners in lib/giveaways.ts — keep in sync.
+function pickWeightedWinners(entrants, count, exclude = []) {
+  const excludeSet = new Set(exclude);
+  const byId = new Map();
+  for (const e of entrants) {
+    if (!e?.id || excludeSet.has(e.id)) continue;
+    const w = Math.max(1, Math.floor(Number(e.weight) || 1));
+    const cur = byId.get(e.id);
+    if (cur === undefined || w > cur) byId.set(e.id, w);
+  }
+  const pool = [...byId.entries()].map(([id, weight]) => ({ id, weight }));
+
+  const winners = [];
+  const n = Math.max(0, Math.min(count, pool.length));
+  for (let k = 0; k < n; k++) {
+    const total = pool.reduce((s, e) => s + e.weight, 0);
+    let r = Math.random() * total;
+    let idx = 0;
+    for (; idx < pool.length - 1; idx++) {
+      r -= pool[idx].weight;
+      if (r < 0) break;
+    }
+    winners.push(pool[idx].id);
+    pool.splice(idx, 1);
+  }
+  return winners;
+}
+
 function createGiveaways(client, supabase, leveling = null, economy = null) {
   // id -> giveaway row (scheduled + active only; ended ones drop out of cache)
   const cache = new Map();
@@ -345,6 +376,44 @@ function createGiveaways(client, supabase, leveling = null, economy = null) {
     return count ?? 0;
   }
 
+  // Spend the member's unused shop "giveaway entries" rewards (bought in THIS
+  // guild) on the giveaway they just joined: each grants `entries` of bonus
+  // draw weight. The rewards are marked consumed so each is spent once, on the
+  // next giveaway the member enters. Returns the bonus applied (0 if none).
+  async function applyEntryBonus(giveawayId, guildId, userId) {
+    try {
+      const { data: rewards } = await supabase
+        .from("reward_purchases")
+        .select("id, reward_snapshot")
+        .eq("user_id", userId)
+        .eq("guild_id", guildId)
+        .eq("status", "active")
+        .eq("reward_snapshot->>category", "giveaway_entry");
+      if (!rewards || rewards.length === 0) return 0;
+
+      let bonus = 0;
+      for (const r of rewards) {
+        const e = Number(r.reward_snapshot?.payload?.entries);
+        if (Number.isFinite(e) && e > 0) bonus += Math.min(100, Math.floor(e));
+      }
+      if (bonus <= 0) return 0;
+
+      await supabase
+        .from("reward_purchases")
+        .update({ status: "consumed", activated_at: new Date().toISOString() })
+        .in("id", rewards.map((r) => r.id));
+      await supabase
+        .from("giveaway_entries")
+        .update({ weight: 1 + bonus })
+        .eq("giveaway_id", giveawayId)
+        .eq("user_id", userId);
+      return bonus;
+    } catch (err) {
+      console.warn("[Pulse] giveaway entry bonus failed:", err.message);
+      return 0;
+    }
+  }
+
   async function handleJoin(interaction, giveawayId) {
     const row = cache.get(giveawayId) ?? (await loadGiveaway(giveawayId));
     if (!row) {
@@ -406,7 +475,14 @@ function createGiveaways(client, supabase, leveling = null, economy = null) {
       void leveling.awardGiveawayEntry(interaction.guild, interaction.member, interaction.channel);
     }
 
-    await interaction.reply({ content: "🎉 You're in! Good luck.", flags: MessageFlags.Ephemeral });
+    // Spend any shop "giveaway entries" rewards the member owns on this entry.
+    const bonus = await applyEntryBonus(giveawayId, row.guild_id, interaction.user.id);
+    const joinMsg =
+      bonus > 0
+        ? `🎉 You're in — with **${bonus} bonus ${bonus === 1 ? "entry" : "entries"}** from your rewards! Good luck.`
+        : "🎉 You're in! Good luck.";
+
+    await interaction.reply({ content: joinMsg, flags: MessageFlags.Ephemeral });
   }
 
   // ── Lifecycle: start scheduled, end + draw ───────────────────────────────────
@@ -465,7 +541,7 @@ function createGiveaways(client, supabase, leveling = null, economy = null) {
 
       const { data: entries } = await supabase
         .from("giveaway_entries")
-        .select("user_id, user_name")
+        .select("user_id, user_name, weight")
         .eq("giveaway_id", g.id);
       const all = entries ?? [];
       const nameById = new Map(all.map((e) => [e.user_id, e.user_name]));
@@ -474,7 +550,14 @@ function createGiveaways(client, supabase, leveling = null, economy = null) {
       const previousWinners = reroll ? (fresh.winners ?? []).map((w) => w.id) : [];
       const exclude = [...blacklist, ...previousWinners];
 
-      const winnerIds = pickWinners(all.map((e) => e.user_id), fresh.winner_count, exclude);
+      // Weighted draw: a member's purchased "giveaway entries" reward raises
+      // their entry weight (still one win max). Defaults to weight 1 per member,
+      // so a giveaway with no bonus entries draws exactly as before.
+      const winnerIds = pickWeightedWinners(
+        all.map((e) => ({ id: e.user_id, weight: e.weight })),
+        fresh.winner_count,
+        exclude,
+      );
       const winners = winnerIds.map((id) => ({ id, name: nameById.get(id) ?? null }));
 
       const patch = {
@@ -599,6 +682,7 @@ function createGiveaways(client, supabase, leveling = null, economy = null) {
 module.exports = {
   createGiveaways,
   pickWinners,
+  pickWeightedWinners,
   checkEligibility,
   describeRequirements,
   hasRequirements,

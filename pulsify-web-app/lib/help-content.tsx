@@ -163,13 +163,33 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
       </>
     ),
   },
-  marketplace: {
-    title: 'Marketplace',
+  shop: {
+    title: 'Rewards Shop',
     plan: 'free',
     body: (
       <>
-        <p>The future home of spending Pulse Coins — server shops, items and member-to-member trading, built on the global economy.</p>
-        <p><strong>Heads up:</strong> Nothing is purchasable yet; balances earned today carry over when the Marketplace opens.</p>
+        <p>Spend your global Pulse Coins on rewards your server offers — Discord roles, perks, XP boosters, cosmetics and giveaway entries. Some rewards have requirements (a minimum reputation or level) or limited stock.</p>
+        <p><strong>Tip:</strong> Roles are granted the moment you buy. Boosters wait in your Inventory until you activate them; perks are redeemed there too.</p>
+      </>
+    ),
+  },
+  inventory: {
+    title: 'Inventory',
+    plan: 'free',
+    body: (
+      <>
+        <p>Everything you own from the shop. Activate an XP booster when you want the boost to start, redeem a manual perk so staff can fulfil it, and review your active, expired and past purchases.</p>
+        <p><strong>Tip:</strong> Timed rewards (roles, boosters) show when they expire. Badges &amp; cosmetics decorate your global Pulse profile automatically.</p>
+      </>
+    ),
+  },
+  rewards: {
+    title: 'Rewards',
+    plan: 'free',
+    body: (
+      <>
+        <p>Create the rewards members of this server can buy with Pulse Coins — roles, perks, boosters, cosmetics and more. Set the cost, stock, per-member limit and any purchase requirements.</p>
+        <p><strong>Tip:</strong> Toggle a reward inactive to hide it from the shop without deleting it. Existing purchases keep working — each carries a snapshot.</p>
       </>
     ),
   },
