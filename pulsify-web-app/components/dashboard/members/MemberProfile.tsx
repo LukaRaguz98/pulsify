@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
+import { PageHeader } from '@/components/ui/page-header'
 import { CategorySection } from '@/components/ui/category-section'
 import { StatsCard } from '@/components/dashboard/StatsCard'
 import { ChartCard } from '@/components/dashboard/charts/ChartCard'
@@ -206,10 +207,26 @@ export function MemberProfile({ guildId, userId, viewerRole = 'admin', backHref,
     </Link>
   )
 
+  // The standard page header (title + description + contextual-help ⓘ) every
+  // other view carries; the back link above it acts as the parent breadcrumb.
+  // Own profile (no back link) is phrased in the second person.
+  const pageHeader = (
+    <PageHeader
+      title={hideBack ? 'Your profile' : 'Member profile'}
+      helpId="profile"
+      description={
+        hideBack
+          ? 'A full view of your activity, reputation, progression and standing.'
+          : "A full view of this member's activity, reputation, progression and standing."
+      }
+    />
+  )
+
   if (loading) {
     return (
       <div className="page-content">
         {backButton}
+        {pageHeader}
         <Skeleton className="mb-6 h-[180px]" />
         <div className="mb-6 grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
           {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-[112px]" />)}
@@ -223,6 +240,7 @@ export function MemberProfile({ guildId, userId, viewerRole = 'admin', backHref,
     return (
       <div className="page-content">
         {backButton}
+        {pageHeader}
         <EmptyState
           icon={<AlertCircle size={36} />}
           title="Couldn’t load this profile"
@@ -274,6 +292,7 @@ export function MemberProfile({ guildId, userId, viewerRole = 'admin', backHref,
   return (
     <div className="page-content">
       {backButton}
+      {pageHeader}
 
       {toast && (
         <div

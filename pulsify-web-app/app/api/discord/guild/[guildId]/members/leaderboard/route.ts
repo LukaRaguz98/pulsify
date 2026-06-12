@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { requireGuildRole } from '@/lib/guild-access'
-import { fetchGuildMembers, avatarUrl, defaultAvatarUrl, snowflakeToDate, type DiscordMember } from '@/lib/discord'
+import { fetchGuildMembers, fetchDiscordUser, avatarUrl, defaultAvatarUrl, snowflakeToDate, type DiscordMember } from '@/lib/discord'
 import { computeReputation, daysSince } from '@/lib/reputation'
 import { normaliseLevelingSettings, levelForXp } from '@/lib/leveling'
 import { normaliseEconomyUser } from '@/lib/economy'
@@ -11,9 +11,15 @@ import {
   type LeaderboardEntry,
   type LeaderboardKey,
   type LeaderboardResponse,
+  type RichestEntry,
 } from '@/lib/member-profile'
 
-const TOP_N = 25
+// How many ranked rows each board returns. The dashboard paginates these
+// client-side (like the Members directory), so we return a generous slice
+// rather than a hard "top 25". The richest board is capped lower because each
+// out-of-guild holder needs a (cached) Discord avatar lookup.
+const BOARD_SIZE = 200
+const RICHEST_SIZE = 50
 
 // Map the timeframe filter to a `p_since` bound (null = all time). Only the
 // "Most active" board + the activity numbers are windowed — level / XP /
@@ -64,7 +70,7 @@ export async function GET(
         : Promise.resolve({ data: null as unknown }),
       // "Richest" board — GLOBAL wallet ranking by balance (window-independent),
       // consolidated here from the Economy view.
-      supabase.from('economy_users').select('*').order('balance', { ascending: false }).limit(TOP_N),
+      supabase.from('economy_users').select('*').order('balance', { ascending: false }).limit(RICHEST_SIZE),
     ])
 
   // GLOBAL reputation for everyone on the board (PULSIFY-45): one batched RPC
@@ -137,7 +143,7 @@ export async function GET(
   }
 
   const top = (key: LeaderboardKey, cmp: (a: LeaderboardEntry, b: LeaderboardEntry) => number) =>
-    rows.map((r) => r.entry).sort(cmp).slice(0, TOP_N)
+    rows.map((r) => r.entry).sort(cmp).slice(0, BOARD_SIZE)
 
   const boards: Record<LeaderboardKey, LeaderboardEntry[]> = {
     level: top('level', (a, b) => b.level - a.level || b.xp - a.xp).filter((e) => e.xp > 0),
@@ -162,16 +168,33 @@ export async function GET(
     ? Math.round(([...levelsByUser.values()].reduce((s, v) => s + v.level, 0) / tracked) * 10) / 10
     : 0
 
-  // Resolve an avatar for each wallet holder: prefer their guild-member avatar
-  // (so it matches the member boards) and fall back to the Discord default when
-  // the holder isn't a member of this guild.
-  const memberAvatarById = new Map<string, string>()
-  for (const m of members) {
-    memberAvatarById.set(m.user.id, avatarUrl(m.user.id, m.user.avatar))
-  }
-  const richest = (richestRes.data ?? []).map((r) => {
-    const u = normaliseEconomyUser(r as Record<string, unknown>)
-    return { ...u, avatar: memberAvatarById.get(u.user_id) ?? defaultAvatarUrl(u.user_id) }
+  // Resolve an avatar + profile-availability for each wallet holder. The board
+  // is GLOBAL, so a holder may live on a different Pulse server: for guild
+  // members we already have their avatar (and they have a profile here), while
+  // for outsiders we fetch their global Discord profile so the avatar still
+  // shows. Those outsiders have no profile in THIS guild (`inGuild: false`), so
+  // the UI leaves their row non-clickable.
+  const memberById = new Map<string, DiscordMember>()
+  for (const m of members) memberById.set(m.user.id, m)
+
+  const richestRaw = (richestRes.data ?? []).map((r) =>
+    normaliseEconomyUser(r as Record<string, unknown>),
+  )
+  // Fetch the global profile only for holders who aren't members here (cached
+  // per-user inside fetchDiscordUser); run them in parallel.
+  const outsiderIds = richestRaw.filter((u) => !memberById.has(u.user_id)).map((u) => u.user_id)
+  const outsiderUsers = await Promise.all(outsiderIds.map((id) => fetchDiscordUser(id)))
+  const outsiderById = new Map(outsiderIds.map((id, i) => [id, outsiderUsers[i]]))
+
+  const richest: RichestEntry[] = richestRaw.map((u) => {
+    const m = memberById.get(u.user_id)
+    if (m) return { ...u, avatar: avatarUrl(m.user.id, m.user.avatar), inGuild: true }
+    const fu = outsiderById.get(u.user_id)
+    return {
+      ...u,
+      avatar: fu ? avatarUrl(fu.id, fu.avatar) : defaultAvatarUrl(u.user_id),
+      inGuild: false,
+    }
   })
 
   const response: LeaderboardResponse = {

@@ -7,6 +7,7 @@ import { Trophy, Sparkles, Zap, Activity, AlertCircle, Users, BarChart3, Globe, 
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CategorySection } from '@/components/ui/category-section'
+import { Pagination } from '@/components/ui/pagination'
 import { StatsCard } from '@/components/dashboard/StatsCard'
 import { RefreshButton } from '@/components/dashboard/RefreshButton'
 import { createClient as createSupabase } from '@/lib/supabase'
@@ -83,6 +84,17 @@ const RANK_COL_WIDTH = 64
 const RANK_HEADER_STYLE: React.CSSProperties = { width: RANK_COL_WIDTH, color: 'var(--text-3)' }
 const RANK_CELL_STYLE: React.CSSProperties = { width: RANK_COL_WIDTH }
 
+// Client-side pagination wired exactly like the Members directory: the parent
+// slices the rows for the current page and passes the offset (so ranks keep
+// counting across pages) plus the footer controls.
+type Pager = {
+  page: number
+  pageSize: number
+  total: number
+  onPageChange: (page: number) => void
+  onPageSizeChange: (size: number) => void
+}
+
 /**
  * Member boards (level / reputation / most-active) rendered in the same table
  * chrome as the Members directory: bordered container, stacked header, hover
@@ -91,13 +103,17 @@ const RANK_CELL_STYLE: React.CSSProperties = { width: RANK_COL_WIDTH }
 function MemberBoardTable({
   entries,
   board,
+  rankOffset,
   linkToProfiles,
   onOpen,
+  pager,
 }: {
   entries: LeaderboardEntry[]
   board: BoardId
+  rankOffset: number
   linkToProfiles: boolean
   onOpen: (userId: string) => void
+  pager: Pager
 }) {
   const primary = BOARD_PRIMARY[board]
   return (
@@ -126,7 +142,7 @@ function MemberBoardTable({
                 onMouseEnter={interactive ? (ev) => { ev.currentTarget.style.background = 'var(--bg-2)' } : undefined}
                 onMouseLeave={interactive ? (ev) => { ev.currentTarget.style.background = 'color-mix(in srgb, var(--panel) 50%, transparent)' } : undefined}
               >
-                <td className="px-4 py-3" data-label="" style={RANK_CELL_STYLE}><RankBadge rank={i + 1} /></td>
+                <td className="px-4 py-3" data-label="" style={RANK_CELL_STYLE}><RankBadge rank={rankOffset + i + 1} /></td>
                 <td className="px-4 py-3" data-label="">
                   <div className="flex items-center gap-3">
                     <Image src={e.avatar} alt={e.name} width={30} height={30} unoptimized className="rounded-full shrink-0" />
@@ -143,17 +159,33 @@ function MemberBoardTable({
           })}
         </tbody>
       </table>
+      <Pagination {...pager} />
     </div>
   )
 }
 
 /**
  * "Richest" board — global Pulse Coin wallets ranked by balance. Rendered in the
- * same table chrome as the member boards, now with a profile icon (the holder's
- * guild avatar when they're a member here, otherwise the Discord default). These
- * are GLOBAL wallets, so rows aren't clickable through to a server profile.
+ * same table chrome as the member boards, with a profile icon (the holder's
+ * guild avatar when they're a member here, otherwise their global Discord
+ * avatar). The board is GLOBAL, so a holder can live on another Pulse server:
+ * rows open the member's profile on click, but only for holders who are members
+ * of THIS guild (`inGuild`) — outsiders have no profile here, so their row isn't
+ * clickable.
  */
-function RichestTable({ rows }: { rows: RichestEntry[] }) {
+function RichestTable({
+  rows,
+  rankOffset,
+  linkToProfiles,
+  onOpen,
+  pager,
+}: {
+  rows: RichestEntry[]
+  rankOffset: number
+  linkToProfiles: boolean
+  onOpen: (userId: string) => void
+  pager: Pager
+}) {
   return (
     <div className="rounded-xl border overflow-x-auto" style={{ borderColor: 'var(--line-strong)' }}>
       <table className="w-full min-w-[520px] text-sm table-stack">
@@ -166,25 +198,41 @@ function RichestTable({ rows }: { rows: RichestEntry[] }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((u, i) => (
-            <tr
-              key={u.user_id}
-              className="border-b"
-              style={{ borderColor: 'var(--line-strong)', background: 'color-mix(in srgb, var(--panel) 50%, transparent)' }}
-            >
-              <td className="px-4 py-3" data-label="" style={RANK_CELL_STYLE}><RankBadge rank={i + 1} /></td>
-              <td className="px-4 py-3" data-label="">
-                <div className="flex items-center gap-3">
-                  <Image src={u.avatar} alt={u.user_name ?? u.user_id} width={30} height={30} unoptimized className="rounded-full shrink-0" />
-                  <p className="truncate font-medium text-foreground">{u.user_name ?? u.user_id}</p>
-                </div>
-              </td>
-              <td className="px-4 py-3 font-mono text-xs text-muted-foreground" data-label="Earned all-time">{formatCoins(u.lifetime_earned)}</td>
-              <td className="px-4 py-3 font-mono text-sm font-bold text-foreground" data-label="Balance">{formatCoins(u.balance)}</td>
-            </tr>
-          ))}
+          {rows.map((u, i) => {
+            const interactive = linkToProfiles && u.inGuild
+            return (
+              <tr
+                key={u.user_id}
+                onClick={interactive ? () => onOpen(u.user_id) : undefined}
+                title={!u.inGuild ? 'Not a member of this server' : undefined}
+                className={`border-b transition-colors${interactive ? ' cursor-pointer' : ''}`}
+                style={{ borderColor: 'var(--line-strong)', background: 'color-mix(in srgb, var(--panel) 50%, transparent)' }}
+                onMouseEnter={interactive ? (ev) => { ev.currentTarget.style.background = 'var(--bg-2)' } : undefined}
+                onMouseLeave={interactive ? (ev) => { ev.currentTarget.style.background = 'color-mix(in srgb, var(--panel) 50%, transparent)' } : undefined}
+              >
+                <td className="px-4 py-3" data-label="" style={RANK_CELL_STYLE}><RankBadge rank={rankOffset + i + 1} /></td>
+                <td className="px-4 py-3" data-label="">
+                  <div className="flex items-center gap-3">
+                    <Image src={u.avatar} alt={u.user_name ?? u.user_id} width={30} height={30} unoptimized className="rounded-full shrink-0" />
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <p className="truncate font-medium text-foreground">{u.user_name ?? u.user_id}</p>
+                      {!u.inGuild && (
+                        <span className="inline-flex items-center gap-1 rounded px-1 py-0.5 text-[10px] font-medium" style={{ background: 'var(--bg-2)', color: 'var(--text-3)' }}>
+                          <Globe size={9} />
+                          Other server
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </td>
+                <td className="px-4 py-3 font-mono text-xs text-muted-foreground" data-label="Earned all-time">{formatCoins(u.lifetime_earned)}</td>
+                <td className="px-4 py-3 font-mono text-sm font-bold text-foreground" data-label="Balance">{formatCoins(u.balance)}</td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
+      <Pagination {...pager} />
     </div>
   )
 }
@@ -197,6 +245,13 @@ export function MembersLeaderboard({ guildId, linkToProfiles = true, profileBase
   const [error, setError] = useState<string | null>(null)
   const [board, setBoard] = useState<BoardId>('level')
   const [window, setWindow] = useState('30d')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
+
+  // Switching board or timeframe re-ranks the list, so jump back to page 1.
+  useEffect(() => {
+    setPage(1)
+  }, [board, window])
 
   const load = useCallback(
     async (silent = false) => {
@@ -267,6 +322,23 @@ export function MembersLeaderboard({ guildId, linkToProfiles = true, profileBase
 
   const entries = board === 'richest' ? [] : data.boards[board]
   const maxDist = Math.max(1, ...data.distribution.map((d) => d.count))
+
+  // Client-side pagination, mirroring the Members directory: clamp the page,
+  // slice the active list, and hand the offset to the table so ranks continue
+  // counting from the right number across pages.
+  const total = board === 'richest' ? data.richest.length : entries.length
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const safePage = Math.min(Math.max(1, page), totalPages)
+  const pageStart = (safePage - 1) * pageSize
+  const pagedEntries = entries.slice(pageStart, pageStart + pageSize)
+  const pagedRichest = data.richest.slice(pageStart, pageStart + pageSize)
+  const pager: Pager = {
+    page: safePage,
+    pageSize,
+    total,
+    onPageChange: setPage,
+    onPageSizeChange: (size) => { setPageSize(size); setPage(1) },
+  }
 
   return (
     <div className="space-y-8">
@@ -374,7 +446,13 @@ export function MembersLeaderboard({ guildId, linkToProfiles = true, profileBase
               description="Members start earning Pulse Coins the moment they're active in any server running Pulse."
             />
           ) : (
-            <RichestTable rows={data.richest} />
+            <RichestTable
+              rows={pagedRichest}
+              rankOffset={pageStart}
+              linkToProfiles={linkToProfiles}
+              onOpen={(userId) => router.push(`/dashboard/${guildId}/${profileBasePath}/${userId}`)}
+              pager={pager}
+            />
           )
         ) : entries.length === 0 ? (
           <EmptyState
@@ -384,10 +462,12 @@ export function MembersLeaderboard({ guildId, linkToProfiles = true, profileBase
           />
         ) : (
           <MemberBoardTable
-            entries={entries}
+            entries={pagedEntries}
             board={board}
+            rankOffset={pageStart}
             linkToProfiles={linkToProfiles}
             onOpen={(userId) => router.push(`/dashboard/${guildId}/${profileBasePath}/${userId}`)}
+            pager={pager}
           />
         )}
       </CategorySection>

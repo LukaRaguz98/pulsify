@@ -235,6 +235,16 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
       </>
     ),
   },
+  profile: {
+    title: 'Member profile',
+    plan: 'free',
+    body: (
+      <>
+        <p>A full breakdown of a single member — activity, levels &amp; XP, global reputation, achievements and (for admins) moderation history.</p>
+        <p><strong>Tip:</strong> Use the back link at the top to return to wherever you opened this profile from.</p>
+      </>
+    ),
+  },
   onboarding: {
     title: 'Onboarding & Welcome',
     plan: 'free',

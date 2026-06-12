@@ -193,9 +193,11 @@ export type LeaderboardEntry = {
 export type LeaderboardKey = 'level' | 'xp' | 'reputation' | 'active'
 
 /** A "Richest" board row — a global wallet plus a resolved avatar URL. The
- *  holder may not be a member of this guild, so the avatar falls back to the
- *  Discord default when we don't have their member record. */
-export type RichestEntry = EconomyUser & { avatar: string }
+ *  holder may live on a different Pulse server: `avatar` is their guild-member
+ *  avatar when they're a member here, otherwise their global Discord avatar (or
+ *  the Discord default). `inGuild` is false for holders who aren't members of
+ *  this guild — they have no profile here, so the row isn't clickable. */
+export type RichestEntry = EconomyUser & { avatar: string; inGuild: boolean }
 
 export type LeaderboardResponse = {
   boards: Record<LeaderboardKey, LeaderboardEntry[]>
