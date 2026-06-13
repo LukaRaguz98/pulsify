@@ -91,6 +91,7 @@ const NAV_CATALOG: NavDef[] = [
   { id: 'nav-giveaways', label: 'Giveaways', icon: 'Gift', path: '/giveaways', keywords: 'giveaway contest raffle prize draw winners engagement' },
   { id: 'nav-milestones', label: 'Milestones', icon: 'Award', path: '/milestones', keywords: 'milestones recognition rewards achievements anniversary tenure veteran loyalty roles retention' },
   { id: 'nav-economy', label: 'Economy', icon: 'Coins', path: '/economy', keywords: 'economy coins balance wallet reputation global currency transactions ledger leaderboard richest pay transfer circulation overview' },
+  { id: 'nav-economy-earning', label: 'Earnings settings', icon: 'Sparkles', path: '/economy-earning', keywords: 'earnings settings rewards earning earn coins activity messages voice reactions daily weekly streak multipliers anti-abuse onboarding events giveaways simulator config how to earn' },
   { id: 'nav-shop', label: 'Shop', icon: 'ShoppingBag', path: '/economy/shop', keywords: 'shop store rewards spend buy purchase roles perks boosters cosmetics coins marketplace' },
   { id: 'nav-inventory', label: 'Inventory', icon: 'Backpack', path: '/economy/inventory', keywords: 'inventory owned items rewards purchases redeem activate boosters perks' },
   { id: 'nav-economy-controls', label: 'Economy Controls', icon: 'Crown', path: '/economy/controls', keywords: 'economy controls grant remove adjust coins operator audit moderation log' },

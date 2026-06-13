@@ -8,6 +8,7 @@ const {
   MessageFlags,
   Events,
   AuditLogEvent,
+  Partials,
 } = require("discord.js");
 
 const { createClient } = require("@supabase/supabase-js");
@@ -34,6 +35,7 @@ const { createIntegrations } = require("./integrations");
 const { createOnboarding } = require("./onboarding");
 const { createBackups } = require("./backups");
 const { createEconomy } = require("./economy");
+const { createEconomyRewards } = require("./economy-rewards");
 const { createShop } = require("./shop");
 
 const supabase = createClient(
@@ -54,7 +56,12 @@ const client = new Client({
     // Required for Events.GuildScheduledEvent* — without it the bot never
     // sees event create/update/delete and our notifications would miss them.
     GatewayIntentBits.GuildScheduledEvents,
+    // Reactions-received rewards (PULSIFY-47) need the reaction gateway events.
+    GatewayIntentBits.GuildMessageReactions,
   ],
+  // Partials so MessageReactionAdd fires for reactions on messages that aren't
+  // in the cache (e.g. older messages) — without these the reward never pays.
+  partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 
 // Constructed after `client` exists — the scheduler captures it to resolve
@@ -63,15 +70,28 @@ const scheduler = createScheduler(client, supabase);
 
 // The ticket system registers its own interaction + message listeners on start
 // (it only handles `tkt:` component/modal interactions, never chat-input, so it
-// never collides with the slash-command handler below).
-const tickets = createTickets(client, supabase);
+// never collides with the slash-command handler below). Constructed after the
+// economy rewards engine (below) so resolving a ticket can pay the handler the
+// "helpful contribution" reward.
 
-// The global economy (PULSIFY-45) owns the cross-server coin balance +
-// reputation. Constructed FIRST so every system that awards (leveling,
-// giveaways, milestones, onboarding) can be handed it. It registers no
-// listeners of its own — activity earning rides the leveling hooks, and the
-// /wallet + /pay slash commands route through the command handler below.
+// The global economy (PULSIFY-45) owns the cross-server coin LEDGER (balance,
+// transfers, /wallet + /pay) and the computed global reputation read. Earning
+// rules moved out to the rewards engine below (PULSIFY-47); this module is now
+// purely the ledger primitives every award path calls. Registers no listeners.
 const economy = createEconomy(client, supabase);
+
+// Economy Rewards & Earning engine (PULSIFY-47). Turns the fixed PULSIFY-45
+// earning rates into a per-guild, configurable system: it owns the reward
+// config cache, the anti-abuse state (cooldowns/caps/dedup) and every award
+// path, calling economy's ledger primitives. Constructed right after economy so
+// leveling/giveaways/milestones/onboarding all receive it and route their coin
+// awards through it. Registers a reaction listener (wired below) + its own
+// voice tick; the /daily + /weekly commands route through the command handler.
+const economyRewards = createEconomyRewards(client, supabase, economy);
+
+// Ticket system (see note above) — passed the rewards engine for the "helpful
+// contribution" payout when a ticket is resolved.
+const tickets = createTickets(client, supabase, economyRewards);
 
 // The rewards shop (PULSIFY-46) is the spend side of the economy. Purchases
 // happen in the dashboard (atomic RPC + REST role grant); this worker owns the
@@ -88,13 +108,13 @@ const shop = createShop(client, supabase);
 // command handler below); it only runs a once-a-minute voice-XP tick.
 // `economy` is passed so every XP award also pays global coins; `shop` so a
 // member's active XP booster multiplies their award.
-const leveling = createLeveling(client, supabase, economy, shop);
+const leveling = createLeveling(client, supabase, economyRewards, shop);
 
 // The giveaway system likewise registers its own interaction listener (only
 // `gw:` buttons) plus a once-a-minute lifecycle tick that starts scheduled
 // giveaways and draws winners when they end. `leveling` is passed so a Join
 // awards engagement XP; `economy` so winners earn global coins + reputation.
-const giveaways = createGiveaways(client, supabase, leveling, economy);
+const giveaways = createGiveaways(client, supabase, leveling, economyRewards);
 
 // The milestones system recognises members for crossing activity / tenure
 // thresholds. Like leveling it owns its table (member_milestones): a periodic
@@ -102,7 +122,7 @@ const giveaways = createGiveaways(client, supabase, leveling, economy);
 // reward roles, announces, and records a notification. It registers no
 // interaction listener — /milestones routes through the command handler below,
 // and event participation is fed in from the GuildScheduledEventUserAdd handler.
-const milestones = createMilestones(client, supabase, economy);
+const milestones = createMilestones(client, supabase, economyRewards);
 
 // The presence system owns the bot's global Discord status. It reads the
 // "active" guild's presence config (bot_presence_state → guild_presence),
@@ -123,7 +143,7 @@ const integrations = createIntegrations(client, supabase);
 // Registers its own `ob:` interaction listener; posting is driven from
 // GuildMemberAdd below. Passed `leveling` so completion XP routes through the
 // same atomic RPC the rest of the levelling system uses.
-const onboarding = createOnboarding(client, supabase, leveling, economy);
+const onboarding = createOnboarding(client, supabase, leveling, economyRewards);
 
 // Server Recovery & Backup System (PULSIFY-42): the dashboard owns manual
 // backups + restores; this worker is the WRITER of SCHEDULED backups. An hourly
@@ -370,6 +390,10 @@ client.once(Events.ClientReady, async (readyClient) => {
   // Leveling system: load per-guild XP config, subscribe to settings changes,
   // and start the voice-XP tick.
   await leveling.start();
+
+  // Economy rewards engine: load per-guild reward config, subscribe to changes,
+  // and start the voice-coins tick (PULSIFY-47).
+  await economyRewards.start();
 
   // Milestones system: load per-guild milestone definitions, subscribe to
   // changes, and start the recognition sweep.
@@ -740,6 +764,10 @@ client.on(Events.MessageCreate, (message) => {
   // enforced inside the module). Fire-and-forget — never blocks tracking.
   void leveling.awardMessage(message);
 
+  // Award Pulse Coins for the message + the once-a-day "active day" bonus
+  // (own cooldowns/caps/ignore rules inside the module). Fire-and-forget.
+  void economyRewards.onMessage(message);
+
   // Fire-and-forget — Pulse Guard runs the analysis + auto-action on the web
   // app side. Failures are logged inside the helper, never thrown, so a web
   // app outage can't break message tracking.
@@ -916,10 +944,14 @@ client.on(Events.GuildScheduledEventCreate, async (event) => {
     link: `/dashboard/${event.guild.id}/events`,
     targetName: event.name,
   });
+  // Reward the event host (PULSIFY-47).
+  void economyRewards.onEventCreate(event);
 });
 
 client.on(Events.GuildScheduledEventUpdate, async (oldEvent, newEvent) => {
   if (!newEvent.guild) return;
+  // Reward attendance (event went live) / completion (event ended).
+  void economyRewards.onEventUpdate(oldEvent, newEvent);
   // Status 4 = CANCELED — treat as a deletion in the activity feed so the
   // user sees one logical "the event went away" entry instead of an update
   // immediately followed by a delete.
@@ -962,6 +994,15 @@ client.on(Events.GuildScheduledEventUserAdd, async (scheduledEvent, user) => {
     // Record the participation so "event participation" milestones can count it.
     void milestones.recordEventParticipation(guild, member, scheduledEvent.id);
   }
+  // Reward event participation in Pulse Coins (also tracks the RSVP for the
+  // completion payout when the event ends).
+  void economyRewards.onEventUserAdd(scheduledEvent, user);
+});
+
+// A reaction added to a message → reward the message author ("reactions
+// received"). Anti-farm (self-react, dedup, cooldown, caps) lives in the module.
+client.on(Events.MessageReactionAdd, (reaction, user) => {
+  void economyRewards.onReaction(reaction, user);
 });
 
 // ── Server settings ─────────────────────────────────────────────────────────
@@ -1018,6 +1059,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   // Award command-usage XP (its own cooldown + ignore rules live in the module).
   void leveling.awardCommand(interaction);
+  // Award command-usage Pulse Coins (off by default; own cooldown/caps).
+  void economyRewards.onCommand(interaction);
 
   const logBase = {
     guildId: guild.id,
@@ -1060,6 +1103,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       leveling,
       milestones,
       economy,
+      economyRewards,
       ephemeral: verdict.ephemeral,
     });
     verdict.commit();

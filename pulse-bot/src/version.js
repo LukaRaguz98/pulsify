@@ -18,11 +18,26 @@ const path = require("node:path");
 // Current Pulse version. Used for the startup banner and as the displayed
 // version when no release files are reachable. Keep this in step with the
 // newest resources/notes/vX.Y.Z.txt on each release.
-const PULSE_VERSION = "0.43.0";
+const PULSE_VERSION = "0.47.0";
 
 // Manual/static fallback used only when the release-notes files can't be read.
 // Mirrors the shape produced by the parser so callers don't special-case it.
 const STATIC_RELEASES = [
+  {
+    version: "0.47.0",
+    title: "Economy Rewards & Earning",
+    date: "Jun 13, 2026",
+    description:
+      "A full Reward Configuration Center: server owners decide exactly how members earn Pulse Coins, with streaks, multipliers and anti-abuse built in.",
+    highlights: [
+      "**Earn for taking part** — configurable coins for messages, voice, reactions received, active days, helpful contributions, events, giveaways, onboarding, level-ups and milestones.",
+      "**/daily & /weekly** — claimable rewards with growing streaks and loyalty milestone bonuses.",
+      "**Multipliers & bonuses** — stack reputation, server-booster, premium and seasonal multipliers (capped to keep the economy healthy).",
+      "**Anti-abuse + analytics** — cooldowns, daily caps, ignored channels/roles and account-age gates, plus an Economy › Earning view with a live simulator, coins generated, top earners and your most valuable activities.",
+    ],
+    outro:
+      "Reputation is never granted — it stays a computed trust score, used here only as an optional earning multiplier.",
+  },
   {
     version: "0.37.0",
     title: "Onboarding & Welcome",

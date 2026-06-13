@@ -203,6 +203,46 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
       </>
     ),
   },
+  'economy-earning': {
+    title: 'Earnings settings',
+    plan: 'free',
+    body: (
+      <>
+        <p>The earning half of Rewards — decide how members earn the Pulse Coins they spend: per-source amounts for activity, events, giveaways, onboarding and progression, plus daily &amp; weekly claims.</p>
+        <p><strong>Tip:</strong> Use the simulator to preview a payout, and the analytics below to see what your config is actually minting. Reputation is never granted — it&apos;s only an optional earning multiplier.</p>
+      </>
+    ),
+  },
+  'economy-streaks': {
+    title: 'Daily & Weekly Rewards',
+    plan: 'free',
+    body: (
+      <>
+        <p>Claimable coin rewards (<code>/daily</code>, <code>/weekly</code>) that grow a streak each consecutive period. Loyalty milestones pay a one-off bonus at chosen streak lengths.</p>
+        <p><strong>Heads up:</strong> Claims reset at UTC midnight (daily) / weekly. Miss a period and the streak resets to 1.</p>
+      </>
+    ),
+  },
+  'economy-multipliers': {
+    title: 'Multipliers & Bonuses',
+    plan: 'free',
+    body: (
+      <>
+        <p>Scale payouts for reputation, server boosters, premium servers, event-category rewards and limited-time seasonal boosts. Multipliers stack multiplicatively, capped at 10×.</p>
+        <p><strong>Tip:</strong> The reputation multiplier rewards trusted members without ever turning reputation into a points balance.</p>
+      </>
+    ),
+  },
+  'economy-antiabuse': {
+    title: 'Anti-Abuse Protection',
+    plan: 'free',
+    body: (
+      <>
+        <p>Keep the economy healthy: ignore channels/roles, block brand-new accounts, and cap how many coins a member can farm per day (per source and overall).</p>
+        <p><strong>Heads up:</strong> Per-source cooldowns and reaction de-duplication run automatically; a global daily cap of 0 means unlimited.</p>
+      </>
+    ),
+  },
   leveling: {
     title: 'Levels & XP',
     plan: 'free',

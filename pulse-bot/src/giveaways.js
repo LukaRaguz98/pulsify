@@ -216,7 +216,7 @@ function pickWeightedWinners(entrants, count, exclude = []) {
   return winners;
 }
 
-function createGiveaways(client, supabase, leveling = null, economy = null) {
+function createGiveaways(client, supabase, leveling = null, rewards = null) {
   // id -> giveaway row (scheduled + active only; ended ones drop out of cache)
   const cache = new Map();
   // id -> last-seen draw_requested_at (so each dashboard request fires once)
@@ -475,6 +475,12 @@ function createGiveaways(client, supabase, leveling = null, economy = null) {
       void leveling.awardGiveawayEntry(interaction.guild, interaction.member, interaction.channel);
     }
 
+    // Entering also pays configurable Pulse Coins (PULSIFY-47 giveaway
+    // participation). Fire-and-forget; own anti-abuse inside the rewards engine.
+    if (rewards?.awardGiveawayEntry && interaction.member) {
+      void rewards.awardGiveawayEntry(interaction.guild, interaction.member);
+    }
+
     // Spend any shop "giveaway entries" rewards the member owns on this entry.
     const bonus = await applyEntryBonus(giveawayId, row.guild_id, interaction.user.id);
     const joinMsg =
@@ -572,14 +578,18 @@ function createGiveaways(client, supabase, leveling = null, economy = null) {
       Object.assign(fresh, patch);
       cache.delete(g.id);
 
+      const guild = client.guilds.cache.get(fresh.guild_id) ?? { id: fresh.guild_id, name: null };
       if (winnerIds.length > 0) {
         await supabase.from("giveaway_entries").update({ is_winner: true }).eq("giveaway_id", g.id).in("user_id", winnerIds);
-        // Winners earn a global economy bonus (coins + reputation). Fire-and-
-        // forget — never let it delay the winner announcement.
-        if (economy?.awardGiveawayWin) {
-          const guild = client.guilds.cache.get(fresh.guild_id) ?? { id: fresh.guild_id, name: null };
-          void economy.awardGiveawayWin(guild, winners, fresh.prize);
+        // Winners earn a configurable global coin bonus. Fire-and-forget — never
+        // let it delay the winner announcement.
+        if (rewards?.awardGiveawayWin) {
+          void rewards.awardGiveawayWin(guild, winners, fresh.prize);
         }
+      }
+      // The host is rewarded for running the giveaway, win or no win (PULSIFY-47).
+      if (rewards?.awardGiveawayHosting && fresh.host_id) {
+        void rewards.awardGiveawayHosting(guild, fresh.host_id, fresh.host_name, fresh.prize);
       }
 
       // Edit the original message to its settled state and announce winners.

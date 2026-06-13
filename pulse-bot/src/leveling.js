@@ -220,7 +220,7 @@ function progressBar(pct, width = 14) {
 
 const VOICE_TICK_MS = 60 * 1000; // award voice XP once a minute
 
-function createLeveling(client, supabase, economy = null, shop = null) {
+function createLeveling(client, supabase, rewards = null, shop = null) {
   // guildId -> normalised config (seeded on start, kept fresh via realtime)
   const configs = new Map();
   // `${guildId}:${userId}` -> last message-XP timestamp (anti-spam, in-memory)
@@ -345,11 +345,10 @@ function createLeveling(client, supabase, economy = null, shop = null) {
     }
     if (!Number.isFinite(newXp)) return;
 
-    // Global economy rides the XP hook: every successful award also pays Pulse
-    // Coins (from the PRE-multiplier amount, so a guild's local multiplier
-    // can't inflate the global economy) and may earn daily-activity reputation.
-    // Fire-and-forget — the economy must never slow or break XP tracking.
-    if (economy?.awardActivity) void economy.awardActivity(guild, member, Math.max(0, rawAmount));
+    // Activity Pulse Coins are NO LONGER tied to XP (PULSIFY-47): the economy
+    // rewards engine owns its own message/voice/command listeners with
+    // independent amounts, cooldowns and caps, so earning works even when XP is
+    // off. Only the level-up bonus rides this hook (it needs the new level).
 
     // oldXp is derivable (we know exactly how much we just added), so detecting
     // a level-up costs no extra read — the atomic RPC already serialised the add.
@@ -366,8 +365,10 @@ function createLeveling(client, supabase, economy = null, shop = null) {
 
     if (newLevel <= oldLevel) return; // a curve change lowered it — no celebration
 
-    // Level-up bonus: global coins + reputation (server level itself stays local).
-    if (economy?.awardLevelUp) void economy.awardLevelUp(guild, member, newLevel);
+    // Level-up bonus: configurable global coins (server level itself stays
+    // local). Routed through the rewards engine so the amount, multipliers and
+    // anti-abuse caps all honour the guild's reward config.
+    if (rewards?.awardLevelUp) void rewards.awardLevelUp(guild, member, newLevel);
 
     const earnedNow = newlyEarnedRewards(oldLevel, newLevel, cfg.rewards);
     await applyRewardRoles(member, cfg, newLevel);

@@ -60,7 +60,7 @@ function toEmoji(raw) {
   return { name: raw.trim() };
 }
 
-function createOnboarding(client, supabase, leveling = null, economy = null) {
+function createOnboarding(client, supabase, leveling = null, economyRewards = null) {
   // ── Config + progress helpers ───────────────────────────────────────────────
 
   async function getConfig(guildId) {
@@ -437,6 +437,7 @@ function createOnboarding(client, supabase, leveling = null, economy = null) {
     const prevSelected = new Set(
       Array.isArray(prev?.selected_roles) ? prev.selected_roles : [],
     );
+    const hadRolesBefore = (prev?.selected_roles?.length ?? 0) > 0;
     for (const id of categoryRoleIds) prevSelected.delete(id);
     for (const id of selected) prevSelected.add(id);
     const prevSkipped = (
@@ -454,6 +455,12 @@ function createOnboarding(client, supabase, leveling = null, economy = null) {
       },
       { onConflict: "guild_id,user_id" },
     );
+
+    // First time the member picks any self-role → the "role selection" reward
+    // (PULSIFY-47). Fire-and-forget; own anti-abuse inside the rewards engine.
+    if (economyRewards?.awardOnboarding && !hadRolesBefore && prevSelected.size > 0) {
+      void economyRewards.awardOnboarding(ctx.member.guild, ctx.member, "roleSelection");
+    }
 
     await interaction.reply({
       content: selected.size
@@ -488,6 +495,7 @@ function createOnboarding(client, supabase, leveling = null, economy = null) {
     }
 
     const prev = await readProgress(guildId, interaction.user.id);
+    const wasVerified = !!prev?.verified;
     const prevSkipped = (
       Array.isArray(prev?.skipped_steps) ? prev.skipped_steps : []
     ).filter((s) => s !== "verification");
@@ -502,6 +510,11 @@ function createOnboarding(client, supabase, leveling = null, economy = null) {
       },
       { onConflict: "guild_id,user_id" },
     );
+
+    // First successful verification → the "verification" reward (PULSIFY-47).
+    if (economyRewards?.awardOnboarding && !wasVerified) {
+      void economyRewards.awardOnboarding(ctx.member.guild, ctx.member, "verification");
+    }
 
     await interaction.reply({
       content:
@@ -577,11 +590,12 @@ function createOnboarding(client, supabase, leveling = null, economy = null) {
         );
       if (rewards.reputation > 0)
         rewardLines.push(`**${rewards.reputation} reputation**`);
-      // Completion also pays into the GLOBAL coin economy (PULSIFY-45):
-      // fixed welcome coins. Reputation is the computed global trust score, not
-      // a grantable value, so it's not awarded here. Fire-and-forget.
-      if (economy?.awardOnboarding) {
-        void economy.awardOnboarding(ctx.member.guild, ctx.member);
+      // Completion also pays into the GLOBAL coin economy: configurable
+      // onboarding-completion coins (PULSIFY-47). Reputation is the computed
+      // global trust score, not a grantable value, so it's not awarded here.
+      // Fire-and-forget.
+      if (economyRewards?.awardOnboarding) {
+        void economyRewards.awardOnboarding(ctx.member.guild, ctx.member, "completion");
       }
     }
 

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getGuildAccess } from '@/lib/guild-access'
+import { isCurrentUserOperator } from '@/lib/operator'
 import { fetchGuild } from '@/lib/discord'
 import { EconomyContent } from '@/components/dashboard/economy/EconomyContent'
 
@@ -15,8 +16,8 @@ export default async function EconomyPage({
   const access = await getGuildAccess(guildId)
   if (!access) redirect('/dashboard')
 
-  const guild = await fetchGuild(guildId)
+  const [guild, isOperator] = await Promise.all([fetchGuild(guildId), isCurrentUserOperator()])
   if (!guild) redirect('/dashboard')
 
-  return <EconomyContent guildId={guildId} guildName={guild.name} />
+  return <EconomyContent guildId={guildId} guildName={guild.name} isOperator={isOperator} />
 }
