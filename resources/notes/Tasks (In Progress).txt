@@ -1,118 +1,96 @@
-PULSIFY-47 — Economy Rewards & Earning System (v0.47.0)
+PULSIFY-48 — Integrations Polish, Testing & Reliability Pass (v0.48.0)
 
 Description
-	Implement a configurable Economy Rewards system that allows server owners to define how users earn Pulse Balance and Reputation through participation, activity, events, giveaways, onboarding, and community contributions.
-	This release introduces the primary earning mechanisms for the Global Economy, transforming Pulse Balance from a static value into a meaningful progression system.
+	Polish, test, and stabilize the existing Integrations system to ensure connected services work reliably, provide clear feedback, and feel consistent with the rest of Pulsify.
+	This update focuses on improving integration UX, validating connection flows, handling errors properly, and making integrations production-ready.
 
 Goals
-	Give users meaningful ways to earn Pulse Balance
-	Increase community engagement
-	Reward positive participation
-	Create sustainable economy circulation
-	Expand the usefulness of Global Reputation
+	Improve reliability of existing integrations
+	Polish integration UI and setup flows
+	Test connection, sync, and notification behavior
+	Improve error handling and diagnostics
+	Prepare integrations for wider user usage
 
 Tasks
-	Reward Configuration Center
-		Create Economy > Rewards view
-		Display all configured reward sources
-		Allow enabling/disabling reward sources
-		Add reward previews
-		Add reward simulation tools
+	Integration UI Polish
+		Review all integration views and cards
+		Standardize:
+			integration icons
+			connection states
+			setup buttons
+			status badges
+			spacing and layout
+		Improve connected/disconnected states
+		Improve empty states and loading states
+		Ensure responsive mobile layout
 
-	Activity Rewards
-		Allow users to earn Pulse Balance and Reputation through:
-			messages sent
-			voice activity
-			active days
-			community participation
-			reactions received
-			helpful contributions
-		Add configurable reward amounts
+	Connection Flow Testing
+		Test connect/disconnect flows for all existing integrations
+		Validate OAuth/API connection behavior
+		Ensure reconnect flow works correctly
+		Add clear success/error messages
+		Prevent duplicate connections where applicable
 
-	Event Rewards
-		Allow rewards for:
-			event participation
-			event attendance
-			event completion
-			event hosting
-		Support both Balance and Reputation rewards
+	Configuration Testing
+		Review all integration settings pages
+		Validate required fields
+		Test saving and updating configuration
+		Add missing validation messages
+		Ensure settings persist correctly after refresh
 
-	Giveaway Rewards
-		Allow rewards for:
-			giveaway participation
-			giveaway wins
-			giveaway hosting
-		Add configurable reward multipliers
+	Sync & Notification Testing
+		Test integration sync behavior
+		Verify notifications are delivered to the correct Discord channels
+		Test notification templates
+		Validate enable/disable toggles
+		Ensure failed syncs do not break the app
 
-	Onboarding Rewards
-		Reward users for:
-			onboarding completion
-			profile completion
-			verification completion
-			role selection
-		Encourage proper community onboarding
+	Error Handling & Diagnostics
+		Add clear error states for:
+			expired tokens
+			missing permissions
+			invalid configuration
+			failed API requests
+			rate limits
+		Add integration health indicators
+		Add last sync timestamp
+		Add retry/reconnect guidance
 
-	Reputation Rewards
-		Create automatic reputation rewards for:
-			positive engagement
-			active participation
-			community contributions
-			milestone achievements
-		Add anti-abuse protection
-
-	Daily & Weekly Rewards
-		Support:
-			daily rewards
-			weekly rewards
-			streak rewards
-			loyalty rewards
-		Track streak history and progression
-
-	Multipliers & Bonuses
-		Allow configurable multipliers:
-			reputation multiplier
-			event multiplier
-			server booster multiplier
-			premium multiplier
-			seasonal multiplier
-
-	Anti-Abuse Protection
-		Implement:
-			reward cooldowns
-			spam protection
-			farming prevention
-			duplicate activity detection
-		Ensure economy integrity
-
-	Analytics
+	Logs & Monitoring
+		Improve integration logs
 		Track:
-			balance generated
-			rewards distributed
-			most valuable activities
-			top earners
-			reward source breakdown
-		Add economy circulation insights
+			successful syncs
+			failed syncs
+			notification deliveries
+			API errors
+			reconnect attempts
+		Add filtering/search for integration logs where applicable
 
-	Discord Integration
-		Add:
-			reward notifications
-			reward summary embeds
-			balance earned messages
-			milestone notifications
-		Use Pulse v2 embed styling
+	Security & Permissions
+		Validate permissions before enabling integrations
+		Ensure sensitive tokens/keys are never exposed in the frontend
+		Review storage of integration credentials
+		Add confirmation before disconnecting integrations
 
-	UX Improvements
-		Add reward cards
-		Add reward calculators
-		Add responsive layouts
-		Add loading/error/success states
-		Maintain consistency with Pulsify design language
+	QA Pass
+		Test integrations across:
+			desktop
+			tablet
+			mobile
+		Test edge cases:
+			missing Discord channel
+			deleted channel
+			revoked integration access
+			unavailable third-party API
+			disabled integration
+		Fix discovered bugs
 
 Acceptance Criteria
-	Users can earn Pulse Balance through configured activities
-	Reputation rewards function correctly
-	Reward sources are configurable
-	Anti-abuse protections prevent exploitation
-	Analytics track economy generation accurately
-	Discord notifications display correctly
-	UI remains responsive and visually polished
+	Integration cards and settings pages are visually consistent
+	Connect/disconnect/reconnect flows work correctly
+	Integration configuration persists correctly
+	Notifications sync to Discord reliably
+	Failed integrations display clear and useful error messages
+	Logs and health indicators provide enough debugging information
+	Sensitive credentials are handled securely
+	Integrations feel stable, polished, and production-ready

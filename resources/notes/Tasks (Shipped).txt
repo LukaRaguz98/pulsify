@@ -3552,3 +3552,122 @@ Acceptance Criteria
 	Server rewards synchronize with Discord
 	Economy analytics display correctly
 	UI remains responsive and visually polished
+
+PULSIFY-47 — Economy Rewards & Earning System (v0.47.0)
+
+Description
+	Implement a configurable Economy Rewards system that allows server owners to define how users earn Pulse Balance and Reputation through participation, activity, events, giveaways, onboarding, and community contributions.
+	This release introduces the primary earning mechanisms for the Global Economy, transforming Pulse Balance from a static value into a meaningful progression system.
+
+Goals
+	Give users meaningful ways to earn Pulse Balance
+	Increase community engagement
+	Reward positive participation
+	Create sustainable economy circulation
+	Expand the usefulness of Global Reputation
+
+Tasks
+	Reward Configuration Center
+		Create Economy > Rewards view
+		Display all configured reward sources
+		Allow enabling/disabling reward sources
+		Add reward previews
+		Add reward simulation tools
+
+	Activity Rewards
+		Allow users to earn Pulse Balance and Reputation through:
+			messages sent
+			voice activity
+			active days
+			community participation
+			reactions received
+			helpful contributions
+		Add configurable reward amounts
+
+	Event Rewards
+		Allow rewards for:
+			event participation
+			event attendance
+			event completion
+			event hosting
+		Support both Balance and Reputation rewards
+
+	Giveaway Rewards
+		Allow rewards for:
+			giveaway participation
+			giveaway wins
+			giveaway hosting
+		Add configurable reward multipliers
+
+	Onboarding Rewards
+		Reward users for:
+			onboarding completion
+			profile completion
+			verification completion
+			role selection
+		Encourage proper community onboarding
+
+	Reputation Rewards
+		Create automatic reputation rewards for:
+			positive engagement
+			active participation
+			community contributions
+			milestone achievements
+		Add anti-abuse protection
+
+	Daily & Weekly Rewards
+		Support:
+			daily rewards
+			weekly rewards
+			streak rewards
+			loyalty rewards
+		Track streak history and progression
+
+	Multipliers & Bonuses
+		Allow configurable multipliers:
+			reputation multiplier
+			event multiplier
+			server booster multiplier
+			premium multiplier
+			seasonal multiplier
+
+	Anti-Abuse Protection
+		Implement:
+			reward cooldowns
+			spam protection
+			farming prevention
+			duplicate activity detection
+		Ensure economy integrity
+
+	Analytics
+		Track:
+			balance generated
+			rewards distributed
+			most valuable activities
+			top earners
+			reward source breakdown
+		Add economy circulation insights
+
+	Discord Integration
+		Add:
+			reward notifications
+			reward summary embeds
+			balance earned messages
+			milestone notifications
+		Use Pulse v2 embed styling
+
+	UX Improvements
+		Add reward cards
+		Add reward calculators
+		Add responsive layouts
+		Add loading/error/success states
+		Maintain consistency with Pulsify design language
+
+Acceptance Criteria
+	Users can earn Pulse Balance through configured activities
+	Reputation rewards function correctly
+	Reward sources are configurable
+	Anti-abuse protections prevent exploitation
+	Analytics track economy generation accurately
+	Discord notifications display correctly
+	UI remains responsive and visually polished

@@ -1090,6 +1090,36 @@ const COMMANDS = [
       await economy.handlePayCommand({ interaction, guild, ephemeral });
     },
   },
+  {
+    name: "daily",
+    category: "information",
+    defaultPermission: PERMISSION.EVERYONE,
+    data: new SlashCommandBuilder()
+      .setName("daily")
+      .setDescription("Claim your daily Pulse Coins reward and build a streak"),
+    async execute({ interaction, guild, economyRewards, ephemeral }) {
+      if (!economyRewards?.handleClaimCommand) {
+        await interaction.reply({ content: "Rewards aren't available right now.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+      await economyRewards.handleClaimCommand({ interaction, guild, ephemeral }, "daily");
+    },
+  },
+  {
+    name: "weekly",
+    category: "information",
+    defaultPermission: PERMISSION.EVERYONE,
+    data: new SlashCommandBuilder()
+      .setName("weekly")
+      .setDescription("Claim your weekly Pulse Coins reward and build a streak"),
+    async execute({ interaction, guild, economyRewards, ephemeral }) {
+      if (!economyRewards?.handleClaimCommand) {
+        await interaction.reply({ content: "Rewards aren't available right now.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+      await economyRewards.handleClaimCommand({ interaction, guild, ephemeral }, "weekly");
+    },
+  },
 ];
 
 const COMMANDS_BY_NAME = new Map(COMMANDS.map((c) => [c.name, c]));

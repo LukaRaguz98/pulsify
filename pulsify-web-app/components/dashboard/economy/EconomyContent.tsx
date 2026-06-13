@@ -11,8 +11,11 @@ import {
   Trophy,
   Users,
   Wallet,
+  SlidersHorizontal,
+  Lock,
 } from 'lucide-react'
 import { useState } from 'react'
+import Link from 'next/link'
 import { PageHeader } from '@/components/ui/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CategorySection } from '@/components/ui/category-section'
@@ -30,6 +33,9 @@ import { EconomyTransactions } from './EconomyTransactions'
 type Props = {
   guildId: string
   guildName: string
+  /** Earning feeds the GLOBAL coin economy, so its config is operator-only —
+   * only the operator sees the (locked) "Earnings settings" entry point. */
+  isOperator?: boolean
 }
 
 /**
@@ -39,13 +45,13 @@ type Props = {
  * (/economy/controls) are separate routes under the "Economy" nav category.
  * Everything here is a read of the GLOBAL economy, so members see it too.
  */
-export function EconomyContent({ guildId, guildName }: Props) {
+export function EconomyContent({ guildId, guildName, isOperator = false }: Props) {
   const [timeframe, setTimeframe] = useState<Timeframe>('30d')
   const { data, loading, refreshing, error, refresh } = useEconomy(guildId, timeframe)
 
   const header = (
     <PageHeader
-      title="Economy"
+      title="Earnings"
       helpId="economy"
       description={
         <>
@@ -55,6 +61,19 @@ export function EconomyContent({ guildId, guildName }: Props) {
       }
       action={
         <div className="flex items-center gap-3">
+          {/* Operator-only: earning rules feed the GLOBAL economy, so only the
+              Pulsify operator can edit them (same gate as Controls). */}
+          {isOperator && (
+            <Link
+              href={`/dashboard/${guildId}/economy-earning`}
+              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
+              style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
+              title="Operator-only — earning feeds the global economy"
+            >
+              <Lock size={12} style={{ color: 'var(--p-1)' }} />
+              <SlidersHorizontal size={14} /> Earnings settings
+            </Link>
+          )}
           <TimeframeFilter value={timeframe} onChange={setTimeframe} disabled={loading} />
           <RefreshButton onClick={refresh} refreshing={refreshing} />
         </div>

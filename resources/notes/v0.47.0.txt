@@ -1,0 +1,23 @@
+**Pulsify v0.47.0 — Economy Rewards & Earning**
+Pulse Coins were something you spent — now they’re something you earn, your way. Server owners get a full Reward Configuration Center to decide exactly how members earn, with streaks, multipliers and anti-abuse built in.
+
+**Earn coins for taking part**
+- **Activity rewards** — messages, voice, command use, reactions you receive, showing up each day, and resolving support tickets all pay out, with per-source amounts, cooldowns and daily caps.
+- **Events & giveaways** — coins for event interest, attendance, completion and hosting, plus giveaway entries, wins and hosting with a tunable multiplier.
+- **Onboarding & progression** — reward finishing onboarding, verifying, picking roles, levelling up and hitting milestones.
+
+**Daily, weekly & streaks**
+- **/daily and /weekly** — claim coins with a streak that grows every consecutive day or week, plus loyalty milestone bonuses.
+
+**Multipliers & bonuses**
+- **Boost earning** — stack reputation, server-booster, premium and limited-time seasonal multipliers (capped so the economy stays healthy).
+
+**Built to stay fair**
+- **Anti-abuse** — cooldowns, daily caps, ignored channels/roles, minimum account age and reaction de-duplication keep farming in check.
+
+**For admins**
+- **Reward Configuration Center** — a new Economy › Earning view to enable sources, set amounts, preview payouts with the live simulator, and track coins generated, top earners and your most valuable activities.
+
+Note: Reputation is never granted — it stays a computed trust score, used here only as an optional earning multiplier.
+
+June 13, 2026

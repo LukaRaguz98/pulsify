@@ -147,7 +147,7 @@ function normaliseConfig(row) {
   };
 }
 
-function createTickets(client, supabase) {
+function createTickets(client, supabase, economyRewards = null) {
   // guild_id -> normalised config
   const configCache = new Map();
   // channel_id -> { ticketId, guildId } for OPEN tickets (message-activity + close)
@@ -936,6 +936,15 @@ function createTickets(client, supabase) {
       .eq("id", ticketId);
     openChannels.delete(ticket.channel_id);
     await logEvent(ticketId, ticket.guild_id, "closed", interaction.member ?? interaction.user, reason || null);
+
+    // Resolving a ticket is a "helpful contribution" — reward the member who
+    // handled it (the claimer), or the closer if it was never claimed
+    // (PULSIFY-47). Fire-and-forget; own anti-abuse inside the rewards engine.
+    if (economyRewards?.awardHelpful && guild) {
+      const helperId = ticket.claimed_by || interaction.user.id;
+      const helperName = ticket.claimed_by_name || closerName;
+      void economyRewards.awardHelpful(guild, helperId, helperName);
+    }
 
     if (channel) {
       // Lock the opener out of posting but keep the channel readable.

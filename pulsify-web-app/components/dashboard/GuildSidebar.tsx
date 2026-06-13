@@ -173,14 +173,14 @@ export function GuildSidebar({
     title: 'Economy',
     icon: <Coins size={16} />,
     items: [
-      { label: 'Overview', href: `${base}/economy`, icon: <Coins size={16} />, exact: true },
+      // The economy overview is the "Earnings" hub; it also hosts the
+      // operator-only "Earnings settings" (earning config) at /economy-earning,
+      // so keep this item highlighted there.
+      { label: 'Earnings', href: `${base}/economy`, icon: <Coins size={16} />, exact: true, matchPrefixes: ['/economy-earning'] },
+      // Server reward creation/management now lives inside the Shop (admins see
+      // the controls there; members don't), so there's no separate Rewards page.
       { label: 'Shop', href: `${base}/economy/shop`, icon: <ShoppingBag size={16} /> },
       { label: 'Inventory', href: `${base}/economy/inventory`, icon: <Backpack size={16} /> },
-      // Reward management is admin-only (server rewards); members get the
-      // read-only Shop. Global cosmetics are operator-managed in Controls.
-      ...(!isMember
-        ? [{ label: 'Rewards', href: `${base}/economy-rewards`, icon: <Gift size={16} /> }]
-        : []),
       ...(isOperator && !isMember
         ? [{ label: 'Controls', href: `${base}/economy/controls`, icon: <Crown size={16} />, locked: true }]
         : []),

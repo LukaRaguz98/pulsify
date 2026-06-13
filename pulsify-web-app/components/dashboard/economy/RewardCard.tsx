@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Coins, Lock, Check, Star, Globe, Loader2, Eye } from 'lucide-react'
+import { Coins, Lock, Check, Star, Globe, Loader2, Eye, Pencil, Trash2 } from 'lucide-react'
 import {
   CATEGORY_META,
   meetsRequirements,
@@ -23,6 +23,9 @@ type Props = {
   context: RequirementContext
   busy?: boolean
   onBuy: (reward: ShopReward) => void
+  /** Admin management (server rewards only): renders edit/delete controls. */
+  onEdit?: (reward: ShopReward) => void
+  onDelete?: (reward: ShopReward) => void
 }
 
 /** One-line summary of what the reward gives, derived from its payload. */
@@ -49,7 +52,7 @@ function rewardDetail(reward: ShopReward): string | null {
   }
 }
 
-export function RewardCard({ reward, ownedCount, context, busy, onBuy }: Props) {
+export function RewardCard({ reward, ownedCount, context, busy, onBuy, onEdit, onDelete }: Props) {
   const [showPreview, setShowPreview] = useState(false)
   const isCosmetic = reward.category === 'cosmetic'
   const meta = CATEGORY_META[reward.category]
@@ -57,15 +60,20 @@ export function RewardCard({ reward, ownedCount, context, busy, onBuy }: Props) 
   const stockOk = inStock(reward)
   const limitReached = reward.per_user_limit != null && ownedCount >= reward.per_user_limit
   const detail = rewardDetail(reward)
+  // Hidden = an inactive server reward (only ever visible to admins, who fetch
+  // in manage mode); members never receive inactive rewards from the API.
+  const hidden = reward.active === false
 
-  const disabled = busy || !gate.ok || !stockOk || limitReached
-  const buyLabel = limitReached
-    ? 'Owned'
-    : !stockOk
-      ? 'Sold out'
-      : !gate.ok
-        ? 'Locked'
-        : 'Buy'
+  const disabled = busy || hidden || !gate.ok || !stockOk || limitReached
+  const buyLabel = hidden
+    ? 'Hidden'
+    : limitReached
+      ? 'Owned'
+      : !stockOk
+        ? 'Sold out'
+        : !gate.ok
+          ? 'Locked'
+          : 'Buy'
 
   return (
     <div
@@ -73,6 +81,7 @@ export function RewardCard({ reward, ownedCount, context, busy, onBuy }: Props) 
       style={{
         background: 'var(--panel)',
         borderColor: reward.featured ? 'var(--p-soft)' : 'var(--line-strong)',
+        opacity: hidden ? 0.6 : 1,
       }}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -95,6 +104,17 @@ export function RewardCard({ reward, ownedCount, context, busy, onBuy }: Props) 
             </span>
           )}
           {reward.featured && <Star size={12} style={{ color: 'var(--amber)' }} aria-label="Featured" />}
+          {/* Admin controls (server rewards only). */}
+          {onEdit && (
+            <button onClick={() => onEdit(reward)} className="rounded-md p-1 text-muted-foreground transition hover:text-foreground" aria-label="Edit reward" title="Edit">
+              <Pencil size={13} />
+            </button>
+          )}
+          {onDelete && (
+            <button onClick={() => onDelete(reward)} className="rounded-md p-1 transition" style={{ color: '#f87171' }} aria-label="Delete reward" title="Delete">
+              <Trash2 size={13} />
+            </button>
+          )}
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Store, Globe, Coins, Search, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Store, Globe, Coins, Search, AlertCircle, CheckCircle2, Plus } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -18,11 +18,19 @@ import {
 import { useShop } from '@/lib/use-shop'
 import { refreshOwnedCosmetics } from '@/lib/use-cosmetics'
 import { RewardCard } from './RewardCard'
+import { RewardEditPanel, type RoleOption, type AchievementOption } from './RewardEditPanel'
 
-type Props = { guildId: string; guildName: string }
+type Props = {
+  guildId: string
+  guildName: string
+  /** Admins can create/edit/delete this server's rewards inline. Members can't. */
+  isAdmin?: boolean
+  roles?: RoleOption[]
+  achievements?: AchievementOption[]
+}
 
-export function ShopContent({ guildId, guildName }: Props) {
-  const { data, loading, refreshing, error, refresh } = useShop(guildId)
+export function ShopContent({ guildId, guildName, isAdmin = false, roles = [], achievements = [] }: Props) {
+  const { data, loading, refreshing, error, refresh } = useShop(guildId, isAdmin ? { manage: true } : undefined)
 
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<RewardCategory | 'all'>('all')
@@ -33,6 +41,29 @@ export function ShopContent({ guildId, guildName }: Props) {
   const [flash, setFlash] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
   // Optimistic balance so the wallet updates the moment a purchase lands.
   const [balanceOverride, setBalanceOverride] = useState<number | null>(null)
+
+  // Admin reward management (server scope only — globals are operator-managed).
+  const [editing, setEditing] = useState<ShopReward | null | 'new'>(null)
+  const [deleting, setDeleting] = useState<ShopReward | null>(null)
+  const [deleteBusy, setDeleteBusy] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  async function doDelete() {
+    if (!deleting) return
+    setDeleteBusy(true)
+    setDeleteError(null)
+    try {
+      const res = await fetch(`/api/guilds/${guildId}/economy/shop/${deleting.id}`, { method: 'DELETE' })
+      const body = (await res.json().catch(() => ({}))) as { error?: string }
+      if (!res.ok) throw new Error(body.error ?? 'Could not delete the reward.')
+      setDeleting(null)
+      refresh()
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Could not delete the reward.')
+    } finally {
+      setDeleteBusy(false)
+    }
+  }
 
   const balance = balanceOverride ?? data?.context.balance ?? 0
 
@@ -200,7 +231,7 @@ export function ShopContent({ guildId, guildName }: Props) {
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {(!isAdmin && filtered.length === 0) ? (
         <EmptyState
           icon={<Store size={36} />}
           title="No rewards here yet"
@@ -215,18 +246,54 @@ export function ShopContent({ guildId, guildName }: Props) {
               title="Global catalogue"
               description="Pulse-wide rewards — available in every server running Pulse."
             >
-              <Grid rewards={globalRewards} {...{ data, setBuying, busyId: busy ? buying?.id : null }} />
+              <Grid rewards={globalRewards} data={data} setBuying={setBuying} busyId={busy ? buying?.id : null} />
             </CategorySection>
           )}
 
-          {/* This server's own rewards, created by its admins. */}
-          {serverRewards.length > 0 && (
+          {/* This server's own rewards. Admins create/edit/delete them right
+              here; members only see the active ones to buy. */}
+          {(isAdmin || serverRewards.length > 0) && (
             <CategorySection
               icon={<Store size={14} />}
               title={`${guildName} shop`}
               description="Rewards this server’s admins created for their community."
+              action={
+                isAdmin ? (
+                  <button
+                    onClick={() => setEditing('new')}
+                    className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-white"
+                    style={{ background: 'linear-gradient(180deg, var(--p-1) 0%, var(--p-2) 100%)', boxShadow: '0 4px 14px -4px var(--p-glow)' }}
+                  >
+                    <Plus size={15} /> New reward
+                  </button>
+                ) : undefined
+              }
             >
-              <Grid rewards={serverRewards} {...{ data, setBuying, busyId: busy ? buying?.id : null }} />
+              {serverRewards.length > 0 ? (
+                <Grid
+                  rewards={serverRewards}
+                  data={data}
+                  setBuying={setBuying}
+                  busyId={busy ? buying?.id : null}
+                  onEdit={isAdmin ? (r) => setEditing(r) : undefined}
+                  onDelete={isAdmin ? (r) => { setDeleting(r); setDeleteError(null) } : undefined}
+                />
+              ) : (
+                <EmptyState
+                  icon={<Store size={32} />}
+                  title="No server rewards yet"
+                  description="Create your first reward — a role, perk, booster or cosmetic — and members can start spending their Pulse Coins here."
+                  action={
+                    <button
+                      onClick={() => setEditing('new')}
+                      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white"
+                      style={{ background: 'linear-gradient(180deg, var(--p-1) 0%, var(--p-2) 100%)', boxShadow: '0 4px 14px -4px var(--p-glow)' }}
+                    >
+                      <Plus size={15} /> New reward
+                    </button>
+                  }
+                />
+              )}
             </CategorySection>
           )}
         </div>
@@ -243,6 +310,34 @@ export function ShopContent({ guildId, guildName }: Props) {
           onConfirm={confirmBuy}
         />
       )}
+
+      {/* Admin: create / edit a server reward. */}
+      {editing && (
+        <RewardEditPanel
+          guildId={guildId}
+          roles={roles}
+          achievements={achievements}
+          editing={editing === 'new' ? null : editing}
+          onClose={(changed) => {
+            setEditing(null)
+            if (changed) refresh()
+          }}
+        />
+      )}
+
+      {/* Admin: delete a server reward. */}
+      {deleting && (
+        <ConfirmDialog
+          title={`Delete “${deleting.name}”?`}
+          description="Members can no longer buy it. Existing purchases keep working (they carry a snapshot). This can't be undone."
+          confirmLabel="Delete"
+          tone="destructive"
+          busy={deleteBusy}
+          error={deleteError}
+          onCancel={() => { if (!deleteBusy) setDeleting(null) }}
+          onConfirm={doDelete}
+        />
+      )}
     </div>
   )
 }
@@ -252,11 +347,15 @@ function Grid({
   data,
   setBuying,
   busyId,
+  onEdit,
+  onDelete,
 }: {
   rewards: ShopReward[]
   data: NonNullable<ReturnType<typeof useShop>['data']>
   setBuying: (r: ShopReward) => void
   busyId: string | null | undefined
+  onEdit?: (r: ShopReward) => void
+  onDelete?: (r: ShopReward) => void
 }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -268,6 +367,8 @@ function Grid({
           context={data.context}
           busy={busyId === r.id}
           onBuy={setBuying}
+          onEdit={onEdit}
+          onDelete={onDelete}
         />
       ))}
     </div>
