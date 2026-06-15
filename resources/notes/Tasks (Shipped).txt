@@ -3671,3 +3671,100 @@ Acceptance Criteria
 	Analytics track economy generation accurately
 	Discord notifications display correctly
 	UI remains responsive and visually polished
+
+PULSIFY-48 — Integrations Polish, Testing & Reliability Pass (v0.48.0)
+
+Description
+	Polish, test, and stabilize the existing Integrations system to ensure connected services work reliably, provide clear feedback, and feel consistent with the rest of Pulsify.
+	This update focuses on improving integration UX, validating connection flows, handling errors properly, and making integrations production-ready.
+
+Goals
+	Improve reliability of existing integrations
+	Polish integration UI and setup flows
+	Test connection, sync, and notification behavior
+	Improve error handling and diagnostics
+	Prepare integrations for wider user usage
+
+Tasks
+	Integration UI Polish
+		Review all integration views and cards
+		Standardize:
+			integration icons
+			connection states
+			setup buttons
+			status badges
+			spacing and layout
+		Improve connected/disconnected states
+		Improve empty states and loading states
+		Ensure responsive mobile layout
+
+	Connection Flow Testing
+		Test connect/disconnect flows for all existing integrations
+		Validate OAuth/API connection behavior
+		Ensure reconnect flow works correctly
+		Add clear success/error messages
+		Prevent duplicate connections where applicable
+
+	Configuration Testing
+		Review all integration settings pages
+		Validate required fields
+		Test saving and updating configuration
+		Add missing validation messages
+		Ensure settings persist correctly after refresh
+
+	Sync & Notification Testing
+		Test integration sync behavior
+		Verify notifications are delivered to the correct Discord channels
+		Test notification templates
+		Validate enable/disable toggles
+		Ensure failed syncs do not break the app
+
+	Error Handling & Diagnostics
+		Add clear error states for:
+			expired tokens
+			missing permissions
+			invalid configuration
+			failed API requests
+			rate limits
+		Add integration health indicators
+		Add last sync timestamp
+		Add retry/reconnect guidance
+
+	Logs & Monitoring
+		Improve integration logs
+		Track:
+			successful syncs
+			failed syncs
+			notification deliveries
+			API errors
+			reconnect attempts
+		Add filtering/search for integration logs where applicable
+
+	Security & Permissions
+		Validate permissions before enabling integrations
+		Ensure sensitive tokens/keys are never exposed in the frontend
+		Review storage of integration credentials
+		Add confirmation before disconnecting integrations
+
+	QA Pass
+		Test integrations across:
+			desktop
+			tablet
+			mobile
+		Test edge cases:
+			missing Discord channel
+			deleted channel
+			revoked integration access
+			unavailable third-party API
+			disabled integration
+		Fix discovered bugs
+
+Acceptance Criteria
+	Integration cards and settings pages are visually consistent
+	Connect/disconnect/reconnect flows work correctly
+	Integration configuration persists correctly
+	Notifications sync to Discord reliably
+	Failed integrations display clear and useful error messages
+	Logs and health indicators provide enough debugging information
+	Sensitive credentials are handled securely
+	Integrations feel stable, polished, and production-ready

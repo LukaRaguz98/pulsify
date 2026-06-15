@@ -8,6 +8,7 @@ import {
 import { PageHeader } from '@/components/ui/page-header'
 import { CategorySection } from '@/components/ui/category-section'
 import { RefreshButton } from '@/components/dashboard/RefreshButton'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   PROVIDERS,
   CATEGORY_META,
@@ -69,6 +70,11 @@ export function IntegrationsContent({
   // Wizard state: a providerId to connect a new integration, or an Integration to edit.
   const [connecting, setConnecting] = useState<string | null>(null)
   const [editing, setEditing] = useState<Integration | null>(null)
+  // Destructive actions (disconnect / remove) are gated behind a confirmation
+  // dialog so a single misclick can't silently tear down a live connection.
+  const [confirm, setConfirm] = useState<{ integration: Integration; kind: 'disconnect' | 'delete' } | null>(null)
+  const [confirmBusy, setConfirmBusy] = useState(false)
+  const [confirmError, setConfirmError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
   const channelNames = useMemo(() => new Map(channels.map((c) => [c.id, c.name])), [channels])
@@ -103,6 +109,27 @@ export function IntegrationsContent({
     },
     [router],
   )
+
+  // Run the pending destructive action once confirmed. Keeps the dialog open
+  // with an inline error if it fails, so the user sees why nothing happened.
+  const runConfirm = useCallback(async () => {
+    if (!confirm) return
+    const { integration, kind } = confirm
+    setConfirmBusy(true)
+    setConfirmError(null)
+    const res =
+      kind === 'disconnect'
+        ? await disconnectIntegration(guildId, integration.id)
+        : await deleteIntegration(guildId, integration.id)
+    setConfirmBusy(false)
+    if (res.ok) {
+      setConfirm(null)
+      setFeedback({ kind: 'success', msg: kind === 'disconnect' ? 'Integration disconnected.' : 'Integration removed.' })
+      startTransition(() => router.refresh())
+    } else {
+      setConfirmError(res.error)
+    }
+  }, [confirm, guildId, router])
 
   // ── Connected list: filter by search + health ──
   const q = search.trim().toLowerCase()
@@ -316,15 +343,11 @@ export function IntegrationsContent({
                           i.enabled ? 'Notifications paused.' : 'Notifications resumed.',
                         )
                       }
-                      onDisconnect={() =>
-                        runAction(() => disconnectIntegration(guildId, i.id), 'Integration disconnected.')
-                      }
+                      onDisconnect={() => { setConfirmError(null); setConfirm({ integration: i, kind: 'disconnect' }) }}
                       onReconnect={() =>
                         runAction(() => reconnectIntegration(guildId, i.id), 'Integration reconnected.')
                       }
-                      onDelete={() =>
-                        runAction(() => deleteIntegration(guildId, i.id), 'Integration removed.')
-                      }
+                      onDelete={() => { setConfirmError(null); setConfirm({ integration: i, kind: 'delete' }) }}
                     />
                   ))}
                 </div>
@@ -406,6 +429,23 @@ export function IntegrationsContent({
             setConnecting(null)
             setEditing(null)
           }}
+        />
+      )}
+
+      {confirm && (
+        <ConfirmDialog
+          title={confirm.kind === 'disconnect' ? `Disconnect ${confirm.integration.label}?` : `Remove ${confirm.integration.label}?`}
+          description={
+            confirm.kind === 'disconnect'
+              ? 'Pulse stops delivering its notifications, but the configuration is kept so you can reconnect later without re-entering anything.'
+              : 'This permanently deletes the connection, its settings and its activity logs. This cannot be undone.'
+          }
+          confirmLabel={confirm.kind === 'disconnect' ? 'Disconnect' : 'Remove'}
+          tone={confirm.kind === 'disconnect' ? 'warning' : 'destructive'}
+          busy={confirmBusy}
+          error={confirmError}
+          onCancel={() => { if (!confirmBusy) { setConfirm(null); setConfirmError(null) } }}
+          onConfirm={() => { void runConfirm() }}
         />
       )}
     </div>

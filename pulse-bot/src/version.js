@@ -18,25 +18,24 @@ const path = require("node:path");
 // Current Pulse version. Used for the startup banner and as the displayed
 // version when no release files are reachable. Keep this in step with the
 // newest resources/notes/vX.Y.Z.txt on each release.
-const PULSE_VERSION = "0.47.0";
+const PULSE_VERSION = "0.48.0";
 
 // Manual/static fallback used only when the release-notes files can't be read.
 // Mirrors the shape produced by the parser so callers don't special-case it.
 const STATIC_RELEASES = [
   {
-    version: "0.47.0",
-    title: "Economy Rewards & Earning",
-    date: "Jun 13, 2026",
+    version: "0.48.0",
+    title: "Integrations Polish & Reliability",
+    date: "Jun 15, 2026",
     description:
-      "A full Reward Configuration Center: server owners decide exactly how members earn Pulse Coins, with streaks, multipliers and anti-abuse built in.",
+      "A stability-and-style pass on the Integrations Hub: richer, modern notification embeds plus clearer error states, safer controls and easier-to-search logs.",
     highlights: [
-      "**Earn for taking part** — configurable coins for messages, voice, reactions received, active days, helpful contributions, events, giveaways, onboarding, level-ups and milestones.",
-      "**/daily & /weekly** — claimable rewards with growing streaks and loyalty milestone bonuses.",
-      "**Multipliers & bonuses** — stack reputation, server-booster, premium and seasonal multipliers (capped to keep the economy healthy).",
-      "**Anti-abuse + analytics** — cooldowns, daily caps, ignored channels/roles and account-age gates, plus an Economy › Earning view with a live simulator, coins generated, top earners and your most valuable activities.",
+      "**Richer, modern notifications** — every integration post follows Pulse's v2 embed style: the service's brand colour, a relative timestamp, a clean headline, a tidy details panel (event, author, status, game, when…) and a one-tap button to the source.",
+      "**Confirm before you disconnect** — disconnecting or removing an integration asks first, with a clear note on what happens (disconnect keeps your settings; removal is permanent).",
+      "**Clearer error states** — a connection that needs attention shows exactly what went wrong and how to fix it, with a one-click Test to retry and clear the error.",
+      "**Searchable logs & consistent dialogs** — search/filter the activity log by integration as well as type, and the setup panel now closes with Escape and can't be dismissed mid-save.",
     ],
-    outro:
-      "Reputation is never granted — it stays a computed trust score, used here only as an optional earning multiplier.",
+    outro: null,
   },
   {
     version: "0.37.0",

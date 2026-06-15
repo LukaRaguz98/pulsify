@@ -19,8 +19,11 @@ import { setMemberView } from '@/app/dashboard/[guildId]/view-actions'
  * rather than floating with a gap. Like the bell/launcher, the inset assumes the
  * HUD corner bracket; when corner decorations are off, the [data-view-switcher]
  * rules in globals.css pull it to the corner (100px with the guide, 56px
- * without). On mobile the chrome corners belong to the top bar (bell + ping),
- * so it drops just below the bar instead.
+ * without).
+ *
+ * Desktop-only (`hidden lg:flex`), mirroring the tour launcher: a stack of
+ * floating corner icons reads as clutter on a phone, so on mobile this is a row
+ * in the sidebar drawer instead — see {@link ViewSwitcherMenuItem}.
  */
 export function ViewSwitcher({ guildId }: { guildId: string }) {
   const [pending, startTransition] = useTransition()
@@ -38,11 +41,10 @@ export function ViewSwitcher({ guildId }: { guildId: string }) {
       title="Operator-only — preview the dashboard exactly as a regular member sees it (read-only nav, no management modules)."
       aria-label="Preview the dashboard as a member"
       className={cn(
-        'relative flex fixed z-[9] top-2 right-3 mr-[40px] h-9 w-9 items-center justify-center',
+        'hidden lg:flex fixed z-[9] top-2 right-3 mr-[40px] h-9 w-9 items-center justify-center',
         // Slot 3 (under the guide) when contextual help is on; slot 2 (under the
         // bell) when the guide is hidden. Corner-deco-off offsets live in globals.
         contextualHelp ? 'mt-[128px]' : 'mt-[84px]',
-        'max-lg:top-[56px] max-lg:mt-0 max-lg:mr-0',
         'rounded-md border bg-[var(--panel)] border-[var(--line-strong)] text-[var(--p-1)]',
         'transition-all duration-150 disabled:opacity-60 hover:bg-[var(--p-soft)] hover:border-[var(--p-1)]',
         'hover:-translate-y-0.5 hover:shadow-[0_4px_12px_-4px_var(--p-glow)] active:translate-y-0 active:shadow-none',
@@ -58,6 +60,33 @@ export function ViewSwitcher({ guildId }: { guildId: string }) {
       >
         <Lock size={8} />
       </span>
+    </button>
+  )
+}
+
+/**
+ * Mobile-only ("lg:hidden") "Preview as member" row for the sidebar drawer — the
+ * mobile counterpart to the floating {@link ViewSwitcher}, sitting beside the
+ * tour ("Take a tour") row in the drawer footer where mobile users look for
+ * utility actions. Same operator-only action (enter Member View); the trailing
+ * lock marks it operator-only, matching the floating icon + nav lock indicators.
+ */
+export function ViewSwitcherMenuItem({ guildId }: { guildId: string }) {
+  const [pending, startTransition] = useTransition()
+
+  return (
+    <button
+      type="button"
+      disabled={pending}
+      onClick={() => startTransition(() => setMemberView(guildId, true))}
+      aria-label="Preview the dashboard as a member"
+      className="lg:hidden flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-muted-foreground transition hover:text-foreground disabled:opacity-60"
+      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--panel)' }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = '' }}
+    >
+      {pending ? <Loader2 size={16} className="animate-spin" /> : <Eye size={16} />}
+      <span className="flex-1 text-left">Preview as member</span>
+      <Lock size={12} className="shrink-0" style={{ color: 'var(--p-1)' }} aria-label="Operator-only" />
     </button>
   )
 }

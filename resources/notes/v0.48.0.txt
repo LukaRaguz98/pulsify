@@ -1,0 +1,15 @@
+**Pulsify v0.48.0 — Integrations Polish & Reliability**
+The Integrations Hub gets a stability-and-style pass: richer, modern notification embeds plus clearer error states, safer controls and easier-to-search logs — so connected services look great and feel dependable.
+
+**What's new**
+- **Richer, modern notifications** — every integration post now follows Pulse's polished v2 embed style: the service's own brand colour, a "just now" timestamp, a clean headline, a tidy details panel (event, author, status, game, when… per service) and a one-tap button straight to the source.
+- **Confirm before you disconnect** — disconnecting or removing an integration now asks first, with a clear note on what happens (a disconnect keeps your settings for an easy reconnect; a removal is permanent).
+- **Clearer error states** — when a connection needs attention, opening its settings shows exactly what went wrong and how to fix it, with a one-click Test to retry and clear the error.
+- **Searchable logs** — the activity log can now be searched and filtered by integration as well as by type.
+
+**Also**
+- Consistent dialog behaviour — the setup panel closes with Escape and can't be dismissed mid-save, matching the rest of the dashboard.
+
+Connected services now look modern and on-brand, fail loudly when something's wrong, and are easier to debug at a glance.
+
+June 15, 2026

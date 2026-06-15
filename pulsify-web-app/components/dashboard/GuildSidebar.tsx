@@ -49,6 +49,7 @@ import {
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
 import { SearchTrigger } from '@/components/dashboard/search/SearchTrigger'
 import { TourMenuItem } from '@/components/dashboard/tour/DashboardTour'
+import { ViewSwitcherMenuItem } from '@/components/dashboard/ViewSwitcher'
 
 type NavItem = {
   label: string
@@ -761,6 +762,10 @@ export function GuildSidebar({
       {/* Bottom */}
       <div className="border-t p-2 space-y-0.5" style={{ borderColor: 'var(--line-strong)' }}>
         {!isMember && <TourMenuItem />}
+        {/* Mobile-only: the operator's "preview as member" entry (the floating
+            icon is desktop-only). Operators in admin view only — mirrors the
+            layout's gate, which `!isMember` already implies here. */}
+        {!isMember && isOperator && <ViewSwitcherMenuItem guildId={guildId} />}
 
         <Link
           href="/dashboard"

@@ -1,96 +1,143 @@
-PULSIFY-48 — Integrations Polish, Testing & Reliability Pass (v0.48.0)
+PULSIFY-49 — Economy Commands Expansion & Command Polish (v0.49.0)
 
 Description
-	Polish, test, and stabilize the existing Integrations system to ensure connected services work reliably, provide clear feedback, and feel consistent with the rest of Pulsify.
-	This update focuses on improving integration UX, validating connection flows, handling errors properly, and making integrations production-ready.
+	Expand the Pulse Economy command set by introducing a flexible Leaderboard command, improving existing economy commands, and providing users with clear visibility into how they can earn Balance, Reputation, XP, and Levels.
+	This update focuses on improving the member economy experience directly within Discord while ensuring all economy-related commands follow the latest Pulse v2 design standards.
 
 Goals
-	Improve reliability of existing integrations
-	Polish integration UI and setup flows
-	Test connection, sync, and notification behavior
-	Improve error handling and diagnostics
-	Prepare integrations for wider user usage
+	Improve economy command usability
+	Introduce economy leaderboards inside Discord
+	Improve transparency around earning methods
+	Standardize economy command embeds
+	Improve overall member experience
 
 Tasks
-	Integration UI Polish
-		Review all integration views and cards
-		Standardize:
-			integration icons
-			connection states
-			setup buttons
-			status badges
-			spacing and layout
-		Improve connected/disconnected states
-		Improve empty states and loading states
-		Ensure responsive mobile layout
+	Leaderboard Command
+		Create a new:
+			/leaderboard
+		command.
 
-	Connection Flow Testing
-		Test connect/disconnect flows for all existing integrations
-		Validate OAuth/API connection behavior
-		Ensure reconnect flow works correctly
-		Add clear success/error messages
-		Prevent duplicate connections where applicable
+		Requirements:
+			Present a selection dialog/menu when executed
+			Allow users to choose leaderboard type
 
-	Configuration Testing
-		Review all integration settings pages
-		Validate required fields
-		Test saving and updating configuration
-		Add missing validation messages
-		Ensure settings persist correctly after refresh
+		Supported leaderboard types:
+			Global Balance
+			Global Reputation
+			Server Level
+			Server XP
+			Messages
+			Voice Activity
 
-	Sync & Notification Testing
-		Test integration sync behavior
-		Verify notifications are delivered to the correct Discord channels
-		Test notification templates
-		Validate enable/disable toggles
-		Ensure failed syncs do not break the app
+		Display:
+			ranking position
+			username
+			value
+			user highlighting when present
 
-	Error Handling & Diagnostics
-		Add clear error states for:
-			expired tokens
-			missing permissions
-			invalid configuration
-			failed API requests
-			rate limits
-		Add integration health indicators
-		Add last sync timestamp
-		Add retry/reconnect guidance
+		Add pagination support where necessary
 
-	Logs & Monitoring
-		Improve integration logs
-		Track:
-			successful syncs
-			failed syncs
-			notification deliveries
-			API errors
-			reconnect attempts
-		Add filtering/search for integration logs where applicable
+	Balance Command Improvements
+		Review and polish:
+			/balance
 
-	Security & Permissions
-		Validate permissions before enabling integrations
-		Ensure sensitive tokens/keys are never exposed in the frontend
-		Review storage of integration credentials
-		Add confirmation before disconnecting integrations
+		Requirements:
+			Upgrade embed design
+			Improve information hierarchy
 
-	QA Pass
-		Test integrations across:
-			desktop
-			tablet
-			mobile
-		Test edge cases:
-			missing Discord channel
-			deleted channel
-			revoked integration access
-			unavailable third-party API
-			disabled integration
-		Fix discovered bugs
+		Display:
+			current balance
+			global reputation
+			leaderboard position
+			recent economy activity
+
+		Improve mobile readability
+		Ensure consistency with Pulse v2 styling
+
+	Pay Command Improvements
+		Review and polish:
+			/pay
+
+		Requirements:
+			Improve validation messages
+			Improve success messages
+			Improve transfer confirmation embeds
+			Display sender and recipient clearly
+			Prevent invalid transfers
+			Improve error handling
+
+	Economy Guide Command
+		Create a new:
+			/earn
+		command.
+
+		Purpose:
+			Help members understand how to earn Pulse Balance, Reputation, XP, and Levels.
+
+		Requirements:
+			Display a paginated experience.
+
+		Page 1 — Global Economy
+			Display global ways to earn:
+				event participation
+				giveaway participation
+				giveaway wins
+				onboarding completion
+				reputation milestones
+				achievements
+				community contributions
+				special rewards
+				future marketplace rewards
+
+			Explain which rewards contribute to:
+				Global Balance
+				Global Reputation
+
+		Page 2 — Server Progression
+			Display server-specific progression methods:
+				messages sent
+				voice activity
+				active participation
+				server events
+				configured server rewards
+				level progression
+
+			Explain which rewards contribute to:
+				Server XP
+				Server Levels
+
+	Embed & UI Improvements
+		Review all economy-related command embeds
+
+		Requirements:
+			Use Pulse v2 embed standards
+			Improve spacing and readability
+			Add appropriate icons
+			Add footer consistency
+			Add page indicators
+			Add button navigation where applicable
+
+	Command Icons
+		Review:
+			/balance
+			/pay
+			/leaderboard
+			/earn
+
+		Add consistent Pulse command icons
+
+	Validation & Error Handling
+		Prevent invalid economy actions
+		Add user-friendly error messages
+		Handle missing economy data gracefully
+		Handle unavailable leaderboard data gracefully
 
 Acceptance Criteria
-	Integration cards and settings pages are visually consistent
-	Connect/disconnect/reconnect flows work correctly
-	Integration configuration persists correctly
-	Notifications sync to Discord reliably
-	Failed integrations display clear and useful error messages
-	Logs and health indicators provide enough debugging information
-	Sensitive credentials are handled securely
-	Integrations feel stable, polished, and production-ready
+	/leaderboard allows users to choose leaderboard type
+	Leaderboards display accurate rankings
+	/balance displays improved economy information
+	/pay provides clearer validation and feedback
+	/earn explains both global and server-specific earning methods
+	Economy embeds follow Pulse v2 styling
+	Pagination and navigation function correctly
+	Commands remain responsive and visually polished

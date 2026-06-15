@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { ScrollText } from 'lucide-react'
+import { ScrollText, Search } from 'lucide-react'
 import {
   LOG_LEVEL_META,
   providerById,
@@ -31,6 +31,8 @@ export function IntegrationLogs({
   channels?: { id: string; name: string }[]
 }) {
   const [level, setLevel] = useState<'all' | LogLevel>('all')
+  const [integrationId, setIntegrationId] = useState<'all' | string>('all')
+  const [search, setSearch] = useState('')
 
   const byId = useMemo(
     () => new Map(integrations.map((i) => [i.id, i])),
@@ -43,9 +45,28 @@ export function IntegrationLogs({
   const renderMessage = (msg: string) =>
     msg.replace(/<#(\d+)>/g, (_, id) => `#${channelById.get(id) ?? id}`)
 
+  // Only integrations that actually appear in the log set are worth offering as
+  // a filter — keeps the dropdown short and meaningful.
+  const logged = useMemo(() => {
+    const seen = new Set(logs.map((l) => l.integration_id))
+    return integrations.filter((i) => seen.has(i.id))
+  }, [logs, integrations])
+
+  const q = search.trim().toLowerCase()
   const filtered = useMemo(
-    () => (level === 'all' ? logs : logs.filter((l) => l.level === level)),
-    [logs, level],
+    () =>
+      logs.filter((l) => {
+        if (level !== 'all' && l.level !== level) return false
+        if (integrationId !== 'all' && l.integration_id !== integrationId) return false
+        if (!q) return true
+        const label = byId.get(l.integration_id)?.label ?? ''
+        return (
+          (l.message?.toLowerCase().includes(q) ?? false) ||
+          l.event.toLowerCase().includes(q) ||
+          label.toLowerCase().includes(q)
+        )
+      }),
+    [logs, level, integrationId, q, byId],
   )
 
   if (logs.length === 0) {
@@ -67,26 +88,55 @@ export function IntegrationLogs({
 
   return (
     <div className="space-y-4">
-      <div className="inline-flex flex-wrap rounded-lg border p-0.5" style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}>
-        {LEVELS.map((l) => {
-          const active = level === l
-          return (
-            <button
-              key={l}
-              type="button"
-              onClick={() => setLevel(l)}
-              className="rounded-md px-3 py-1 text-xs font-medium transition"
-              style={{ background: active ? 'var(--p-soft)' : 'transparent', color: active ? 'var(--p-1)' : 'var(--text-3)' }}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="inline-flex flex-wrap rounded-lg border p-0.5" style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}>
+          {LEVELS.map((l) => {
+            const active = level === l
+            return (
+              <button
+                key={l}
+                type="button"
+                onClick={() => setLevel(l)}
+                className="rounded-md px-3 py-1 text-xs font-medium transition"
+                style={{ background: active ? 'var(--p-soft)' : 'transparent', color: active ? 'var(--p-1)' : 'var(--text-3)' }}
+              >
+                {LEVEL_LABEL[l]}
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          {logged.length > 1 && (
+            <select
+              value={integrationId}
+              onChange={(e) => setIntegrationId(e.target.value)}
+              className="rounded-lg border py-2 pl-3 pr-7 text-sm focus:outline-none focus:ring-1"
+              style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
             >
-              {LEVEL_LABEL[l]}
-            </button>
-          )
-        })}
+              <option value="all">All integrations</option>
+              {logged.map((i) => (
+                <option key={i.id} value={i.id}>{i.label}</option>
+              ))}
+            </select>
+          )}
+          <div className="relative sm:w-56">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search logs…"
+              className="w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1"
+              style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
+            />
+          </div>
+        </div>
       </div>
 
       {filtered.length === 0 ? (
         <p className="rounded-xl border px-4 py-6 text-center text-sm" style={{ borderColor: 'var(--line-strong)', color: 'var(--text-3)' }}>
-          No {LEVEL_LABEL[level].toLowerCase()} entries.
+          No matching log entries.
         </p>
       ) : (
         <ul className="divide-y overflow-hidden rounded-xl border" style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}>

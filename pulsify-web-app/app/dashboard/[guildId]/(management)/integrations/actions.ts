@@ -21,6 +21,9 @@ import {
   normaliseIntegration,
   renderTemplate,
   sampleContext,
+  notificationDetails,
+  notificationLink,
+  stripStandaloneUrl,
   TEMPLATE_MAX,
   type Integration,
   type IntegrationDraft,
@@ -62,13 +65,28 @@ const divider = () => ({ type: 14, divider: true, spacing: 1 })
 // announcements container) so short notifications don't render cramped.
 const WIDTH_SPACER = td(`-# ${'⠀'.repeat(40)}`)
 
+/** Parse a #rrggbb accent into the int Discord wants, falling back to Pulse violet. */
+function accentInt(hex: string | undefined): number {
+  const n = parseInt(String(hex ?? '').replace('#', ''), 16)
+  return Number.isNaN(n) ? BRAND : n
+}
+
 /**
- * Build the integration notification container: a `Pulse` label + the
- * integration label heading, a `-# <Provider> · Integration` subtitle, a width
- * spacer, the rendered message body, then a divider and a `Pulse · Integrations`
- * footer. Matches the Pulse v2 layout used by announcements/changelog.
+ * Build the integration notification container — the rich Pulse v2 layout shared
+ * with the bot's live deliveries (pulse-bot/src/integrations.js). Top to bottom:
+ * a `Pulse` label + integration heading + `-# <Provider> · Integration` subtitle
+ * beside the Pulse badge, a width spacer, a `-# <when>` timestamp chip, the
+ * rendered body (with the now-redundant raw URL line stripped), a divider, a
+ * labeled details block, a source-link button, and the `Pulse · Integrations`
+ * footer. Accent is the provider's brand colour so each service reads distinctly.
  */
-function notificationContainer(provider: IntegrationProvider, label: string, body: string): V2TopLevelComponent {
+function notificationContainer(
+  provider: IntegrationProvider,
+  label: string,
+  body: string,
+  ctx: Record<string, string>,
+  opts: { isTest?: boolean } = {},
+): V2TopLevelComponent {
   const headerLines = [td('**Pulse**'), td(`# ${label}`), td(`-# ${provider.name} · Integration`)]
   const components: Record<string, unknown>[] = []
   if (HAS_ICON) {
@@ -81,10 +99,31 @@ function notificationContainer(provider: IntegrationProvider, label: string, bod
     components.push(...headerLines)
   }
   components.push(WIDTH_SPACER)
-  for (const para of body.trim().split(/\n{2,}/)) components.push(td(para.trim()))
+
+  // Timestamp chip — a native Discord relative time so the post reads "just now"
+  // and ages on its own. Marked as a test when sent from the dashboard.
+  const now = Math.floor(Date.now() / 1000)
+  components.push(td(`-# ${opts.isTest ? 'Test notification · ' : ''}<t:${now}:R>`))
+
+  const link = notificationLink(provider.id, ctx)
+  const cleanBody = stripStandaloneUrl(body, link?.url).trim()
+  for (const para of cleanBody.split(/\n{2,}/)) {
+    if (para.trim()) components.push(td(para.trim()))
+  }
+
+  const details = notificationDetails(provider.id, ctx)
+  if (details.length > 0) {
+    components.push(divider())
+    components.push(td(details.map((d) => `**${d.label}**  ${d.value}`).join('\n')))
+  }
+
+  if (link) {
+    components.push({ type: 1, components: [{ type: 2, style: 5, label: link.label, url: link.url }] })
+  }
+
   components.push(divider())
   components.push(td('-# Pulse · Integrations'))
-  return { type: 17, accent_color: BRAND, components } as unknown as V2TopLevelComponent
+  return { type: 17, accent_color: accentInt(provider.accent), components } as unknown as V2TopLevelComponent
 }
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
@@ -429,11 +468,11 @@ export async function testConnection(guildId: string, id: string): Promise<Actio
   const config = integration.config as Record<string, string>
   const ctx = sampleContext(provider, config)
   const template = integration.template ?? provider.defaultTemplate
-  const body = `🧪 **Test notification**\n${renderTemplate(template, ctx)}`
+  const body = renderTemplate(template, ctx)
 
   const posted = await postChannelComponentsReturningId(
     integration.channel_id,
-    [notificationContainer(provider, integration.label, body)],
+    [notificationContainer(provider, integration.label, body, ctx, { isTest: true })],
     iconAttachments(),
   )
 

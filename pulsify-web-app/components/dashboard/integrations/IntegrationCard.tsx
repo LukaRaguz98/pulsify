@@ -128,7 +128,7 @@ export function ProviderCard({
 
 // ── Connected integration card ────────────────────────────────────────────────
 
-type Busy = null | 'test' | 'toggle' | 'disconnect' | 'reconnect' | 'delete'
+type Busy = null | 'test' | 'toggle' | 'reconnect'
 
 export function IntegrationCard({
   integration,
@@ -145,9 +145,11 @@ export function IntegrationCard({
   onOpen: () => void
   onTest: () => Promise<void>
   onToggle: () => Promise<void>
-  onDisconnect: () => Promise<void>
+  // Disconnect/remove are confirmed in a parent dialog, so they only signal
+  // intent here (no in-card busy spinner — the dialog owns that state).
+  onDisconnect: () => void
   onReconnect: () => Promise<void>
-  onDelete: () => Promise<void>
+  onDelete: () => void
 }) {
   const [busy, setBusy] = useState<Busy>(null)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -332,7 +334,7 @@ export function IntegrationCard({
                 {integration.status !== 'disconnected' && (
                   <button
                     type="button"
-                    onClick={() => run('disconnect', onDisconnect)}
+                    onClick={() => { setMenuOpen(false); onDisconnect() }}
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--bg-2)]"
                     style={{ color: 'var(--text-2)' }}
                   >
@@ -341,7 +343,7 @@ export function IntegrationCard({
                 )}
                 <button
                   type="button"
-                  onClick={() => run('delete', onDelete)}
+                  onClick={() => { setMenuOpen(false); onDelete() }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--bg-2)]"
                   style={{ color: '#f87171' }}
                 >
