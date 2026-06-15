@@ -71,6 +71,96 @@ function providerName(id) {
   );
 }
 
+// Brand accent per provider so each service's notification reads distinctly (the
+// container's left bar). Mirrors `accent` in pulsify-web-app/lib/integrations.ts.
+// Falls back to the Pulse violet BRAND for anything unmapped.
+const PROVIDER_ACCENTS = {
+  github: 0x8b949e,
+  gitlab: 0xfc6d26,
+  youtube: 0xff0000,
+  tiktok: 0xff0050,
+  twitch: 0x9146ff,
+  kick: 0x53fc18,
+  reddit: 0xff4500,
+  twitter: 0x1d9bf0,
+  rss: 0xf59e0b,
+  steam: 0x66c0f4,
+  patreon: 0xf96854,
+  "google-calendar": 0x4285f4,
+  trello: 0x0079bf,
+  jira: 0x2684ff,
+  notion: 0xcbd5e1,
+};
+
+// Which placeholder fields surface as a labeled "details" block, and the verb on
+// the source-link button — mirrors notificationDetails()/notificationLink() in
+// pulsify-web-app/lib/integrations.ts so a live post reads like the dashboard test.
+const META_FIELDS = {
+  github: [{ key: "event", label: "Event" }, { key: "author", label: "Author" }],
+  gitlab: [{ key: "event", label: "Event" }, { key: "author", label: "Author" }],
+  youtube: [{ key: "author", label: "Channel" }],
+  twitch: [{ key: "game", label: "Playing" }],
+  kick: [{ key: "game", label: "Playing" }],
+  reddit: [{ key: "author", label: "Posted by" }],
+  twitter: [{ key: "author", label: "Account" }],
+  tiktok: [{ key: "author", label: "Creator" }],
+  rss: [{ key: "author", label: "Author" }],
+  steam: [{ key: "game", label: "Game" }],
+  patreon: [{ key: "author", label: "Creator" }, { key: "action", label: "Update" }],
+  "google-calendar": [{ key: "when", label: "When" }, { key: "location", label: "Location" }],
+  trello: [{ key: "list", label: "List" }, { key: "actor", label: "By" }, { key: "action", label: "Change" }],
+  jira: [{ key: "status", label: "Status" }, { key: "assignee", label: "Assignee" }],
+  notion: [{ key: "actor", label: "By" }, { key: "action", label: "Change" }],
+};
+
+const LINK_LABELS = {
+  github: "View on GitHub",
+  gitlab: "View on GitLab",
+  youtube: "Watch on YouTube",
+  twitch: "Watch on Twitch",
+  kick: "Watch on Kick",
+  reddit: "View on Reddit",
+  twitter: "View post",
+  tiktok: "View on TikTok",
+  rss: "Read more",
+  steam: "View on Steam",
+  patreon: "View on Patreon",
+  "google-calendar": "Open in Calendar",
+  trello: "View card",
+  jira: "View issue",
+  notion: "Open page",
+};
+
+function notificationDetails(providerId, ctx) {
+  const out = [];
+  for (const f of META_FIELDS[providerId] || []) {
+    const v = String(ctx[f.key] ?? "").trim();
+    if (v) out.push({ label: f.label, value: v.slice(0, 120) });
+  }
+  return out;
+}
+
+function notificationLink(providerId, ctx) {
+  const url = String(ctx.url ?? "").trim();
+  if (!/^https?:\/\/.+/i.test(url)) return null;
+  return { label: LINK_LABELS[providerId] || "Open link", url };
+}
+
+// Drop a line that's just the source URL once a link button carries it — keeps a
+// URL used inline within a sentence. Mirrors stripStandaloneUrl() in the web app.
+function stripStandaloneUrl(body, url) {
+  if (!url) return body;
+  return String(body)
+    .split("\n")
+    .filter((line) => {
+      const t = line.trim();
+      return t !== url && t !== `<${url}>`;
+    })
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 // Mirror of renderTemplate in lib/integrations.ts: unknown {{tokens}} are left
 // as-is. Templates are authored + validated on the dashboard.
 function renderTemplate(template, ctx) {
@@ -79,13 +169,14 @@ function renderTemplate(template, ctx) {
   );
 }
 
-// Pulse v2 container, matching the dashboard's notificationContainer() and the
-// announcement/giveaway layout: a `**Pulse**` label + connection-label heading +
-// `-# <Provider> · Integration` subtitle sitting beside the Pulse integrations
-// badge (type-9 Section), a braille width spacer, the rendered body split on
-// blank lines, a divider, and the `-# Pulse · Integrations` footer. An optional
-// leading mention line pings a role for go-live alerts.
-function buildContainer(provider, label, body, mentionLine) {
+// Rich Pulse v2 container, matching the dashboard's notificationContainer() and
+// the command-embed structure: a `**Pulse**` label + connection-label heading +
+// `-# <Provider> · Integration` subtitle beside the Pulse integrations badge
+// (type-9 Section), a braille width spacer, a `-# <when>` relative-time chip, the
+// rendered body (raw URL line stripped), a divider + labeled details block, a
+// source-link button, then the `-# Pulse · Integrations` footer. Accent is the
+// provider's brand colour. An optional leading mention line pings a role.
+function buildContainer(provider, label, body, mentionLine, ctx = {}) {
   const text = (content) => ({ type: 10, content });
   const headerLines = [
     text("**Pulse**"),
@@ -108,14 +199,41 @@ function buildContainer(provider, label, body, mentionLine) {
     components.push(...headerLines);
   }
   components.push(text(`-# ${"⠀".repeat(40)}`));
-  for (const para of String(body || "")
+
+  // Relative-time chip — Discord renders <t:…:R> as "just now" and ages it.
+  components.push(text(`-# <t:${Math.floor(Date.now() / 1000)}:R>`));
+
+  const link = notificationLink(provider, ctx);
+  const cleanBody = stripStandaloneUrl(body, link && link.url);
+  for (const para of String(cleanBody || "")
     .trim()
     .split(/\n{2,}/)) {
     if (para.trim()) components.push(text(para.trim()));
   }
+
+  const details = notificationDetails(provider, ctx);
+  if (details.length > 0) {
+    components.push({ type: 14, divider: true, spacing: 1 });
+    components.push(
+      text(details.map((d) => `**${d.label}**  ${d.value}`).join("\n")),
+    );
+  }
+
+  if (link) {
+    components.push({
+      type: 1,
+      components: [{ type: 2, style: 5, label: link.label, url: link.url }],
+    });
+  }
+
   components.push({ type: 14, divider: true, spacing: 1 });
   components.push(text("-# Pulse · Integrations"));
-  return { type: 17, accent_color: BRAND, components };
+  const accent = PROVIDER_ACCENTS[provider];
+  return {
+    type: 17,
+    accent_color: typeof accent === "number" ? accent : BRAND,
+    components,
+  };
 }
 
 function createIntegrations(client, supabase) {
@@ -213,7 +331,8 @@ function createIntegrations(client, supabase) {
   // Post one rendered item to the given (pre-resolved) channel. Throws on a
   // delivery failure so the caller can mark the row in error.
   async function deliver(row, channel, item) {
-    const body = renderTemplate(row.template, item.placeholders || {});
+    const placeholders = item.placeholders || {};
+    const body = renderTemplate(row.template, placeholders);
     const roleId = row.config?.role;
     const mentionLine = roleId ? `<@&${roleId}>` : null;
     const allowedMentions = roleId
@@ -224,6 +343,7 @@ function createIntegrations(client, supabase) {
       row.label,
       body,
       mentionLine,
+      placeholders,
     );
     await channel.send({
       flags: MessageFlags.IsComponentsV2,

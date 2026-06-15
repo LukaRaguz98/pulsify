@@ -195,7 +195,7 @@ export const PROVIDERS: IntegrationProvider[] = [
     ],
     labelField: 'repo',
     refField: 'repo',
-    defaultTemplate: '**{{repo}}** · {{event}}\n{{title}}\n{{url}}',
+    defaultTemplate: '**{{repo}}** — {{title}}',
     placeholders: [
       { token: '{{repo}}', description: 'The repository (owner/repo)' },
       { token: '{{event}}', description: 'The event type (push, release, …)' },
@@ -228,7 +228,7 @@ export const PROVIDERS: IntegrationProvider[] = [
     ],
     labelField: 'project',
     refField: 'project',
-    defaultTemplate: '**{{repo}}** · {{event}}\n{{title}}\n{{url}}',
+    defaultTemplate: '**{{repo}}** — {{title}}',
     placeholders: [
       { token: '{{repo}}', description: 'The project (group/project)' },
       { token: '{{event}}', description: 'The event type (push, release, …)' },
@@ -259,7 +259,7 @@ export const PROVIDERS: IntegrationProvider[] = [
     ],
     labelField: 'channel',
     refField: 'channel',
-    defaultTemplate: '**{{author}}** just posted: {{title}}\n{{url}}',
+    defaultTemplate: '**{{title}}**',
     placeholders: [
       { token: '{{author}}', description: 'The channel name' },
       { token: '{{title}}', description: 'Video / stream title' },
@@ -285,7 +285,7 @@ export const PROVIDERS: IntegrationProvider[] = [
     ],
     labelField: 'handle',
     refField: 'handle',
-    defaultTemplate: '**{{author}}** posted a new TikTok: {{title}}\n{{url}}',
+    defaultTemplate: '**{{title}}**',
     placeholders: [
       { token: '{{author}}', description: 'The creator handle' },
       { token: '{{title}}', description: 'Video caption' },
@@ -310,7 +310,7 @@ export const PROVIDERS: IntegrationProvider[] = [
     ],
     labelField: 'channel',
     refField: 'channel',
-    defaultTemplate: '**{{author}}** is now live: {{title}}\n{{url}}',
+    defaultTemplate: '**{{author}}** is live — {{title}}',
     placeholders: [
       { token: '{{author}}', description: 'The streamer' },
       { token: '{{title}}', description: 'Stream title' },
@@ -338,7 +338,7 @@ export const PROVIDERS: IntegrationProvider[] = [
     ],
     labelField: 'channel',
     refField: 'channel',
-    defaultTemplate: '**{{author}}** is now live on Kick: {{title}}\n{{url}}',
+    defaultTemplate: '**{{author}}** is live — {{title}}',
     placeholders: [
       { token: '{{author}}', description: 'The streamer' },
       { token: '{{title}}', description: 'Stream title' },
@@ -369,7 +369,7 @@ export const PROVIDERS: IntegrationProvider[] = [
     ],
     labelField: 'subreddit',
     refField: 'subreddit',
-    defaultTemplate: 'New on **{{subreddit}}**: {{title}}\n{{url}}',
+    defaultTemplate: '**{{subreddit}}** — {{title}}',
     placeholders: [
       { token: '{{subreddit}}', description: 'The subreddit' },
       { token: '{{title}}', description: 'Post title' },
@@ -401,7 +401,7 @@ export const PROVIDERS: IntegrationProvider[] = [
     ],
     labelField: 'handle',
     refField: 'handle',
-    defaultTemplate: '**{{author}}** posted:\n{{title}}\n{{url}}',
+    defaultTemplate: '**{{title}}**',
     placeholders: [
       { token: '{{author}}', description: 'The account handle' },
       { token: '{{title}}', description: 'The post text' },
@@ -430,7 +430,7 @@ export const PROVIDERS: IntegrationProvider[] = [
     ],
     labelField: 'url',
     refField: 'url',
-    defaultTemplate: '{{title}}\n{{url}}',
+    defaultTemplate: '**{{title}}**\n{{summary}}',
     placeholders: [
       { token: '{{title}}', description: 'Item title' },
       { token: '{{author}}', description: 'Item author (if any)' },
@@ -455,7 +455,7 @@ export const PROVIDERS: IntegrationProvider[] = [
     ],
     labelField: 'appId',
     refField: 'appId',
-    defaultTemplate: '**{{game}}** — {{title}}\n{{url}}',
+    defaultTemplate: '**{{title}}**',
     placeholders: [
       { token: '{{game}}', description: 'The game title' },
       { token: '{{title}}', description: 'News / update headline' },
@@ -485,7 +485,7 @@ export const PROVIDERS: IntegrationProvider[] = [
     ],
     labelField: 'campaign',
     refField: 'campaign',
-    defaultTemplate: '**{{title}}**\n{{author}} — {{action}}\n{{url}}',
+    defaultTemplate: '**{{title}}**',
     placeholders: [
       { token: '{{title}}', description: 'Post title or patron name' },
       { token: '{{author}}', description: 'The creator / campaign' },
@@ -517,7 +517,7 @@ export const PROVIDERS: IntegrationProvider[] = [
       { key: 'updated', label: 'Event updated', description: 'An event is rescheduled or edited.', defaultOn: true },
       { key: 'reminder', label: 'Starting soon', description: 'Post a reminder shortly before an event starts.', defaultOn: true },
     ],
-    defaultTemplate: '**{{title}}**\n{{when}}\n{{url}}',
+    defaultTemplate: '**{{title}}**',
     placeholders: [
       { token: '{{title}}', description: 'Event title' },
       { token: '{{when}}', description: 'Start time (and end)' },
@@ -549,7 +549,7 @@ export const PROVIDERS: IntegrationProvider[] = [
       { key: 'card_moved', label: 'Card moved', description: 'A card moves between lists.', defaultOn: true },
       { key: 'card_commented', label: 'Card commented', description: 'Someone comments on a card.', defaultOn: false },
     ],
-    defaultTemplate: '**{{list}}** · {{title}}\n{{actor}} — {{action}}\n{{url}}',
+    defaultTemplate: '**{{title}}**',
     placeholders: [
       { token: '{{title}}', description: 'Card name' },
       { token: '{{list}}', description: 'The list the card is in' },
@@ -583,7 +583,7 @@ export const PROVIDERS: IntegrationProvider[] = [
       { key: 'issue_transitioned', label: 'Status changed', description: 'An issue moves to a new status.', defaultOn: true },
       { key: 'issue_assigned', label: 'Issue assigned', description: 'An issue is assigned to someone.', defaultOn: false },
     ],
-    defaultTemplate: '**{{key}}** {{title}}\n{{status}} · {{assignee}}\n{{url}}',
+    defaultTemplate: '**{{key}}** — {{title}}',
     placeholders: [
       { token: '{{key}}', description: 'Issue key (e.g. PULSIFY-34)' },
       { token: '{{title}}', description: 'Issue summary' },
@@ -614,7 +614,7 @@ export const PROVIDERS: IntegrationProvider[] = [
       { key: 'page_created', label: 'Page created', description: 'A new page is added to the database.', defaultOn: true },
       { key: 'page_updated', label: 'Page updated', description: 'A page in the database is edited.', defaultOn: false },
     ],
-    defaultTemplate: '**{{title}}**\n{{actor}} — {{action}}\n{{url}}',
+    defaultTemplate: '**{{title}}**',
     placeholders: [
       { token: '{{title}}', description: 'Page title' },
       { token: '{{actor}}', description: 'Who made the change' },
@@ -830,6 +830,91 @@ export function computeStats(list: Integration[]): IntegrationStats {
  */
 export function renderTemplate(template: string, ctx: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (m, key) => ctx[key] ?? m)
+}
+
+// ── Rich notification presentation ─────────────────────────────────────────────
+// The posted notification is more than the rendered template: it follows the
+// Pulse v2 command-embed structure (header → body → divider → details → action
+// button → footer). These pure helpers decide which context fields surface as a
+// labeled "details" block and what the source-link button reads, per provider.
+//
+// MIRRORED in the bot (pulse-bot/src/integrations.js) so a live delivery reads
+// EXACTLY like the dashboard's test — keep the two in sync when adding providers.
+
+/** Context fields to surface as a labeled detail line, in display order. */
+const META_FIELDS: Record<string, { key: string; label: string }[]> = {
+  github:            [{ key: 'event', label: 'Event' }, { key: 'author', label: 'Author' }],
+  gitlab:            [{ key: 'event', label: 'Event' }, { key: 'author', label: 'Author' }],
+  youtube:           [{ key: 'author', label: 'Channel' }],
+  twitch:            [{ key: 'game', label: 'Playing' }],
+  kick:              [{ key: 'game', label: 'Playing' }],
+  reddit:            [{ key: 'author', label: 'Posted by' }],
+  twitter:           [{ key: 'author', label: 'Account' }],
+  tiktok:            [{ key: 'author', label: 'Creator' }],
+  rss:               [{ key: 'author', label: 'Author' }],
+  steam:             [{ key: 'game', label: 'Game' }],
+  patreon:           [{ key: 'author', label: 'Creator' }, { key: 'action', label: 'Update' }],
+  'google-calendar': [{ key: 'when', label: 'When' }, { key: 'location', label: 'Location' }],
+  trello:            [{ key: 'list', label: 'List' }, { key: 'actor', label: 'By' }, { key: 'action', label: 'Change' }],
+  jira:              [{ key: 'status', label: 'Status' }, { key: 'assignee', label: 'Assignee' }],
+  notion:            [{ key: 'actor', label: 'By' }, { key: 'action', label: 'Change' }],
+}
+
+/** Verb for the source-link button, tuned per provider. */
+const LINK_LABELS: Record<string, string> = {
+  github: 'View on GitHub',
+  gitlab: 'View on GitLab',
+  youtube: 'Watch on YouTube',
+  twitch: 'Watch on Twitch',
+  kick: 'Watch on Kick',
+  reddit: 'View on Reddit',
+  twitter: 'View post',
+  tiktok: 'View on TikTok',
+  rss: 'Read more',
+  steam: 'View on Steam',
+  patreon: 'View on Patreon',
+  'google-calendar': 'Open in Calendar',
+  trello: 'View card',
+  jira: 'View issue',
+  notion: 'Open page',
+}
+
+export type NotificationDetail = { label: string; value: string }
+
+/** The labeled detail lines for a provider's notification, dropping blanks. */
+export function notificationDetails(providerId: string, ctx: Record<string, string>): NotificationDetail[] {
+  const out: NotificationDetail[] = []
+  for (const f of META_FIELDS[providerId] ?? []) {
+    const v = (ctx[f.key] ?? '').trim()
+    if (v) out.push({ label: f.label, value: v.slice(0, 120) })
+  }
+  return out
+}
+
+/** The source-link button (label + url), or null when there's no valid link. */
+export function notificationLink(providerId: string, ctx: Record<string, string>): { label: string; url: string } | null {
+  const url = (ctx.url ?? '').trim()
+  if (!/^https?:\/\/.+/i.test(url)) return null
+  return { label: LINK_LABELS[providerId] ?? 'Open link', url }
+}
+
+/**
+ * Remove a standalone line that's just the source URL (or `<url>`). The template
+ * default puts `{{url}}` on its own line; once a link BUTTON carries that URL the
+ * raw line is redundant noise, so it's stripped from the rendered body. A URL
+ * used inline within a sentence is left untouched.
+ */
+export function stripStandaloneUrl(body: string, url: string | null | undefined): string {
+  if (!url) return body
+  return body
+    .split('\n')
+    .filter((line) => {
+      const t = line.trim()
+      return t !== url && t !== `<${url}>`
+    })
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
 }
 
 // Provider-specific sample title/action so the preview + test notification read

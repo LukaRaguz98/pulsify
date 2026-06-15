@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useDialogDismiss } from '@/components/ui/use-dialog-dismiss'
 import {
   X, AlertCircle, Loader2, Plug, Save, Send, Eye, Hash, ChevronLeft, ChevronRight,
-  CheckCircle2, ShieldCheck, Bell, Sparkles,
+  CheckCircle2, ShieldCheck, Bell, Sparkles, ExternalLink as LinkIcon,
 } from 'lucide-react'
 import {
   providerById,
@@ -13,9 +14,13 @@ import {
   deriveLabel,
   renderTemplate,
   sampleContext,
+  notificationDetails,
+  notificationLink,
+  stripStandaloneUrl,
   TEMPLATE_MAX,
   type Integration,
   type IntegrationDraft,
+  type IntegrationProvider,
 } from '@/lib/integrations'
 import {
   connectIntegration,
@@ -87,10 +92,10 @@ export function IntegrationWizard({ guildId, providerId, channels, editing, onCl
   const [testing, setTesting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    document.body.classList.add('slide-over-open')
-    return () => document.body.classList.remove('slide-over-open')
-  }, [])
+  // Escape-to-close + chrome-hide, matching every other dialog. Disabled while a
+  // save or test is in flight so the panel can't be dismissed mid-request.
+  const busy = saving || testing
+  useDialogDismiss(onClose, busy)
 
   const setConfig = (key: string, value: string) =>
     setDraft((d) => ({ ...d, config: { ...d.config, [key]: value } }))
@@ -100,10 +105,14 @@ export function IntegrationWizard({ guildId, providerId, channels, editing, onCl
   const channelName = channels.find((c) => c.id === draft.channel_id)?.name
   const previewLabel = draft.label.trim() || (provider ? deriveLabel(provider, draft.config) : '')
 
+  // Mirror the posted embed: render the template, strip the now-redundant raw URL
+  // line (the link button carries it), and surface the provider's detail fields.
   const preview = useMemo(() => {
-    if (!provider) return ''
+    if (!provider) return { body: '', details: [] as { label: string; value: string }[], link: null as { label: string; url: string } | null }
     const ctx = sampleContext(provider, draft.config)
-    return renderTemplate(draft.template ?? provider.defaultTemplate, ctx)
+    const link = notificationLink(provider.id, ctx)
+    const body = stripStandaloneUrl(renderTemplate(draft.template ?? provider.defaultTemplate, ctx), link?.url)
+    return { body, details: notificationDetails(provider.id, ctx), link }
   }, [provider, draft.config, draft.template])
 
   if (!provider) return null
@@ -155,7 +164,7 @@ export function IntegrationWizard({ guildId, providerId, channels, editing, onCl
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
-      onClick={onClose}
+      onClick={() => { if (!busy) onClose() }}
     >
       <aside
         role="dialog"
@@ -212,6 +221,24 @@ export function IntegrationWizard({ guildId, providerId, channels, editing, onCl
         <div className="grid flex-1 gap-0 overflow-hidden md:grid-cols-[3fr_2fr]">
           {/* Form */}
           <div className="flex flex-col gap-5 overflow-y-auto p-5">
+            {/* Stored error from the last sync/test — shown when editing so the
+                admin sees what's wrong and how to clear it. */}
+            {isEdit && editing!.status === 'error' && editing!.last_error && (
+              <div
+                className="flex items-start gap-2.5 rounded-lg border px-3 py-2.5 text-xs"
+                style={{ borderColor: 'rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.08)', color: '#f87171' }}
+              >
+                <AlertCircle size={15} className="mt-0.5 shrink-0" />
+                <div className="min-w-0">
+                  <p className="font-semibold">This integration needs attention</p>
+                  <p className="mt-0.5 break-words" style={{ color: '#fca5a5' }}>{editing!.last_error}</p>
+                  <p className="mt-1" style={{ color: 'var(--text-3)' }}>
+                    Fix the configuration above, then run <strong>Test connection</strong> to retry and clear the error.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* ── Configure ── */}
             {showSection('configure') && (
               <section className="space-y-4">
@@ -393,7 +420,7 @@ export function IntegrationWizard({ guildId, providerId, channels, editing, onCl
             <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
               <Eye size={13} /> Preview
             </p>
-            <NotificationPreview provider={provider} label={previewLabel} body={preview} />
+            <NotificationPreview provider={provider} label={previewLabel} body={preview.body} details={preview.details} link={preview.link} />
             <p className="mt-3 flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--text-3)' }}>
               <Hash size={11} /> Posts to <span style={{ color: 'var(--text-2)' }}>#{channelName ?? '—'}</span>
             </p>
@@ -486,20 +513,24 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-/** Faithful-enough preview of the Pulse v2 integration notification embed. */
+/** Faithful-enough preview of the rich Pulse v2 integration notification embed. */
 function NotificationPreview({
   provider,
   label,
   body,
+  details,
+  link,
 }: {
-  provider: { name: string; icon: string; accent: string }
+  provider: IntegrationProvider
   label: string
   body: string
+  details: { label: string; value: string }[]
+  link: { label: string; url: string } | null
 }) {
   return (
     <div
       className="overflow-hidden rounded-lg"
-      style={{ background: 'var(--panel)', borderLeft: '4px solid #8b5cf6', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
+      style={{ background: 'var(--panel)', borderLeft: `4px solid ${provider.accent}`, boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
     >
       <div className="flex items-start gap-3 p-3.5">
         <div className="min-w-0 flex-1">
@@ -508,9 +539,33 @@ function NotificationPreview({
             {label || provider.name}
           </p>
           <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>{provider.name} · Integration</p>
-          <div className="mt-2.5 whitespace-pre-wrap break-words text-sm leading-relaxed" style={{ color: 'var(--text-2)' }}>
+          <p className="mt-1.5 text-[11px]" style={{ color: 'var(--text-3)' }}>just now</p>
+          <div className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed" style={{ color: 'var(--text-2)' }}>
             {body.trim() || 'Your notification will appear here…'}
           </div>
+
+          {details.length > 0 && (
+            <div className="mt-3 space-y-1 border-t pt-2.5" style={{ borderColor: 'var(--line-strong)' }}>
+              {details.map((d) => (
+                <p key={d.label} className="break-words text-[13px]" style={{ color: 'var(--text-2)' }}>
+                  <span className="font-bold text-foreground">{d.label}</span>{'  '}
+                  <span>{d.value}</span>
+                </p>
+              ))}
+            </div>
+          )}
+
+          {link && (
+            <div className="mt-3">
+              <span
+                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium"
+                style={{ background: 'var(--bg-2)', color: 'var(--text)', border: '1px solid var(--line-strong)' }}
+              >
+                <LinkIcon size={12} /> {link.label}
+              </span>
+            </div>
+          )}
+
           <div className="mt-3 border-t pt-2 text-[11px]" style={{ borderColor: 'var(--line-strong)', color: 'var(--text-3)' }}>
             Pulse · Integrations
           </div>
