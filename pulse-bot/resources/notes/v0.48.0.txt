@@ -8,7 +8,7 @@ The Integrations Hub gets a stability-and-style pass: richer, modern notificatio
 - **Searchable logs** — the activity log can now be searched and filtered by integration as well as by type.
 
 **Also**
-- Consistent dialog behaviour — the setup panel closes with Escape and can't be dismissed mid-save, matching the rest of the dashboard.
+- **Consistent dialog behaviour** — the setup panel closes with Escape and can't be dismissed mid-save, matching the rest of the dashboard.
 
 Connected services now look modern and on-brand, fail loudly when something's wrong, and are easier to debug at a glance.
 
