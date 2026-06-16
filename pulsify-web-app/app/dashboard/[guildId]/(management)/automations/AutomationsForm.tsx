@@ -1031,7 +1031,7 @@ function PulseContentExtra({
             title={title}
             content={content}
             color={accentHex}
-            icon={section === 'rules' ? '/pulse-rules.png' : section === 'onboarding' ? '/pulse-onboarding.png' : undefined}
+            icon={section === 'rules' ? '/pulse-info.png' : section === 'onboarding' ? '/pulse-onboarding.png' : undefined}
             footer={section === 'rules' ? 'Pulse · Server Rules' : section === 'onboarding' ? 'Pulse · Onboarding Guide' : undefined}
           />
         </div>

@@ -40,7 +40,7 @@ function buildScheduleContainer({ colorInt, title, subtitle, body, footerLabel }
   if (first) components.push(lead(first));
   for (const block of rest) components.push({ type: 10, content: block });
   components.push({ type: 14, divider: true, spacing: 1 });
-  components.push({ type: 10, content: `-# Pulse · ${footerLabel} · <t:${unix}:R>` });
+  components.push({ type: 10, content: `-# Pulse — ${footerLabel} — <t:${unix}:R>` });
   return { type: 17, accent_color: colorInt, components };
 }
 
@@ -389,9 +389,9 @@ function createScheduler(client, supabase) {
       subtitle: guild.name,
       body: [
         `A summary of the ${periodLabel}.`,
-        `**Messages:** ${messages.toLocaleString()} · **Commands:** ${commands.toLocaleString()}\n` +
+        `**Messages:** ${messages.toLocaleString()} — **Commands:** ${commands.toLocaleString()}\n` +
           `**Members:** ${(guild.memberCount ?? 0).toLocaleString()}\n` +
-          `**Joins:** +${joins.toLocaleString()} · **Leaves:** -${leaves.toLocaleString()} · ` +
+          `**Joins:** +${joins.toLocaleString()} — **Leaves:** -${leaves.toLocaleString()} — ` +
           `**Net:** ${net >= 0 ? "+" : ""}${net.toLocaleString()}`,
       ],
       footerLabel: "Digest",

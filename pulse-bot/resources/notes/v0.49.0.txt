@@ -1,0 +1,19 @@
+**Pulsify v0.49.0 — Economy Commands & Earning Visibility**
+A polish pass on the in-Discord economy: a flexible leaderboard, a redesigned balance card, clearer transfers, and a brand-new guide that spells out exactly how to earn — all following Pulse's v2 embed style.
+
+**See where everyone stands**
+- **/leaderboard** — one command, six boards: Global Balance, Global Reputation, Server Level, Server XP, Messages and Voice Activity. Pick a board from the menu, page through the rankings, and watch your own position get highlighted when you're on the list. Every board always shows a full top 10 — each entry reads as display name plus username — with empty slots kept blank when a server is still filling up.
+- **Accurate rankings** — global boards span every Pulse server; level, XP, message and voice boards are scoped to your server.
+
+**Know how to earn**
+- **/info** — a one-embed guide to earning everything: the global economy (Pulse Balance & Reputation — events, giveaways, onboarding, milestones and daily/weekly rewards) and server progression (XP & Levels — messages, voice, participation and level rewards).
+
+**A cleaner balance**
+- **/balance** (formerly /wallet) — a redesigned card that leads with your balance and leaderboard position, then your reputation, lifetime earned/spent and recent activity, laid out to read well on mobile.
+
+**Friendlier transfers**
+- **/pay** — clearer validation messages that tell you exactly what went wrong, a polished success embed, and an unmistakable from → to summary so every transfer is easy to read.
+
+Members can now see where they stand and exactly how to climb — all without leaving Discord.
+
+June 16, 2026

@@ -24,6 +24,7 @@ const {
 const { readFile } = require("node:fs/promises");
 const path = require("node:path");
 const { recordNotification } = require("./notifications");
+const { replyNotice, editNotice } = require("./commands");
 const {
   APL,
   OTHER_TYPE_ID,
@@ -171,7 +172,7 @@ function createTickets(client, supabase, economyRewards = null) {
     const components = [td("**Pulse**")];
     if (first) components.push(td(first.startsWith("# ") ? first : `### ${first}`));
     for (const line of rest) components.push(td(line));
-    components.push(divider(), td(`-# Pulse · ${footer}`));
+    components.push(divider(), td(`-# Pulse — ${footer}`));
     return { type: 17, accent_color: accent, components };
   }
 
@@ -187,8 +188,10 @@ function createTickets(client, supabase, economyRewards = null) {
       .catch(() => {});
   }
 
-  /** Reply to an interaction with a V2 notice (public or ephemeral). */
-  function replyNotice(interaction, guildId, lines, { ephemeral = false } = {}) {
+  /** Reply with a guild-accent V2 notice from one or more body lines (public by
+   *  default). For short single-line status/validation messages use the shared
+   *  `replyNotice`/`editNotice` (imported above) instead. */
+  function replyTicketNotice(interaction, guildId, lines, { ephemeral = false } = {}) {
     return interaction.reply({
       flags: MessageFlags.IsComponentsV2 | (ephemeral ? MessageFlags.Ephemeral : 0),
       components: [noticeContainer(accentFor(guildId), lines)],
@@ -292,7 +295,7 @@ function createTickets(client, supabase, economyRewards = null) {
       .replace(/\{user\}/g, `<@${ticket.opener_id}>`)
       .replace(/\{type\}/g, type?.label || "ticket");
 
-    const headerLines = [td("**Pulse**"), td(`# ${type?.label || "Support ticket"} · #${ticket.number}`), td(`-# ${opening}`)];
+    const headerLines = [td("**Pulse**"), td(`# ${type?.label || "Support ticket"} — #${ticket.number}`), td(`-# ${opening}`)];
     const body = [];
     if (hasIcon) {
       body.push({
@@ -319,7 +322,7 @@ function createTickets(client, supabase, economyRewards = null) {
         button(4, "Close", `${TKT}:close:${ticket.id}`),
       ],
     });
-    body.push(td("-# Pulse · Support ticket"));
+    body.push(td("-# Pulse — Support ticket"));
     return { type: 17, accent_color: accent, components: body };
   }
 
@@ -387,11 +390,11 @@ function createTickets(client, supabase, economyRewards = null) {
     if (!guild) return;
     const config = configCache.get(guild.id);
     if (!config || !config.enabled) {
-      return interaction.reply({ content: "The ticket system isn't enabled here.", flags: MessageFlags.Ephemeral });
+      return replyNotice(interaction, "The ticket system isn't enabled here.");
     }
     const type = config.ticket_types.find((t) => t.id === typeId && t.enabled);
     if (!type) {
-      return interaction.reply({ content: "That ticket type is no longer available.", flags: MessageFlags.Ephemeral });
+      return replyNotice(interaction, "That ticket type is no longer available.");
     }
 
     // Application types are CHANNEL-LESS: open the application dialog instead of
@@ -421,16 +424,16 @@ function createTickets(client, supabase, economyRewards = null) {
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const limitMsg = await checkLimit(guild, config, interaction.user.id);
-    if (limitMsg) return interaction.editReply({ content: limitMsg });
+    if (limitMsg) return editNotice(interaction, limitMsg);
     await createTicket(interaction, config, type, []);
   }
 
   async function handleModalSubmit(interaction, typeId) {
     const guild = interaction.guild;
     const config = configCache.get(guild?.id);
-    if (!config) return interaction.reply({ content: "Tickets aren't configured here.", flags: MessageFlags.Ephemeral });
+    if (!config) return replyNotice(interaction, "Tickets aren't configured here.");
     const type = config.ticket_types.find((t) => t.id === typeId);
-    if (!type) return interaction.reply({ content: "That ticket type no longer exists.", flags: MessageFlags.Ephemeral });
+    if (!type) return replyNotice(interaction, "That ticket type no longer exists.");
 
     const answers = (type.form || []).map((f) => ({
       label: f.label,
@@ -438,7 +441,7 @@ function createTickets(client, supabase, economyRewards = null) {
     }));
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const limitMsg = await checkLimit(guild, config, interaction.user.id);
-    if (limitMsg) return interaction.editReply({ content: limitMsg });
+    if (limitMsg) return editNotice(interaction, limitMsg);
     await createTicket(interaction, config, type, answers);
   }
 
@@ -502,7 +505,7 @@ function createTickets(client, supabase, economyRewards = null) {
         name,
         type: ChannelType.GuildText,
         parent: parentId && guild.channels.cache.get(parentId)?.type === ChannelType.GuildCategory ? parentId : undefined,
-        topic: `Ticket #${number} · ${type.label} · opened by ${opener.tag}`.slice(0, 1024),
+        topic: `Ticket #${number} — ${type.label} — opened by ${opener.tag}`.slice(0, 1024),
         permissionOverwrites: overwrites,
       });
 
@@ -559,12 +562,12 @@ function createTickets(client, supabase, economyRewards = null) {
         metadata: { ticket_id: ticket.id, type: type.id },
       });
 
-      await interaction.editReply({ content: `✅ Your ticket has been created: <#${channel.id}>` });
+      await editNotice(interaction, `Your ticket has been created: <#${channel.id}>`);
     } catch (err) {
       console.error(`[Pulse] Failed to open ticket in guild ${guild.id}:`, err.message);
       const msg = "Sorry — I couldn't create your ticket. The server may be missing the **Manage Channels** permission.";
-      if (interaction.deferred || interaction.replied) await interaction.editReply({ content: msg }).catch(() => {});
-      else await interaction.reply({ content: msg, flags: MessageFlags.Ephemeral }).catch(() => {});
+      if (interaction.deferred || interaction.replied) await editNotice(interaction, msg).catch(() => {});
+      else await replyNotice(interaction, msg).catch(() => {});
     }
   }
 
@@ -574,7 +577,7 @@ function createTickets(client, supabase, economyRewards = null) {
   async function handleApplicationStart(interaction, config, ticketType) {
     const types = selectableTypes(normaliseApplicationTypes(config.application_types));
     if (types.length === 0) {
-      return interaction.reply({ content: "No application types are available right now.", flags: MessageFlags.Ephemeral });
+      return replyNotice(interaction, "No application types are available right now.");
     }
     await interaction.reply({
       flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -603,7 +606,7 @@ function createTickets(client, supabase, economyRewards = null) {
                 },
               ],
             },
-            td("-# Pulse · Application"),
+            td("-# Pulse — Application"),
           ],
         },
       ],
@@ -614,12 +617,12 @@ function createTickets(client, supabase, economyRewards = null) {
   async function handleApplicationTypeSelect(interaction) {
     const typeId = interaction.values[0];
     const config = configCache.get(interaction.guild?.id);
-    if (!config) return interaction.reply({ content: "Applications aren't configured here.", flags: MessageFlags.Ephemeral });
+    if (!config) return replyNotice(interaction, "Applications aren't configured here.");
     const types = normaliseApplicationTypes(config.application_types);
     const isOther = typeId === OTHER_TYPE_ID;
     const label = applicationTypeLabel(types, typeId);
 
-    const modal = new ModalBuilder().setCustomId(applicationModalId(typeId)).setTitle(`Apply · ${label}`.slice(0, 45));
+    const modal = new ModalBuilder().setCustomId(applicationModalId(typeId)).setTitle(`Apply — ${label}`.slice(0, 45));
     if (isOther) {
       modal.addComponents(
         new ActionRowBuilder().addComponents(
@@ -650,7 +653,7 @@ function createTickets(client, supabase, economyRewards = null) {
   async function handleApplicationModalSubmit(interaction, typeId) {
     const guild = interaction.guild;
     const config = configCache.get(guild?.id);
-    if (!config) return interaction.reply({ content: "Applications aren't configured here.", flags: MessageFlags.Ephemeral });
+    if (!config) return replyNotice(interaction, "Applications aren't configured here.");
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     try {
       const types = normaliseApplicationTypes(config.application_types);
@@ -663,7 +666,7 @@ function createTickets(client, supabase, economyRewards = null) {
 
       // Anti-spam: one open application per type + per-user cooldown.
       const block = await checkApplicationLimit(guild.id, interaction.user.id, typeId, config);
-      if (block) return interaction.editReply({ content: block });
+      if (block) return editNotice(interaction, block);
 
       // Reserve the next application number (read-modify-write on the counter).
       const number = (config.application_counter || 0) + 1;
@@ -728,8 +731,8 @@ function createTickets(client, supabase, economyRewards = null) {
     } catch (err) {
       console.error(`[Pulse] Failed to save application in guild ${guild?.id}:`, err.message);
       const msg = "Sorry — I couldn't submit your application. Please try again in a moment.";
-      if (interaction.deferred || interaction.replied) await interaction.editReply({ content: msg }).catch(() => {});
-      else await interaction.reply({ content: msg, flags: MessageFlags.Ephemeral }).catch(() => {});
+      if (interaction.deferred || interaction.replied) await editNotice(interaction, msg).catch(() => {});
+      else await replyNotice(interaction, msg).catch(() => {});
     }
   }
 
@@ -784,7 +787,7 @@ function createTickets(client, supabase, economyRewards = null) {
     try {
       await user.send({
         flags: MessageFlags.IsComponentsV2,
-        components: [noticeContainer(accent, lines, guild?.name ? `${guild.name} · Application` : "Application")],
+        components: [noticeContainer(accent, lines, guild?.name ? `${guild.name} — Application` : "Application")],
       });
       return true;
     } catch {
@@ -809,11 +812,11 @@ function createTickets(client, supabase, economyRewards = null) {
                 accent_color: accentFor(guild.id),
                 components: [
                   td("**Pulse**"),
-                  td(`# New application · #${app.number}`),
+                  td(`# New application — #${app.number}`),
                   td(`**${app.displayType}** — from <@${app.applicantId}> (${app.applicantName})`),
                   divider(),
                   { type: 1, components: [{ type: 2, style: 5, label: "Review in Pulsify", url: `${appUrl}${dashLink}` }] },
-                  td("-# Pulse · Application"),
+                  td("-# Pulse — Application"),
                 ],
               },
             ],
@@ -858,7 +861,7 @@ function createTickets(client, supabase, economyRewards = null) {
       const serverName = guild?.name ?? "the server";
 
       const lines = [`# Application ${meta.label.toLowerCase()}`];
-      if (status === "approved") lines.push(`Good news — your **${displayType}** application to **${serverName}** was approved! 🎉`);
+      if (status === "approved") lines.push(`Good news — your **${displayType}** application to **${serverName}** was approved!`);
       else if (status === "rejected") lines.push(`Your **${displayType}** application to **${serverName}** wasn't successful this time.`);
       else if (status === "needs_info") lines.push(`We need a bit more information about your **${displayType}** application to **${serverName}**.`);
       else lines.push(`Your **${displayType}** application status is now **${meta.label}**.`);
@@ -880,15 +883,15 @@ function createTickets(client, supabase, economyRewards = null) {
 
   async function handleClaim(interaction, ticketId) {
     const ticket = await loadTicket(ticketId);
-    if (!ticket) return interaction.reply({ content: "This ticket no longer exists.", flags: MessageFlags.Ephemeral });
-    if (ticket.status === "closed") return interaction.reply({ content: "This ticket is closed.", flags: MessageFlags.Ephemeral });
+    if (!ticket) return replyNotice(interaction, "This ticket no longer exists.");
+    if (ticket.status === "closed") return replyNotice(interaction, "This ticket is closed.");
     const name = interaction.member?.displayName ?? interaction.user.username;
     await supabase
       .from("tickets")
       .update({ claimed_by: interaction.user.id, claimed_by_name: name, status: "claimed", updated_at: new Date().toISOString() })
       .eq("id", ticketId);
     await logEvent(ticketId, ticket.guild_id, "claimed", interaction.member ?? interaction.user);
-    await replyNotice(interaction, ticket.guild_id, [`**${name}** claimed this ticket.`]);
+    await replyTicketNotice(interaction, ticket.guild_id, [`**${name}** claimed this ticket.`]);
   }
 
   async function promptClose(interaction, ticketId) {
@@ -908,8 +911,8 @@ function createTickets(client, supabase, economyRewards = null) {
 
   async function doClose(interaction, ticketId, reason) {
     const ticket = await loadTicket(ticketId);
-    if (!ticket) return interaction.reply({ content: "This ticket no longer exists.", flags: MessageFlags.Ephemeral });
-    if (ticket.status === "closed") return interaction.reply({ content: "This ticket is already closed.", flags: MessageFlags.Ephemeral });
+    if (!ticket) return replyNotice(interaction, "This ticket no longer exists.");
+    if (ticket.status === "closed") return replyNotice(interaction, "This ticket is already closed.");
     const guild = interaction.guild ?? client.guilds.cache.get(ticket.guild_id);
     const config = configCache.get(ticket.guild_id);
     await interaction.deferReply({ flags: MessageFlags.Ephemeral }).catch(() => {});
@@ -964,7 +967,7 @@ function createTickets(client, supabase, economyRewards = null) {
                 td(`-# Closed by **${closerName}**${reason ? ` — ${reason}` : ""}.`),
                 divider(),
                 closedRow(ticketId),
-                td("-# Pulse · Ticket"),
+                td("-# Pulse — Ticket"),
               ],
             },
           ],
@@ -1005,13 +1008,13 @@ function createTickets(client, supabase, economyRewards = null) {
       actorUsername: interaction.user.username,
       metadata: { ticket_id: ticketId },
     });
-    await interaction.editReply({ content: "🔒 Ticket closed." }).catch(() => {});
+    await editNotice(interaction, "Ticket closed.").catch(() => {});
   }
 
   async function handleReopen(interaction, ticketId) {
     const ticket = await loadTicket(ticketId);
-    if (!ticket) return interaction.reply({ content: "This ticket no longer exists.", flags: MessageFlags.Ephemeral });
-    if (ticket.status !== "closed") return interaction.reply({ content: "This ticket is already open.", flags: MessageFlags.Ephemeral });
+    if (!ticket) return replyNotice(interaction, "This ticket no longer exists.");
+    if (ticket.status !== "closed") return replyNotice(interaction, "This ticket is already open.");
     const guild = interaction.guild;
     await supabase
       .from("tickets")
@@ -1023,15 +1026,15 @@ function createTickets(client, supabase, economyRewards = null) {
       if (channel) await channel.permissionOverwrites.edit(ticket.opener_id, { SendMessages: true }).catch(() => {});
     }
     await logEvent(ticketId, ticket.guild_id, "reopened", interaction.member ?? interaction.user);
-    await replyNotice(interaction, ticket.guild_id, [
+    await replyTicketNotice(interaction, ticket.guild_id, [
       `Ticket reopened by ${interaction.member?.displayName ?? interaction.user.username}.`,
     ]);
   }
 
   async function handleDelete(interaction, ticketId) {
     const ticket = await loadTicket(ticketId);
-    if (!ticket) return interaction.reply({ content: "This ticket no longer exists.", flags: MessageFlags.Ephemeral });
-    await interaction.reply({ content: "🗑️ Deleting this ticket…", flags: MessageFlags.Ephemeral }).catch(() => {});
+    if (!ticket) return replyNotice(interaction, "This ticket no longer exists.");
+    await replyNotice(interaction, "Deleting this ticket…").catch(() => {});
     if (ticket.channel_id) openChannels.delete(ticket.channel_id);
     await supabase.from("ticket_events").delete().eq("ticket_id", ticketId);
     await supabase.from("tickets").delete().eq("id", ticketId);
@@ -1043,13 +1046,13 @@ function createTickets(client, supabase, economyRewards = null) {
 
   async function handleTranscriptButton(interaction, ticketId) {
     const ticket = await loadTicket(ticketId);
-    if (!ticket) return interaction.reply({ content: "This ticket no longer exists.", flags: MessageFlags.Ephemeral });
+    if (!ticket) return replyNotice(interaction, "This ticket no longer exists.");
     let transcript = ticket.transcript;
     if (!transcript && ticket.channel_id && interaction.guild) {
       const channel = await interaction.guild.channels.fetch(ticket.channel_id).catch(() => null);
       if (channel) transcript = await buildTranscript(channel, ticket);
     }
-    if (!transcript) return interaction.reply({ content: "No transcript is available yet.", flags: MessageFlags.Ephemeral });
+    if (!transcript) return replyNotice(interaction, "No transcript is available yet.");
     await interaction.reply({
       flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
       components: [noticeContainer(accentFor(ticket.guild_id), [`**Transcript — Ticket #${ticket.number}**`])],
@@ -1084,11 +1087,11 @@ function createTickets(client, supabase, economyRewards = null) {
   async function handleTicketCommand(interaction) {
     const config = configCache.get(interaction.guild?.id);
     if (!config || !config.enabled) {
-      return interaction.reply({ content: "The ticket system isn't enabled on this server yet.", flags: MessageFlags.Ephemeral });
+      return replyNotice(interaction, "The ticket system isn't enabled on this server yet.");
     }
     const enabled = config.ticket_types.filter((t) => t.enabled);
     if (enabled.length === 0) {
-      return interaction.reply({ content: "No ticket types are available right now.", flags: MessageFlags.Ephemeral });
+      return replyNotice(interaction, "No ticket types are available right now.");
     }
     await interaction.reply({
       flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -1102,7 +1105,7 @@ function createTickets(client, supabase, economyRewards = null) {
             td("-# Pick what you need help with."),
             divider(),
             ...pickerComponents(config),
-            td("-# Pulse · Ticket panel"),
+            td("-# Pulse — Ticket panel"),
           ],
         },
       ],
@@ -1141,7 +1144,7 @@ function createTickets(client, supabase, economyRewards = null) {
     } catch (err) {
       console.error("[Pulse] Ticket interaction failed:", err.message);
       if (interaction && !interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: "Something went wrong handling that.", flags: MessageFlags.Ephemeral }).catch(() => {});
+        await replyNotice(interaction, "Something went wrong handling that.").catch(() => {});
       }
     }
   }
@@ -1193,7 +1196,7 @@ function createTickets(client, supabase, economyRewards = null) {
             await sendNotice(
               channel,
               ticket.guild_id,
-              [`⏰ <@${ticket.opener_id}> this ticket has been quiet — it will auto-close in about ${hrsLeft}h unless there's a reply.`],
+              [`<@${ticket.opener_id}> this ticket has been quiet — it will auto-close in about ${hrsLeft}h unless there's a reply.`],
               { allowedMentions: { users: [ticket.opener_id] } },
             );
           }
@@ -1239,7 +1242,7 @@ function createTickets(client, supabase, economyRewards = null) {
                 td("-# This ticket was closed automatically after a period of inactivity."),
                 divider(),
                 closedRow(ticket.id),
-                td("-# Pulse · Ticket"),
+                td("-# Pulse — Ticket"),
               ],
             },
           ],

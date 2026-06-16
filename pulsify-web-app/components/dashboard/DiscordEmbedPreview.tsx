@@ -17,7 +17,7 @@ export type EmbedData = {
 type Props = {
   embed: EmbedData
   serverName: string
-  /** Footer shown when the user left footer_text blank (e.g. 'Pulse · Welcome'),
+  /** Footer shown when the user left footer_text blank (e.g. 'Pulse — Welcome'),
    *  mirroring the bot's branded fallback. */
   footerFallback?: string
 }

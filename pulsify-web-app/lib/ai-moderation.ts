@@ -1018,7 +1018,7 @@ export async function analyzeContent(
     confidence,
     confidenceLabel: confidenceLabel(confidence),
     severity,
-    reasoning: reasoningParts.join(' · '),
+    reasoning: reasoningParts.join(' — '),
     heuristicHits: hits,
     signals: orderedSignals,
     aiReasoning: aiReasoning ?? null,

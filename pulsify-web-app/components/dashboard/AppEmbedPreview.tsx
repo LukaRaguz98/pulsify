@@ -8,9 +8,9 @@ type Props = {
   content: string
   color?: string
   /** Public path to the branded badge shown top-right inside the container
-   *  (e.g. '/pulse-rules.png'). Omit for no badge. */
+   *  (e.g. '/pulse-info.png'). Omit for no badge. */
   icon?: string
-  /** Footer line rendered under a divider (e.g. 'Pulse · Server Rules'). */
+  /** Footer line rendered under a divider (e.g. 'Pulse — Server Rules'). */
   footer?: string
 }
 

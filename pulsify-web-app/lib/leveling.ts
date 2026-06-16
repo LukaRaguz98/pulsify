@@ -169,7 +169,7 @@ export type LevelingConfig = {
   stack_rewards: boolean
 }
 
-export const DEFAULT_LEVELUP_MESSAGE = '🎉 GG {mention}, you just reached **level {level}**!'
+export const DEFAULT_LEVELUP_MESSAGE = 'GG {mention}, you just reached **level {level}**!'
 
 export const LEVELING_LIMITS = {
   maxXpPerEvent: 100_000,

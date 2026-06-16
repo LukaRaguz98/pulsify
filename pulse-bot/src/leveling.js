@@ -28,7 +28,7 @@ const {
 
 const DEFAULT_CURVE = { base: 100, factor: 50, quadratic: 5 };
 const MAX_LEVEL = 1000;
-const DEFAULT_LEVELUP_MESSAGE = "🎉 GG {mention}, you just reached **level {level}**!";
+const DEFAULT_LEVELUP_MESSAGE = "GG {mention}, you just reached **level {level}**!";
 
 function clampNum(v, min, max, fallback) {
   const n = Number(v);
@@ -255,7 +255,7 @@ function createLeveling(client, supabase, rewards = null, shop = null) {
     });
     const body = [text(rendered)];
     if (rewards.length > 0) {
-      body.push(text(`-# 🎁 Unlocked: ${rewards.map((r) => `<@&${r.role_id}>`).join(", ")}`));
+      body.push(text(`-# Unlocked: ${rewards.map((r) => `<@&${r.role_id}>`).join(", ")}`));
     }
     return buildPulseContainer({
       iconUrl: member.displayAvatarURL({ size: 128 }),
@@ -263,7 +263,7 @@ function createLeveling(client, supabase, rewards = null, shop = null) {
       title: `Level ${newLevel}`,
       subtitle: member.displayName,
       body,
-      footer: "Pulse · Level up",
+      footer: "Pulse — Level up",
     });
   }
 
@@ -546,12 +546,11 @@ function createLeveling(client, supabase, rewards = null, shop = null) {
     if (top.length === 0) {
       body.push(text("No one has earned any XP yet. Start chatting to climb the leaderboard!"));
     } else {
-      const medals = ["🥇", "🥈", "🥉"];
       const lines = top.map((r, i) => {
-        const rankLabel = medals[i] ?? `**${i + 1}.**`;
+        const rankLabel = `**${i + 1}.**`;
         const level = Number(r.level ?? levelForXp(Number(r.xp ?? 0), cfg.curve));
         const name = r.user_name ? r.user_name : `<@${r.user_id}>`;
-        return `${rankLabel} ${name} — **Lvl ${level}** · ${Number(r.xp ?? 0).toLocaleString()} XP`;
+        return `${rankLabel} ${name} — **Lvl ${level}** — ${Number(r.xp ?? 0).toLocaleString()} XP`;
       });
       body.push(text(lines.join("\n")));
 
@@ -559,7 +558,7 @@ function createLeveling(client, supabase, rewards = null, shop = null) {
       const me = await rankInfo(guild, interaction.user.id, interaction.user.username);
       if (me.rank && me.rank > top.length) {
         body.push(divider());
-        body.push(text(`-# Your rank: #${me.rank} — Lvl ${me.prog.level} · ${me.prog.totalXp.toLocaleString()} XP`));
+        body.push(text(`-# Your rank: #${me.rank} — Lvl ${me.prog.level} — ${me.prog.totalXp.toLocaleString()} XP`));
       }
     }
 
@@ -572,7 +571,7 @@ function createLeveling(client, supabase, rewards = null, shop = null) {
           title: "Leaderboard",
           subtitle: guild.name,
           body,
-          footer: "Pulse · Top members by XP",
+          footer: "Pulse — Top members by XP",
         }),
       ],
       files: icon ? [icon] : [],

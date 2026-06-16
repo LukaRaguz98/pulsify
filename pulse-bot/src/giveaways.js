@@ -21,6 +21,7 @@ const { Events, MessageFlags } = require("discord.js");
 const fs = require("node:fs");
 const path = require("node:path");
 const { recordNotification } = require("./notifications");
+const { replyNotice } = require("./commands");
 
 const GW = "gw";
 const TICK_MS = 30 * 1000; // lifecycle scan every 30s
@@ -256,17 +257,17 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
           `**Ends:** <t:${endUnix}:R> (<t:${endUnix}:f>)`,
       ),
     );
-    // Requirements on a single compact subtext line (· separated) rather than a
+    // Requirements on a single compact subtext line (— separated) rather than a
     // stacked bullet list — readable even with several conditions enabled.
     if (hasRequirements(req)) {
-      body.push(td(`-# **Requirements:** ${describeRequirements(req).join(" · ")}`));
+      body.push(td(`-# **Requirements:** ${describeRequirements(req).join(" — ")}`));
     }
     if (g.host_name || g.host_id) {
       body.push(td(`-# Hosted by ${g.host_id ? `<@${g.host_id}>` : g.host_name}`));
     }
     body.push(divider());
     body.push(joinRow(g.id, g.entry_count ?? 0));
-    body.push(td("-# Pulse · Giveaway"));
+    body.push(td("-# Pulse — Giveaway"));
     return { type: 17, accent_color: BRAND, components: body };
   }
 
@@ -279,7 +280,7 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
     body.push(divider());
     if (g.status === "cancelled") {
       body.push(td("This giveaway was cancelled."));
-      body.push(td("-# Pulse · Giveaway cancelled"));
+      body.push(td("-# Pulse — Giveaway cancelled"));
       return { type: 17, accent_color: GREY, components: body };
     }
     if (winners && winners.length > 0) {
@@ -288,7 +289,7 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
       body.push(td("No eligible entries — no winner could be drawn."));
     }
     const n = g.entry_count ?? 0;
-    body.push(td(`-# Pulse · Giveaway ended · ${n} entr${n === 1 ? "y" : "ies"}`));
+    body.push(td(`-# Pulse — Giveaway ended — ${n} entr${n === 1 ? "y" : "ies"}`));
     return { type: 17, accent_color: ENDED, components: body };
   }
 
@@ -417,19 +418,19 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
   async function handleJoin(interaction, giveawayId) {
     const row = cache.get(giveawayId) ?? (await loadGiveaway(giveawayId));
     if (!row) {
-      return interaction.reply({ content: "This giveaway no longer exists.", flags: MessageFlags.Ephemeral });
+      return replyNotice(interaction, "This giveaway no longer exists.");
     }
     if (row.status !== "active") {
       const msg = row.status === "scheduled" ? "This giveaway hasn't started yet." : "This giveaway has ended.";
-      return interaction.reply({ content: msg, flags: MessageFlags.Ephemeral });
+      return replyNotice(interaction, msg);
     }
     if (new Date(row.ends_at).getTime() <= Date.now()) {
-      return interaction.reply({ content: "This giveaway has just ended.", flags: MessageFlags.Ephemeral });
+      return replyNotice(interaction, "This giveaway has just ended.");
     }
 
     const blacklist = Array.isArray(row.blacklist_user_ids) ? row.blacklist_user_ids : [];
     if (blacklist.includes(interaction.user.id)) {
-      return interaction.reply({ content: "You're not eligible to enter this giveaway.", flags: MessageFlags.Ephemeral });
+      return replyNotice(interaction, "You're not eligible to enter this giveaway.");
     }
 
     const req = normaliseRequirements(row.requirements);
@@ -438,7 +439,7 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
 
     const verdict = checkEligibility(req, facts);
     if (!verdict.ok) {
-      return interaction.reply({ content: `❌ ${verdict.reason}`, flags: MessageFlags.Ephemeral });
+      return replyNotice(interaction, verdict.reason);
     }
 
     // Idempotent insert — the unique (giveaway_id, user_id) constraint turns a
@@ -452,10 +453,10 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
     });
     if (error) {
       if (error.code === "23505" || /duplicate key/i.test(error.message || "")) {
-        return interaction.reply({ content: "🎟️ You're already entered — good luck!", flags: MessageFlags.Ephemeral });
+        return replyNotice(interaction, "You're already entered — good luck!");
       }
       console.warn("[Pulse] giveaway entry insert failed:", error.message);
-      return interaction.reply({ content: "Sorry — I couldn't record your entry. Try again in a moment.", flags: MessageFlags.Ephemeral });
+      return replyNotice(interaction, "Sorry — I couldn't record your entry. Try again in a moment.");
     }
 
     // Recount (race-safe) and refresh the cached row + the message button.
@@ -485,10 +486,10 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
     const bonus = await applyEntryBonus(giveawayId, row.guild_id, interaction.user.id);
     const joinMsg =
       bonus > 0
-        ? `🎉 You're in — with **${bonus} bonus ${bonus === 1 ? "entry" : "entries"}** from your rewards! Good luck.`
-        : "🎉 You're in! Good luck.";
+        ? `You're in — with **${bonus} bonus ${bonus === 1 ? "entry" : "entries"}** from your rewards! Good luck.`
+        : "You're in! Good luck.";
 
-    await interaction.reply({ content: joinMsg, flags: MessageFlags.Ephemeral });
+    await replyNotice(interaction, joinMsg);
   }
 
   // ── Lifecycle: start scheduled, end + draw ───────────────────────────────────
@@ -605,11 +606,11 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
                   `Congratulations ${winners.map((w) => `<@${w.id}>`).join(", ")} — you won **${fresh.prize}**!`,
                 ),
                 link ? td(`-# [Jump to the giveaway](${link})`) : null,
-                td("-# Pulse · Giveaway"),
+                td("-# Pulse — Giveaway"),
               ].filter(Boolean)
             : [
                 ...headerBlocks(fresh.title, `No eligible entries — no winner could be drawn for **${fresh.prize}**.`),
-                td("-# Pulse · Giveaway"),
+                td("-# Pulse — Giveaway"),
               ];
         await channel
           .send({
@@ -669,7 +670,7 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
     } catch (err) {
       console.error("[Pulse] Giveaway interaction failed:", err.message);
       if (interaction && !interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: "Something went wrong handling that.", flags: MessageFlags.Ephemeral }).catch(() => {});
+        await replyNotice(interaction, "Something went wrong handling that.").catch(() => {});
       }
     }
   }

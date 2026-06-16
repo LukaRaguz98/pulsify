@@ -93,7 +93,7 @@ function ticketNoticeContainer(accent: number, lines: string[], footer = 'Ticket
   const components: Record<string, unknown>[] = [td('**Pulse**')]
   if (first) components.push(td(first.startsWith('# ') ? first : `### ${first}`))
   for (const line of rest) components.push(td(line))
-  components.push(divider(), td(`-# Pulse · ${footer}`))
+  components.push(divider(), td(`-# Pulse — ${footer}`))
   return { type: 17, accent_color: accent, components } as unknown as V2TopLevelComponent
 }
 
@@ -259,7 +259,7 @@ export async function postTicketPanel(guildId: string): Promise<ActionResult> {
       })),
     })
   }
-  body.push(td('-# Pulse · Ticket panel'))
+  body.push(td('-# Pulse — Ticket panel'))
 
   const res = await postChannelComponents(
     panel.channel_id,

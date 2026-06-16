@@ -418,7 +418,7 @@ function buildAlertContainer(ctx: {
   const headerLines = [
     { type: 10 as const, content: `**Pulse**` },
     { type: 10 as const, content: `# ${categoryLabel} detected` },
-    { type: 10 as const, content: `-# Pulse Guard · ${confidenceText} (${pct}%)` },
+    { type: 10 as const, content: `-# Pulse Guard — ${confidenceText} (${pct}%)` },
   ]
   if (ctx.hasIcon) {
     components.push({
@@ -523,7 +523,7 @@ function buildAlertContainer(ctx: {
   const unix = Math.floor(Date.now() / 1000)
   components.push({
     type: 10,
-    content: `-# Pulse · Pulse Guard · Executed <t:${unix}:f> (<t:${unix}:R>)`,
+    content: `-# Pulse — Pulse Guard — Executed <t:${unix}:f> (<t:${unix}:R>)`,
   })
 
   return {

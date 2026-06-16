@@ -3768,3 +3768,147 @@ Acceptance Criteria
 	Logs and health indicators provide enough debugging information
 	Sensitive credentials are handled securely
 	Integrations feel stable, polished, and production-ready
+
+PULSIFY-49 — Economy Commands Expansion & Command Polish (v0.49.0)
+
+Description
+	Expand the Pulse Economy command set by introducing a flexible Leaderboard command, improving existing economy commands, and providing users with clear visibility into how they can earn Balance, Reputation, XP, and Levels.
+	This update focuses on improving the member economy experience directly within Discord while ensuring all economy-related commands follow the latest Pulse v2 design standards.
+
+Goals
+	Improve economy command usability
+	Introduce economy leaderboards inside Discord
+	Improve transparency around earning methods
+	Standardize economy command embeds
+	Improve overall member experience
+
+Tasks
+	Leaderboard Command
+		Create a new:
+			/leaderboard
+		command.
+
+		Requirements:
+			Present a selection dialog/menu when executed
+			Allow users to choose leaderboard type
+
+		Supported leaderboard types:
+			Global Balance
+			Global Reputation
+			Server Level
+			Server XP
+			Messages
+			Voice Activity
+
+		Display:
+			ranking position
+			username
+			value
+			user highlighting when present
+
+		Add pagination support where necessary
+
+	Balance Command Improvements
+		Review and polish:
+			/balance
+
+		Requirements:
+			Upgrade embed design
+			Improve information hierarchy
+
+		Display:
+			current balance
+			global reputation
+			leaderboard position
+			recent economy activity
+
+		Improve mobile readability
+		Ensure consistency with Pulse v2 styling
+
+	Pay Command Improvements
+		Review and polish:
+			/pay
+
+		Requirements:
+			Improve validation messages
+			Improve success messages
+			Improve transfer confirmation embeds
+			Display sender and recipient clearly
+			Prevent invalid transfers
+			Improve error handling
+
+	Economy Guide Command
+		Create a new:
+			/earn
+		command.
+
+		Purpose:
+			Help members understand how to earn Pulse Balance, Reputation, XP, and Levels.
+
+		Requirements:
+			Display a paginated experience.
+
+		Page 1 — Global Economy
+			Display global ways to earn:
+				event participation
+				giveaway participation
+				giveaway wins
+				onboarding completion
+				reputation milestones
+				achievements
+				community contributions
+				special rewards
+				future marketplace rewards
+
+			Explain which rewards contribute to:
+				Global Balance
+				Global Reputation
+
+		Page 2 — Server Progression
+			Display server-specific progression methods:
+				messages sent
+				voice activity
+				active participation
+				server events
+				configured server rewards
+				level progression
+
+			Explain which rewards contribute to:
+				Server XP
+				Server Levels
+
+	Embed & UI Improvements
+		Review all economy-related command embeds
+
+		Requirements:
+			Use Pulse v2 embed standards
+			Improve spacing and readability
+			Add appropriate icons
+			Add footer consistency
+			Add page indicators
+			Add button navigation where applicable
+
+	Command Icons
+		Review:
+			/balance
+			/pay
+			/leaderboard
+			/earn
+
+		Add consistent Pulse command icons
+
+	Validation & Error Handling
+		Prevent invalid economy actions
+		Add user-friendly error messages
+		Handle missing economy data gracefully
+		Handle unavailable leaderboard data gracefully
+
+Acceptance Criteria
+	/leaderboard allows users to choose leaderboard type
+	Leaderboards display accurate rankings
+	/balance displays improved economy information
+	/pay provides clearer validation and feedback
+	/earn explains both global and server-specific earning methods
+	Economy embeds follow Pulse v2 styling
+	Pagination and navigation function correctly
+	Commands remain responsive and visually polished

@@ -49,7 +49,7 @@ const td = (content: string) => ({ type: 10, content })
  * Build the milestone congratulations container exactly as the bot does
  * (milestones.js milestoneContainer): a header Section carrying the milestone
  * badge, the rendered message, an optional "Unlocked roles" line, and the
- * `Pulse · Milestone` footer. Used by the "Send test" preview so what the admin
+ * `Pulse — Milestone` footer. Used by the "Send test" preview so what the admin
  * sees is what members will get.
  */
 function milestoneContainer(opts: {
@@ -71,9 +71,9 @@ function milestoneContainer(opts: {
   const body: Record<string, unknown>[] = [...header]
   body.push(td(opts.rendered))
   if (opts.rewardRoleIds.length > 0) {
-    body.push(td(`-# 🎁 Unlocked: ${opts.rewardRoleIds.map((id) => `<@&${id}>`).join(', ')}`))
+    body.push(td(`-# Unlocked: ${opts.rewardRoleIds.map((id) => `<@&${id}>`).join(', ')}`))
   }
-  body.push(td('-# Pulse · Milestone'))
+  body.push(td('-# Pulse — Milestone'))
   return { type: 17, accent_color: BRAND, components: body } as unknown as V2TopLevelComponent
 }
 

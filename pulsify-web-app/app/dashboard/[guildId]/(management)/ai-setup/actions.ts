@@ -114,8 +114,8 @@ function hexToInt(hex: string): number {
 // gets the right icon + footer.
 type ContentKind = 'rules' | 'onboarding'
 const CONTENT_META: Record<ContentKind, { icon: string; footer: string }> = {
-  rules:      { icon: 'pulse-rules.png',      footer: 'Pulse · Server Rules' },
-  onboarding: { icon: 'pulse-onboarding.png', footer: 'Pulse · Onboarding Guide' },
+  rules:      { icon: 'pulse-info.png',       footer: 'Pulse — Server Rules' },
+  onboarding: { icon: 'pulse-onboarding.png', footer: 'Pulse — Onboarding Guide' },
 }
 
 // Load + cache an icon buffer from public/. Absent ⇒ null (the header then
@@ -142,7 +142,7 @@ const WIDTH_SPACER: V2TextDisplay = { type: 10, content: `-# ${'⠀'.repeat(44)}
  * onboarding), matching the standardized Pulse v2 embed style used by
  * /changelog and announcements: a `Pulse` label + `# title` heading beside the
  * block's branded badge (type-9 Section), a width spacer, the body, then a
- * divider and a `Pulse · …` footer. Returns the container plus the icon
+ * divider and a `Pulse — …` footer. Returns the container plus the icon
  * attachment to post alongside it (empty when the icon couldn't be loaded).
  */
 function buildContentMessage(
