@@ -21,6 +21,8 @@ const {
   buildPulseContainer,
   getPulseColor,
   loadPulseIcon,
+  replyNotice,
+  editNotice,
   text,
   divider,
 } = require("./commands");
@@ -48,7 +50,7 @@ const METRIC_META = {
 };
 
 const DEFAULT_MILESTONE_MESSAGE =
-  "🎉 Congratulations {mention} — you reached the **{milestone}** milestone in {server}!";
+  "Congratulations {mention} — you reached the **{milestone}** milestone in {server}!";
 
 const MILESTONE_LIMITS = {
   maxName: 80,
@@ -374,7 +376,7 @@ function createMilestones(client, supabase, rewards = null) {
     });
     const body = [text(rendered)];
     if (milestone.rewards.length > 0) {
-      body.push(text(`-# 🎁 Unlocked: ${milestone.rewards.map((r) => `<@&${r.role_id}>`).join(", ")}`));
+      body.push(text(`-# Unlocked: ${milestone.rewards.map((r) => `<@&${r.role_id}>`).join(", ")}`));
     }
     const container = buildPulseContainer({
       iconUrl: icon ? `attachment://${icon.name}` : member.displayAvatarURL({ size: 128 }),
@@ -382,7 +384,7 @@ function createMilestones(client, supabase, rewards = null) {
       title: milestone.name,
       subtitle: member.displayName,
       body,
-      footer: "Pulse · Milestone",
+      footer: "Pulse — Milestone",
     });
     return { container, files: icon ? [icon] : [] };
   }
@@ -585,7 +587,7 @@ function createMilestones(client, supabase, rewards = null) {
             title,
             subtitle: guild.name,
             body: [text("This server hasn't set up any milestones yet.")],
-            footer: "Pulse · Milestones",
+            footer: "Pulse — Milestones",
           }),
         ],
       };
@@ -638,7 +640,7 @@ function createMilestones(client, supabase, rewards = null) {
     ]);
 
     const body = [];
-    const pageLabel = totalPages > 1 ? ` · Page ${safePage + 1}/${totalPages}` : "";
+    const pageLabel = totalPages > 1 ? ` — Page ${safePage + 1}/${totalPages}` : "";
     body.push(text(`Earned **${earned.length}** of **${defs.length}** milestones.${pageLabel}`));
 
     if (cardsImg) {
@@ -653,8 +655,8 @@ function createMilestones(client, supabase, rewards = null) {
           pageItems
             .map((it) =>
               isItemEarned(it)
-                ? `✅ **${it.def.name}** — ${describeThresholdLong(it.def.metric, it.def.threshold)}`
-                : `🔒 **${it.def.name}** — ${formatMetricValueLong(it.def.metric, it.value)} / ` +
+                ? `**${it.def.name}** — ${describeThresholdLong(it.def.metric, it.def.threshold)} *(earned)*`
+                : `**${it.def.name}** — ${formatMetricValueLong(it.def.metric, it.value)} / ` +
                   `${describeThresholdLong(it.def.metric, it.def.threshold)} (${it.prog.pct}%)`,
             )
             .join("\n"),
@@ -667,8 +669,8 @@ function createMilestones(client, supabase, rewards = null) {
       body.push({
         type: 1,
         components: [
-          { type: 2, style: 2, label: "◀ Previous", custom_id: `ms:pg:${member.id}:${safePage - 1}`, disabled: safePage <= 0 },
-          { type: 2, style: 2, label: "Next ▶", custom_id: `ms:pg:${member.id}:${safePage + 1}`, disabled: safePage >= totalPages - 1 },
+          { type: 2, style: 2, label: "Previous", custom_id: `ms:pg:${member.id}:${safePage - 1}`, disabled: safePage <= 0 },
+          { type: 2, style: 2, label: "Next", custom_id: `ms:pg:${member.id}:${safePage + 1}`, disabled: safePage >= totalPages - 1 },
         ],
       });
     }
@@ -689,7 +691,7 @@ function createMilestones(client, supabase, rewards = null) {
           title,
           subtitle: guild.name,
           body,
-          footer: "Pulse · Milestones",
+          footer: "Pulse — Milestones",
           // A full-width image defines the width; skip the spacer (like /profile).
           noSpacer: !!(cardsImg || bannerImg),
         }),
@@ -704,7 +706,7 @@ function createMilestones(client, supabase, rewards = null) {
     const user = interaction.options.getUser("user") ?? interaction.user;
     const member = await guild.members.fetch(user.id).catch(() => null);
     if (!member) {
-      await interaction.editReply({ content: "That member isn't in this server." });
+      await editNotice(interaction, "That member isn't in this server.");
       return;
     }
     const page = await buildMilestonesPage(guild, member, user.id === interaction.user.id);
@@ -732,8 +734,7 @@ function createMilestones(client, supabase, rewards = null) {
 
       const member = await guild.members.fetch(userId).catch(() => null);
       if (!member) {
-        await interaction
-          .reply({ content: "That member isn't in this server.", flags: MessageFlags.Ephemeral })
+        await replyNotice(interaction, "That member isn't in this server.")
           .catch(() => {});
         return;
       }
@@ -764,7 +765,7 @@ function createMilestones(client, supabase, rewards = null) {
     } catch (err) {
       console.error("[Pulse] Milestone interaction failed:", err.message);
       if (interaction && !interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: "Something went wrong.", flags: MessageFlags.Ephemeral }).catch(() => {});
+        await replyNotice(interaction, "Something went wrong.").catch(() => {});
       }
     }
   }

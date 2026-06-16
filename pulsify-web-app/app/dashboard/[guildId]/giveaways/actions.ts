@@ -122,7 +122,7 @@ function activeContainer(g: {
   const endUnix = Math.floor(new Date(g.ends_at).getTime() / 1000)
   // No literal 🎉 prefix — preset titles already carry one and the badge brands
   // the embed. Description (or a fallback blurb) rides in the header beside the
-  // badge so the top isn't half-empty; requirements collapse to one · line.
+  // badge so the top isn't half-empty; requirements collapse to one — line.
   const subtitle = g.description ? g.description.slice(0, 1500) : JOIN_BLURB
   const body: Record<string, unknown>[] = [...headerBlocks(g.title, subtitle)]
   body.push(
@@ -134,7 +134,7 @@ function activeContainer(g: {
   )
   if (hasRequirements(req)) {
     // Role mentions (<@&id>) so Discord renders names — matches the bot's embed.
-    const summary = describeRequirements(req, (id) => `<@&${id}>`).join(' · ')
+    const summary = describeRequirements(req, (id) => `<@&${id}>`).join(' — ')
     body.push(td(`-# **Requirements:** ${summary}`))
   }
   if (g.host_id || g.host_name) body.push(td(`-# Hosted by ${g.host_id ? `<@${g.host_id}>` : g.host_name}`))
@@ -152,7 +152,7 @@ function activeContainer(g: {
       },
     ],
   })
-  body.push(td('-# Pulse · Giveaway'))
+  body.push(td('-# Pulse — Giveaway'))
   return { type: 17, accent_color: BRAND, components: body } as unknown as V2TopLevelComponent
 }
 
@@ -163,7 +163,7 @@ function cancelledContainer(g: { title: string; description: string | null; priz
   if (g.description) body.push(td(g.description.slice(0, 1500)))
   body.push({ type: 14, divider: true, spacing: 1 })
   body.push(td('This giveaway was cancelled.'))
-  body.push(td('-# Pulse · Giveaway cancelled'))
+  body.push(td('-# Pulse — Giveaway cancelled'))
   return { type: 17, accent_color: GREY, components: body } as unknown as V2TopLevelComponent
 }
 

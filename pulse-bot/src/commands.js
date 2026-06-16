@@ -34,7 +34,7 @@ const DEFAULT_PULSE_COLOR = "#8b5cf6";
 // ── Themed Components V2 helpers ─────────────────────────────────────────────
 // Every command reply shares one look: a header Section carrying a
 // thumbnail (the Pulse badge, or — for server/user info — the server icon /
-// member avatar), the body, and a subtle `-# Pulse · …` footer. The Pulse
+// member avatar), the body, and a subtle `-# Pulse — …` footer. The Pulse
 // badge is fetched from the web app's tint endpoint (one shared recolour
 // pipeline) and falls back to the bundled PNG so a reply always renders. Keep
 // emoji out — the accent bar + glyph carry the branding.
@@ -43,9 +43,13 @@ const ICON_FILES = {
   help: "pulse-help.png",
   announcement: "pulse-annoucement.png",
   milestone: "pulse-milestone.png",
-  // Leveling (/rank, /leaderboard) header glyph.
+  // Ranking / progression glyph (server boards, /rank).
   stats: "pulse-stats.png",
-  // Global economy (/wallet, /pay) header glyph.
+  // Trophy glyph — the /leaderboard boards.
+  leaderboard: "pulse-leaderboard.png",
+  // Info glyph — the /info guide (also the posted Server Rules badge).
+  info: "pulse-info.png",
+  // Global economy glyph (/balance, /pay, /earn, global boards).
   money: "pulse-money.png",
 };
 const localIconCache = {};
@@ -141,7 +145,9 @@ async function loadPulseIcon(iconKey, colorHex) {
  * Build a themed Components V2 container. `body` is an array of pre-built V2
  * components (use text()/divider()). `iconUrl` is the header thumbnail — either
  * an `attachment://<name>` reference or an external https URL (server icon /
- * avatar). When omitted the header renders without a thumbnail.
+ * avatar). When omitted the header renders without a thumbnail. `actions` is an
+ * array of action rows (buttons / select menus) rendered inside the container,
+ * below the footer, so interactive controls sit within the embed itself.
  */
 function buildPulseContainer({
   iconUrl,
@@ -150,6 +156,7 @@ function buildPulseContainer({
   subtitle,
   body = [],
   footer,
+  actions = [],
   noSpacer = false,
 }) {
   const colorInt = parseInt(colorHex.replace("#", ""), 16);
@@ -174,6 +181,7 @@ function buildPulseContainer({
 
   for (const c of body) components.push(c);
   if (footer) components.push(text(`-# ${footer}`));
+  for (const row of actions) if (row) components.push(row);
 
   return {
     type: 17,
@@ -195,6 +203,50 @@ async function replyContainer(interaction, container, file, ephemeral = true) {
     components: [container],
     files: file ? [file] : [],
   });
+}
+
+/**
+ * A minimal Components V2 container for the bot's short status messages —
+ * validations, errors, "already claimed", "not available", confirmations.
+ * Deliberately bare: just the accent bar + the message text (no header glyph,
+ * no thumbnail, no footer). One line in, one tidy embed out. Keep it emoji-free
+ * like every other Pulse embed.
+ */
+function buildNoticeContainer(message, colorHex = DEFAULT_PULSE_COLOR) {
+  const colorInt = parseInt(String(colorHex).replace("#", ""), 16);
+  return {
+    type: 17,
+    accent_color: Number.isNaN(colorInt) ? ACCENT : colorInt,
+    components: [text(message)],
+  };
+}
+
+/**
+ * Reply (or follow up, if the interaction was already answered) with a notice
+ * container. Ephemeral by default — these are personal status messages. Pass a
+ * `colorHex` when the guild accent is already on hand; otherwise it falls back
+ * to Pulse violet (no extra DB read on an error path).
+ */
+async function replyNotice(interaction, message, ephemeral = true, colorHex = DEFAULT_PULSE_COLOR) {
+  const payload = {
+    flags: MessageFlags.IsComponentsV2 | (ephemeral ? MessageFlags.Ephemeral : 0),
+    components: [buildNoticeContainer(message, colorHex)],
+  };
+  if (interaction.replied || interaction.deferred) {
+    await interaction.followUp(payload).catch(() => {});
+  } else {
+    await interaction.reply(payload).catch(() => {});
+  }
+}
+
+/** Like replyNotice but edits a deferred/earlier reply in place. */
+async function editNotice(interaction, message, colorHex = DEFAULT_PULSE_COLOR) {
+  await interaction
+    .editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [buildNoticeContainer(message, colorHex)],
+    })
+    .catch(() => {});
 }
 
 // ── Version / update embed helpers ───────────────────────────────────────────
@@ -273,6 +325,106 @@ function helpLinkButtonRow(guildId, member) {
   return { type: 1, components: links };
 }
 
+// /help shows a flat list (no category grouping) paginated at this many per
+// page, so each page stays short and scannable.
+const HELP_PER_PAGE = 5;
+
+/** Build the /help prev/next row (omitted when everything fits one page). */
+function helpNavRow(viewerId, page, totalPages) {
+  if (totalPages <= 1) return null;
+  return {
+    type: 1,
+    components: [
+      {
+        type: 2,
+        style: 2,
+        label: "Previous",
+        custom_id: `help:nav:${viewerId}:${page - 1}`,
+        disabled: page <= 0,
+      },
+      {
+        type: 2,
+        style: 2,
+        label: "Next",
+        custom_id: `help:nav:${viewerId}:${page + 1}`,
+        disabled: page >= totalPages - 1,
+      },
+    ],
+  };
+}
+
+/**
+ * Render a /help page for `member`: a single flat, paginated list of the
+ * commands they're allowed to run (admin-only entries hidden from non-admins),
+ * HELP_PER_PAGE per page, with prev/next + the link button row. Returns
+ * `{ components, files }` for both the initial reply and pagination updates.
+ */
+async function renderHelp({ supabase, guild, member, getAllowedCommands, page }) {
+  const colorHex = await getPulseColor(supabase, guild.id);
+  const icon = await loadPulseIcon("help", colorHex);
+  const allowed = await getAllowedCommands(supabase, guild, member);
+
+  // Flatten to one list — no category grouping, for a cleaner read.
+  const entries = [];
+  for (const entry of allowed) {
+    const level = effectiveCommandPermission(entry.def, entry.config);
+    if (level === "admin" && !memberIsAdmin(member)) continue;
+    entries.push(entry);
+  }
+
+  const total = entries.length;
+  const totalPages = Math.max(1, Math.ceil(total / HELP_PER_PAGE));
+  const safePage = Math.min(Math.max(0, page), totalPages - 1);
+  const start = safePage * HELP_PER_PAGE;
+
+  const body = [];
+  if (total === 0) {
+    body.push(lead("No commands are available to you in this server right now."));
+  } else {
+    body.push(
+      lead(`You can run ${total} command${total === 1 ? "" : "s"} in ${guild.name}.`),
+    );
+    body.push(
+      text(
+        "-# Arguments use `<required>` and `[optional]`. Admin-only commands are only shown to server admins.",
+      ),
+    );
+    body.push(divider());
+    const lines = entries
+      .slice(start, start + HELP_PER_PAGE)
+      .map(({ def, config }) => {
+        const usage = `\`${commandUsage(def)}\``;
+        const level = effectiveCommandPermission(def, config);
+        return `${usage}\n${def.data.description}\n-# ${commandAccessLabel(level)}`;
+      })
+      .join("\n\n");
+    body.push(text(lines));
+    if (totalPages > 1) {
+      body.push(divider());
+      body.push(text(`-# Page ${safePage + 1} of ${totalPages}`));
+    }
+  }
+
+  const actions = [
+    helpNavRow(member.id, safePage, totalPages),
+    helpLinkButtonRow(guild.id, member),
+  ];
+
+  const components = [
+    buildPulseContainer({
+      iconUrl: icon ? `attachment://${icon.name}` : null,
+      colorHex,
+      title: "Command Menu",
+      subtitle: `Pulse — ${guild.name}`,
+      body,
+      footer: "Pulse — Help",
+      actions,
+    }),
+  ];
+
+  return { components, files: icon ? [icon] : [] };
+}
+
 /** Render a release's highlights as a bulleted text block (trimmed + capped). */
 function highlightsBlock(highlights) {
   const shown = (highlights ?? []).slice(0, HIGHLIGHT_MAX);
@@ -315,9 +467,9 @@ function buildChangelogContainer(release, { colorHex, icon, guildId } = {}) {
     title: release.title,
     // Version as a monospace badge alongside the release date — a subtle,
     // professional accent under the title.
-    subtitle: `Pulse \`v${release.version}\` · Released ${release.date}`,
+    subtitle: `Pulse \`v${release.version}\` — Released ${release.date}`,
     body,
-    footer: "Pulse · Change Log",
+    footer: "Pulse — Change Log",
   });
 }
 
@@ -337,7 +489,7 @@ function buildUnavailableContainer(colorHex, guildId, icon, message) {
       ),
       linkButtonRow(guildId),
     ],
-    footer: "Pulse · Try again shortly",
+    footer: "Pulse — Try again shortly",
   });
 }
 
@@ -545,13 +697,6 @@ async function fetchOwnedCosmetics(supabase, userId) {
   }
 }
 
-const CATEGORY_LABELS = {
-  utility: "Utility",
-  information: "Information",
-  insights: "Insights",
-  moderation: "Moderation",
-};
-
 function effectiveCommandPermission(def, config) {
   return config.permission_level === "inherit"
     ? def.defaultPermission
@@ -596,74 +741,18 @@ const COMMANDS = [
       getAllowedCommands,
       ephemeral,
     }) {
-      const colorHex = await getPulseColor(supabase, guild.id);
-      const icon = await loadPulseIcon("help", colorHex);
-      const allowed = await getAllowedCommands(
+      const payload = await renderHelp({
         supabase,
         guild,
-        interaction.member,
-      );
-
-      const byCategory = new Map();
-      for (const entry of allowed) {
-        const level = effectiveCommandPermission(entry.def, entry.config);
-        if (level === "admin" && !memberIsAdmin(interaction.member)) continue;
-
-        const category = entry.config.category ?? entry.def.category;
-        if (!byCategory.has(category)) byCategory.set(category, []);
-        byCategory.get(category).push(entry);
-      }
-
-      const visibleCount = [...byCategory.values()].reduce(
-        (sum, entries) => sum + entries.length,
-        0,
-      );
-      const body = [];
-      if (visibleCount === 0) {
-        body.push(
-          lead("No commands are available to you in this server right now."),
-        );
-      } else {
-        body.push(
-          lead(
-            `You can run ${visibleCount} command${visibleCount === 1 ? "" : "s"} in ${guild.name}.`,
-          ),
-        );
-        body.push(
-          text(
-            "-# Arguments use `<required>` and `[optional]`. Admin-only commands are only shown to server admins.",
-          ),
-        );
-        for (const [category, entries] of byCategory) {
-          const lines = entries
-            .map(({ def, config }) => {
-              const usage = `\`${commandUsage(def)}\``;
-              const level = effectiveCommandPermission(def, config);
-              return `${usage}\n${def.data.description}\n-# ${commandAccessLabel(level)}`;
-            })
-            .join("\n\n");
-          body.push(divider());
-          body.push(
-            text(`**${CATEGORY_LABELS[category] ?? category}**\n${lines}`),
-          );
-        }
-      }
-
-      body.push(helpLinkButtonRow(guild.id, interaction.member));
-
-      await replyContainer(
-        interaction,
-        buildPulseContainer({
-          iconUrl: icon ? `attachment://${icon.name}` : null,
-          colorHex,
-          title: "Command Menu",
-          subtitle: `Pulse · ${guild.name}`,
-          body,
-          footer: "Pulse · Help",
-        }),
-        icon,
-        ephemeral,
-      );
+        member: interaction.member,
+        getAllowedCommands,
+        page: 0,
+      });
+      await interaction.reply({
+        ...payload,
+        flags:
+          MessageFlags.IsComponentsV2 | (ephemeral ? MessageFlags.Ephemeral : 0),
+      });
     },
   },
   {
@@ -788,7 +877,7 @@ const COMMANDS = [
           rep: {
             pct: rep.score,
             label: "Reputation",
-            detail: `${rep.score}/100 · ${rep.tier}`,
+            detail: `${rep.score}/100 — ${rep.tier}`,
           },
           level: levelingOn
             ? {
@@ -824,7 +913,7 @@ const COMMANDS = [
         // Unicode fallback when the image can't be fetched — same headings.
         body.push(
           text(
-            `**Reputation** ${rep.score}/100 · ${rep.tier}\n\`${unicodeBar(rep.score)}\``,
+            `**Reputation** ${rep.score}/100 — ${rep.tier}\n\`${unicodeBar(rep.score)}\``,
           ),
         );
         if (levelingOn) {
@@ -837,7 +926,7 @@ const COMMANDS = [
       }
       body.push(
         text(
-          "-# Balance & reputation are global across every Pulse server · level is specific to this server",
+          "-# Balance & reputation are global across every Pulse server — level is specific to this server",
         ),
       );
 
@@ -858,7 +947,7 @@ const COMMANDS = [
         body.push(divider());
         body.push(
           text(
-            `**Badges & cosmetics**\n${cosmetics.map((c) => `\`${c.name}\``).join(" · ")}`,
+            `**Badges & cosmetics**\n${cosmetics.map((c) => `\`${c.name}\``).join(" — ")}`,
           ),
         );
       }
@@ -936,9 +1025,9 @@ const COMMANDS = [
             iconUrl: avatarUrl,
             colorHex,
             title: `**${displayName}**`,
-            subtitle: `${rep.tier}${levelingOn ? ` · Level ${prog.level}` : ""}`,
+            subtitle: `${rep.tier}${levelingOn ? ` — Level ${prog.level}` : ""}`,
             body,
-            footer: "Pulse · Member profile",
+            footer: "Pulse — Member profile",
             noSpacer: true,
           }),
         ],
@@ -1013,23 +1102,20 @@ const COMMANDS = [
       ),
     async execute({ interaction, guild, milestones, ephemeral }) {
       if (!milestones?.handleMilestonesCommand) {
-        await interaction.reply({
-          content: "Milestones aren't available right now.",
-          flags: MessageFlags.Ephemeral,
-        });
+        await replyNotice(interaction, "Milestones aren't available right now.");
         return;
       }
       await milestones.handleMilestonesCommand({ interaction, guild, ephemeral });
     },
   },
   {
-    name: "wallet",
+    name: "balance",
     category: "information",
     defaultPermission: PERMISSION.EVERYONE,
     data: new SlashCommandBuilder()
-      .setName("wallet")
+      .setName("balance")
       .setDescription(
-        "Show a member's global Pulse balance and reputation",
+        "Show a member's global Pulse balance, reputation and ranking",
       )
       .addUserOption((o) =>
         o
@@ -1038,14 +1124,59 @@ const COMMANDS = [
           .setRequired(false),
       ),
     async execute({ interaction, guild, economy, ephemeral }) {
-      if (!economy?.handleWalletCommand) {
-        await interaction.reply({
-          content: "The Pulse economy isn't available right now.",
-          flags: MessageFlags.Ephemeral,
-        });
+      if (!economy?.handleBalanceCommand) {
+        await replyNotice(interaction, "The Pulse economy isn't available right now.");
         return;
       }
-      await economy.handleWalletCommand({ interaction, guild, ephemeral });
+      await economy.handleBalanceCommand({ interaction, guild, ephemeral });
+    },
+  },
+  {
+    name: "leaderboard",
+    category: "information",
+    defaultPermission: PERMISSION.EVERYONE,
+    data: new SlashCommandBuilder()
+      .setName("leaderboard")
+      .setDescription(
+        "View Pulse leaderboards — balance, reputation, levels, XP and activity",
+      )
+      .addStringOption((o) =>
+        o
+          .setName("type")
+          .setDescription("Which leaderboard to open first (you can switch in the menu)")
+          .setRequired(false)
+          .addChoices(
+            { name: "Global Balance", value: "balance" },
+            { name: "Global Reputation", value: "reputation" },
+            { name: "Server Level", value: "level" },
+            { name: "Server XP", value: "xp" },
+            { name: "Messages", value: "messages" },
+            { name: "Voice Activity", value: "voice" },
+          ),
+      ),
+    async execute({ interaction, guild, economy, ephemeral }) {
+      if (!economy?.handleLeaderboardCommand) {
+        await replyNotice(interaction, "The Pulse economy isn't available right now.");
+        return;
+      }
+      await economy.handleLeaderboardCommand({ interaction, guild, ephemeral });
+    },
+  },
+  {
+    name: "info",
+    category: "information",
+    defaultPermission: PERMISSION.EVERYONE,
+    data: new SlashCommandBuilder()
+      .setName("info")
+      .setDescription(
+        "Learn how to earn Pulse Balance, Reputation, XP and Levels",
+      ),
+    async execute({ interaction, guild, economy, ephemeral }) {
+      if (!economy?.handleInfoCommand) {
+        await replyNotice(interaction, "The Pulse economy isn't available right now.");
+        return;
+      }
+      await economy.handleInfoCommand({ interaction, guild, ephemeral });
     },
   },
   {
@@ -1081,10 +1212,7 @@ const COMMANDS = [
       ),
     async execute({ interaction, guild, economy, ephemeral }) {
       if (!economy?.handlePayCommand) {
-        await interaction.reply({
-          content: "The Pulse economy isn't available right now.",
-          flags: MessageFlags.Ephemeral,
-        });
+        await replyNotice(interaction, "The Pulse economy isn't available right now.");
         return;
       }
       await economy.handlePayCommand({ interaction, guild, ephemeral });
@@ -1099,7 +1227,7 @@ const COMMANDS = [
       .setDescription("Claim your daily Pulse Coins reward and build a streak"),
     async execute({ interaction, guild, economyRewards, ephemeral }) {
       if (!economyRewards?.handleClaimCommand) {
-        await interaction.reply({ content: "Rewards aren't available right now.", flags: MessageFlags.Ephemeral });
+        await replyNotice(interaction, "Rewards aren't available right now.");
         return;
       }
       await economyRewards.handleClaimCommand({ interaction, guild, ephemeral }, "daily");
@@ -1114,7 +1242,7 @@ const COMMANDS = [
       .setDescription("Claim your weekly Pulse Coins reward and build a streak"),
     async execute({ interaction, guild, economyRewards, ephemeral }) {
       if (!economyRewards?.handleClaimCommand) {
-        await interaction.reply({ content: "Rewards aren't available right now.", flags: MessageFlags.Ephemeral });
+        await replyNotice(interaction, "Rewards aren't available right now.");
         return;
       }
       await economyRewards.handleClaimCommand({ interaction, guild, ephemeral }, "weekly");
@@ -1141,12 +1269,18 @@ module.exports = {
   COMMANDS,
   COMMANDS_BY_NAME,
   defaultMemberPermissionsFor,
+  // /help page renderer — reused by index.js to drive prev/next pagination.
+  renderHelp,
   // Shared embed helpers — reused by other modules (e.g. leveling.js for the
   // /rank + /leaderboard replies) so every Pulse embed shares one look.
   buildPulseContainer,
   getPulseColor,
   loadPulseIcon,
   replyContainer,
+  // Bare notice embeds for short status/validation/error messages.
+  buildNoticeContainer,
+  replyNotice,
+  editNotice,
   text,
   divider,
 };

@@ -18,11 +18,26 @@ const path = require("node:path");
 // Current Pulse version. Used for the startup banner and as the displayed
 // version when no release files are reachable. Keep this in step with the
 // newest resources/notes/vX.Y.Z.txt on each release.
-const PULSE_VERSION = "0.48.0";
+const PULSE_VERSION = "0.49.0";
 
 // Manual/static fallback used only when the release-notes files can't be read.
 // Mirrors the shape produced by the parser so callers don't special-case it.
 const STATIC_RELEASES = [
+  {
+    version: "0.49.0",
+    title: "Economy Commands & Earning Visibility",
+    date: "Jun 16, 2026",
+    description:
+      "A polish pass on the in-Discord economy: a flexible /leaderboard, a redesigned /balance, clearer /pay, and a new /earn guide that explains exactly how to earn.",
+    highlights: [
+      "**/leaderboard** — one command, six boards: Global Balance, Global Reputation, Server Level, Server XP, Messages and Voice Activity. Switch with a menu, page through the rankings, and see your own position highlighted.",
+      "**/earn** — a two-page guide to earning everything: global Balance & Reputation on page one, server XP & Levels on page two.",
+      "**/balance** (was /wallet) — a cleaner layout with your leaderboard position, reputation, lifetime totals and recent activity, tuned for mobile.",
+      "**/pay** — friendlier validation, a clearer success embed and an unmistakable from → to transfer summary.",
+    ],
+    outro:
+      "Members can now see where they stand and exactly how to climb — all without leaving Discord.",
+  },
   {
     version: "0.48.0",
     title: "Integrations Polish & Reliability",

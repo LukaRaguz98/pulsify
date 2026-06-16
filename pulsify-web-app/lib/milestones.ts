@@ -153,7 +153,7 @@ export type MemberMetrics = {
 }
 
 export const DEFAULT_MILESTONE_MESSAGE =
-  '🎉 Congratulations {mention} — you reached the **{milestone}** milestone in {server}!'
+  'Congratulations {mention} — you reached the **{milestone}** milestone in {server}!'
 
 export const MILESTONE_LIMITS = {
   maxName: 80,

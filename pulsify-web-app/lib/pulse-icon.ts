@@ -32,9 +32,13 @@ export const PULSE_ICONS = {
   announcement: 'pulse-annoucement.png',
   /** Milestone glyph — the member-milestone embed posted on completion. */
   milestone: 'pulse-milestone.png',
-  /** Stats glyph — the bot's /rank and /leaderboard replies. */
+  /** Stats glyph — the bot's server progression boards (/rank). */
   stats: 'pulse-stats.png',
-  /** Coin glyph — the global-economy embeds (/wallet, /pay). */
+  /** Trophy glyph — the bot's /leaderboard boards. */
+  leaderboard: 'pulse-leaderboard.png',
+  /** Info glyph — the bot's /info guide (also the posted Server Rules badge). */
+  info: 'pulse-info.png',
+  /** Coin glyph — the global-economy embeds (/balance, /pay, /earn). */
   money: 'pulse-money.png',
 } as const
 

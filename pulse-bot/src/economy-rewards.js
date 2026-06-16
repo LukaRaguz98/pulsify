@@ -20,6 +20,8 @@ const {
   getPulseColor,
   loadPulseIcon,
   replyContainer,
+  replyNotice,
+  buildNoticeContainer,
   text,
   divider,
 } = require("./commands");
@@ -544,7 +546,12 @@ function createEconomyRewards(client, supabase, economy) {
       const user = await client.users.fetch(userId).catch(() => null);
       if (!user) return;
       await user.send({
-        content: `🪙 You earned **${fmt(amount)} Pulse Coins** — ${label}${guildName ? ` in ${guildName}` : ""}.`,
+        flags: MessageFlags.IsComponentsV2,
+        components: [
+          buildNoticeContainer(
+            `You earned **${fmt(amount)} Pulse Coins** — ${label}${guildName ? ` in ${guildName}` : ""}.`,
+          ),
+        ],
       });
     } catch {
       /* DMs closed — ignore */
@@ -847,26 +854,23 @@ function createEconomyRewards(client, supabase, economy) {
     const colorHex = await getPulseColor(supabase, guild.id);
     const member = interaction.member && interaction.member.roles ? interaction.member : await guild.members.fetch(interaction.user.id).catch(() => null);
     if (!member) {
-      await interaction.reply({ content: "Couldn't find your membership.", flags: MessageFlags.Ephemeral });
+      await replyNotice(interaction, "Couldn't find your membership.");
       return;
     }
     const res = await claim(guild, member, kind);
     const label = kind === "weekly" ? "Weekly reward" : "Daily reward";
 
     if (res.disabled) {
-      await interaction.reply({ content: `The ${kind} reward isn't enabled in this server.`, flags: MessageFlags.Ephemeral });
+      await replyNotice(interaction, `The ${kind} reward isn't enabled in this server.`);
       return;
     }
     if (res.error) {
-      await interaction.reply({ content: "Something went wrong claiming your reward. Try again in a moment.", flags: MessageFlags.Ephemeral });
+      await replyNotice(interaction, "Something went wrong claiming your reward. Try again in a moment.");
       return;
     }
     if (!res.claimed) {
       const next = Math.floor((Date.now() + (res.nextInMs ?? 0)) / 1000);
-      await interaction.reply({
-        content: `You've already claimed your ${kind} reward. Come back <t:${next}:R>.`,
-        flags: MessageFlags.Ephemeral,
-      });
+      await replyNotice(interaction, `You've already claimed your ${kind} reward. Come back <t:${next}:R>.`);
       return;
     }
 
@@ -875,7 +879,7 @@ function createEconomyRewards(client, supabase, economy) {
       text(`You claimed your ${kind} reward!`),
       divider(),
       text(`**+${fmt(res.amount)} Pulse Coins**` + (res.result.streakBonus + res.result.milestoneBonus > 0 ? `\n-# Includes a streak bonus` : "")),
-      text(`**${res.streak}-${kind === "weekly" ? "week" : "day"} streak** 🔥\n-# New balance: ${fmt(res.balance)} coins`),
+      text(`**${res.streak}-${kind === "weekly" ? "week" : "day"} streak**\n-# New balance: ${fmt(res.balance)} coins`),
     ];
     await replyContainer(
       interaction,
@@ -885,7 +889,7 @@ function createEconomyRewards(client, supabase, economy) {
         title: label,
         subtitle: member.displayName,
         body,
-        footer: "Pulse · Global economy",
+        footer: "Pulse — Global economy",
       }),
       icon,
       ephemeral,

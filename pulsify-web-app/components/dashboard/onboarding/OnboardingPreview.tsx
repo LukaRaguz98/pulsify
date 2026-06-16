@@ -77,7 +77,7 @@ export function OnboardingPreview({
             )
           )}
 
-          {/* Step blocks (roles · events · community · rewards) */}
+          {/* Step blocks (roles — events — community — rewards) */}
           {ordered.map((s) => {
             if (s.id === 'roles' && config.roleCategories.length > 0) {
               return (
@@ -105,7 +105,7 @@ export function OnboardingPreview({
                     <div style={{ color: '#949ba4' }}>No events scheduled.</div>
                   ) : list.map((ev) => (
                     <div key={ev.id} className="border-l-2 pl-2.5" style={{ color: '#dbdee1', borderColor: '#3f4147' }}>
-                      <strong style={{ color: '#fff' }}>{ev.name}</strong> · <span style={{ color: '#949ba4' }}>{new Date(ev.scheduled_start_time).toLocaleDateString()}</span>
+                      <strong style={{ color: '#fff' }}>{ev.name}</strong> — <span style={{ color: '#949ba4' }}>{new Date(ev.scheduled_start_time).toLocaleDateString()}</span>
                     </div>
                   ))}
                 </div>
@@ -175,7 +175,7 @@ export function OnboardingPreview({
           {/* Footer */}
           <Divider />
           <div className="text-[11px]" style={{ color: '#949ba4' }}>
-            {w.footer_text ? resolve(w.footer_text) : 'Pulse · Welcome'}
+            {w.footer_text ? resolve(w.footer_text) : 'Pulse — Welcome'}
           </div>
         </div>
       </div>

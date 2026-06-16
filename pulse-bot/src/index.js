@@ -15,7 +15,7 @@ const { createClient } = require("@supabase/supabase-js");
 const { createAnalytics } = require("./analytics");
 const { recordNotification, fetchActor } = require("./notifications");
 const { forwardMessageToPulseGuard } = require("./ai-moderation");
-const { COMMANDS_BY_NAME } = require("./commands");
+const { COMMANDS_BY_NAME, replyNotice, renderHelp } = require("./commands");
 const { getCurrentVersion } = require("./version");
 const {
   loadConfigs,
@@ -231,10 +231,10 @@ function buildMemberV2Container(cfg, resolve, hasBanner, footerLabel) {
   }
 
   // Divider + footer — the standardized Pulse v2 close. Honour the user's
-  // footer_text; fall back to a branded `Pulse · <label>` when it's blank.
+  // footer_text; fall back to a branded `Pulse — <label>` when it's blank.
   const footer = cfg.footer_text
     ? resolve(cfg.footer_text)
-    : `Pulse · ${footerLabel}`;
+    : `Pulse — ${footerLabel}`;
   components.push({ type: 14, divider: true, spacing: 1 });
   components.push({ type: 10, content: `-# ${footer}` });
 
@@ -264,7 +264,7 @@ function buildModAlertContainer({ colorInt, title, lines, footerLabel }) {
       { type: 10, content: "-# Moderation alert" },
       { type: 10, content: lines.filter(Boolean).join("\n") },
       { type: 14, divider: true, spacing: 1 },
-      { type: 10, content: `-# Pulse · ${footerLabel} · <t:${unix}:R>` },
+      { type: 10, content: `-# Pulse — ${footerLabel} — <t:${unix}:R>` },
     ],
   };
 }
@@ -390,6 +390,11 @@ client.once(Events.ClientReady, async (readyClient) => {
   // Leveling system: load per-guild XP config, subscribe to settings changes,
   // and start the voice-XP tick.
   await leveling.start();
+
+  // Global economy: register the /leaderboard component listener
+  // (select-menu switching + pagination). Coin ledger reads/writes need no
+  // startup — this only wires the interactive controls (PULSIFY-49).
+  economy.start();
 
   // Economy rewards engine: load per-guild reward config, subscribe to changes,
   // and start the voice-coins tick (PULSIFY-47).
@@ -1040,6 +1045,38 @@ client.on(Events.GuildUpdate, async (oldGuild, newGuild) => {
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
+  // /help pagination (prev/next) — commands.js builds these buttons; handle them
+  // here since the central listener owns getAllowedCommands + the page renderer.
+  if (interaction.isButton?.() && interaction.customId?.startsWith("help:nav:")) {
+    if (!interaction.guild) return;
+    try {
+      const parts = interaction.customId.split(":");
+      const viewerId = parts[2];
+      const page = Number(parts[3]) || 0;
+      if (interaction.user.id !== viewerId) {
+        await replyNotice(
+          interaction,
+          "This menu belongs to someone else — run /help to open your own.",
+        ).catch(() => {});
+        return;
+      }
+      const payload = await renderHelp({
+        supabase,
+        guild: interaction.guild,
+        member: interaction.member,
+        getAllowedCommands,
+        page,
+      });
+      await interaction.update({
+        ...payload,
+        flags: MessageFlags.IsComponentsV2,
+      });
+    } catch (err) {
+      console.error("[Pulse] /help pagination failed:", err.message);
+    }
+    return;
+  }
+
   if (!interaction.isChatInputCommand()) return;
   const guild = interaction.guild;
   if (!guild) return;
@@ -1077,15 +1114,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   if (verdict.kind === "unknown") {
     // Registered command with no handler — should not happen, but never hang.
-    await interaction
-      .reply({ content: "Unknown command.", flags: MessageFlags.Ephemeral })
+    await replyNotice(interaction, "Unknown command.")
       .catch(() => {});
     return;
   }
 
   if (verdict.kind === "blocked") {
-    await interaction
-      .reply({ content: verdict.reason, flags: MessageFlags.Ephemeral })
+    await replyNotice(interaction, verdict.reason)
       .catch(() => {});
     await logCommand(supabase, { ...logBase, status: verdict.status, detail: verdict.reason });
     return;
@@ -1120,14 +1155,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
       detail: err.message,
       durationMs: Date.now() - startedAt,
     });
-    // Surface a generic failure without leaking internals; ignore if the
-    // interaction was already answered by the handler before it threw.
-    const failMsg = { content: "Something went wrong running that command.", flags: MessageFlags.Ephemeral };
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp(failMsg).catch(() => {});
-    } else {
-      await interaction.reply(failMsg).catch(() => {});
-    }
+    // Surface a generic failure without leaking internals (replyNotice follows
+    // up automatically if the handler already answered before it threw).
+    await replyNotice(interaction, "Something went wrong running that command.");
   }
 });
 

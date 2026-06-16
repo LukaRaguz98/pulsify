@@ -231,7 +231,7 @@ function changelogContainer(
   opts: { colorHex: string; hasIcon: boolean; baseUrl: string; guildId: string },
 ): V2TopLevelComponent {
   const colorInt = parseInt(opts.colorHex.replace('#', ''), 16)
-  const subtitle = `Pulse \`v${release.version}\` · Released ${release.date}`
+  const subtitle = `Pulse \`v${release.version}\` — Released ${release.date}`
   const headerLines = [td('**Pulse**'), td(`# ${release.title}`), td(`-# ${subtitle}`)]
 
   const body: Record<string, unknown>[] = []
@@ -264,7 +264,7 @@ function changelogContainer(
   }
 
   body.push(linkButtonRow(opts.baseUrl, opts.guildId))
-  body.push(td('-# Pulse · Change Log'))
+  body.push(td('-# Pulse — Change Log'))
 
   return {
     type: 17,

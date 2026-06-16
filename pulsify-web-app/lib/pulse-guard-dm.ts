@@ -44,7 +44,7 @@ export function buildWarningDMContainer(
   const headerLines = [
     { type: 10 as const, content: `**Pulse**` },
     { type: 10 as const, content: `# Warning issued` },
-    { type: 10 as const, content: `-# Pulse Guard · ${opts.guildName}` },
+    { type: 10 as const, content: `-# Pulse Guard — ${opts.guildName}` },
   ]
   if (hasIcon) {
     components.push({
@@ -80,7 +80,7 @@ export function buildWarningDMContainer(
   const unix = Math.floor(Date.now() / 1000)
   components.push({
     type: 10,
-    content: `-# Pulse · Warning · <t:${unix}:f>`,
+    content: `-# Pulse — Warning — <t:${unix}:f>`,
   })
 
   return {

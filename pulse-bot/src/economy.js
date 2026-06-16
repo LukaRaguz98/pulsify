@@ -17,13 +17,14 @@
 //
 // Coin rates MIRROR pulsify-web-app/lib/economy.ts — keep in sync.
 
-const { MessageFlags } = require("discord.js");
+const { MessageFlags, Events } = require("discord.js");
 const { computeReputation, daysSince } = require("./reputation");
 const {
   buildPulseContainer,
   getPulseColor,
   loadPulseIcon,
   replyContainer,
+  replyNotice,
   text,
   divider,
 } = require("./commands");
@@ -52,6 +53,16 @@ function levelUpCoins(level) {
 }
 
 const fmt = (n) => Math.max(0, Math.round(Number(n) || 0)).toLocaleString();
+
+/** Compact voice duration: "12h 30m", "45m", "8m", "0m". */
+function formatVoice(totalSeconds) {
+  const s = Math.max(0, Math.round(Number(totalSeconds) || 0));
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  const rm = m % 60;
+  return rm > 0 ? `${h}h ${rm}m` : `${h}h`;
+}
 
 /** Human label for a ledger row in the /wallet recent-activity list. */
 function describeTransaction(t) {
@@ -84,7 +95,7 @@ function describeTransaction(t) {
   if (t.kind === "transfer_in") return `Transfer from ${t.counterparty_name ?? "a member"}`;
   if (t.kind === "transfer_out") return `Transfer to ${t.counterparty_name ?? "a member"}`;
   const base = reasonLabels[t.reason] ?? "Balance change";
-  return t.guild_name ? `${base} · ${t.guild_name}` : base;
+  return t.guild_name ? `${base} — ${t.guild_name}` : base;
 }
 
 // ── Module ───────────────────────────────────────────────────────────────────
@@ -267,23 +278,22 @@ function createEconomy(client, supabase) {
 
   // ── Slash commands (delegated from commands.js execute) ───────────────────
 
-  async function handleWalletCommand({ interaction, guild, ephemeral }) {
+  async function handleBalanceCommand({ interaction, guild, ephemeral }) {
     const colorHex = await getPulseColor(supabase, guild.id);
     const icon = await loadPulseIcon("money", colorHex);
     const user = interaction.options.getUser("user") ?? interaction.user;
     const isSelf = user.id === interaction.user.id;
 
     if (user.bot) {
-      await interaction.reply({
-        content: "Bots don't have a Pulse wallet.",
-        flags: MessageFlags.Ephemeral,
-      });
+      await replyNotice(interaction, "Bots don't have a Pulse balance.");
       return;
     }
 
     const w = await getWallet(user.id, user.createdTimestamp);
     const name = user.globalName ?? user.username;
 
+    // ── Balance — the headline figure, with the leaderboard position right
+    //    under it so the member sees where they stand at a glance. ──
     const body = [
       text(
         isSelf
@@ -294,19 +304,21 @@ function createEconomy(client, supabase) {
       text(
         `**Balance**\n## ${fmt(w.balance)} ${CURRENCY_NAME}` +
           (w.balanceRank
-            ? `\n-# Global rank #${w.balanceRank} · ${fmt(w.lifetimeEarned)} earned · ${fmt(w.lifetimeSpent)} spent all-time`
-            : ""),
+            ? `\n-# Leaderboard position **#${w.balanceRank}** globally`
+            : "\n-# Earn coins to climb the leaderboard — try /earn"),
       ),
     ];
 
+    // Reputation + lifetime totals as a tidy two-line block (one stat per line
+    // reads better on mobile than a long comma-joined run).
+    const stats = [];
     if (w.reputation) {
-      body.push(
-        text(
-          `**Reputation:** ${w.reputation.score}/100 · ${w.reputation.tier}` +
-            `\n-# Trust score across every Pulse server`,
-        ),
-      );
+      stats.push(`**Reputation** — ${w.reputation.score}/100 — ${w.reputation.tier}`);
     }
+    stats.push(`**Earned** — ${fmt(w.lifetimeEarned)} all-time`);
+    stats.push(`**Spent** — ${fmt(w.lifetimeSpent)} all-time`);
+    body.push(divider());
+    body.push(text(stats.join("\n")));
 
     if (w.recent.length > 0) {
       body.push(divider());
@@ -320,24 +332,27 @@ function createEconomy(client, supabase) {
       }));
       const width = Math.max(...rows.map((r) => r.amount.length));
       const lines = rows.map((r) => {
-        const when = r.ts ? ` · <t:${r.ts}:R>` : "";
+        const when = r.ts ? ` — <t:${r.ts}:R>` : "";
         return `\`${r.amount.padStart(width)}\`  ${r.label}${when}`;
       });
       body.push(text(`**Recent activity**\n${lines.join("\n")}`));
+    } else {
+      body.push(divider());
+      body.push(text("-# No recent activity yet — see /earn for ways to start earning."));
     }
 
     body.push(divider());
-    body.push(text("-# Balance and reputation are global. Levels are per-server — see /profile."));
+    body.push(text("-# Balance & reputation are global — levels are per-server (/profile) — rankings (/leaderboard)"));
 
     await replyContainer(
       interaction,
       buildPulseContainer({
         iconUrl: icon ? `attachment://${icon.name}` : null,
         colorHex,
-        title: "Pulse Wallet",
+        title: "Pulse Balance",
         subtitle: name,
         body,
-        footer: "Pulse · Global economy",
+        footer: "Pulse — Global economy",
       }),
       icon,
       ephemeral,
@@ -350,15 +365,19 @@ function createEconomy(client, supabase) {
     const note = interaction.options.getString("note") ?? null;
     const colorHex = await getPulseColor(supabase, guild.id);
 
+    // Friendly, specific validation messages — each one tells the member exactly
+    // what went wrong and (where useful) how to fix it.
     const fail = async (message) => {
-      await interaction.reply({ content: message, flags: MessageFlags.Ephemeral });
+      await replyNotice(interaction, message);
     };
 
-    if (!target || target.bot) return fail("You can only send coins to a real member.");
-    if (target.id === interaction.user.id) return fail("You can't pay yourself.");
-    if (!Number.isInteger(amount) || amount < 1) return fail("The amount must be at least 1 coin.");
+    if (!target) return fail("Pick a member to send coins to.");
+    if (target.bot) return fail("Bots don't have a Pulse balance — you can only pay real members.");
+    if (target.id === interaction.user.id) return fail("You can't send coins to yourself.");
+    if (!Number.isInteger(amount) || amount < 1)
+      return fail("Enter a whole amount of at least **1 coin**.");
     if (amount > ECONOMY_RATES.maxTransfer)
-      return fail(`The maximum transfer is ${fmt(ECONOMY_RATES.maxTransfer)} coins.`);
+      return fail(`That's over the limit — the most you can send at once is **${fmt(ECONOMY_RATES.maxTransfer)} coins**.`);
 
     let remaining = null;
     try {
@@ -374,25 +393,34 @@ function createEconomy(client, supabase) {
       });
       if (error) {
         console.warn("[Pulse] economy_transfer failed:", error.message);
-        return fail("Something went wrong sending the coins. Try again in a moment.");
+        return fail("Something went wrong sending the coins. Please try again in a moment.");
       }
       remaining = data === null ? null : Number(data);
     } catch (err) {
       console.warn("[Pulse] economy_transfer threw:", err.message);
-      return fail("Something went wrong sending the coins. Try again in a moment.");
+      return fail("Something went wrong sending the coins. Please try again in a moment.");
     }
 
+    // A null return means the atomic RPC refused the transfer for insufficient
+    // funds (the balance never went negative).
     if (remaining === null) {
-      return fail("You don't have enough coins for that transfer. Check /wallet for your balance.");
+      return fail("You don't have enough coins for that transfer. Check your /balance.");
     }
 
+    const senderName = interaction.user.globalName ?? interaction.user.username;
+    const targetName = target.globalName ?? target.username;
     const icon = await loadPulseIcon("money", colorHex);
+
+    // Confirmation embed that headlines the amount and makes the direction of the
+    // transfer unmistakable.
     const body = [
-      text(`<@${interaction.user.id}> sent **${fmt(amount)} ${CURRENCY_NAME}** to <@${target.id}>.`),
+      text(`## ${fmt(amount)} ${CURRENCY_NAME}`),
+      text(`Sent from <@${interaction.user.id}> to <@${target.id}>.`),
     ];
-    if (note) body.push(text(`-# “${note.slice(0, 300)}”`));
+    if (note) body.push(text(`**Note** — “${note.slice(0, 300)}”`));
     body.push(divider());
-    body.push(text(`-# Your remaining balance: ${fmt(remaining)} coins`));
+    body.push(text("-# Pulse Coins are global — they spend in every server running Pulse."));
+    body.push(text(`-# Your remaining balance: **${fmt(remaining)} coins** — check /balance any time.`));
 
     await replyContainer(
       interaction,
@@ -400,16 +428,395 @@ function createEconomy(client, supabase) {
         iconUrl: icon ? `attachment://${icon.name}` : null,
         colorHex,
         title: "Transfer complete",
-        subtitle: `${interaction.user.globalName ?? interaction.user.username} → ${target.globalName ?? target.username}`,
+        subtitle: `${senderName} → ${targetName}`,
         body,
-        footer: "Pulse · Global economy",
+        footer: "Pulse — Global economy",
       }),
       icon,
       ephemeral,
     );
   }
 
+  // ── /leaderboard ─────────────────────────────────────────────────────────
+  //
+  // One flexible command with a select menu to switch between six boards (two
+  // global, four server-scoped) and prev/next pagination. Both the slash command
+  // and the component interactions render through `renderLeaderboard`, so a page
+  // turn or type switch re-fetches the board fresh (stateless — survives bot
+  // restarts). The invoker's id is carried in every custom_id so only they can
+  // drive the controls even when the reply is posted publicly.
+
+  const LB_PER_PAGE = 10;
+  const LB_MAX = 100; // cap each board so paging + the in-memory boards stay light
+
+  const LB_TYPES = [
+    { id: "balance", label: "Global Balance", scope: "global", blurb: "Top balances across every Pulse server" },
+    { id: "reputation", label: "Global Reputation", scope: "global", blurb: "Most trusted members across Pulse" },
+    { id: "level", label: "Server Level", scope: "server", blurb: "Highest levels in this server" },
+    { id: "xp", label: "Server XP", scope: "server", blurb: "Most XP earned in this server" },
+    { id: "messages", label: "Messages", scope: "server", blurb: "Most messages sent in this server" },
+    { id: "voice", label: "Voice Activity", scope: "server", blurb: "Most time in voice in this server" },
+  ];
+
+  const lbType = (id) => LB_TYPES.find((t) => t.id === id) ?? LB_TYPES[0];
+
+  /**
+   * Resolve a row's display name + @handle. Prefers the live guild member (server
+   * nickname + username); falls back to the stored name with no handle when the
+   * member isn't cached (we only persist a display name, not the handle).
+   */
+  function lbIdentity(guild, userId, storedName) {
+    const member = guild.members.cache.get(userId);
+    if (member) return { name: member.displayName, username: member.user.username };
+    if (storedName) return { name: storedName, username: null };
+    return { name: `<@${userId}>`, username: null };
+  }
+
+  /**
+   * Fetch a full board (already sorted, capped at LB_MAX) for `type`. Each row is
+   * `{ id, name, username, value, isMe }`. Returns [] when there's no data yet.
+   */
+  async function fetchBoard(guild, type, viewerId) {
+    try {
+      if (type === "balance") {
+        const { data } = await supabase
+          .from("economy_users")
+          .select("user_id, user_name, balance")
+          .gt("balance", 0)
+          .order("balance", { ascending: false })
+          .limit(LB_MAX);
+        return (data ?? []).map((r) => ({
+          id: r.user_id,
+          ...lbIdentity(guild, r.user_id, r.user_name),
+          value: `${fmt(r.balance)} coins`,
+          isMe: r.user_id === viewerId,
+        }));
+      }
+
+      if (type === "reputation") {
+        const members = [...guild.members.cache.values()]
+          .filter((m) => !m.user.bot)
+          .slice(0, 500);
+        if (members.length === 0) return [];
+        const ids = members.map((m) => m.id);
+        const { data } = await supabase.rpc("get_global_members_reputation", { p_user_ids: ids });
+        const byId = new Map((data ?? []).map((r) => [String(r.user_id), r]));
+        return members
+          .map((m) => {
+            const g = byId.get(m.id);
+            const rep = computeReputation({
+              accountAgeDays: daysSince(m.user.createdTimestamp),
+              tenureDays: g?.first_seen ? daysSince(new Date(g.first_seen).getTime()) : 0,
+              messages: Number(g?.message_count ?? 0),
+              voiceSeconds: Number(g?.voice_seconds ?? 0),
+              commands: Number(g?.command_count ?? 0),
+              activeChannels: Number(g?.active_channels ?? 0),
+              assignableRoles: 0,
+              warnings: Number(g?.warnings ?? 0),
+              timeouts: Number(g?.timeouts ?? 0),
+              kicks: Number(g?.kicks ?? 0),
+              bans: Number(g?.bans ?? 0),
+            });
+            return { id: m.id, name: m.displayName, username: m.user.username, score: rep.score, tier: rep.tier };
+          })
+          .filter((r) => r.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, LB_MAX)
+          .map((r) => ({ id: r.id, name: r.name, username: r.username, value: `${r.score}/100 — ${r.tier}`, isMe: r.id === viewerId }));
+      }
+
+      if (type === "level" || type === "xp") {
+        const { data } = await supabase
+          .from("member_levels")
+          .select("user_id, user_name, xp, level")
+          .eq("guild_id", guild.id)
+          .gt("xp", 0)
+          .order("xp", { ascending: false })
+          .limit(LB_MAX);
+        return (data ?? []).map((r) => ({
+          id: r.user_id,
+          ...lbIdentity(guild, r.user_id, r.user_name),
+          value: type === "level" ? `Level ${Number(r.level ?? 0)}` : `${fmt(r.xp)} XP`,
+          isMe: r.user_id === viewerId,
+        }));
+      }
+
+      if (type === "messages" || type === "voice") {
+        const { data } = await supabase.rpc("get_guild_members_stats", {
+          p_guild_id: guild.id,
+          p_since: null,
+        });
+        const key = type === "messages" ? "message_count" : "voice_seconds";
+        return (data ?? [])
+          .map((r) => ({ id: String(r.user_id), raw: Number(r[key] ?? 0) }))
+          .filter((r) => r.raw > 0 && !guild.members.cache.get(r.id)?.user?.bot)
+          .sort((a, b) => b.raw - a.raw)
+          .slice(0, LB_MAX)
+          .map((r) => ({
+            id: r.id,
+            ...lbIdentity(guild, r.id, null),
+            value: type === "messages" ? `${fmt(r.raw)} messages` : formatVoice(r.raw),
+            isMe: r.id === viewerId,
+          }));
+      }
+    } catch (err) {
+      console.warn(`[Pulse] leaderboard fetch (${type}) failed:`, err.message);
+      return null; // signals "couldn't load" vs. an empty board
+    }
+    return [];
+  }
+
+  /** Build the type-picker select menu (current board marked default). */
+  function lbSelectRow(typeId, viewerId) {
+    return {
+      type: 1,
+      components: [
+        {
+          type: 3,
+          custom_id: `eco:lb:sel:${viewerId}`,
+          placeholder: "Choose a leaderboard…",
+          options: LB_TYPES.map((t) => ({
+            label: t.label,
+            value: t.id,
+            description: t.blurb.slice(0, 100),
+            default: t.id === typeId,
+          })),
+        },
+      ],
+    };
+  }
+
+  /** Build the prev/next pagination row (omitted when a board fits one page). */
+  function lbNavRow(typeId, page, totalPages, viewerId) {
+    if (totalPages <= 1) return null;
+    return {
+      type: 1,
+      components: [
+        {
+          type: 2,
+          style: 2,
+          label: "Previous",
+          custom_id: `eco:lb:nav:${viewerId}:${typeId}:${page - 1}`,
+          disabled: page <= 0,
+        },
+        {
+          type: 2,
+          style: 2,
+          label: "Next",
+          custom_id: `eco:lb:nav:${viewerId}:${typeId}:${page + 1}`,
+          disabled: page >= totalPages - 1,
+        },
+      ],
+    };
+  }
+
+  /**
+   * Render the leaderboard payload for a given board + page. Returns
+   * `{ components, files }`; the caller adds the message flags (reply() sets
+   * ephemeral, update() must not change it).
+   */
+  async function renderLeaderboard({ guild, typeId, page, viewerId }) {
+    const type = lbType(typeId);
+    const colorHex = await getPulseColor(supabase, guild.id);
+    const icon = await loadPulseIcon("leaderboard", colorHex);
+
+    const rows = await fetchBoard(guild, type.id, viewerId);
+    const body = [];
+    let nav = null;
+
+    if (rows === null) {
+      body.push(text("That leaderboard isn't available right now — please try again in a moment."));
+    } else {
+      // Always render a full board of LB_PER_PAGE rows so the embed keeps a
+      // fixed height — any unfilled ranks on this page show an empty placeholder.
+      const totalPages = Math.max(1, Math.ceil((rows.length || 1) / LB_PER_PAGE));
+      const safePage = Math.min(Math.max(0, page), totalPages - 1);
+      const start = safePage * LB_PER_PAGE;
+      const slice = rows.slice(start, start + LB_PER_PAGE);
+
+      const lines = [];
+      for (let i = 0; i < LB_PER_PAGE; i++) {
+        const rank = start + i + 1;
+        const r = slice[i];
+        if (r) {
+          const handle = r.username ? ` (${r.username})` : "";
+          const label = r.isMe ? `**${r.name}${handle}**` : `${r.name}${handle}`;
+          lines.push(`**${rank}.** ${label} — ${r.value}`);
+        } else {
+          // Empty slot — keep the rank but leave the field blank.
+          lines.push(`**${rank}.**`);
+        }
+      }
+      body.push(text(lines.join("\n")));
+
+      if (rows.length === 0) {
+        body.push(divider());
+        body.push(text("-# No one's on this leaderboard yet — see /earn for ways to climb!"));
+      }
+
+      // Viewer's own standing, if they have a place that isn't on this page.
+      const myIndex = rows.findIndex((r) => r.isMe);
+      if (myIndex >= 0 && (myIndex < start || myIndex >= start + LB_PER_PAGE)) {
+        body.push(divider());
+        body.push(text(`-# Your position: **#${myIndex + 1}** — ${rows[myIndex].value}`));
+      }
+
+      if (totalPages > 1) {
+        body.push(divider());
+        body.push(text(`-# Page ${safePage + 1} of ${totalPages}`));
+        nav = lbNavRow(type.id, safePage, totalPages, viewerId);
+      }
+    }
+
+    const components = [
+      buildPulseContainer({
+        iconUrl: icon ? `attachment://${icon.name}` : null,
+        colorHex,
+        title: "Leaderboard",
+        subtitle: `${type.label}${type.scope === "server" ? ` — ${guild.name}` : ""}`,
+        body,
+        footer: `Pulse — ${type.blurb}`,
+        actions: [lbSelectRow(type.id, viewerId), nav],
+      }),
+    ];
+
+    return { components, files: icon ? [icon] : [] };
+  }
+
+  async function handleLeaderboardCommand({ interaction, guild, ephemeral }) {
+    // Honour a preselected type from the optional `type` option; default to the
+    // global balance board so the command always shows something immediately.
+    const requested = interaction.options.getString?.("type");
+    const typeId = LB_TYPES.some((t) => t.id === requested) ? requested : "balance";
+    const payload = await renderLeaderboard({
+      guild,
+      typeId,
+      page: 0,
+      viewerId: interaction.user.id,
+    });
+    await interaction.reply({
+      ...payload,
+      flags: MessageFlags.IsComponentsV2 | (ephemeral ? MessageFlags.Ephemeral : 0),
+    });
+  }
+
+  // ── /info ────────────────────────────────────────────────────────────────
+  //
+  // A single-embed guide to earning across Pulse: global currencies (Balance +
+  // Reputation) and per-server progression (XP + Levels), kept concise so it all
+  // fits in one tidy container.
+
+  function infoBody() {
+    return [
+      text("Pulse **Balance** and **Reputation** are global — they follow you everywhere. **XP** and **Levels** are per-server."),
+      divider(),
+      text(
+        "**Pulse Balance**\n" +
+          "- Join **events** and **giveaways** (more for winning)\n" +
+          "- Complete **onboarding** and hit **milestones**\n" +
+          "- Claim **/daily** and **/weekly** to build a streak",
+      ),
+      divider(),
+      text(
+        "**Reputation** — a 0–100 trust score, *earned, not bought*\n" +
+          "- Grows with steady, positive activity over time\n" +
+          "- A higher score can boost how much you earn",
+      ),
+      divider(),
+      text(
+        "**Server XP & Levels**\n" +
+          "- Earn XP from **messages**, **voice** and day-to-day activity\n" +
+          "- Level up to unlock **role rewards** and climb the board",
+      ),
+      divider(),
+      text("-# Check your standing with **/balance** — see the rankings with **/leaderboard**"),
+    ];
+  }
+
+  async function renderInfo({ guild }) {
+    const colorHex = await getPulseColor(supabase, guild.id);
+    const icon = await loadPulseIcon("info", colorHex);
+
+    return {
+      components: [
+        buildPulseContainer({
+          iconUrl: icon ? `attachment://${icon.name}` : null,
+          colorHex,
+          title: "Earning Guide",
+          subtitle: "How to earn across Pulse",
+          body: infoBody(),
+          footer: "Pulse — Earning Guide",
+        }),
+      ],
+      files: icon ? [icon] : [],
+    };
+  }
+
+  async function handleInfoCommand({ interaction, guild, ephemeral }) {
+    const payload = await renderInfo({ guild });
+    await interaction.reply({
+      ...payload,
+      flags: MessageFlags.IsComponentsV2 | (ephemeral ? MessageFlags.Ephemeral : 0),
+    });
+  }
+
+  // ── Component routing (our own listener; index.js owns chat-input) ─────────
+
+  async function onInteraction(interaction) {
+    try {
+      const isSelect = interaction.isStringSelectMenu?.();
+      const isButton = interaction.isButton?.();
+      if (!isSelect && !isButton) return;
+      const id = interaction.customId ?? "";
+      if (!id.startsWith("eco:")) return;
+
+      const parts = id.split(":");
+      const surface = parts[1]; // "lb"
+      const guild = interaction.guild;
+      if (!guild) return;
+
+      // Editing a Components V2 message must keep the V2 flag; the ephemeral-ness
+      // is fixed at creation, so update() never re-sends it.
+      const updateFlags = MessageFlags.IsComponentsV2;
+
+      if (surface === "lb") {
+        const action = parts[2];
+        const viewerId = parts[3];
+        if (interaction.user.id !== viewerId) {
+          await replyNotice(interaction, "This leaderboard belongs to someone else — run /leaderboard to open your own.");
+          return;
+        }
+        let typeId = "balance";
+        let page = 0;
+        if (action === "sel" && isSelect) {
+          typeId = interaction.values?.[0] ?? "balance";
+          page = 0; // switching boards starts at the top
+        } else if (action === "nav" && isButton) {
+          typeId = parts[4];
+          page = Number(parts[5]) || 0;
+        }
+        const payload = await renderLeaderboard({ guild, typeId, page, viewerId });
+        await interaction.update({ ...payload, flags: updateFlags });
+        return;
+      }
+
+    } catch (err) {
+      console.error("[Pulse] Economy interaction failed:", err.message);
+      if (interaction && !interaction.replied && !interaction.deferred) {
+        await replyNotice(interaction, "Something went wrong handling that.")
+          .catch(() => {});
+      }
+    }
+  }
+
+  function start() {
+    client.on(Events.InteractionCreate, onInteraction);
+    console.log("[Pulse] Economy commands started.");
+  }
+
   return {
+    // lifecycle
+    start,
     // hooks
     awardActivity,
     awardLevelUp,
@@ -421,8 +828,10 @@ function createEconomy(client, supabase) {
     // reads + commands
     getWallet,
     getGlobalReputation,
-    handleWalletCommand,
+    handleBalanceCommand,
     handlePayCommand,
+    handleLeaderboardCommand,
+    handleInfoCommand,
   };
 }
 

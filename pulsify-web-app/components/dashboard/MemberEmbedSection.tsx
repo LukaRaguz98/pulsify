@@ -270,7 +270,7 @@ export function MemberEmbedSection({
             <DiscordEmbedPreview
               embed={previewEmbed}
               serverName={guildName}
-              footerFallback={variant === 'welcome' ? 'Pulse · Welcome' : 'Pulse · Goodbye'}
+              footerFallback={variant === 'welcome' ? 'Pulse — Welcome' : 'Pulse — Goodbye'}
             />
 
             {/* Editable fields */}

@@ -43,7 +43,7 @@ const HAS_ICON = ICON_BUFFER !== null;
 const iconFiles = () =>
   HAS_ICON ? [{ attachment: ICON_BUFFER, name: ICON_NAME }] : [];
 
-// Display names for the `-# <Provider> · Integration` subtitle. Mirrors the
+// Display names for the `-# <Provider> — Integration` subtitle. Mirrors the
 // catalog in pulsify-web-app/lib/integrations.ts — keep in sync when adding
 // providers. Falls back to the capitalised id for anything missing.
 const PROVIDER_NAMES = {
@@ -171,17 +171,17 @@ function renderTemplate(template, ctx) {
 
 // Rich Pulse v2 container, matching the dashboard's notificationContainer() and
 // the command-embed structure: a `**Pulse**` label + connection-label heading +
-// `-# <Provider> · Integration` subtitle beside the Pulse integrations badge
+// `-# <Provider> — Integration` subtitle beside the Pulse integrations badge
 // (type-9 Section), a braille width spacer, a `-# <when>` relative-time chip, the
 // rendered body (raw URL line stripped), a divider + labeled details block, a
-// source-link button, then the `-# Pulse · Integrations` footer. Accent is the
+// source-link button, then the `-# Pulse — Integrations` footer. Accent is the
 // provider's brand colour. An optional leading mention line pings a role.
 function buildContainer(provider, label, body, mentionLine, ctx = {}) {
   const text = (content) => ({ type: 10, content });
   const headerLines = [
     text("**Pulse**"),
     text(`# ${label}`),
-    text(`-# ${providerName(provider)} · Integration`),
+    text(`-# ${providerName(provider)} — Integration`),
   ];
   const components = [];
   if (mentionLine) components.push(text(mentionLine));
@@ -227,7 +227,7 @@ function buildContainer(provider, label, body, mentionLine, ctx = {}) {
   }
 
   components.push({ type: 14, divider: true, spacing: 1 });
-  components.push(text("-# Pulse · Integrations"));
+  components.push(text("-# Pulse — Integrations"));
   const accent = PROVIDER_ACCENTS[provider];
   return {
     type: 17,

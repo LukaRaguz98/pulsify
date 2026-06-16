@@ -67,8 +67,8 @@ function formatLongDate(d: Date): string {
 /**
  * Build the announcement container. Matches the /changelog layout: a `Pulse`
  * label + `# title` heading beside the announcement badge (type-9 Section), a
- * `-# Announcement · <date>` subtitle, a width spacer, the message body, then a
- * divider and a `Pulse · Announcement` footer. `publishedAt` dates the subtitle
+ * `-# Announcement — <date>` subtitle, a width spacer, the message body, then a
+ * divider and a `Pulse — Announcement` footer. `publishedAt` dates the subtitle
  * (now, for a fresh publish or preview).
  */
 function announcementContainer(a: {
@@ -76,7 +76,7 @@ function announcementContainer(a: {
   content: string
   publishedAt?: Date
 }): V2TopLevelComponent {
-  const subtitle = `Announcement · ${formatLongDate(a.publishedAt ?? new Date())}`
+  const subtitle = `Announcement — ${formatLongDate(a.publishedAt ?? new Date())}`
   const headerLines = [td('**Pulse**'), td(`# ${a.title}`), td(`-# ${subtitle}`)]
 
   const body: Record<string, unknown>[] = []
@@ -95,7 +95,7 @@ function announcementContainer(a: {
   const paragraphs = a.content.trim().slice(0, ANNOUNCEMENT_LIMITS.maxContent).split(/\n{2,}/)
   for (const p of paragraphs) body.push(td(p.trim()))
   body.push(divider())
-  body.push(td('-# Pulse · Announcement'))
+  body.push(td('-# Pulse — Announcement'))
 
   return { type: 17, accent_color: BRAND, components: body } as unknown as V2TopLevelComponent
 }

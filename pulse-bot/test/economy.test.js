@@ -48,7 +48,7 @@ test("describeTransaction: transfers name the counterparty", () => {
 test("describeTransaction: earns label the source and server", () => {
   assert.equal(
     describeTransaction({ kind: "earn", reason: "activity", guild_name: "Pulse HQ" }),
-    "Server activity · Pulse HQ",
+    "Server activity — Pulse HQ",
   );
   assert.equal(
     describeTransaction({ kind: "reward", reason: "giveaway_win", guild_name: null }),

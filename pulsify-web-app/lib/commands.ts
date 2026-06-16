@@ -96,16 +96,37 @@ export const COMMAND_CATALOG: CommandDefinition[] = [
       'Lists the recognition milestones a member has earned (time in server, messages, voice, events, giveaways, XP/level) and how close they are to the next ones. Milestones are configured in the dashboard under Engagement › Milestones. Defaults to your own.',
   },
   {
-    name: 'wallet',
-    description: "Show a member's global Pulse balance and reputation",
+    name: 'balance',
+    description: "Show a member's global Pulse balance, reputation and ranking",
     category: 'information',
     defaultPermission: 'everyone',
     options: [
       { name: 'user', description: 'The member to look up (defaults to you)', type: 'user' },
     ],
-    examples: ['/wallet', '/wallet user:@username'],
+    examples: ['/balance', '/balance user:@username'],
     detail:
-      'Shows the global Pulse wallet — coin balance, reputation tier, global ranks and recent activity. Balance and reputation are shared across every server running Pulse; levels stay per-server. Defaults to your own.',
+      'Shows the global Pulse balance — coin balance, leaderboard position, reputation tier, lifetime earned/spent and recent activity. Balance and reputation are shared across every server running Pulse; levels stay per-server. Defaults to your own.',
+  },
+  {
+    name: 'leaderboard',
+    description: 'View Pulse leaderboards — balance, reputation, levels, XP and activity',
+    category: 'information',
+    defaultPermission: 'everyone',
+    options: [
+      { name: 'type', description: 'Which leaderboard to open first (switchable in the menu)', type: 'string' },
+    ],
+    examples: ['/leaderboard', '/leaderboard type:Server Level'],
+    detail:
+      'An interactive leaderboard with a menu to switch between six boards — Global Balance, Global Reputation, Server Level, Server XP, Messages and Voice Activity — plus pagination. Highlights your own position and shows rank, name and value for each member.',
+  },
+  {
+    name: 'info',
+    description: 'Learn how to earn Pulse Balance, Reputation, XP and Levels',
+    category: 'information',
+    defaultPermission: 'everyone',
+    examples: ['/info'],
+    detail:
+      'A single-embed guide to earning across Pulse: the global economy (Pulse Balance & Reputation — events, giveaways, onboarding, milestones, daily/weekly) and server progression (XP & Levels — messages, voice, participation, level rewards).',
   },
   {
     name: 'pay',

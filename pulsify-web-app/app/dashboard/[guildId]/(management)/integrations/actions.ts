@@ -74,10 +74,10 @@ function accentInt(hex: string | undefined): number {
 /**
  * Build the integration notification container — the rich Pulse v2 layout shared
  * with the bot's live deliveries (pulse-bot/src/integrations.js). Top to bottom:
- * a `Pulse` label + integration heading + `-# <Provider> · Integration` subtitle
+ * a `Pulse` label + integration heading + `-# <Provider> — Integration` subtitle
  * beside the Pulse badge, a width spacer, a `-# <when>` timestamp chip, the
  * rendered body (with the now-redundant raw URL line stripped), a divider, a
- * labeled details block, a source-link button, and the `Pulse · Integrations`
+ * labeled details block, a source-link button, and the `Pulse — Integrations`
  * footer. Accent is the provider's brand colour so each service reads distinctly.
  */
 function notificationContainer(
@@ -87,7 +87,7 @@ function notificationContainer(
   ctx: Record<string, string>,
   opts: { isTest?: boolean } = {},
 ): V2TopLevelComponent {
-  const headerLines = [td('**Pulse**'), td(`# ${label}`), td(`-# ${provider.name} · Integration`)]
+  const headerLines = [td('**Pulse**'), td(`# ${label}`), td(`-# ${provider.name} — Integration`)]
   const components: Record<string, unknown>[] = []
   if (HAS_ICON) {
     components.push({
@@ -103,7 +103,7 @@ function notificationContainer(
   // Timestamp chip — a native Discord relative time so the post reads "just now"
   // and ages on its own. Marked as a test when sent from the dashboard.
   const now = Math.floor(Date.now() / 1000)
-  components.push(td(`-# ${opts.isTest ? 'Test notification · ' : ''}<t:${now}:R>`))
+  components.push(td(`-# ${opts.isTest ? 'Test notification — ' : ''}<t:${now}:R>`))
 
   const link = notificationLink(provider.id, ctx)
   const cleanBody = stripStandaloneUrl(body, link?.url).trim()
@@ -122,7 +122,7 @@ function notificationContainer(
   }
 
   components.push(divider())
-  components.push(td('-# Pulse · Integrations'))
+  components.push(td('-# Pulse — Integrations'))
   return { type: 17, accent_color: accentInt(provider.accent), components } as unknown as V2TopLevelComponent
 }
 

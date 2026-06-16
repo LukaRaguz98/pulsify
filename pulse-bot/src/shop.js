@@ -92,7 +92,7 @@ function createShop(client, supabase) {
     const body = [
       text(`You bought **${snap.name ?? "a reward"}**${where}.`),
       divider(),
-      text(`**${label}** · ${fmtCoins(purchase.cost)} Pulse Coins`),
+      text(`**${label}** — ${fmtCoins(purchase.cost)} Pulse Coins`),
     ];
     if (purchase.expires_at) {
       body.push(text(`-# Expires <t:${Math.floor(new Date(purchase.expires_at).getTime() / 1000)}:R>`));
@@ -113,7 +113,7 @@ function createShop(client, supabase) {
       title: "Purchase confirmed",
       subtitle: snap.name ?? undefined,
       body,
-      footer: "Pulse · Shop",
+      footer: "Pulse — Shop",
     });
 
     try {
@@ -132,7 +132,7 @@ function createShop(client, supabase) {
         guildId,
         type: "reward_purchased",
         title: `${purchase.user_name ?? "A member"} bought "${snap.name ?? "a reward"}"`,
-        body: `${label} · ${fmtCoins(purchase.cost)} Pulse Coins`,
+        body: `${label} — ${fmtCoins(purchase.cost)} Pulse Coins`,
         link: `/dashboard/${guildId}/economy-rewards`,
         targetId: purchase.user_id,
         targetName: purchase.user_name ?? null,

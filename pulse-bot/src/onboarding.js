@@ -14,6 +14,7 @@
 // the panel was posted to a channel or to the member's DMs.
 
 const { Events, MessageFlags } = require("discord.js");
+const { replyNotice } = require("./commands");
 
 const OB = "ob";
 const BRAND = 0x6366f1;
@@ -207,7 +208,7 @@ function createOnboarding(client, supabase, leveling = null, economyRewards = nu
                   e.scheduledStartAt ?? e.scheduledStartTimestamp ?? Date.now(),
                 ).getTime() / 1000,
               );
-              return `> **${e.name}**　·　<t:${ts}:R>`;
+              return `> **${e.name}**　—　<t:${ts}:R>`;
             })
             .join("\n");
           components.push({
@@ -291,7 +292,7 @@ function createOnboarding(client, supabase, leveling = null, economyRewards = nu
     components.push({ type: 14, divider: true, spacing: 1 });
     components.push({
       type: 10,
-      content: `-# ${w.footer_text ? resolve(w.footer_text) : "Pulse · Welcome"}`,
+      content: `-# ${w.footer_text ? resolve(w.footer_text) : "Pulse — Welcome"}`,
     });
 
     const container = { type: 17, accent_color: colorInt(w.color), components };
@@ -398,16 +399,10 @@ function createOnboarding(client, supabase, leveling = null, economyRewards = nu
   async function handleRole(interaction, guildId, catId) {
     const ctx = await resolveContext(interaction, guildId);
     if (!ctx)
-      return interaction.reply({
-        content: "Onboarding is no longer available.",
-        flags: MessageFlags.Ephemeral,
-      });
+      return replyNotice(interaction, "Onboarding is no longer available.");
     const cat = (ctx.cfg.roleCategories ?? []).find((c) => c.id === catId);
     if (!cat)
-      return interaction.reply({
-        content: "That role group no longer exists.",
-        flags: MessageFlags.Ephemeral,
-      });
+      return replyNotice(interaction, "That role group no longer exists.");
 
     const categoryRoleIds = (cat.roles ?? [])
       .map((r) => r.role_id)
@@ -462,36 +457,26 @@ function createOnboarding(client, supabase, leveling = null, economyRewards = nu
       void economyRewards.awardOnboarding(ctx.member.guild, ctx.member, "roleSelection");
     }
 
-    await interaction.reply({
-      content: selected.size
-        ? `✅ Updated your **${cat.label}** roles.`
+    await replyNotice(
+      interaction,
+      selected.size
+        ? `Updated your **${cat.label}** roles.`
         : `Cleared your **${cat.label}** roles.`,
-      flags: MessageFlags.Ephemeral,
-    });
+    );
   }
 
   async function handleVerify(interaction, guildId) {
     const ctx = await resolveContext(interaction, guildId);
     if (!ctx)
-      return interaction.reply({
-        content: "Onboarding is no longer available.",
-        flags: MessageFlags.Ephemeral,
-      });
+      return replyNotice(interaction, "Onboarding is no longer available.");
     const roleId = ctx.cfg.verification?.role_id;
     if (!ctx.cfg.verification?.enabled || !roleId)
-      return interaction.reply({
-        content: "Verification isn't enabled here.",
-        flags: MessageFlags.Ephemeral,
-      });
+      return replyNotice(interaction, "Verification isn't enabled here.");
 
     try {
       await ctx.member.roles.add(roleId, "Pulse onboarding verification");
     } catch {
-      return interaction.reply({
-        content:
-          "I couldn't assign the verified role — please ping a moderator.",
-        flags: MessageFlags.Ephemeral,
-      });
+      return replyNotice(interaction, "I couldn't assign the verified role — please ping a moderator.");
     }
 
     const prev = await readProgress(guildId, interaction.user.id);
@@ -516,28 +501,21 @@ function createOnboarding(client, supabase, leveling = null, economyRewards = nu
       void economyRewards.awardOnboarding(ctx.member.guild, ctx.member, "verification");
     }
 
-    await interaction.reply({
-      content:
-        ctx.cfg.verification.success_message ||
+    await replyNotice(
+      interaction,
+      ctx.cfg.verification.success_message ||
         "You're **verified** — welcome aboard!",
-      flags: MessageFlags.Ephemeral,
-    });
+    );
   }
 
   async function handleDone(interaction, guildId) {
     const ctx = await resolveContext(interaction, guildId);
     if (!ctx)
-      return interaction.reply({
-        content: "Onboarding is no longer available.",
-        flags: MessageFlags.Ephemeral,
-      });
+      return replyNotice(interaction, "Onboarding is no longer available.");
 
     const prev = await readProgress(guildId, interaction.user.id);
     if (prev?.rewarded)
-      return interaction.reply({
-        content: "You've already completed onboarding — welcome back! 👋",
-        flags: MessageFlags.Ephemeral,
-      });
+      return replyNotice(interaction, "You've already completed onboarding — welcome back!");
 
     const enabled = (ctx.cfg.steps ?? [])
       .filter((s) => s.enabled)
@@ -620,9 +598,9 @@ function createOnboarding(client, supabase, leveling = null, economyRewards = nu
     );
 
     const msg = rewardLines.length
-      ? `🎉 Onboarding complete! You earned ${rewardLines.join(" & ")}. Welcome to **${ctx.guild.name}**!`
-      : `🎉 You're all set — welcome to **${ctx.guild.name}**!`;
-    await interaction.reply({ content: msg, flags: MessageFlags.Ephemeral });
+      ? `Onboarding complete! You earned ${rewardLines.join(" & ")}. Welcome to **${ctx.guild.name}**!`
+      : `You're all set — welcome to **${ctx.guild.name}**!`;
+    await replyNotice(interaction, msg);
   }
 
   async function onInteraction(interaction) {
@@ -643,11 +621,7 @@ function createOnboarding(client, supabase, leveling = null, economyRewards = nu
     } catch (err) {
       console.error("[Pulse] Onboarding interaction failed:", err.message);
       if (interaction && !interaction.replied && !interaction.deferred) {
-        await interaction
-          .reply({
-            content: "Something went wrong — try again in a moment.",
-            flags: MessageFlags.Ephemeral,
-          })
+        await replyNotice(interaction, "Something went wrong — try again in a moment.")
           .catch(() => {});
       }
     }
