@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useTransition, type ReactNode } from 'react'
-import { AlertCircle, Info, Mic2 } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Info, Loader2, Mic2, RefreshCw } from 'lucide-react'
 import type { DiscordRole } from '@/lib/discord'
 import { CategorySection } from '@/components/ui/category-section'
 import { SaveBar } from '@/components/ui/save-bar'
@@ -12,7 +12,7 @@ import {
   formatPrivateChannelName,
   validatePrivateChannelConfig,
 } from '@/lib/private-channels'
-import { savePrivateChannels } from '@/app/dashboard/[guildId]/(management)/private-channels/actions'
+import { savePrivateChannels, reprovisionPrivateChannels } from '@/app/dashboard/[guildId]/(management)/private-channels/actions'
 
 const fieldStyle = {
   background: 'var(--bg-2)',
@@ -147,10 +147,26 @@ export function PrivateChannelsSettings({
   const [snapshot, setSnapshot] = useState<PrivateChannelConfig>({ ...DEFAULT_PRIVATE_CHANNEL_CONFIG, ...initialConfig })
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [reprovisioning, startReprovision] = useTransition()
+  const [reprovisionNotice, setReprovisionNotice] = useState<string | null>(null)
 
   function set<K extends keyof PrivateChannelConfig>(key: K, value: PrivateChannelConfig[K]) {
     setConfig((c) => ({ ...c, [key]: value }))
     setError(null)
+    setReprovisionNotice(null)
+  }
+
+  function handleReprovision() {
+    setError(null)
+    setReprovisionNotice(null)
+    startReprovision(async () => {
+      const res = await reprovisionPrivateChannels(guildId)
+      if (res.ok) {
+        setReprovisionNotice('Asked Pulse to re-create the category and trigger channel — they should reappear within a few seconds.')
+      } else {
+        setError(res.error)
+      }
+    })
   }
 
   const changedCount = useMemo(() => {
@@ -235,6 +251,36 @@ export function PrivateChannelsSettings({
               />
             </Field>
           </div>
+
+          {/* Recovery: a re-save can't run on an unchanged config, so when the
+              feature is already enabled we expose an explicit re-create — for
+              when the category/trigger were deleted in Discord and didn't come
+              back on their own. */}
+          {snapshot.enabled && (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3" style={{ borderColor: 'var(--line-strong)', background: 'var(--bg-2)' }}>
+              <div className="min-w-0">
+                <p className="text-sm font-medium" style={{ color: 'var(--text-1)' }}>Trigger channel missing?</p>
+                <p className="text-xs text-subtle">If you deleted the category or trigger in Discord, have Pulse re-create them.</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleReprovision}
+                disabled={reprovisioning}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition disabled:opacity-50"
+                style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
+              >
+                {reprovisioning ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                {reprovisioning ? 'Re-creating…' : 'Re-create channels'}
+              </button>
+            </div>
+          )}
+
+          {reprovisionNotice && (
+            <div className="mt-3 flex items-start gap-2 text-xs" style={{ color: '#22c55e' }}>
+              <CheckCircle2 size={13} className="mt-0.5 shrink-0" />
+              <span>{reprovisionNotice}</span>
+            </div>
+          )}
         </div>
 
         <div className="space-y-4">

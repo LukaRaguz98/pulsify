@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase-server'
-import { isBotInGuild, checkBotPermissions, deleteChannel, modifyChannel } from '@/lib/discord'
+import { isBotInGuild, checkBotPermissions, deleteChannel, modifyChannel, fetchChannel } from '@/lib/discord'
 import { recordNotification } from '@/lib/notifications-server'
 import {
   type PrivateChannelConfig,
@@ -54,12 +54,26 @@ export async function savePrivateChannels(
     }
   }
 
-  // Preserve the Pulse-owned IDs already on the row.
+  // Preserve the Pulse-owned IDs already on the row — but only if those channels
+  // still exist. The bot recreates a missing category/trigger by checking its
+  // gateway channel CACHE; if it missed the ChannelDelete event (a disconnect,
+  // a restart, or a stale cache) when an admin deleted them in Discord, the row
+  // keeps pointing at dead channels and the bot never recreates them — saving
+  // here does "nothing". We verify over fresh REST (not the bot's cache) and
+  // null out any dead IDs, so the bot's ensureProvisioned sees a null id and
+  // recreates unconditionally on the next config update.
   const { data: existing } = await supabase
     .from('private_channel_configs')
     .select('category_id, trigger_channel_id')
     .eq('guild_id', guildId)
     .maybeSingle()
+
+  let categoryId = existing?.category_id ?? null
+  let triggerChannelId = existing?.trigger_channel_id ?? null
+  if (config.enabled) {
+    if (categoryId && !(await fetchChannel(categoryId))) categoryId = null
+    if (triggerChannelId && !(await fetchChannel(triggerChannelId))) triggerChannelId = null
+  }
 
   const { error } = await supabase.from('private_channel_configs').upsert(
     {
@@ -77,8 +91,8 @@ export async function savePrivateChannels(
       ignored_role_ids: config.ignored_role_ids,
       per_user_limit: config.per_user_limit,
       allow_owner_management: config.allow_owner_management,
-      category_id: existing?.category_id ?? null,
-      trigger_channel_id: existing?.trigger_channel_id ?? null,
+      category_id: categoryId,
+      trigger_channel_id: triggerChannelId,
       updated_at: new Date().toISOString(),
       updated_by: user.user_metadata?.provider_id ?? user.id,
     },
@@ -103,6 +117,58 @@ export async function savePrivateChannels(
     actorUsername: claims?.username ?? null,
   })
 
+  return { ok: true }
+}
+
+/**
+ * Force Pulse to (re)create the category + trigger channel for an already-enabled
+ * guild. Use when the admin deleted them in Discord and the bot didn't pick it up
+ * — the dashboard can't re-save an unchanged config, so this gives an explicit
+ * "re-create" trigger. We null out any dead IDs (verified over fresh REST, not
+ * the bot's gateway cache) and bump `updated_at` so the bot's realtime handler
+ * re-runs ensureProvisioned and recreates whatever's missing.
+ */
+export async function reprovisionPrivateChannels(guildId: string): Promise<ActionResult> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Unauthorized.' }
+
+  const { data: row } = await supabase
+    .from('private_channel_configs')
+    .select('enabled, category_id, trigger_channel_id')
+    .eq('guild_id', guildId)
+    .maybeSingle()
+
+  if (!row?.enabled) return { ok: false, error: 'Enable Private Channels and save first.' }
+
+  const botPresent = await isBotInGuild(guildId)
+  if (!botPresent)
+    return { ok: false, error: 'The Pulse bot is not installed in this server. Add it first.' }
+
+  const perms = await checkBotPermissions(guildId)
+  if (perms !== null && perms.inGuild && !perms.administrator && !perms.manageChannels)
+    return {
+      ok: false,
+      error: 'Private Channels requires the bot to have the Manage Channels permission.',
+    }
+
+  let categoryId = (row.category_id as string | null) ?? null
+  let triggerChannelId = (row.trigger_channel_id as string | null) ?? null
+  if (categoryId && !(await fetchChannel(categoryId))) categoryId = null
+  if (triggerChannelId && !(await fetchChannel(triggerChannelId))) triggerChannelId = null
+
+  const { error } = await supabase
+    .from('private_channel_configs')
+    .update({
+      category_id: categoryId,
+      trigger_channel_id: triggerChannelId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('guild_id', guildId)
+
+  if (error) return { ok: false, error: `Failed to trigger re-create: ${error.message}` }
   return { ok: true }
 }
 
