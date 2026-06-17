@@ -46,6 +46,8 @@ import {
   ShoppingBag,
   Backpack,
   Crown,
+  Vote,
+  BarChart3,
 } from 'lucide-react'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
 import { SearchTrigger } from '@/components/dashboard/search/SearchTrigger'
@@ -209,6 +211,7 @@ export function GuildSidebar({
         { label: 'Statistics', href: `${base}/statistics`, icon: <Activity size={16} /> },
         { label: 'Events', href: `${base}/events`, icon: <CalendarDays size={16} /> },
         { label: 'Giveaways', href: `${base}/giveaways`, icon: <Gift size={16} /> },
+        { label: 'Polls', href: `${base}/polls`, icon: <Vote size={16} /> },
         { label: 'Announcements', href: `${base}/announcements`, icon: <Megaphone size={16} /> },
       ],
     },
@@ -260,6 +263,8 @@ export function GuildSidebar({
         { label: 'Announcements', href: `${base}/announcements`, icon: <Megaphone size={16} /> },
         { label: 'Scheduled', href: `${base}/scheduled`, icon: <CalendarClock size={16} /> },
         { label: 'Giveaways', href: `${base}/giveaways`, icon: <Gift size={16} /> },
+        { label: 'Polls', href: `${base}/polls`, icon: <Vote size={16} /> },
+        { label: 'Poll Results', href: `${base}/poll-results`, icon: <BarChart3 size={16} /> },
         { label: 'Milestones', href: `${base}/milestones`, icon: <Award size={16} /> },
       ],
     },
