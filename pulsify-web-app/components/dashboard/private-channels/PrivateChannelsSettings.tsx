@@ -162,7 +162,7 @@ export function PrivateChannelsSettings({
     startReprovision(async () => {
       const res = await reprovisionPrivateChannels(guildId)
       if (res.ok) {
-        setReprovisionNotice('Asked Pulse to re-create the category and trigger channel — they should reappear within a few seconds.')
+        setReprovisionNotice('Re-created the category and trigger channel — refresh Discord if you don’t see them yet.')
       } else {
         setError(res.error)
       }

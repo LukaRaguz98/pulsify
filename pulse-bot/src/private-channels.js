@@ -158,6 +158,21 @@ function createPrivateChannels(client, supabase) {
   // ── Provisioning (category + trigger channel) ────────────────────────────--
 
   /**
+   * Resolve a stored channel id to a LIVE channel of the expected type, forcing
+   * an API fetch so we never trust a stale gateway cache. Returns null when the
+   * channel is gone. This matters because the dashboard now provisions the
+   * category/trigger directly over REST: when we then react to the config
+   * update, a force-fetch confirms the just-created channel exists (cache may
+   * not have it yet) so we don't create a duplicate, and it also lets us detect
+   * a channel that was deleted while we missed the gateway event.
+   */
+  async function resolveExisting(guild, id, type) {
+    if (!id) return null;
+    const ch = await guild.channels.fetch(id, { force: true }).catch(() => null);
+    return ch && ch.type === type ? ch : null;
+  }
+
+  /**
    * Make sure the configured category + trigger voice channel exist for a guild,
    * creating whichever is missing and persisting the resulting IDs. Serialised
    * per-guild so a burst of saves/sweeps can't create duplicates.
@@ -173,8 +188,8 @@ function createPrivateChannels(client, supabase) {
         }
 
         let categoryId = config.category_id;
-        let category = categoryId ? guild.channels.cache.get(categoryId) : null;
-        if (!category || category.type !== ChannelType.GuildCategory) {
+        let category = await resolveExisting(guild, categoryId, ChannelType.GuildCategory);
+        if (!category) {
           category = await guild.channels.create({
             name: config.category_name.slice(0, NAME_MAX),
             type: ChannelType.GuildCategory,
@@ -183,8 +198,8 @@ function createPrivateChannels(client, supabase) {
         }
 
         let triggerId = config.trigger_channel_id;
-        let trigger = triggerId ? guild.channels.cache.get(triggerId) : null;
-        if (!trigger || trigger.type !== ChannelType.GuildVoice) {
+        let trigger = await resolveExisting(guild, triggerId, ChannelType.GuildVoice);
+        if (!trigger) {
           trigger = await guild.channels.create({
             name: config.trigger_name.slice(0, NAME_MAX),
             type: ChannelType.GuildVoice,

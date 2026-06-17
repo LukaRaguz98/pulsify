@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase-server'
-import { isBotInGuild, checkBotPermissions, deleteChannel, modifyChannel, fetchChannel } from '@/lib/discord'
+import { isBotInGuild, checkBotPermissions, deleteChannel, modifyChannel, fetchChannel, createGuildChannel } from '@/lib/discord'
 import { recordNotification } from '@/lib/notifications-server'
 import {
   type PrivateChannelConfig,
@@ -12,8 +12,52 @@ import {
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
 
-// Discord channel type for a guild voice channel (modifyChannel needs it).
+// Discord channel types.
 const VOICE_CHANNEL_TYPE = 2
+const CATEGORY_CHANNEL_TYPE = 4
+
+/**
+ * Create the category + trigger voice channel for a guild straight from the
+ * dashboard (over the bot-token REST API), returning their IDs. We do NOT rely
+ * on the bot to provision: realtime delivery to the bot can be unreliable (and
+ * the bot may be down), which is why a save / re-create could appear to do
+ * nothing. Provisioning here makes the channels appear immediately regardless of
+ * the bot's state; the bot still owns the runtime (join-to-create, sweep, panel)
+ * and picks up the stored IDs. Idempotent: only creates what's actually missing
+ * (verified over fresh REST, not the bot's gateway cache).
+ *
+ * Returns the resolved IDs WITHOUT writing the DB, so the caller can persist
+ * them in the same row write that the bot reacts to over realtime — that way the
+ * bot only ever sees valid IDs and won't race us into creating duplicates.
+ */
+async function ensureProvisioned(
+  guildId: string,
+  opts: { categoryName: string; triggerName: string; categoryId: string | null; triggerChannelId: string | null },
+): Promise<{ ok: true; categoryId: string; triggerChannelId: string } | { ok: false; error: string }> {
+  let categoryId = opts.categoryId
+  if (!categoryId || !(await fetchChannel(categoryId))) {
+    const res = await createGuildChannel(
+      guildId,
+      { name: opts.categoryName || 'Private Channels', type: CATEGORY_CHANNEL_TYPE },
+      'Pulsify — Private Channels',
+    )
+    if (!res.ok) return { ok: false, error: `Couldn't create the category: ${res.error}` }
+    categoryId = res.channel.id
+  }
+
+  let triggerChannelId = opts.triggerChannelId
+  if (!triggerChannelId || !(await fetchChannel(triggerChannelId))) {
+    const res = await createGuildChannel(
+      guildId,
+      { name: opts.triggerName || 'Private Channel +', type: VOICE_CHANNEL_TYPE, parent_id: categoryId },
+      'Pulsify — Private Channels',
+    )
+    if (!res.ok) return { ok: false, error: `Couldn't create the trigger channel: ${res.error}` }
+    triggerChannelId = res.channel.id
+  }
+
+  return { ok: true, categoryId, triggerChannelId }
+}
 
 /**
  * Persist the Private Channels config for a guild. Validates, checks the bot can
@@ -54,25 +98,28 @@ export async function savePrivateChannels(
     }
   }
 
-  // Preserve the Pulse-owned IDs already on the row — but only if those channels
-  // still exist. The bot recreates a missing category/trigger by checking its
-  // gateway channel CACHE; if it missed the ChannelDelete event (a disconnect,
-  // a restart, or a stale cache) when an admin deleted them in Discord, the row
-  // keeps pointing at dead channels and the bot never recreates them — saving
-  // here does "nothing". We verify over fresh REST (not the bot's cache) and
-  // null out any dead IDs, so the bot's ensureProvisioned sees a null id and
-  // recreates unconditionally on the next config update.
   const { data: existing } = await supabase
     .from('private_channel_configs')
     .select('category_id, trigger_channel_id')
     .eq('guild_id', guildId)
     .maybeSingle()
 
+  // Provision the category + trigger FIRST (over REST), so the single config
+  // write below already carries valid IDs. That keeps the bot — which reacts to
+  // this write over realtime — from racing us into creating duplicates. When
+  // disabled we leave the stored IDs as-is (the bot won't act on a disabled row).
   let categoryId = existing?.category_id ?? null
   let triggerChannelId = existing?.trigger_channel_id ?? null
   if (config.enabled) {
-    if (categoryId && !(await fetchChannel(categoryId))) categoryId = null
-    if (triggerChannelId && !(await fetchChannel(triggerChannelId))) triggerChannelId = null
+    const provisioned = await ensureProvisioned(guildId, {
+      categoryName: config.category_name,
+      triggerName: config.trigger_name,
+      categoryId,
+      triggerChannelId,
+    })
+    if (!provisioned.ok) return provisioned
+    categoryId = provisioned.categoryId
+    triggerChannelId = provisioned.triggerChannelId
   }
 
   const { error } = await supabase.from('private_channel_configs').upsert(
@@ -122,11 +169,10 @@ export async function savePrivateChannels(
 
 /**
  * Force Pulse to (re)create the category + trigger channel for an already-enabled
- * guild. Use when the admin deleted them in Discord and the bot didn't pick it up
- * — the dashboard can't re-save an unchanged config, so this gives an explicit
- * "re-create" trigger. We null out any dead IDs (verified over fresh REST, not
- * the bot's gateway cache) and bump `updated_at` so the bot's realtime handler
- * re-runs ensureProvisioned and recreates whatever's missing.
+ * guild. Use when the admin deleted them in Discord — the dashboard can't
+ * re-save an unchanged config, so this gives an explicit "re-create" trigger.
+ * Creates the channels directly over REST (not via the bot) so they reappear
+ * immediately even if the bot is offline or realtime isn't reaching it.
  */
 export async function reprovisionPrivateChannels(guildId: string): Promise<ActionResult> {
   const supabase = await createClient()
@@ -137,7 +183,7 @@ export async function reprovisionPrivateChannels(guildId: string): Promise<Actio
 
   const { data: row } = await supabase
     .from('private_channel_configs')
-    .select('enabled, category_id, trigger_channel_id')
+    .select('enabled, category_name, trigger_name, category_id, trigger_channel_id')
     .eq('guild_id', guildId)
     .maybeSingle()
 
@@ -154,21 +200,23 @@ export async function reprovisionPrivateChannels(guildId: string): Promise<Actio
       error: 'Private Channels requires the bot to have the Manage Channels permission.',
     }
 
-  let categoryId = (row.category_id as string | null) ?? null
-  let triggerChannelId = (row.trigger_channel_id as string | null) ?? null
-  if (categoryId && !(await fetchChannel(categoryId))) categoryId = null
-  if (triggerChannelId && !(await fetchChannel(triggerChannelId))) triggerChannelId = null
+  const provisioned = await ensureProvisioned(guildId, {
+    categoryName: (row.category_name as string) || 'Private Channels',
+    triggerName: (row.trigger_name as string) || 'Private Channel +',
+    categoryId: (row.category_id as string | null) ?? null,
+    triggerChannelId: (row.trigger_channel_id as string | null) ?? null,
+  })
+  if (!provisioned.ok) return provisioned
 
   const { error } = await supabase
     .from('private_channel_configs')
     .update({
-      category_id: categoryId,
-      trigger_channel_id: triggerChannelId,
+      category_id: provisioned.categoryId,
+      trigger_channel_id: provisioned.triggerChannelId,
       updated_at: new Date().toISOString(),
     })
     .eq('guild_id', guildId)
-
-  if (error) return { ok: false, error: `Failed to trigger re-create: ${error.message}` }
+  if (error) return { ok: false, error: `Failed to save channel IDs: ${error.message}` }
   return { ok: true }
 }
 
