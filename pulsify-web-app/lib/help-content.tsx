@@ -389,6 +389,16 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
       </>
     ),
   },
+  'private-channels': {
+    title: 'Private Channels',
+    plan: 'free',
+    body: (
+      <>
+        <p>Join-to-create temporary voice channels. Pulse makes a category and a trigger channel; joining the trigger spins up a private channel the member owns and can manage.</p>
+        <p><strong>Tip:</strong> Configure the trigger, naming and permissions under Private channels settings — empty channels auto-delete so the list stays clean.</p>
+      </>
+    ),
+  },
 
   // ── Guild · config & branding ─────────────────────────────────────────────
   roles: {

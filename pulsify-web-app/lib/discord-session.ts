@@ -65,21 +65,35 @@ async function readCookie(): Promise<DiscordSession | null> {
 
 async function writeCookie(session: DiscordSession): Promise<void> {
   const store = await cookies()
-  store.set(COOKIE_NAME, JSON.stringify(session), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    // Pin to the refresh-token lifetime: Discord docs say refresh tokens don't
-    // strictly expire, but practically they go stale ~30d after last use. We
-    // give the cookie a year, then rely on refresh failure to clear it.
-    maxAge: ONE_YEAR_SECONDS,
-  })
+  try {
+    // `cookies().set()` throws when called during a Server Component render
+    // (it's only allowed in Server Actions / Route Handlers). We refresh the
+    // Discord token lazily from read paths like `getValidDiscordToken`, which
+    // can run during render — swallowing the error there is safe because the
+    // in-memory token is still returned and the cookie gets rewritten on the
+    // next mutation-capable request.
+    store.set(COOKIE_NAME, JSON.stringify(session), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      // Pin to the refresh-token lifetime: Discord docs say refresh tokens don't
+      // strictly expire, but practically they go stale ~30d after last use. We
+      // give the cookie a year, then rely on refresh failure to clear it.
+      maxAge: ONE_YEAR_SECONDS,
+    })
+  } catch {
+    // Ignore — running in a context where cookies can't be set (render).
+  }
 }
 
 export async function clearDiscordSession(): Promise<void> {
   const store = await cookies()
-  store.delete(COOKIE_NAME)
+  try {
+    store.delete(COOKIE_NAME)
+  } catch {
+    // Ignore — running in a context where cookies can't be modified (render).
+  }
 }
 
 /**

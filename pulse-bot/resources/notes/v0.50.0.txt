@@ -1,0 +1,20 @@
+**Pulsify v0.50.0 — Private Channels**
+Join-to-create temporary voice channels: members make their own private spaces in a click, and Pulse cleans them up automatically.
+
+**Set it up in seconds**
+- **Pulse Bot › Private Channels › Private channels settings** — flip it on and Pulse creates a category plus a trigger channel (default **Private Channel +**). Both the category and trigger names are yours to customise.
+- **Configurable** — channel name format (with {username}/{display}), user limit, start-locked, allowed/ignored roles, max channels per member, and auto-delete timing.
+
+**One click to a private channel**
+- Joining the trigger spins up a personal voice channel, moves the member in, and applies the right permissions so it's theirs.
+- **Owner control panel** — rename, lock/unlock, set a user limit, invite or remove members, transfer ownership, or delete — right inside the channel.
+
+**Tidy by default**
+- Empty channels auto-delete after a configurable delay, and Pulse recreates the trigger/category if they ever go missing.
+
+**Manage from the dashboard**
+- A new **Private Channels** page opens on an at-a-glance summary (total, in use, empty, locked) above a live list of every active channel — owner, name, lock + in-use status, and created time — with search, filtering, force-rename and delete.
+- Configuration lives one click away under **Private channels settings**.
+- Clear setup errors when Pulse is missing a permission it needs.
+
+June 16, 2026
