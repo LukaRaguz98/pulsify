@@ -37,6 +37,7 @@ const { createBackups } = require("./backups");
 const { createEconomy } = require("./economy");
 const { createEconomyRewards } = require("./economy-rewards");
 const { createShop } = require("./shop");
+const { createPrivateChannels } = require("./private-channels");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -150,6 +151,13 @@ const onboarding = createOnboarding(client, supabase, leveling, economyRewards);
 // tick captures snapshots for every guild whose backup_schedules row is enabled
 // and due, then prunes to the retention count. Registers no interaction listener.
 const backups = createBackups(client, supabase);
+
+// Private Channels (PULSIFY-50): the "join-to-create" system. Provisions a
+// category + trigger voice channel, creates per-member private voice channels
+// when they join the trigger, posts an owner control panel, and auto-deletes
+// empty channels. Registers its own `pc:` interaction listener; the join/leave
+// flow + channel-delete reconciliation are fed in from the gateway handlers below.
+const privateChannels = createPrivateChannels(client, supabase);
 
 /**
  * Shared helper for Discord-side activity → notifications row.
@@ -423,6 +431,10 @@ client.once(Events.ClientReady, async (readyClient) => {
   // Backup system: start the hourly scheduled-backup tick (no-op for guilds
   // without an enabled schedule).
   await backups.start();
+
+  // Private Channels: load config, provision categories/triggers for enabled
+  // guilds, register the `pc:` listener, and start the empty-channel sweep.
+  await privateChannels.start();
 
   // Startup banner — a clear, scannable success summary so an operator can
   // confirm at a glance which version is live, how many servers it serves, and
@@ -780,6 +792,9 @@ client.on(Events.MessageCreate, (message) => {
 });
 
 client.on(Events.VoiceStateUpdate, (oldState, newState) => {
+  // Private Channels: join-to-create + empty-channel cleanup (own bot filter).
+  void privateChannels.onVoiceStateUpdate(oldState, newState);
+
   const guildId = newState.guild.id;
   const userId = newState.id;
   const member = newState.member ?? oldState.member;
@@ -839,6 +854,9 @@ client.on(Events.ChannelCreate, async (channel) => {
 
 client.on(Events.ChannelDelete, async (channel) => {
   if (!channel.guild) return;
+  // Private Channels: drop a tracked channel's row, or clear a deleted
+  // category/trigger id so the sweep recreates it.
+  void privateChannels.onChannelDelete(channel);
   await notifyIfNotBot({
     guild: channel.guild,
     auditType: AuditLogEvent.ChannelDelete,

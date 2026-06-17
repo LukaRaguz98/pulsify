@@ -11,6 +11,7 @@ import {
   CalendarDays,
   CalendarClock,
   Zap,
+  Mic2,
   Shield,
   ShieldAlert,
   Users,
@@ -242,6 +243,7 @@ export function GuildSidebar({
       items: [
         { label: 'Commands', href: `${base}/commands`, icon: <Command size={16} /> },
         { label: 'Automations', href: `${base}/automations`, icon: <Zap size={16} /> },
+        { label: 'Private Channels', href: `${base}/private-channels`, icon: <Mic2 size={16} /> },
         { label: 'Integrations', href: `${base}/integrations`, icon: <Plug size={16} /> },
         // Presence is a bot-wide, operator-only surface — hide it from everyone
         // else (the page itself re-checks operator status server-side).

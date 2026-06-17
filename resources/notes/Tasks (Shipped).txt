@@ -3912,3 +3912,153 @@ Acceptance Criteria
 	Economy embeds follow Pulse v2 styling
 	Pagination and navigation function correctly
 	Commands remain responsive and visually polished
+
+PULSIFY-50 — Private Channels & Automations (v0.50.0)
+
+Description
+	Implement a Private Channels automation system that allows server administrators to enable automatic private voice/text channel creation through Pulsify.
+	When enabled, Pulse creates a configured category and a trigger channel such as Private Channel +. When a member joins or interacts with that trigger channel, Pulse automatically creates a new private channel for that member based on the configured settings.
+
+Goals
+	Add automated private channel creation
+	Improve community voice/channel management
+	Reduce manual channel setup work
+	Allow members to create personal private spaces
+	Provide administrators with configurable private channel controls
+
+Tasks
+	Automation Configuration
+		Add Private Channels as an automation option inside:
+			Automations > Private Channels
+
+		Allow administrators to enable/disable the system.
+
+		Configuration options:
+			Enable/disable Private Channels
+			Category name
+			Trigger channel name
+			Created private channel name format
+			Channel type:
+				Voice
+				Text
+				Both if supported
+			User limit
+			Default permissions
+			Auto-delete empty channels
+			Auto-delete delay
+			Allowed roles
+			Ignored roles
+			Maximum active private channels per user
+
+	Discord Category & Trigger Channel Creation
+		When Private Channels is enabled:
+			Create configured category on the Discord server
+			Create trigger channel inside that category
+
+		Default trigger channel example:
+			Private Channel +
+
+		Allow admins to customize trigger channel name from the web app
+
+		Store created category/channel IDs in the database
+
+		Prevent duplicate categories/channels when settings are saved multiple times
+
+	Private Channel Creation Flow
+		When a member joins or uses the trigger channel:
+			Create a new private channel for that member
+			Use configured channel name format
+
+		Examples:
+			{username}'s Channel
+			Private - {username}
+			{username}
+
+		Move the member into the newly created channel if voice-based
+
+		Assign channel permissions so only allowed members/staff can access it
+
+		Set the creator as channel owner where applicable
+
+	Private Channel Management
+		Allow channel owners to manage their private channel if enabled:
+			Rename channel
+			Lock/unlock channel
+			Set user limit
+			Invite members
+			Remove members
+			Transfer ownership
+			Delete channel
+
+	Web App Management
+		Add private channel management inside Pulsify
+
+		Display active private channels
+
+		Display:
+			channel owner
+			channel name
+			channel type
+			created time
+			connected members
+			locked/unlocked status
+
+		Allow admins to delete active private channels
+
+		Allow admins to force rename channels
+
+		Add search/filtering
+
+	Cleanup & Reliability
+		Automatically delete empty private channels
+
+		Handle deleted categories/channels gracefully
+
+		Recreate trigger channel if missing
+
+		Prevent duplicate channel creation
+
+		Handle Discord permission errors clearly
+
+		Add retry/recovery behavior where appropriate
+
+	Permissions & Validation
+		Validate Pulse permissions for:
+			Manage Channels
+			Move Members
+			Manage Roles/Permissions if needed
+			View Channels
+			Connect/Speak for voice channels
+
+		Show clear setup errors if permissions are missing
+
+	Discord Embeds & Feedback
+		Add Pulse-styled confirmation/error messages where appropriate
+
+		Use consistent Pulse v2 embed styling for:
+			private channel created
+			channel deleted
+			permission error
+			owner actions
+			automation enabled/disabled
+
+	UX Improvements
+		Add responsive settings UI
+		Add channel name preview
+		Add permission preview
+		Add loading/error/success states
+		Add helpful guidance/tooltips
+		Add confirmation dialogs for destructive actions
+
+Acceptance Criteria
+	Admins can enable/disable Private Channels from Automations
+	Category name can be configured from the web app
+	Trigger channel name can be configured from the web app
+	Pulse creates the configured category and trigger channel
+	Joining/using the trigger channel creates a new private channel
+	Created private channel name follows the configured format
+	Private channels have correct permissions
+	Empty private channels are deleted automatically
+	Active private channels are visible in Pulsify
+	Missing permissions display clear errors
+	UI remains responsive and visually polished

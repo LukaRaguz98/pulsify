@@ -1,100 +1,106 @@
-PULSIFY-51 — Community Polls & Voting System (v0.51.0)
+PULSIFY-52 — DDoS Protection & Security Monitoring (v0.52.0)
 
 Description
-	Implement a complete Community Polls & Voting system that allows administrators to create polls directly from Pulsify while members can vote through Discord.
-	The system should support simple polls, advanced voting, community decisions, feature voting, and governance-style community participation.
-	Unlike standard Discord polls, all voting data should be tracked, analyzed, and stored within Pulsify.
+	Implement a DDoS Protection module under the Security navigation category that helps administrators monitor, detect, and respond to suspicious traffic spikes, abuse patterns, bot activity, and potential service disruption attempts affecting Pulsify-connected Discord communities and Pulse-related systems.
+	The system should focus on visibility, alerts, automated protection rules, and mitigation workflows.
 
 Goals
-	Increase community engagement
-	Improve community feedback collection
-	Help administrators make data-driven decisions
-	Create a transparent voting system
-	Expand engagement automation capabilities
+	Add a dedicated Security-focused protection module
+	Detect suspicious traffic and abuse patterns
+	Improve platform reliability and administrator awareness
+	Provide protection controls for Pulse and Pulsify workflows
+	Prepare Pulsify for larger public server usage
 
 Tasks
-	Poll Management
-		Create:
-			Engagement > Polls
-
-		Allow administrators to:
-			create polls
-			edit polls
-			close polls
-			archive polls
-			duplicate polls
-
-	Poll Types
-		Support:
-			Single Choice
-			Multiple Choice
-			Yes / No
-			Rating Poll
-			Feature Voting
-			Anonymous Poll
-
-	Discord Integration
-		Generate Pulse-styled poll embeds
-
-		Allow members to vote using:
-			buttons
-			select menus
+	Security Navigation
+		Create a new view under:
+			Security > DDoS Protection
 
 		Display:
-			vote count
-			participation count
-			remaining time
+			current protection status
+			recent suspicious activity
+			active protection rules
+			traffic/activity spikes
+			mitigation status
 
-	Poll Scheduling
-		Support:
-			immediate publishing
-			scheduled publishing
-			automatic closing
+	Detection System
+		Detect suspicious patterns such as:
+			sudden request spikes
+			repeated failed actions
+			excessive command usage
+			mass ticket creation attempts
+			mass giveaway joins
+			mass application submissions
+			repeated API abuse
+			unusual member activity bursts
+			automated spam behavior
 
-	Voting Restrictions
-		Allow:
-			role restrictions
-			minimum level requirements
-			minimum reputation requirements
-			account age requirements
+	Protection Rules
+		Allow administrators to configure:
+			command rate limits
+			ticket creation limits
+			application submission limits
+			giveaway join cooldowns
+			automation execution limits
+			suspicious user thresholds
+			temporary lockdown triggers
 
-	Poll Analytics
+	Automatic Mitigation
+		Support automated actions such as:
+			temporarily disable vulnerable features
+			increase cooldowns
+			restrict command usage
+			block repeated abusive actions
+			pause ticket/application submissions
+			enable server lockdown mode
+			notify administrators
+
+	Monitoring Dashboard
+		Display:
+			traffic/activity graphs
+			blocked attempts
+			triggered rules
+			affected modules
+			suspicious users
+			recent mitigation actions
+
+	Alerts & Notifications
+		Add alerts for:
+			possible DDoS/abuse spikes
+			repeated command abuse
+			ticket/application spam
+			suspicious automation abuse
+			mitigation activation
+
+		Send alerts to:
+			Pulsify dashboard notifications
+			configured Discord admin/security channel
+
+	Logs & Investigation
 		Track:
-			participation rate
-			total voters
-			voting trends
-			winning options
-			most active voters
+			detected abuse events
+			mitigation actions
+			affected users
+			timestamps
+			triggered rules
+			recovery actions
 
-	Community Governance Features
-		Support:
-			weighted voting (optional)
-			reputation-based voting (optional)
-			approval thresholds
-			minimum participation thresholds
-
-	Results View
-		Create:
-			Engagement > Poll Results
-
-		Display:
-			poll history
-			participation graphs
-			vote breakdowns
-			engagement metrics
+		Add filtering and search
 
 	UX Improvements
-		Add responsive poll builder
-		Add live results
-		Add countdown timers
-		Add loading/error states
-		Ensure Pulse v2 embed consistency
+		Add security status indicators
+		Add severity badges
+		Add responsive dashboard layout
+		Add loading/error/empty states
+		Add clear setup guidance
+		Add confirmation dialogs for manual mitigation actions
 
 Acceptance Criteria
-	Polls can be created from Pulsify
-	Members can vote through Discord
-	Results are tracked accurately
-	Analytics display correctly
-	Scheduling functions correctly
-	Poll restrictions work correctly
+	DDoS Protection appears under the Security navigation
+	Suspicious traffic/activity spikes are detected
+	Protection rules can be configured
+	Automatic mitigation actions trigger correctly
+	Alerts are sent to dashboard and Discord where configured
+	Logs provide useful investigation details
+	Admins can clearly see protection status
 	UI remains responsive and visually polished

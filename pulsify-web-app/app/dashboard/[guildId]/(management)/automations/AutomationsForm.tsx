@@ -1,8 +1,8 @@
 'use client'
 
 import { useMemo, useState, useTransition, type ReactNode } from 'react'
-import { saveAutomations, removePulseContent, type AutomationSettings } from './actions'
-import { applyRules, applyChannelsReference } from '@/app/dashboard/[guildId]/(management)/ai-setup/actions'
+import { saveAutomations, type AutomationSettings } from './actions'
+import { applyRules } from '@/app/dashboard/[guildId]/(management)/ai-setup/actions'
 import type { DiscordChannel, DiscordRole } from '@/lib/discord'
 import { AppEmbedPreview } from '@/components/dashboard/AppEmbedPreview'
 import { DiscordEmbedPreview, type EmbedData } from '@/components/dashboard/DiscordEmbedPreview'
@@ -13,8 +13,8 @@ import { THEMES } from '@/lib/themes'
 import {
   MessageSquare, Star, Bell,
   AlertCircle, Sparkles, RotateCcw,
-  ShieldCheck, LayoutGrid, Loader2, Check, Trash2, RefreshCw,
-  UserPlus, Shield, FolderTree, LogOut, Send, Plus, X, Zap,
+  ShieldCheck, Loader2, Check,
+  UserPlus, Shield, LogOut, Send,
 } from 'lucide-react'
 
 type Props = {
@@ -33,7 +33,6 @@ type ModerationAlertsConfig = AutomationSettings['moderation_alerts']
 type MemberEventConfig      = WelcomeConfig
 
 type PulseRulesConfig      = { enabled: boolean; channel_id: string; title?: string; content: string }
-type PulseChannelsConfig   = { enabled: boolean; structure: { category: string; channels: string[] }[] }
 
 type GenerationResult = {
   welcome_message: string
@@ -110,7 +109,6 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
   const rawModAlerts = initialSettings.moderation_alerts  as Partial<ModerationAlertsConfig> | undefined
 
   const rawRules   = initialSettings.rules             as PulseRulesConfig      | undefined
-  const rawChRef   = initialSettings.channels_reference as PulseChannelsConfig  | undefined
 
   const [welcome, setWelcome] = useState<WelcomeConfig>({
     enabled:    rawWelcome?.enabled    ?? false,
@@ -147,12 +145,6 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
   const [rulesResult,     setRulesResult]     = useState<'success' | 'error' | null>(null)
   const [rulesError,      setRulesError]      = useState('')
 
-  const [chRefVisible,  setChRefVisible]  = useState(rawChRef?.enabled ?? false)
-  const [chStructure,   setChStructure]   = useState<{ category: string; channels: string[] }[] | null>(rawChRef?.structure ?? null)
-  const [creatingCh,    setCreatingCh]    = useState(false)
-  const [createChResult, setCreateChResult] = useState<'success' | 'error' | null>(null)
-  const [createChError,  setCreateChError]  = useState('')
-
   // Pulse generation
   const [generatingSection,    setGeneratingSection]    = useState<string | null>(null)
   const [pulseGenError,         setPulseGenError]         = useState<string | null>(null)
@@ -167,17 +159,14 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     autoRole: AutoRoleConfig
     modAlerts: ModerationAlertsConfig
     rulesVisible: boolean; rulesChannel: string; rulesTitle: string; rulesContent: string
-    chRefVisible: boolean; chStructure: { category: string; channels: string[] }[] | null
   }
   const buildSnapshot = (): Snapshot => ({
     welcome, goodbye, autoRole, modAlerts,
     rulesVisible, rulesChannel, rulesTitle, rulesContent,
-    chRefVisible, chStructure,
   })
   const [snapshot, setSnapshot] = useState<Snapshot>(() => ({
     welcome, goodbye, autoRole, modAlerts,
     rulesVisible, rulesChannel, rulesTitle, rulesContent,
-    chRefVisible, chStructure,
   }))
 
   const current = buildSnapshot()
@@ -191,8 +180,7 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     // current is rebuilt every render; comparison is cheap relative to render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot, welcome, goodbye, autoRole, modAlerts,
-    rulesVisible, rulesChannel, rulesTitle, rulesContent,
-    chRefVisible, chStructure])
+    rulesVisible, rulesChannel, rulesTitle, rulesContent])
   const dirty = changedCount > 0
 
   function handleReset() {
@@ -204,48 +192,10 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     setRulesChannel(snapshot.rulesChannel)
     setRulesTitle(snapshot.rulesTitle)
     setRulesContent(snapshot.rulesContent)
-    setChRefVisible(snapshot.chRefVisible)
-    setChStructure(snapshot.chStructure)
     setError(null)
   }
 
   function clearFeedback() { setError(null) }
-
-  // Editing the suggested structure marks it as not-yet-created on Discord.
-  function updateStructure(next: { category: string; channels: string[] }[]) {
-    setChStructure(next)
-    setChRefVisible(false)
-    clearFeedback()
-  }
-  function renameCategory(ci: number, name: string) {
-    if (!chStructure) return
-    updateStructure(chStructure.map((c, i) => (i === ci ? { ...c, category: name } : c)))
-  }
-  function deleteCategory(ci: number) {
-    if (!chStructure) return
-    updateStructure(chStructure.filter((_, i) => i !== ci))
-  }
-  function addCategory() {
-    updateStructure([...(chStructure ?? []), { category: 'new-category', channels: ['new-channel'] }])
-  }
-  function renameChannel(ci: number, chi: number, name: string) {
-    if (!chStructure) return
-    updateStructure(chStructure.map((c, i) =>
-      i === ci ? { ...c, channels: c.channels.map((ch, j) => (j === chi ? name : ch)) } : c,
-    ))
-  }
-  function deleteChannel(ci: number, chi: number) {
-    if (!chStructure) return
-    updateStructure(chStructure.map((c, i) =>
-      i === ci ? { ...c, channels: c.channels.filter((_, j) => j !== chi) } : c,
-    ))
-  }
-  function addChannel(ci: number) {
-    if (!chStructure) return
-    updateStructure(chStructure.map((c, i) =>
-      i === ci ? { ...c, channels: [...c.channels, 'new-channel'] } : c,
-    ))
-  }
 
   function handleSave(): Promise<void> {
     const validationError = validate(welcome, goodbye, autoRole, modAlerts)
@@ -259,7 +209,6 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
           auto_role: autoRole,
           moderation_alerts: modAlerts,
           rules: { enabled: rulesVisible, channel_id: rulesChannel, title: rulesTitle, content: rulesContent },
-          channels_reference: chStructure ? { enabled: chRefVisible, structure: chStructure } : undefined,
         })
         if (result.ok) {
           setError(null)
@@ -281,11 +230,6 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     setRulesResult(res.ok ? 'success' : 'error')
     if (!res.ok) setRulesError(res.error)
     setApplyingRules(false)
-  }
-
-  async function handleRemoveChRef() {
-    const res = await removePulseContent(guildId, 'channels_reference')
-    if (res.ok) { setChRefVisible(false); setChStructure(null) }
   }
 
   function getPulsePrefs() {
@@ -354,9 +298,6 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
         if (section === 'rules') {
           setRulesContent(result.rules.map((r, i) => `${i + 1}. ${r}`).join('\n'))
           setRulesVisible(true)
-        } else if (section === 'channels') {
-          setChStructure(result.channels)
-          setChRefVisible(false)
         }
       }
     } catch {
@@ -365,16 +306,6 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     } finally {
       setGeneratingSection(null)
     }
-  }
-
-  async function handleCreateChannels() {
-    if (!chStructure) return
-    setCreatingCh(true)
-    setCreateChResult(null)
-    const res = await applyChannelsReference(guildId, chStructure)
-    if (res.ok) { setCreateChResult('success'); setChRefVisible(true) }
-    else { setCreateChResult('error'); setCreateChError(res.error) }
-    setCreatingCh(false)
   }
 
   const isEmbed = welcome.type === 'embed'
@@ -543,174 +474,6 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
           <CardItem card={modAlertsCard} />
           <CardItem card={autoRoleCard} />
         </div>
-      </CategorySection>
-
-      {/* ── Server Structure ────────────────────────────────────────────── */}
-      <CategorySection
-        icon={<FolderTree size={14} />}
-        title="Server Structure"
-        description="An Pulse suggested category and channel layout for your server."
-      >
-        {chStructure ? (
-          <div className="rounded-xl border p-5" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: 'rgba(59,130,246,0.12)', color: '#3b82f6' }}>
-                  <LayoutGrid size={16} />
-                </div>
-                <div>
-                  <h2 className="font-semibold text-foreground">Suggested Channels</h2>
-                  <p className="text-sm text-subtle">
-                    {chRefVisible ? 'Channels created on your server via Pulse.' : 'Rename, add or remove channels, then create them on Discord.'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => generateWithPulse('channels')}
-                  disabled={generatingSection !== null}
-                  className="flex items-center gap-1.5 text-xs transition-colors disabled:opacity-50"
-                  style={{ color: 'var(--text-3)' }}
-                  onMouseEnter={(e) => { if (!generatingSection) e.currentTarget.style.color = 'var(--text)' }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-3)' }}
-                >
-                  {generatingSection === 'channels' ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
-                  Re-generate
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRemoveChRef}
-                  className="flex items-center gap-1.5 text-xs transition-colors"
-                  style={{ color: 'var(--text-3)' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171' }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-3)' }}
-                >
-                  <Trash2 size={12} /> Remove
-                </button>
-              </div>
-            </div>
-
-            <div className="grid gap-2 sm:grid-cols-2">
-              {chStructure.map((cat, ci) => (
-                <div key={ci} className="rounded-lg p-3" style={{ background: 'var(--bg-2)' }}>
-                  <div className="mb-2 flex items-center gap-1.5">
-                    <input
-                      value={cat.category}
-                      onChange={(e) => renameCategory(ci, e.target.value)}
-                      placeholder="category-name"
-                      className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1.5 py-1 text-[10px] font-bold uppercase tracking-widest outline-none transition-colors hover:border-[var(--line-strong)] focus:border-[var(--p-1)]"
-                      style={{ color: 'var(--text-2)' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => deleteCategory(ci)}
-                      title="Delete category"
-                      className="shrink-0 transition-colors"
-                      style={{ color: 'var(--text-3)' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171' }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-3)' }}
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                  <div className="space-y-1">
-                    {cat.channels.map((ch, chi) => (
-                      <div key={chi} className="flex items-center gap-1">
-                        <span className="text-xs text-subtle">#</span>
-                        <input
-                          value={ch}
-                          onChange={(e) => renameChannel(ci, chi, e.target.value)}
-                          placeholder="channel-name"
-                          className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1.5 py-0.5 text-xs outline-none transition-colors hover:border-[var(--line-strong)] focus:border-[var(--p-1)]"
-                          style={{ color: 'var(--text-2)' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => deleteChannel(ci, chi)}
-                          title="Delete channel"
-                          className="shrink-0 transition-colors"
-                          style={{ color: 'var(--text-3)' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171' }}
-                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-3)' }}
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => addChannel(ci)}
-                      className="mt-1 flex items-center gap-1 text-[11px] transition-colors"
-                      style={{ color: 'var(--text-3)' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)' }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-3)' }}
-                    >
-                      <Plus size={11} /> Add channel
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <button
-              type="button"
-              onClick={addCategory}
-              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed py-2 text-xs transition-colors"
-              style={{ borderColor: 'var(--line-strong)', color: 'var(--text-3)' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--p-1)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.borderColor = 'var(--line-strong)' }}
-            >
-              <Plus size={12} /> Add category
-            </button>
-
-            {!chRefVisible && (
-              <div className="mt-4 pt-4 border-t space-y-2" style={{ borderColor: 'var(--line-strong)' }}>
-                {createChResult === 'success' && (
-                  <div className="flex items-center gap-2 text-xs" style={{ color: '#22c55e' }}>
-                    <Check size={12} /> Channels created on Discord.
-                  </div>
-                )}
-                {createChResult === 'error' && (
-                  <div className="flex items-center gap-2 text-xs" style={{ color: '#f87171' }}>
-                    <AlertCircle size={12} /> {createChError}
-                  </div>
-                )}
-                <p className="text-xs text-subtle">Categories and text channels will be created as listed above. Existing channels are not affected.</p>
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleCreateChannels}
-                    disabled={creatingCh}
-                    className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold text-white transition-all disabled:opacity-50"
-                    style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))' }}
-                  >
-                    {creatingCh ? <><Loader2 size={11} className="animate-spin" /> Creating…</> : <><Zap size={11} /> Create Channels on Discord</>}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {pulseGenError && pulseGenErrorSection === 'channels' && (
-              <div className="mt-3 flex items-center gap-2 text-xs" style={{ color: '#f87171' }}>
-                <AlertCircle size={12} /> {pulseGenError}
-              </div>
-            )}
-          </div>
-        ) : (
-          <PulseEmptyState
-            icon={<LayoutGrid size={16} />}
-            iconBg="rgba(59,130,246,0.12)"
-            iconColor="#3b82f6"
-            title="Suggested Channels"
-            description="Generate a suggested channel structure with Pulse."
-            section="channels"
-            generatingSection={generatingSection}
-            pulseGenError={pulseGenError}
-            pulseGenErrorSection={pulseGenErrorSection}
-            onGenerate={() => generateWithPulse('channels')}
-          />
-        )}
       </CategorySection>
 
       {error && (
@@ -936,9 +699,10 @@ function PulseContentExtra({
 }) {
   return (
     <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--line-strong)' }}>
-      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-        {/* Left: controls — channel, generation, title/content, post. */}
-        <div className="space-y-3">
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
+        {/* Left: controls — channel, generation, title/content, post. The content
+            editor flexes to fill whatever height is left so it runs to the bottom. */}
+        <div className="flex flex-col gap-3">
           <div>
             <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Channel</label>
             <select
@@ -988,13 +752,12 @@ function PulseContentExtra({
               className={selectClass}
             />
           </div>
-          <div>
+          <div className="flex min-h-0 flex-1 flex-col">
             <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Edit content</label>
             <textarea
               value={content}
               onChange={(e) => onContentChange(e.target.value)}
-              rows={8}
-              className={selectClass + ' resize-none' + (mono ? ' font-mono' : '')}
+              className={selectClass + ' min-h-[20rem] flex-1 resize-none' + (mono ? ' font-mono' : '')}
             />
           </div>
 
@@ -1036,56 +799,6 @@ function PulseContentExtra({
           />
         </div>
       </div>
-    </div>
-  )
-}
-
-// ─── PulseEmptyState ──────────────────────────────────────────────────────────
-
-function PulseEmptyState({
-  icon, iconBg, iconColor, title, description, section,
-  generatingSection, pulseGenError, pulseGenErrorSection, onGenerate,
-}: {
-  icon: ReactNode; iconBg: string; iconColor: string
-  title: string; description: string; section: string
-  generatingSection: string | null
-  pulseGenError: string | null
-  pulseGenErrorSection: string | null
-  onGenerate: () => void
-}) {
-  const isGenerating = generatingSection === section
-  const hasError = pulseGenError !== null && pulseGenErrorSection === section
-
-  return (
-    <div className="rounded-xl border p-5" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: iconBg, color: iconColor }}>
-            {icon}
-          </div>
-          <div className="min-w-0">
-            <h2 className="font-semibold text-foreground">{title}</h2>
-            <p className="text-sm text-subtle">{description}</p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onGenerate}
-          disabled={generatingSection !== null}
-          className="shrink-0 flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-all disabled:opacity-50"
-          style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))', boxShadow: '0 4px 14px -4px var(--p-glow)' }}
-        >
-          {isGenerating
-            ? <><Loader2 size={13} className="animate-spin" /> Generating…</>
-            : <><Sparkles size={13} /> Generate</>
-          }
-        </button>
-      </div>
-      {hasError && (
-        <div className="mt-3 flex items-center gap-2 text-xs" style={{ color: '#f87171' }}>
-          <AlertCircle size={12} /> {pulseGenError}
-        </div>
-      )}
     </div>
   )
 }
