@@ -28,6 +28,7 @@ const {
 const { createScheduler } = require("./scheduler");
 const { createTickets } = require("./tickets");
 const { createGiveaways } = require("./giveaways");
+const { createPolls } = require("./polls");
 const { createLeveling } = require("./leveling");
 const { createMilestones } = require("./milestones");
 const { createPresence } = require("./presence");
@@ -116,6 +117,12 @@ const leveling = createLeveling(client, supabase, economyRewards, shop);
 // giveaways and draws winners when they end. `leveling` is passed so a Join
 // awards engagement XP; `economy` so winners earn global coins + reputation.
 const giveaways = createGiveaways(client, supabase, leveling, economyRewards);
+
+// The polls system (PULSIFY-51) registers its own interaction listener (`pv:`
+// vote buttons + select menus) plus a once-a-minute lifecycle tick that opens
+// scheduled polls and closes + tallies polls when their end time arrives. It
+// reads member_levels + computes reputation for level/reputation vote gates.
+const polls = createPolls(client, supabase);
 
 // The milestones system recognises members for crossing activity / tenure
 // thresholds. Like leveling it owns its table (member_milestones): a periodic
@@ -394,6 +401,10 @@ client.once(Events.ClientReady, async (readyClient) => {
   // Giveaway system: load live giveaways, subscribe to realtime (Join button +
   // dashboard draw/reroll requests), and run the start/end lifecycle tick.
   await giveaways.start();
+
+  // Polls system: load live polls, subscribe to realtime (vote buttons/menus +
+  // dashboard close requests), and run the open/close lifecycle tick.
+  await polls.start();
 
   // Leveling system: load per-guild XP config, subscribe to settings changes,
   // and start the voice-XP tick.

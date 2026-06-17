@@ -44,6 +44,9 @@ export const NOTIFICATION_TYPES = [
   'giveaway_started',
   'giveaway_ended',
   'giveaway_rerolled',
+  // polls
+  'poll_started',
+  'poll_closed',
   // announcements
   'announcement_published',
   'announcement_failed',
@@ -74,6 +77,7 @@ export type NotificationCategory =
   | 'automations'
   | 'tickets'
   | 'giveaways'
+  | 'polls'
   | 'announcements'
   | 'integrations'
   | 'leveling'
@@ -108,6 +112,8 @@ export const TYPE_TO_CATEGORY: Record<NotificationType, NotificationCategory> = 
   giveaway_started: 'giveaways',
   giveaway_ended: 'giveaways',
   giveaway_rerolled: 'giveaways',
+  poll_started: 'polls',
+  poll_closed: 'polls',
   announcement_published: 'announcements',
   announcement_failed: 'announcements',
   integration_connected: 'integrations',
@@ -145,6 +151,8 @@ export const TYPE_TO_SEVERITY: Record<NotificationType, NotificationSeverity> = 
   giveaway_started: 'success',
   giveaway_ended: 'success',
   giveaway_rerolled: 'info',
+  poll_started: 'success',
+  poll_closed: 'info',
   announcement_published: 'success',
   announcement_failed: 'error',
   integration_connected: 'success',
@@ -167,6 +175,7 @@ export const CATEGORY_LABELS: Record<NotificationCategory, string> = {
   automations: 'Automations',
   tickets: 'Tickets',
   giveaways: 'Giveaways',
+  polls: 'Polls',
   announcements: 'Announcements',
   integrations: 'Integrations',
   leveling: 'Levels & XP',
@@ -199,6 +208,8 @@ export const TYPE_LABELS: Record<NotificationType, string> = {
   giveaway_started: 'Giveaway started',
   giveaway_ended: 'Giveaway ended',
   giveaway_rerolled: 'Giveaway rerolled',
+  poll_started: 'Poll opened',
+  poll_closed: 'Poll closed',
   announcement_published: 'Announcement published',
   announcement_failed: 'Announcement failed',
   integration_connected: 'Integration connected',
@@ -236,6 +247,8 @@ export const TYPE_DESCRIPTIONS: Record<NotificationType, string> = {
   giveaway_started: 'A giveaway goes live in the server.',
   giveaway_ended: 'A giveaway ends and winners are drawn.',
   giveaway_rerolled: 'New winners are drawn for a giveaway.',
+  poll_started: 'A poll opens for voting.',
+  poll_closed: 'A poll closes and the result is tallied.',
   announcement_published: 'An announcement is posted to a channel.',
   announcement_failed: 'An announcement could not be published.',
   integration_connected: 'An external service is connected to the server.',

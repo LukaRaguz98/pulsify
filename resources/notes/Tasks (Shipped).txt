@@ -4062,3 +4062,104 @@ Acceptance Criteria
 	Active private channels are visible in Pulsify
 	Missing permissions display clear errors
 	UI remains responsive and visually polished
+
+PULSIFY-51 — Community Polls & Voting System (v0.51.0)
+
+Description
+	Implement a complete Community Polls & Voting system that allows administrators to create polls directly from Pulsify while members can vote through Discord.
+	The system should support simple polls, advanced voting, community decisions, feature voting, and governance-style community participation.
+	Unlike standard Discord polls, all voting data should be tracked, analyzed, and stored within Pulsify.
+
+Goals
+	Increase community engagement
+	Improve community feedback collection
+	Help administrators make data-driven decisions
+	Create a transparent voting system
+	Expand engagement automation capabilities
+
+Tasks
+	Poll Management
+		Create:
+			Engagement > Polls
+
+		Allow administrators to:
+			create polls
+			edit polls
+			close polls
+			archive polls
+			duplicate polls
+
+	Poll Types
+		Support:
+			Single Choice
+			Multiple Choice
+			Yes / No
+			Rating Poll
+			Feature Voting
+			Anonymous Poll
+
+	Discord Integration
+		Generate Pulse-styled poll embeds
+
+		Allow members to vote using:
+			buttons
+			select menus
+
+		Display:
+			vote count
+			participation count
+			remaining time
+
+	Poll Scheduling
+		Support:
+			immediate publishing
+			scheduled publishing
+			automatic closing
+
+	Voting Restrictions
+		Allow:
+			role restrictions
+			minimum level requirements
+			minimum reputation requirements
+			account age requirements
+
+	Poll Analytics
+		Track:
+			participation rate
+			total voters
+			voting trends
+			winning options
+			most active voters
+
+	Community Governance Features
+		Support:
+			weighted voting (optional)
+			reputation-based voting (optional)
+			approval thresholds
+			minimum participation thresholds
+
+	Results View
+		Create:
+			Engagement > Poll Results
+
+		Display:
+			poll history
+			participation graphs
+			vote breakdowns
+			engagement metrics
+
+	UX Improvements
+		Add responsive poll builder
+		Add live results
+		Add countdown timers
+		Add loading/error states
+		Ensure Pulse v2 embed consistency
+
+Acceptance Criteria
+	Polls can be created from Pulsify
+	Members can vote through Discord
+	Results are tracked accurately
+	Analytics display correctly
+	Scheduling functions correctly
+	Poll restrictions work correctly
+	UI remains responsive and visually polished
