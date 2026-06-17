@@ -2,7 +2,7 @@
 Join-to-create temporary voice channels: members make their own private spaces in a click, and Pulse cleans them up automatically.
 
 **Set it up in seconds**
-- **Pulse Bot › Private Channels › Private channels settings** — flip it on and Pulse creates a category plus a trigger channel (default **Private Channel +**). Both the category and trigger names are yours to customise.
+- **Pulse Bot › Private Channels › Private channels settings** — flip it on and Pulse creates a category plus a trigger channel. Both the category and trigger names are yours to customise.
 - **Configurable** — channel name format (with {username}/{display}), user limit, start-locked, allowed/ignored roles, max channels per member, and auto-delete timing.
 
 **One click to a private channel**
