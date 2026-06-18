@@ -264,7 +264,6 @@ export function GuildSidebar({
         { label: 'Scheduled', href: `${base}/scheduled`, icon: <CalendarClock size={16} /> },
         { label: 'Giveaways', href: `${base}/giveaways`, icon: <Gift size={16} /> },
         { label: 'Polls', href: `${base}/polls`, icon: <Vote size={16} /> },
-        { label: 'Poll Results', href: `${base}/poll-results`, icon: <BarChart3 size={16} /> },
         { label: 'Milestones', href: `${base}/milestones`, icon: <Award size={16} /> },
       ],
     },

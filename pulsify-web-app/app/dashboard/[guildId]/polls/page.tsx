@@ -29,7 +29,7 @@ export default async function PollsPage({ params }: { params: Promise<{ guildId:
     fetchGuild(guildId),
     fetchGuildChannels(guildId),
     fetchGuildRoles(guildId),
-    supabase.from('polls').select('*').eq('guild_id', guildId).order('created_at', { ascending: false }).limit(200),
+    supabase.from('polls').select('*').eq('guild_id', guildId).order('created_at', { ascending: false }).limit(500),
   ])
 
   const textChannels = channels

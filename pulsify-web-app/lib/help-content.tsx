@@ -149,17 +149,8 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
     body: (
       <>
         <p>Run polls members vote on right in Discord — single/multiple choice, yes-no, ratings or feature voting. Every vote is tracked in Pulsify with live results and analytics.</p>
+        <p>The <strong>Results</strong> tab holds the history of every closed poll with its final breakdown and participation, plus engagement trends across all your polls.</p>
         <p><strong>Tip:</strong> Restrict who can vote (roles, account age, level, reputation) and add governance rules — weighted voting, approval thresholds and minimum participation.</p>
-      </>
-    ),
-  },
-  'poll-results': {
-    title: 'Poll Results',
-    plan: 'free',
-    body: (
-      <>
-        <p>The history of every closed poll with its final breakdown, participation and outcome, plus engagement trends across all your polls.</p>
-        <p><strong>Tip:</strong> Anonymous polls still report aggregate results here — just without naming individual voters.</p>
       </>
     ),
   },

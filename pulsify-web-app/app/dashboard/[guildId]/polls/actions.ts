@@ -58,7 +58,6 @@ const iconAttachments = (): V2Attachment[] | undefined =>
 
 function revalidate(guildId: string) {
   revalidatePath(`/dashboard/${guildId}/polls`)
-  revalidatePath(`/dashboard/${guildId}/poll-results`)
 }
 
 type PollRow = {

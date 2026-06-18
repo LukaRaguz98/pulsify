@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { BarChart3, Plus, CheckCircle2, AlertCircle, X, ListChecks, Radio, CalendarClock, Users, Search } from 'lucide-react'
+import { BarChart3, Plus, CheckCircle2, AlertCircle, X, ListChecks, Radio, CalendarClock, Users, Search, History } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { CategorySection } from '@/components/ui/category-section'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -16,7 +16,7 @@ import { PollAnalytics } from './PollAnalytics'
 
 type Channel = { id: string; name: string }
 type Role = { id: string; name: string; color: number }
-type Tab = 'polls' | 'analytics'
+type Tab = 'polls' | 'results'
 type Feedback = { kind: 'success' | 'error'; msg: string }
 
 const SECTIONS: PollStatus[] = ['active', 'scheduled', 'closed', 'archived']
@@ -44,17 +44,28 @@ export function PollsContent({
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | PollStatus>('all')
+  const [historySearch, setHistorySearch] = useState('')
   const [pending, startTransition] = useTransition()
 
   const roleNames = useMemo(() => new Map(roles.map((r) => [r.id, r.name])), [roles])
   const channelNames = useMemo(() => new Map(channels.map((c) => [c.id, c.name])), [channels])
 
+  // Deep links: ?new=1 opens the create panel, ?tab=results opens Results.
+  // Both are cleaned from the URL so a refresh doesn't re-force them.
   useEffect(() => {
-    if (readOnly) return
     const params = new URLSearchParams(window.location.search)
-    if (params.get('new') === '1') {
+    let changed = false
+    if (!readOnly && params.get('new') === '1') {
       setCreating(true)
       params.delete('new')
+      changed = true
+    }
+    if (!readOnly && params.get('tab') === 'results') {
+      setTab('results')
+      params.delete('tab')
+      changed = true
+    }
+    if (changed) {
       const qs = params.toString()
       window.history.replaceState({}, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`)
     }
@@ -81,6 +92,17 @@ export function PollsContent({
     }
     return map
   }, [filtered])
+
+  // History = settled polls only (closed + archived), newest first.
+  const history = useMemo(
+    () => initialPolls.filter((p) => p.status === 'closed' || p.status === 'archived'),
+    [initialPolls],
+  )
+  const filteredHistory = useMemo(() => {
+    const q = historySearch.trim().toLowerCase()
+    if (!q) return history
+    return history.filter((p) => p.title.toLowerCase().includes(q) || (p.description ?? '').toLowerCase().includes(q))
+  }, [history, historySearch])
 
   const runAction = useCallback(
     async <T,>(fn: () => Promise<ActionResult<T>>, successMsg?: string): Promise<ActionResult<T>> => {
@@ -147,51 +169,42 @@ export function PollsContent({
         </div>
       )}
 
-      <div className="space-y-8">
-        <CategorySection icon={<BarChart3 size={14} />} title="At a glance" description="Voting activity across this server.">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard icon={<BarChart3 size={16} />} label="Polls" value={stats.total} color="#60a5fa" />
-            <StatCard icon={<Radio size={16} />} label="Active" value={stats.active} color="#22c55e" />
-            <StatCard icon={<CalendarClock size={16} />} label="Scheduled" value={stats.scheduled} color="#3b82f6" />
-            <StatCard icon={<Users size={16} />} label="Voters" value={stats.totalVoters} color="#a855f7" />
-          </div>
-        </CategorySection>
-
-        <CategorySection icon={<ListChecks size={14} />} title="Manage" description="Browse polls, launch a new one, and review engagement.">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="inline-flex rounded-xl border p-1" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
-              {([
-                { id: 'polls' as Tab, label: 'Polls', icon: <ListChecks size={15} /> },
-                { id: 'analytics' as Tab, label: 'Analytics', icon: <BarChart3 size={15} /> },
-              ]).map((t) => {
-                const active = tab === t.id
-                return (
-                  <button
-                    key={t.id}
-                    onClick={() => setTab(t.id)}
-                    className="flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors"
-                    style={active ? { background: 'var(--p-soft)', color: 'var(--text)', boxShadow: 'inset 0 0 0 1px var(--p-soft)' } : { color: 'var(--text-2)' }}
-                  >
-                    <span style={active ? { color: 'var(--p-1)' } : { color: 'var(--text-3)' }}>{t.icon}</span>
-                    {t.label}
-                  </button>
-                )
-              })}
-            </div>
-            {!readOnly && (
+      {/* Members vote in Discord, so they only get the poll list — no results tab. */}
+      {!readOnly && (
+        <div className="mb-6 inline-flex rounded-xl border p-1" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
+          {([
+            { id: 'polls' as Tab, label: 'Polls', icon: <ListChecks size={15} /> },
+            { id: 'results' as Tab, label: 'Results', icon: <BarChart3 size={15} /> },
+          ]).map((t) => {
+            const active = tab === t.id
+            return (
               <button
-                onClick={() => setCreating(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white"
-                style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className="flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors"
+                style={active ? { background: 'var(--p-soft)', color: 'var(--text)' } : { color: 'var(--text-2)' }}
               >
-                <Plus size={15} />
-                New poll
+                <span style={active ? { color: 'var(--p-1)' } : { color: 'var(--text-3)' }}>{t.icon}</span>
+                {t.label}
               </button>
-            )}
-          </div>
+            )
+          })}
+        </div>
+      )}
 
-          {tab === 'polls' &&
-            (initialPolls.length === 0 ? (
+      {tab === 'polls' ? (
+        <div className="space-y-8">
+          <CategorySection icon={<BarChart3 size={14} />} title="At a glance" description="Voting activity across this server.">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard icon={<BarChart3 size={16} />} label="Polls" value={stats.total} color="#60a5fa" />
+              <StatCard icon={<Radio size={16} />} label="Active" value={stats.active} color="#22c55e" />
+              <StatCard icon={<CalendarClock size={16} />} label="Scheduled" value={stats.scheduled} color="#3b82f6" />
+              <StatCard icon={<Users size={16} />} label="Voters" value={stats.totalVoters} color="#a855f7" />
+            </div>
+          </CategorySection>
+
+          <CategorySection icon={<ListChecks size={14} />} title="Manage" description="Browse polls and launch a new one.">
+            {initialPolls.length === 0 ? (
               <EmptyState
                 icon={<BarChart3 size={26} />}
                 title="No polls yet"
@@ -226,22 +239,34 @@ export function PollsContent({
                       style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
                     />
                   </div>
-                  <div className="inline-flex flex-wrap rounded-lg border p-0.5" style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}>
-                    {(['all', ...SECTIONS] as const).map((f) => {
-                      const active = statusFilter === f
-                      const label = f === 'all' ? 'All' : STATUS_META[f].label
-                      return (
-                        <button
-                          key={f}
-                          type="button"
-                          onClick={() => setStatusFilter(f)}
-                          className="rounded-md px-3 py-1 text-xs font-medium transition"
-                          style={{ background: active ? 'var(--p-soft)' : 'transparent', color: active ? 'var(--p-1)' : 'var(--text-3)' }}
-                        >
-                          {label}
-                        </button>
-                      )
-                    })}
+                  <div className="flex items-center gap-3">
+                    <div className="inline-flex flex-wrap rounded-lg border p-0.5" style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}>
+                      {(['all', ...SECTIONS] as const).map((f) => {
+                        const active = statusFilter === f
+                        const label = f === 'all' ? 'All' : STATUS_META[f].label
+                        return (
+                          <button
+                            key={f}
+                            type="button"
+                            onClick={() => setStatusFilter(f)}
+                            className="rounded-md px-3 py-1 text-xs font-medium transition"
+                            style={{ background: active ? 'var(--p-soft)' : 'transparent', color: active ? 'var(--p-1)' : 'var(--text-3)' }}
+                          >
+                            {label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {!readOnly && (
+                      <button
+                        onClick={() => setCreating(true)}
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white"
+                        style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}
+                      >
+                        <Plus size={15} />
+                        New poll
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -271,11 +296,50 @@ export function PollsContent({
                   </div>
                 )}
               </div>
-            ))}
+            )}
+          </CategorySection>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          <CategorySection icon={<CheckCircle2 size={14} />} title="Engagement" description="How your community participates in voting.">
+            <PollAnalytics stats={stats} />
+          </CategorySection>
 
-          {tab === 'analytics' && <PollAnalytics stats={stats} />}
-        </CategorySection>
-      </div>
+          <CategorySection icon={<History size={14} />} title="Poll history" description="Every poll that has closed, with its final result.">
+            {history.length === 0 ? (
+              <EmptyState
+                icon={<BarChart3 size={26} />}
+                variant="muted"
+                title="No closed polls yet"
+                description="Once a poll closes, its result and breakdown appear here."
+              />
+            ) : (
+              <div className="space-y-5">
+                <div className="relative max-w-xs">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
+                  <input
+                    type="text"
+                    value={historySearch}
+                    onChange={(e) => setHistorySearch(e.target.value)}
+                    placeholder="Search results…"
+                    className="w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1"
+                    style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
+                  />
+                </div>
+                {filteredHistory.length === 0 ? (
+                  <EmptyState variant="muted" icon={<Search size={24} />} title="No matching results" description="Try a different search." />
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {filteredHistory.map((p) => (
+                      <PollCard key={p.id} poll={p} onSelect={() => setSelectedId(p.id)} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </CategorySection>
+        </div>
+      )}
 
       {selected && (
         <PollDetail
