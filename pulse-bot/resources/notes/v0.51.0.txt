@@ -3,23 +3,23 @@ Run polls from the dashboard and let members vote right inside Discord — every
 
 **Make any kind of poll**
 - **Engagement › Polls** — single choice, multiple choice, yes/no, ratings, or feature voting. Pick a template to start fast, or build your own.
-- **Anonymous polls** keep voter names private while still tracking the result, and you can let voters change their mind or lock votes as final.
+- **Anonymous polls** — keep voter names private while still tracking the result, and let voters change their mind or lock votes as final.
 
 **Vote in Discord**
-- Pulse posts a polished poll embed with vote **buttons** (small polls) or a **select menu** (bigger or multi-pick polls), showing live vote + voter counts and a live countdown.
-- Votes are recorded instantly; single-choice replaces a prior vote, multiple choice lets members pick up to your limit.
+- **Buttons or a menu** — Pulse posts a polished poll embed with vote buttons (small polls) or a select menu (bigger or multi-pick polls), showing live vote and voter counts and a live countdown.
+- **Instant, accurate tallies** — votes are recorded instantly; single-choice replaces a prior vote, multiple choice lets members pick up to your limit.
 
 **Schedule + auto-close**
-- Publish immediately or schedule for later, and set how long a poll runs — Pulse closes it on time, tallies the result and announces the outcome.
+- **Set it and forget it** — publish immediately or schedule for later, and set how long a poll runs; Pulse closes it on time, tallies the result and announces the outcome.
 
 **Decide who can vote**
-- Gate voting by **role**, **account age**, **minimum level** or **minimum reputation**.
+- **Four ways to gate** — restrict voting by role, account age, minimum level or minimum reputation.
 
 **Community governance**
-- Optional **weighted voting** (by reputation or level), **approval thresholds** and **minimum participation** so a result only "passes" when it truly has community backing.
+- **Make results count** — optional weighted voting (by reputation or level), approval thresholds and minimum participation, so a result only "passes" when it truly has community backing.
 
 **Track everything**
 - **Engagement › Poll Results** — closed-poll history, vote breakdowns, participation and engagement trends.
-- Live results, countdowns and CSV export on every poll's detail view.
+- **Drill into any poll** — live results, countdowns and CSV export on every poll's detail view.
 
 June 17, 2026
