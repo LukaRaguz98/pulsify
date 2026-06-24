@@ -401,25 +401,27 @@ export function AssetsContent({ guildId }: Props) {
             })}
           </div>
 
-          {/* Toolbar */}
+          {/* Toolbar — capped search on the left, controls grouped on the right
+              (mirrors the Events / Scheduled toolbars). */}
           <div className="flex flex-wrap items-center gap-2">
-            <div className="relative min-w-[180px] flex-1">
+            <div className="relative min-w-[200px] max-w-sm flex-1">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
               <input
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setPage(1) }}
                 placeholder={`Search ${TABS.find((t) => t.kind === tab)?.label.toLowerCase()}…`}
                 className="w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1"
-                style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
+                style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
               />
             </div>
 
+            <div className="ml-auto flex flex-wrap items-center gap-2">
             {filters.length > 0 && (
               <select
                 value={activeFilter}
                 onChange={(e) => { if (tab === 'emoji') setEmojiFilter(e.target.value as EmojiFilter); else setStickerFilter(e.target.value as StickerFilter); setPage(1) }}
                 className="rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
-                style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
+                style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
               >
                 {filters.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
               </select>
@@ -429,7 +431,7 @@ export function AssetsContent({ guildId }: Props) {
               value={sort}
               onChange={(e) => { setSort(e.target.value as SortKey); setPage(1) }}
               className="rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
-              style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
+              style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
             >
               <option value="name">Name</option>
               <option value="newest">Newest first</option>
@@ -460,6 +462,7 @@ export function AssetsContent({ guildId }: Props) {
                   {v === 'grid' ? <LayoutGrid size={15} /> : <ListIcon size={15} />}
                 </button>
               ))}
+            </div>
             </div>
           </div>
 
