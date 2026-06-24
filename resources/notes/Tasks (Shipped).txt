@@ -4270,3 +4270,172 @@ Acceptance Criteria
 	Logs provide useful investigation details
 	Admins can clearly see protection status
 	UI remains responsive and visually polished
+
+PULSIFY-53 — Server Assets Management & Configuration (v0.53.0)
+
+Description
+	Implement a dedicated Server > Assets management page that provides centralized control over Discord server emojis, stickers, and soundboard sounds.
+	The Assets page should make it significantly easier to manage server assets compared to Discord's native interface by providing bulk operations, asset previews, import/export functionality, and streamlined management workflows.
+
+Goals
+	Centralize server asset management
+	Simplify emoji, sticker, and soundboard administration
+	Improve server branding workflows
+	Support bulk asset operations
+	Reduce reliance on Discord's native settings pages
+
+Tasks
+	Assets Navigation
+		Create a new view:
+			Server > Assets
+
+		Display separate tabs:
+			Emojis
+			Stickers
+			Soundboard
+
+		Display summary statistics:
+			total emojis
+			animated emojis
+			total stickers
+			total soundboard sounds
+			available asset slots
+			asset usage indicators where possible
+
+	Emoji Management
+		Allow administrators to:
+			view all server emojis
+			search emojis
+			filter emojis
+			preview emojis
+			rename emojis
+			delete emojis
+			duplicate emojis
+			export individual emojis
+			export selected emojis
+			export all emojis
+
+		Display:
+			emoji preview
+			emoji name
+			animated/static status
+			upload information where available
+
+	Sticker Management
+		Allow administrators to:
+			view all server stickers
+			search stickers
+			filter stickers
+			preview stickers
+			rename stickers
+			delete stickers
+			export individual stickers
+			export selected stickers
+			export all stickers
+
+		Display:
+			sticker preview
+			sticker name
+			description
+			sticker format
+
+	Soundboard Management
+		Allow administrators to:
+			view all soundboard sounds
+			search sounds
+			filter sounds
+			preview sounds directly inside Pulsify
+			rename sounds
+			delete sounds
+			export individual sounds
+			export selected sounds
+			export all sounds
+
+		Display:
+			sound name
+			duration
+			volume information where available
+			upload information where available
+
+	Import System
+		Support importing:
+			individual assets
+			multiple assets simultaneously
+
+		Support:
+			drag-and-drop uploads
+			batch uploads
+			upload validation
+			duplicate detection
+			rename before upload
+			import previews
+
+	Export System
+		Allow exporting:
+			single asset
+			multiple selected assets
+			entire asset category
+			full server asset package
+
+		Include:
+			original files
+			asset metadata
+			naming information
+
+	Bulk Actions
+		Support:
+			bulk rename
+			bulk delete
+			bulk export
+			bulk import
+			bulk selection
+
+		Add confirmation dialogs for destructive actions
+
+	Asset Organization
+		Add:
+			grid view
+			list view
+			sorting options
+			filtering options
+			quick actions
+			preview modal
+
+	Discord Synchronization
+		Ensure all asset actions synchronize correctly with Discord:
+			rename
+			upload
+			delete
+			import
+			export
+
+		Handle Discord API limitations gracefully
+
+	Permissions & Validation
+		Validate required Discord permissions before actions
+
+		Display clear errors when:
+			asset limits are reached
+			file formats are invalid
+			permissions are missing
+			Discord API actions fail
+
+	UX Improvements
+		Add responsive layouts
+		Add loading states
+		Add empty states
+		Add success notifications
+		Add error notifications
+		Add asset previews
+		Add modern asset management experience
+
+Acceptance Criteria
+	Assets page is available under Server > Assets
+	Emojis can be viewed, renamed, imported, exported, and deleted
+	Stickers can be viewed, renamed, imported, exported, and deleted
+	Soundboard sounds can be viewed, renamed, imported, exported, and deleted
+	Bulk actions function correctly
+	Import/export workflows function correctly
+	Discord synchronization works reliably
+	Permission validation prevents invalid actions
+	UI remains responsive and visually polished

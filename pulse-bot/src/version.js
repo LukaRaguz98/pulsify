@@ -18,11 +18,27 @@ const path = require("node:path");
 // Current Pulse version. Used for the startup banner and as the displayed
 // version when no release files are reachable. Keep this in step with the
 // newest resources/notes/vX.Y.Z.txt on each release.
-const PULSE_VERSION = "0.52.0";
+const PULSE_VERSION = "0.53.0";
 
 // Manual/static fallback used only when the release-notes files can't be read.
 // Mirrors the shape produced by the parser so callers don't special-case it.
 const STATIC_RELEASES = [
+  {
+    version: "0.53.0",
+    title: "Server Assets Manager",
+    date: "Jun 24, 2026",
+    description:
+      "A dedicated Server › Assets page that manages your emojis, stickers and soundboard sounds in one place — with bulk tools, drag-and-drop uploads and one-click exports.",
+    highlights: [
+      "**Server › Assets** — Emojis, Stickers and Soundboard tabs with totals, animated counts and live slot-usage bars.",
+      "**Full management** — search, filter, sort, grid/list views, previews (with in-dashboard sound playback), rename, delete and duplicate.",
+      "**Import** — drag-and-drop or batch uploads with validation, duplicate detection and rename-before-upload, pushed straight to Discord.",
+      "**Bulk tools** — select many assets to rename, export or delete together, with confirmation on destructive actions.",
+      "**Export** — a single asset, your selection, a whole category, or a full server package as a ZIP with a metadata manifest.",
+    ],
+    outro:
+      "Server branding, organised — no more digging through Discord's native settings.",
+  },
   {
     version: "0.52.0",
     title: "DDoS Protection & Security Monitoring",

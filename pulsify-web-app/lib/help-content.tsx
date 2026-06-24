@@ -442,6 +442,16 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
       </>
     ),
   },
+  assets: {
+    title: 'Assets',
+    plan: 'free',
+    body: (
+      <>
+        <p>One place to manage your server&apos;s emojis, stickers and soundboard sounds — preview them, rename, duplicate, import via drag-and-drop and export individually or as a full package.</p>
+        <p><strong>Tip:</strong> Select multiple assets to rename, export or delete them in bulk. Pulse needs the <em>Manage Expressions</em> permission to upload, rename and delete.</p>
+      </>
+    ),
+  },
   commands: {
     title: 'Command Center',
     plan: 'free',

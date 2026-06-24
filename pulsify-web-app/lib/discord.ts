@@ -1868,3 +1868,373 @@ export async function duplicateGuildChannel(
 
   return created
 }
+
+// ─── Server assets: emojis, stickers, soundboard sounds ─────────────────────
+//
+// These power the Server › Assets dashboard. All three are "guild expressions"
+// in Discord's permission model — managing them requires Manage Guild
+// Expressions (and Create Guild Expressions to add new ones), or Administrator.
+// The CDN-URL helpers below are pure so the client can render previews without
+// a round-trip; downloads go through the server export route to dodge CORS.
+
+const CDN_BASE = 'https://cdn.discordapp.com'
+const MEDIA_BASE = 'https://media.discordapp.net'
+
+export const CREATE_GUILD_EXPRESSIONS_BIT = BigInt('0x80000000000') // 1 << 43
+export const MANAGE_GUILD_EXPRESSIONS_BIT = BigInt(0x40000000) // 1 << 30
+
+export type DiscordEmoji = {
+  id: string
+  name: string | null
+  roles: string[]
+  /** Uploader — only returned when the bot has Manage Guild Expressions. */
+  user?: { id: string; username: string; global_name: string | null; avatar: string | null }
+  require_colons: boolean
+  managed: boolean
+  animated: boolean
+  available: boolean
+}
+
+/** Sticker format: 1=PNG, 2=APNG, 3=Lottie, 4=GIF. */
+export type StickerFormat = 1 | 2 | 3 | 4
+
+export type DiscordSticker = {
+  id: string
+  name: string
+  description: string | null
+  /** Autocomplete/suggestion tags. Guild stickers carry a single tag string. */
+  tags: string
+  /** 1=standard (Nitro pack), 2=guild. We only manage guild stickers. */
+  type: number
+  format_type: StickerFormat
+  available: boolean
+  guild_id?: string
+  user?: { id: string; username: string; global_name: string | null; avatar: string | null }
+  sort_value?: number
+}
+
+export type DiscordSoundboardSound = {
+  sound_id: string
+  name: string
+  /** 0..1 playback volume. */
+  volume: number
+  emoji_id: string | null
+  emoji_name: string | null
+  guild_id?: string
+  available: boolean
+  user?: { id: string; username: string; global_name: string | null; avatar: string | null }
+}
+
+/** CDN URL for a guild emoji image (animated emojis resolve to .gif). */
+export function emojiAssetUrl(id: string, animated: boolean, size = 96): string {
+  return `${CDN_BASE}/emojis/${id}.${animated ? 'gif' : 'png'}?size=${size}`
+}
+
+/**
+ * Best image URL for a sticker preview. Lottie (3) stickers are vector JSON and
+ * have no raster CDN image — callers should render a placeholder for those.
+ * APNG (2) is served as a static .png by the CDN; GIF (4) animates via the
+ * media proxy host.
+ */
+export function stickerAssetUrl(id: string, format: StickerFormat, size = 160): string | null {
+  if (format === 3) return null
+  if (format === 4) return `${MEDIA_BASE}/stickers/${id}.gif?size=${size}`
+  return `${CDN_BASE}/stickers/${id}.png?size=${size}`
+}
+
+/** Original-file URL for a sticker (used by export). */
+export function stickerFileUrl(id: string, format: StickerFormat): string {
+  if (format === 3) return `${CDN_BASE}/stickers/${id}.json`
+  if (format === 4) return `${MEDIA_BASE}/stickers/${id}.gif`
+  return `${CDN_BASE}/stickers/${id}.png`
+}
+
+/** Playable/downloadable URL for a soundboard sound. */
+export function soundAssetUrl(soundId: string): string {
+  return `${CDN_BASE}/soundboard-sounds/${soundId}`
+}
+
+export const STICKER_FORMAT_NAMES: Record<StickerFormat, string> = {
+  1: 'PNG',
+  2: 'APNG',
+  3: 'Lottie',
+  4: 'GIF',
+}
+
+/** File extension for an exported sticker, by format. */
+export function stickerExtension(format: StickerFormat): string {
+  return format === 3 ? 'json' : format === 4 ? 'gif' : 'png'
+}
+
+/**
+ * Per-tier asset capacity. Discord grants more slots as a server boosts:
+ *  - emojis: static and animated each get their own pool
+ *  - stickers / soundboard: a single pool
+ * Indexed by `premium_tier` (0..3).
+ */
+export type AssetLimits = {
+  emojiStatic: number
+  emojiAnimated: number
+  stickers: number
+  soundboard: number
+}
+
+export function assetLimitsForTier(tier: number): AssetLimits {
+  const t = Math.max(0, Math.min(3, tier | 0))
+  const emoji = [50, 100, 150, 250][t]
+  return {
+    emojiStatic: emoji,
+    emojiAnimated: emoji,
+    stickers: [5, 15, 30, 60][t],
+    soundboard: [8, 24, 36, 48][t],
+  }
+}
+
+export type ExpressionPerms = { manage: boolean; create: boolean }
+
+/**
+ * Whether the bot can manage / create guild expressions (emojis, stickers,
+ * soundboard). Returns null when we can't determine it — callers should treat
+ * null as "unknown" and let Discord enforce rather than blocking.
+ */
+export async function checkBotExpressionPerms(guildId: string): Promise<ExpressionPerms | null> {
+  if (!process.env.DISCORD_BOT_TOKEN) return null
+  const botId = await getBotId()
+  if (!botId) return null
+
+  const [member, roles] = await Promise.all([
+    fetchGuildMember(guildId, botId),
+    fetchGuildRoles(guildId),
+  ])
+  if (!member || roles.length === 0) return null
+
+  let permissions = BigInt(0)
+  const botRoleIds = new Set(member.roles)
+  for (const role of roles) {
+    if (role.id === guildId || botRoleIds.has(role.id)) permissions |= BigInt(role.permissions)
+  }
+  if ((permissions & PERM_BITS.ADMINISTRATOR) !== BigInt(0)) return { manage: true, create: true }
+  const manage = (permissions & MANAGE_GUILD_EXPRESSIONS_BIT) !== BigInt(0)
+  return {
+    manage,
+    // Manage implies create; the dedicated Create bit also grants additions.
+    create: manage || (permissions & CREATE_GUILD_EXPRESSIONS_BIT) !== BigInt(0),
+  }
+}
+
+// ── Emojis ──────────────────────────────────────────────────────────────────
+
+export async function fetchGuildEmojis(guildId: string): Promise<DiscordEmoji[]> {
+  if (!process.env.DISCORD_BOT_TOKEN) return []
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/emojis`, {
+    headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function createGuildEmoji(
+  guildId: string,
+  body: { name: string; image: string; roles?: string[] },
+  reason?: string,
+): Promise<{ ok: true; emoji: DiscordEmoji } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/emojis`, {
+    method: 'POST',
+    headers: jsonHeaders(reason),
+    body: JSON.stringify({
+      name: sanitizeExpressionName(body.name),
+      image: body.image,
+      roles: body.roles ?? [],
+    }),
+  })
+  if (!res.ok) return { ok: false, error: await discordError(res) }
+  return { ok: true, emoji: (await res.json()) as DiscordEmoji }
+}
+
+export async function modifyGuildEmoji(
+  guildId: string,
+  emojiId: string,
+  body: { name?: string; roles?: string[] },
+  reason?: string,
+): Promise<{ ok: true; emoji: DiscordEmoji } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const payload: Record<string, unknown> = {}
+  if (body.name !== undefined) payload.name = sanitizeExpressionName(body.name)
+  if (body.roles !== undefined) payload.roles = body.roles
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/emojis/${emojiId}`, {
+    method: 'PATCH',
+    headers: jsonHeaders(reason),
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) return { ok: false, error: await discordError(res) }
+  return { ok: true, emoji: (await res.json()) as DiscordEmoji }
+}
+
+export async function deleteGuildEmoji(
+  guildId: string,
+  emojiId: string,
+  reason?: string,
+): Promise<DiscordResult> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/emojis/${emojiId}`, {
+    method: 'DELETE',
+    headers: authHeaders(reason),
+  })
+  if (res.ok) return { ok: true }
+  return { ok: false, error: await discordError(res) }
+}
+
+// ── Stickers ──────────────────────────────────────────────────────────────
+
+export async function fetchGuildStickers(guildId: string): Promise<DiscordSticker[]> {
+  if (!process.env.DISCORD_BOT_TOKEN) return []
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/stickers`, {
+    headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function createGuildSticker(
+  guildId: string,
+  body: { name: string; description: string; tags: string; file: { data: Buffer; filename: string; contentType: string } },
+  reason?: string,
+): Promise<{ ok: true; sticker: DiscordSticker } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  // Sticker creation is multipart/form-data — the only Discord asset endpoint
+  // that wants the raw file rather than a base64 data URI.
+  const form = new FormData()
+  form.append('name', body.name.slice(0, 30))
+  form.append('description', (body.description ?? '').slice(0, 100))
+  // tags is required and must be non-empty; fall back to the name.
+  form.append('tags', (body.tags?.trim() || body.name).slice(0, 200))
+  const blob = new Blob([new Uint8Array(body.file.data)], { type: body.file.contentType })
+  form.append('file', blob, body.file.filename)
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/stickers`, {
+    method: 'POST',
+    headers: authHeaders(reason),
+    body: form,
+  })
+  if (!res.ok) return { ok: false, error: await discordError(res) }
+  return { ok: true, sticker: (await res.json()) as DiscordSticker }
+}
+
+export async function modifyGuildSticker(
+  guildId: string,
+  stickerId: string,
+  body: { name?: string; description?: string | null; tags?: string },
+  reason?: string,
+): Promise<{ ok: true; sticker: DiscordSticker } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const payload: Record<string, unknown> = {}
+  if (body.name !== undefined) payload.name = body.name.slice(0, 30)
+  if (body.description !== undefined) payload.description = body.description?.slice(0, 100) ?? ''
+  if (body.tags !== undefined) payload.tags = body.tags.slice(0, 200)
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/stickers/${stickerId}`, {
+    method: 'PATCH',
+    headers: jsonHeaders(reason),
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) return { ok: false, error: await discordError(res) }
+  return { ok: true, sticker: (await res.json()) as DiscordSticker }
+}
+
+export async function deleteGuildSticker(
+  guildId: string,
+  stickerId: string,
+  reason?: string,
+): Promise<DiscordResult> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/stickers/${stickerId}`, {
+    method: 'DELETE',
+    headers: authHeaders(reason),
+  })
+  if (res.ok) return { ok: true }
+  return { ok: false, error: await discordError(res) }
+}
+
+// ── Soundboard ──────────────────────────────────────────────────────────────
+
+export async function fetchGuildSoundboardSounds(guildId: string): Promise<DiscordSoundboardSound[]> {
+  if (!process.env.DISCORD_BOT_TOKEN) return []
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/soundboard-sounds`, {
+    headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  // This endpoint wraps the list in `{ items: [...] }`, unlike emojis/stickers.
+  const data = (await res.json()) as { items?: DiscordSoundboardSound[] }
+  return data.items ?? []
+}
+
+export async function createGuildSoundboardSound(
+  guildId: string,
+  body: { name: string; sound: string; volume?: number; emoji_id?: string | null; emoji_name?: string | null },
+  reason?: string,
+): Promise<{ ok: true; sound: DiscordSoundboardSound } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const payload: Record<string, unknown> = {
+    name: body.name.slice(0, 32),
+    sound: body.sound,
+  }
+  if (body.volume !== undefined) payload.volume = Math.max(0, Math.min(1, body.volume))
+  if (body.emoji_id) payload.emoji_id = body.emoji_id
+  if (body.emoji_name) payload.emoji_name = body.emoji_name
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/soundboard-sounds`, {
+    method: 'POST',
+    headers: jsonHeaders(reason),
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) return { ok: false, error: await discordError(res) }
+  return { ok: true, sound: (await res.json()) as DiscordSoundboardSound }
+}
+
+export async function modifyGuildSoundboardSound(
+  guildId: string,
+  soundId: string,
+  body: { name?: string; volume?: number; emoji_id?: string | null; emoji_name?: string | null },
+  reason?: string,
+): Promise<{ ok: true; sound: DiscordSoundboardSound } | { ok: false; error: string }> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const payload: Record<string, unknown> = {}
+  if (body.name !== undefined) payload.name = body.name.slice(0, 32)
+  if (body.volume !== undefined) payload.volume = Math.max(0, Math.min(1, body.volume))
+  if (body.emoji_id !== undefined) payload.emoji_id = body.emoji_id
+  if (body.emoji_name !== undefined) payload.emoji_name = body.emoji_name
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/soundboard-sounds/${soundId}`, {
+    method: 'PATCH',
+    headers: jsonHeaders(reason),
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) return { ok: false, error: await discordError(res) }
+  return { ok: true, sound: (await res.json()) as DiscordSoundboardSound }
+}
+
+export async function deleteGuildSoundboardSound(
+  guildId: string,
+  soundId: string,
+  reason?: string,
+): Promise<DiscordResult> {
+  if (!process.env.DISCORD_BOT_TOKEN) return { ok: false, error: 'Bot token not configured.' }
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/soundboard-sounds/${soundId}`, {
+    method: 'DELETE',
+    headers: authHeaders(reason),
+  })
+  if (res.ok) return { ok: true }
+  return { ok: false, error: await discordError(res) }
+}
+
+/**
+ * Emoji and soundboard names must be 2–32 chars of [A-Za-z0-9_]. Discord
+ * rejects spaces and most punctuation, so we coerce a friendly input (e.g. a
+ * dropped filename) into a valid name rather than bouncing the whole upload.
+ */
+export function sanitizeExpressionName(raw: string): string {
+  const cleaned = raw.replace(/[^A-Za-z0-9_]/g, '_').replace(/_{2,}/g, '_').replace(/^_+|_+$/g, '')
+  const name = cleaned.slice(0, 32)
+  // Discord requires a minimum of 2 chars; pad rather than fail.
+  return name.length >= 2 ? name : (name + '_emoji').slice(0, 32)
+}
