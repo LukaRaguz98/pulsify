@@ -81,7 +81,7 @@ export function QuickSetupBanner({
               Get {guildName} configured in minutes
             </h2>
             <p className="mt-1 text-sm" style={{ color: 'var(--text-2)' }}>
-              Answer a couple of quick questions and Pulsify sets up welcome messages, moderation, roles and more — saved as an editable template in your library.
+              Pick a preset and Pulsify switches on the right features — welcome, onboarding, safety, engagement and more — saved as an editable profile in your library.
             </p>
           </div>
 

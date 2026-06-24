@@ -4163,3 +4163,110 @@ Acceptance Criteria
 	Scheduling functions correctly
 	Poll restrictions work correctly
 	UI remains responsive and visually polished
+
+PULSIFY-52 — DDoS Protection & Security Monitoring (v0.52.0)
+
+Description
+	Implement a DDoS Protection module under the Security navigation category that helps administrators monitor, detect, and respond to suspicious traffic spikes, abuse patterns, bot activity, and potential service disruption attempts affecting Pulsify-connected Discord communities and Pulse-related systems.
+	The system should focus on visibility, alerts, automated protection rules, and mitigation workflows.
+
+Goals
+	Add a dedicated Security-focused protection module
+	Detect suspicious traffic and abuse patterns
+	Improve platform reliability and administrator awareness
+	Provide protection controls for Pulse and Pulsify workflows
+	Prepare Pulsify for larger public server usage
+
+Tasks
+	Security Navigation
+		Create a new view under:
+			Security > DDoS Protection
+
+		Display:
+			current protection status
+			recent suspicious activity
+			active protection rules
+			traffic/activity spikes
+			mitigation status
+
+	Detection System
+		Detect suspicious patterns such as:
+			sudden request spikes
+			repeated failed actions
+			excessive command usage
+			mass ticket creation attempts
+			mass giveaway joins
+			mass application submissions
+			repeated API abuse
+			unusual member activity bursts
+			automated spam behavior
+
+	Protection Rules
+		Allow administrators to configure:
+			command rate limits
+			ticket creation limits
+			application submission limits
+			giveaway join cooldowns
+			automation execution limits
+			suspicious user thresholds
+			temporary lockdown triggers
+
+	Automatic Mitigation
+		Support automated actions such as:
+			temporarily disable vulnerable features
+			increase cooldowns
+			restrict command usage
+			block repeated abusive actions
+			pause ticket/application submissions
+			enable server lockdown mode
+			notify administrators
+
+	Monitoring Dashboard
+		Display:
+			traffic/activity graphs
+			blocked attempts
+			triggered rules
+			affected modules
+			suspicious users
+			recent mitigation actions
+
+	Alerts & Notifications
+		Add alerts for:
+			possible DDoS/abuse spikes
+			repeated command abuse
+			ticket/application spam
+			suspicious automation abuse
+			mitigation activation
+
+		Send alerts to:
+			Pulsify dashboard notifications
+			configured Discord admin/security channel
+
+	Logs & Investigation
+		Track:
+			detected abuse events
+			mitigation actions
+			affected users
+			timestamps
+			triggered rules
+			recovery actions
+
+		Add filtering and search
+
+	UX Improvements
+		Add security status indicators
+		Add severity badges
+		Add responsive dashboard layout
+		Add loading/error/empty states
+		Add clear setup guidance
+		Add confirmation dialogs for manual mitigation actions
+
+Acceptance Criteria
+	DDoS Protection appears under the Security navigation
+	Suspicious traffic/activity spikes are detected
+	Protection rules can be configured
+	Automatic mitigation actions trigger correctly
+	Alerts are sent to dashboard and Discord where configured
+	Logs provide useful investigation details
+	Admins can clearly see protection status
+	UI remains responsive and visually polished

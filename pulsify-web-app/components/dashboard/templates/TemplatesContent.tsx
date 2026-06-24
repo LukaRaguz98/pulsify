@@ -22,13 +22,12 @@ import {
   BUILTIN_TEMPLATES,
   CATEGORY_META,
   TEMPLATE_CATEGORIES,
-  sectionKeysPresent,
+  featureKeysEnabled,
   toExport,
+  type FeatureMap,
   type ServerTemplate,
   type TemplateCategory,
-  type TemplateSectionKey,
 } from '@/lib/templates'
-import type { GuildConfigSnapshot } from '@/app/dashboard/[guildId]/(management)/templates/page'
 import { deleteTemplate } from '@/app/dashboard/[guildId]/(management)/templates/actions'
 import { TemplateCard } from './TemplateCard'
 import { TemplateCreatePanel } from './TemplateCreatePanel'
@@ -40,13 +39,12 @@ type Props = {
   guildId: string
   guildName: string
   savedTemplates: ServerTemplate[]
-  snapshot: GuildConfigSnapshot
-  capturableSections: TemplateSectionKey[]
+  currentFeatures: FeatureMap
 }
 
 type Tab = 'library' | 'presets'
 
-export function TemplatesContent({ guildId, guildName, savedTemplates, snapshot, capturableSections }: Props) {
+export function TemplatesContent({ guildId, guildName, savedTemplates, currentFeatures }: Props) {
   const router = useRouter()
   const [tab, setTab] = useState<Tab>(savedTemplates.length === 0 ? 'presets' : 'library')
   const [search, setSearch] = useState('')
@@ -111,11 +109,7 @@ export function TemplatesContent({ guildId, guildName, savedTemplates, snapshot,
   }, [source, search, categoryFilter])
 
   const totalUses = useMemo(() => savedTemplates.reduce((sum, t) => sum + t.usageCount, 0), [savedTemplates])
-  const sectionsCovered = useMemo(() => {
-    const s = new Set<TemplateSectionKey>()
-    for (const t of savedTemplates) for (const k of sectionKeysPresent(t.sections)) s.add(k)
-    return s.size
-  }, [savedTemplates])
+  const enabledNow = useMemo(() => featureKeysEnabled(currentFeatures).length, [currentFeatures])
 
   // Categories present in the active tab (for the filter chips).
   const usedCategories = useMemo(
@@ -151,8 +145,8 @@ export function TemplatesContent({ guildId, guildName, savedTemplates, snapshot,
         helpId="templates"
         description={
           <>
-            Save, reuse and deploy proven configurations across your servers —{' '}
-            <span className="font-medium text-foreground">{guildName}</span> and beyond
+            Pick which Pulsify features are switched on for{' '}
+            <span className="font-medium text-foreground">{guildName}</span> — save reusable profiles and apply them in one click
           </>
         }
         action={
@@ -178,11 +172,11 @@ export function TemplatesContent({ guildId, guildName, savedTemplates, snapshot,
 
       <div className="space-y-8">
         {/* At a glance */}
-        <CategorySection icon={<LayoutTemplate size={14} />} title="At a glance" description="Your reusable server configurations.">
+        <CategorySection icon={<LayoutTemplate size={14} />} title="At a glance" description="Reusable feature profiles for your servers.">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard icon={<Library size={16} />} label="Saved templates" value={savedTemplates.length} color="#60a5fa" />
             <StatCard icon={<Star size={16} />} label="Official presets" value={BUILTIN_TEMPLATES.length} color="#8b5cf6" />
-            <StatCard icon={<Layers size={16} />} label="Sections covered" value={sectionsCovered} color="#34d399" />
+            <StatCard icon={<Layers size={16} />} label={`Features on in ${guildName || 'server'}`} value={enabledNow} color="#34d399" />
             <StatCard icon={<Repeat2 size={16} />} label="Total deployments" value={totalUses} color="#f59e0b" />
           </div>
         </CategorySection>
@@ -281,7 +275,7 @@ export function TemplatesContent({ guildId, guildName, savedTemplates, snapshot,
       {creating && (
         <TemplateCreatePanel
           guildId={guildId}
-          capturable={capturableSections}
+          currentFeatures={currentFeatures}
           onClose={() => setCreating(false)}
           onCreated={() => {
             setCreating(false)
@@ -306,7 +300,7 @@ export function TemplatesContent({ guildId, guildName, savedTemplates, snapshot,
           guildId={guildId}
           guildName={guildName}
           template={applying}
-          snapshot={snapshot}
+          currentFeatures={currentFeatures}
           onClose={() => setApplying(null)}
         />
       )}
@@ -343,7 +337,7 @@ function EmptyLibrary({ onCreate, onBrowse }: { onCreate: () => void; onBrowse: 
       </div>
       <p className="font-semibold text-foreground">No saved templates yet</p>
       <p className="mt-2 max-w-sm text-sm" style={{ color: 'var(--text-3)' }}>
-        Capture the current server setup as a reusable template, import one from JSON, or start from an official preset.
+        Save this server&apos;s feature setup as a reusable profile, import one from JSON, or start from an official preset.
       </p>
       <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
         <button onClick={onCreate} className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white" style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))', boxShadow: '0 4px 14px -4px var(--p-glow)' }}>

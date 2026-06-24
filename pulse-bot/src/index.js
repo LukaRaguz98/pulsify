@@ -29,6 +29,7 @@ const { createScheduler } = require("./scheduler");
 const { createTickets } = require("./tickets");
 const { createGiveaways } = require("./giveaways");
 const { createPolls } = require("./polls");
+const { createSecurity } = require("./security");
 const { createLeveling } = require("./leveling");
 const { createMilestones } = require("./milestones");
 const { createPresence } = require("./presence");
@@ -123,6 +124,17 @@ const giveaways = createGiveaways(client, supabase, leveling, economyRewards);
 // scheduled polls and closes + tallies polls when their end time arrives. It
 // reads member_levels + computes reputation for level/reputation vote gates.
 const polls = createPolls(client, supabase);
+
+// DDoS Protection & Security Monitoring (PULSIFY-52): samples activity
+// (commands, component interactions, messages, joins, ticket/giveaway/
+// application actions), runs the detection engine against each guild's rules,
+// records events, applies + enforces mitigations (lockdown / blocked users /
+// paused modules), raises dashboard + Discord alerts, and expires temporary
+// mitigations (recovery). Registers its own interaction tap (classifies
+// component/modal interactions by custom_id prefix); command/message/join
+// samples are fed from the gateway handlers below. Enforcement is read via
+// security.checkAllowed() before a command runs.
+const security = createSecurity(client, supabase);
 
 // The milestones system recognises members for crossing activity / tenure
 // thresholds. Like leveling it owns its table (member_milestones): a periodic
@@ -406,6 +418,11 @@ client.once(Events.ClientReady, async (readyClient) => {
   // dashboard close requests), and run the open/close lifecycle tick.
   await polls.start();
 
+  // DDoS Protection: load per-guild security config + active mitigations,
+  // subscribe to realtime, register the interaction classifier, and start the
+  // recovery sweep.
+  await security.start();
+
   // Leveling system: load per-guild XP config, subscribe to settings changes,
   // and start the voice-XP tick.
   await leveling.start();
@@ -481,6 +498,9 @@ client.on(Events.GuildMemberAdd, async (member) => {
     userName: member.user.username,
     immediate: true,
   });
+
+  // Feed DDoS Protection's member-join-burst detector (raid signal).
+  security.onMemberJoin(member.guild.id, member.id);
 
   const settings = await getGuildSettings(member.guild.id);
 
@@ -787,6 +807,9 @@ client.on(Events.MessageCreate, (message) => {
     channelId: message.channelId,
     channelName: message.channel?.name,
   });
+
+  // Feed DDoS Protection's automated-spam detector (per-user message rate).
+  security.onMessage(message.guild.id, message.author.id);
 
   // Award XP for the message (anti-spam cooldown + ignored channels/roles are
   // enforced inside the module). Fire-and-forget — never blocks tracking.
@@ -1122,6 +1145,26 @@ client.on(Events.InteractionCreate, async (interaction) => {
     channelId: interaction.channelId,
     metadata: { command: commandName },
   });
+
+  // Feed DDoS Protection (command spike + per-user command-abuse detectors) and
+  // enforce any active security mitigation BEFORE doing the work: a lockdown,
+  // a per-user block, or a paused Commands module short-circuits the command.
+  security.onCommand(interaction.guildId, interaction.user.id);
+  const securityGate = security.checkAllowed(interaction.guildId, interaction.user.id, "commands");
+  if (!securityGate.allowed) {
+    await replyNotice(interaction, securityGate.reason).catch(() => {});
+    await logCommand(supabase, {
+      guildId: guild.id,
+      commandName,
+      userId: interaction.user.id,
+      userName: interaction.member?.displayName ?? interaction.user.username,
+      channelId: interaction.channelId,
+      channelName: interaction.channel?.name ?? null,
+      status: "blocked",
+      detail: securityGate.reason,
+    });
+    return;
+  }
 
   // Award command-usage XP (its own cooldown + ignore rules live in the module).
   void leveling.awardCommand(interaction);

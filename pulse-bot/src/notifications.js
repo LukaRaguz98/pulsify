@@ -33,6 +33,9 @@ const TYPE_TO_CATEGORY = {
   level_up: 'leveling',
   milestone_reached: 'milestones',
   reward_purchased: 'economy',
+  security_alert: 'security',
+  security_mitigation: 'security',
+  security_recovered: 'security',
   bot_warning: 'bot',
   bot_error: 'bot',
 };
@@ -64,6 +67,9 @@ const TYPE_TO_SEVERITY = {
   level_up: 'success',
   milestone_reached: 'success',
   reward_purchased: 'success',
+  security_alert: 'warning',
+  security_mitigation: 'warning',
+  security_recovered: 'success',
   bot_warning: 'warning',
   bot_error: 'error',
 };

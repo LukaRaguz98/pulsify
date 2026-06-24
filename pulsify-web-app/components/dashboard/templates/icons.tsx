@@ -19,6 +19,11 @@ import {
   Crown,
   Boxes,
   GraduationCap,
+  Siren,
+  Mic2,
+  Trophy,
+  Coins,
+  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -44,6 +49,11 @@ const ICONS: Record<string, LucideIcon> = {
   Crown,
   Boxes,
   GraduationCap,
+  Siren,
+  Mic2,
+  Trophy,
+  Coins,
+  ShieldCheck,
 }
 
 export function TemplateIcon({ name, size = 16 }: { name: string; size?: number }) {

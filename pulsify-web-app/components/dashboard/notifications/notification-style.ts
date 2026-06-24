@@ -34,6 +34,7 @@ export const CATEGORY_ACCENT: Record<NotificationCategory, string> = {
   leveling:    '#fbbf24',
   milestones:  '#f59e0b',
   economy:     '#34d399',
+  security:    '#ef4444',
   bot:         '#ec4899',
 }
 

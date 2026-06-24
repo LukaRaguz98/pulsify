@@ -1,55 +1,53 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Save, AlertCircle, Loader2, Check, LayoutTemplate } from 'lucide-react'
+import { Save, AlertCircle, Loader2, LayoutTemplate } from 'lucide-react'
 import {
-  TEMPLATE_SECTION_KEYS,
-  SECTION_META,
+  FEATURE_KEYS,
+  FEATURE_GROUP_META,
   TEMPLATE_CATEGORIES,
   CATEGORY_META,
   TEMPLATE_LIMITS,
   validateDraft,
   type TemplateCategory,
-  type TemplateSectionKey,
   type TemplateDraft,
+  type FeatureMap,
+  type FeatureKey,
 } from '@/lib/templates'
-import { captureTemplate } from '@/app/dashboard/[guildId]/(management)/templates/actions'
+import { saveTemplate } from '@/app/dashboard/[guildId]/(management)/templates/actions'
 import { Modal } from './Modal'
 import { TemplateIcon, TEMPLATE_ICON_CHOICES } from './icons'
+import { FeatureToggleList } from './FeatureToggleList'
 
 type Props = {
   guildId: string
-  /** Sections that currently hold config in this server (others are disabled). */
-  capturable: TemplateSectionKey[]
+  /** This server's current feature on/off states — seeds the toggles. */
+  currentFeatures: FeatureMap
   onClose: () => void
   onCreated: () => void
 }
 
-export function TemplateCreatePanel({ guildId, capturable, onClose, onCreated }: Props) {
+export function TemplateCreatePanel({ guildId, currentFeatures, onClose, onCreated }: Props) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const capturableSet = useMemo(() => new Set(capturable), [capturable])
 
   const [draft, setDraft] = useState<TemplateDraft>(() => ({
     name: '',
     description: '',
     category: 'custom',
     icon: 'LayoutTemplate',
-    sectionKeys: [...capturable],
+    // Seed from the live server so "Save as template" snapshots current state,
+    // then let the admin tweak any switch before saving.
+    features: Object.fromEntries(FEATURE_KEYS.map((k) => [k, Boolean(currentFeatures[k])])) as FeatureMap,
   }))
 
   const set = <K extends keyof TemplateDraft>(key: K, value: TemplateDraft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }))
 
-  function toggleSection(key: TemplateSectionKey) {
-    setDraft((d) => ({
-      ...d,
-      sectionKeys: d.sectionKeys.includes(key)
-        ? d.sectionKeys.filter((k) => k !== key)
-        : [...d.sectionKeys, key],
-    }))
+  function setFeature(key: FeatureKey, on: boolean) {
+    setDraft((d) => ({ ...d, features: { ...d.features, [key]: on } }))
   }
 
   async function onSave() {
@@ -60,12 +58,12 @@ export function TemplateCreatePanel({ guildId, capturable, onClose, onCreated }:
     }
     setSaving(true)
     setError(null)
-    const res = await captureTemplate(guildId, {
+    const res = await saveTemplate(guildId, {
       name: draft.name,
       description: draft.description,
       category: draft.category,
       icon: draft.icon,
-      sectionKeys: draft.sectionKeys,
+      features: draft.features,
     })
     setSaving(false)
     if (res.ok) {
@@ -76,15 +74,14 @@ export function TemplateCreatePanel({ guildId, capturable, onClose, onCreated }:
     }
   }
 
-  const nothingCapturable = capturable.length === 0
-
   return (
     <Modal
       title="Save as template"
-      subtitle="Snapshot this server's configuration to reuse it elsewhere."
+      subtitle="Snapshot which Pulsify features are on, to reuse on any server."
       icon={<LayoutTemplate size={17} />}
       busy={saving}
       onClose={onClose}
+      maxWidth="max-w-2xl"
       footer={
         <>
           <button
@@ -97,7 +94,7 @@ export function TemplateCreatePanel({ guildId, capturable, onClose, onCreated }:
           </button>
           <button
             onClick={onSave}
-            disabled={saving || nothingCapturable}
+            disabled={saving}
             className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white disabled:opacity-50"
             style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}
           >
@@ -117,17 +114,7 @@ export function TemplateCreatePanel({ guildId, capturable, onClose, onCreated }:
         </div>
       )}
 
-      {nothingCapturable && (
-        <div
-          className="mb-4 rounded-lg border px-3 py-2.5 text-sm"
-          style={{ borderColor: 'var(--line-strong)', background: 'var(--bg-2)', color: 'var(--text-2)' }}
-        >
-          This server has no configured features to capture yet. Set up automations, moderation, tickets or roles first.
-        </div>
-      )}
-
       <div className="space-y-5">
-        {/* Name + description */}
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Name" hint={`${draft.name.length}/${TEMPLATE_LIMITS.nameMax}`}>
             <input
@@ -146,9 +133,7 @@ export function TemplateCreatePanel({ guildId, capturable, onClose, onCreated }:
               style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
             >
               {TEMPLATE_CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {CATEGORY_META[c].label}
-                </option>
+                <option key={c} value={c}>{CATEGORY_META[c].label}</option>
               ))}
             </select>
           </Field>
@@ -159,13 +144,12 @@ export function TemplateCreatePanel({ guildId, capturable, onClose, onCreated }:
             value={draft.description}
             onChange={(e) => set('description', e.target.value.slice(0, TEMPLATE_LIMITS.descriptionMax))}
             rows={2}
-            placeholder="What is this setup for? (optional)"
+            placeholder="What is this profile for? (optional)"
             className="w-full resize-none rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
             style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
           />
         </Field>
 
-        {/* Icon picker */}
         <Field label="Icon">
           <div className="flex flex-wrap gap-1.5">
             {TEMPLATE_ICON_CHOICES.map((name) => {
@@ -189,56 +173,12 @@ export function TemplateCreatePanel({ guildId, capturable, onClose, onCreated }:
           </div>
         </Field>
 
-        {/* Sections to capture */}
         <div>
-          <div className="mb-2 flex items-center justify-between">
-            <p className="text-sm font-medium text-foreground">Include in this template</p>
-            <span className="text-xs" style={{ color: 'var(--text-3)' }}>
-              {draft.sectionKeys.length} selected
-            </span>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {TEMPLATE_SECTION_KEYS.map((key) => {
-              const meta = SECTION_META[key]
-              const available = capturableSet.has(key)
-              const checked = draft.sectionKeys.includes(key) && available
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  disabled={!available}
-                  onClick={() => toggleSection(key)}
-                  className="flex items-start gap-2.5 rounded-lg border p-3 text-left transition-colors disabled:opacity-45"
-                  style={{
-                    background: checked ? 'var(--p-soft)' : 'var(--bg-2)',
-                    borderColor: checked ? 'var(--p-1)' : 'var(--line-strong)',
-                  }}
-                >
-                  <span
-                    className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border"
-                    style={{
-                      background: checked ? 'var(--p-1)' : 'transparent',
-                      borderColor: checked ? 'var(--p-1)' : 'var(--line-strong)',
-                      color: '#fff',
-                    }}
-                  >
-                    {checked && <Check size={13} />}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-                      <span style={{ color: meta.accent }}>
-                        <TemplateIcon name={meta.icon} size={13} />
-                      </span>
-                      {meta.label}
-                    </span>
-                    <span className="mt-0.5 block text-xs" style={{ color: 'var(--text-3)' }}>
-                      {available ? meta.description : 'Nothing configured to capture'}
-                    </span>
-                  </span>
-                </button>
-              )
-            })}
-          </div>
+          <p className="mb-1 text-sm font-medium text-foreground">Features</p>
+          <p className="mb-3 text-xs" style={{ color: 'var(--text-3)' }}>
+            Toggle what this profile turns on or off. Seeded from this server&apos;s current setup.
+          </p>
+          <FeatureToggleList features={draft.features} onChange={setFeature} groupMeta={FEATURE_GROUP_META} />
         </div>
       </div>
     </Modal>

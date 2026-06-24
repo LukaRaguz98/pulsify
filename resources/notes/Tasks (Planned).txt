@@ -1,168 +1,139 @@
-PULSIFY-53 — Server Assets Management & Configuration (v0.53.0)
+PULSIFY-54 — Temporary Roles Tab & Expiring Permissions (v0.54.0)
 
 Description
-	Implement a dedicated Server > Assets management page that provides centralized control over Discord server emojis, stickers, and soundboard sounds.
-	The Assets page should make it significantly easier to manage server assets compared to Discord's native interface by providing bulk operations, asset previews, import/export functionality, and streamlined management workflows.
+	Upgrade the existing Server > Roles view by introducing a dedicated Temporary Roles tab that allows administrators to assign, manage, and monitor roles with automatic expiration.
+	Temporary Roles should integrate with existing Pulsify systems such as Economy, Marketplace, Giveaways, Events, Automations, Applications, and Moderation while providing a centralized interface for managing time-limited permissions.
 
 Goals
-	Centralize server asset management
-	Simplify emoji, sticker, and soundboard administration
-	Improve server branding workflows
-	Support bulk asset operations
-	Reduce reliance on Discord's native settings pages
+	Extend the existing Roles management experience
+	Reduce manual role maintenance
+	Support temporary access and rewards
+	Improve automation capabilities
+	Centralize temporary role management
 
 Tasks
-	Assets Navigation
-		Create a new view:
-			Server > Assets
+	Roles View Upgrade
+		Update:
+			Server > Roles
 
-		Display separate tabs:
-			Emojis
-			Stickers
-			Soundboard
+		Add new tab:
+			Temporary Roles
 
-		Display summary statistics:
-			total emojis
-			animated emojis
-			total stickers
-			total soundboard sounds
-			available asset slots
-			asset usage indicators where possible
+		Maintain consistency with existing Roles UI and navigation
 
-	Emoji Management
-		Allow administrators to:
-			view all server emojis
-			search emojis
-			filter emojis
-			preview emojis
-			rename emojis
-			delete emojis
-			duplicate emojis
-			export individual emojis
-			export selected emojis
-			export all emojis
+	Temporary Role Assignments
+		Allow administrators to assign temporary roles to members
 
 		Display:
-			emoji preview
-			emoji name
-			animated/static status
-			upload information where available
+			member
+			role
+			assigned by
+			assigned date
+			expiration date
+			remaining time
+			assignment source
 
-	Sticker Management
-		Allow administrators to:
-			view all server stickers
-			search stickers
-			filter stickers
-			preview stickers
-			rename stickers
-			delete stickers
-			export individual stickers
-			export selected stickers
-			export all stickers
-
-		Display:
-			sticker preview
-			sticker name
-			description
-			sticker format
-
-	Soundboard Management
-		Allow administrators to:
-			view all soundboard sounds
-			search sounds
-			filter sounds
-			preview sounds directly inside Pulsify
-			rename sounds
-			delete sounds
-			export individual sounds
-			export selected sounds
-			export all sounds
-
-		Display:
-			sound name
-			duration
-			volume information where available
-			upload information where available
-
-	Import System
-		Support importing:
-			individual assets
-			multiple assets simultaneously
-
+	Expiration Configuration
 		Support:
-			drag-and-drop uploads
-			batch uploads
-			upload validation
-			duplicate detection
-			rename before upload
-			import previews
+			minutes
+			hours
+			days
+			weeks
+			months
+			custom expiration date
 
-	Export System
-		Allow exporting:
-			single asset
-			multiple selected assets
-			entire asset category
-			full server asset package
+		Examples:
+			VIP for 30 days
+			Event Access for 24 hours
+			Giveaway Winner for 7 days
+			Trial Moderator for 14 days
 
-		Include:
-			original files
-			asset metadata
-			naming information
+	Automatic Expiration
+		Automatically:
+			remove expired roles
+			update role status
+			log expiration events
+			notify users if enabled
+			notify administrators if enabled
 
-	Bulk Actions
-		Support:
-			bulk rename
-			bulk delete
-			bulk export
-			bulk import
-			bulk selection
+	Assignment Sources
+		Track where temporary roles originated from:
+			Manual Assignment
+			Economy Purchase
+			Marketplace Reward
+			Giveaway Reward
+			Event Reward
+			Automation
+			Application Approval
+			Moderation Action
+			Other
 
-		Add confirmation dialogs for destructive actions
+	Temporary Role Management
+		Allow administrators to:
+			assign temporary roles
+			extend expiration
+			shorten expiration
+			remove temporary roles
+			bulk remove temporary roles
+			search assignments
+			filter assignments
 
-	Asset Organization
-		Add:
-			grid view
-			list view
-			sorting options
-			filtering options
-			quick actions
-			preview modal
+	Monitoring Dashboard
+		Display:
+			active temporary roles
+			expiring soon
+			recently expired
+			most assigned temporary roles
+			role assignment trends
 
-	Discord Synchronization
-		Ensure all asset actions synchronize correctly with Discord:
-			rename
-			upload
-			delete
-			import
-			export
+	Notifications
+		Optional notifications for:
+			role assigned
+			role expiring soon
+			role expired
+			role extended
 
-		Handle Discord API limitations gracefully
+		Use Pulse v2 embed styling
 
-	Permissions & Validation
-		Validate required Discord permissions before actions
+	Discord Integration
+		Ensure role assignment and expiration synchronize correctly with Discord
 
-		Display clear errors when:
-			asset limits are reached
-			file formats are invalid
-			permissions are missing
-			Discord API actions fail
+		Handle:
+			missing roles
+			deleted roles
+			permission issues
+			hierarchy conflicts
+
+	Audit Logs
+		Track:
+			role assigned
+			role extended
+			role shortened
+			role expired
+			role removed
+
+		Store:
+			actor
+			target user
+			timestamp
+			source
 
 	UX Improvements
+		Add countdown indicators
+		Add expiration badges
+		Add role status indicators
 		Add responsive layouts
 		Add loading states
 		Add empty states
-		Add success notifications
-		Add error notifications
-		Add asset previews
-		Add modern asset management experience
+		Add success/error notifications
 
 Acceptance Criteria
-	Assets page is available under Server > Assets
-	Emojis can be viewed, renamed, imported, exported, and deleted
-	Stickers can be viewed, renamed, imported, exported, and deleted
-	Soundboard sounds can be viewed, renamed, imported, exported, and deleted
-	Bulk actions function correctly
-	Import/export workflows function correctly
-	Discord synchronization works reliably
-	Permission validation prevents invalid actions
+	Temporary Roles tab is available under Server > Roles
+	Temporary roles can be assigned successfully
+	Expiration dates are tracked accurately
+	Roles are removed automatically upon expiration
+	Assignment sources are tracked correctly
+	Notifications work correctly
+	Audit logs store all role lifecycle events
+	Discord synchronization functions correctly
 	UI remains responsive and visually polished
