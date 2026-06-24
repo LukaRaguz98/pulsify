@@ -2,19 +2,23 @@
 A new Temporary Roles tab in Server > Roles for granting time-limited access and rewards — Pulse removes the role automatically when it expires, and logs every step.
 
 **Assign with an expiry**
-- Grant any role for minutes, hours, days, weeks or months, or pick a custom expiration date. Start from a preset — VIP for 30 days, Event Access for 24 hours, Giveaway Winner for 7 days, Trial Moderator for 14 days.
+- **Any duration you need** — grant a role for minutes, hours, days, weeks or months, or pick a custom expiration date and time.
+- **Start from a preset** — VIP for 30 days, Event Access for 24 hours, Giveaway Winner for 7 days or Trial Moderator for 14 days, then tweak from there.
 
 **Automatic expiration**
-- A background sweep removes expired roles from Discord, marks them expired, logs the event and (optionally) DMs the member with a Pulse v2 notice — plus a heads-up when a grant is within 24 hours of expiring.
+- **Hands-off cleanup** — a background sweep removes expired roles from Discord, marks them expired and logs the event, so nothing lingers past its time.
+- **The member stays informed** — an optional Pulse v2 DM lets them know when a role is removed, plus a heads-up when a grant is within 24 hours of expiring.
 
 **Built to integrate**
-- Every grant records where it came from — Manual, Economy, Marketplace, Giveaway, Event, Automation, Application, Moderation or Other — so automated rewards from across Pulsify are attributed correctly.
+- **Every grant is attributed** — each one records where it came from: Manual, Economy, Marketplace, Giveaway, Event, Automation, Application, Moderation or Other.
+- **Rewards across Pulsify line up** — automated grants from anywhere in the dashboard are tracked the same way, so credit always lands in the right place.
 
 **Manage at a glance**
-- Live monitoring of active grants, what's expiring soon, what recently expired, the most-assigned roles and a 14-day assignment trend.
-- Extend, shorten, remove or bulk-remove grants, with search and filters by status and source — and countdown badges that tick down in real time.
+- **Live monitoring** — see active grants, what's expiring soon, what recently expired, the most-assigned roles and a 14-day assignment trend.
+- **Full control** — extend, shorten, remove or bulk-remove grants, with search and filters by status and source, and countdown badges that tick down in real time.
 
 **Audited and in sync**
-- An append-only audit log records assigned, extended, shortened, expired and removed events with the actor, target, timestamp and source. Role changes synchronize with Discord and degrade gracefully around deleted roles, departed members and permission limits.
+- **An append-only audit log** — assigned, extended, shortened, expired and removed events are recorded with the actor, target, timestamp and source.
+- **Stays in step with Discord** — role changes synchronize back to the server and degrade gracefully around deleted roles, departed members and permission limits.
 
 June 24, 2026
