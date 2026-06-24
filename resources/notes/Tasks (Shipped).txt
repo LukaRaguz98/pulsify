@@ -4439,3 +4439,143 @@ Acceptance Criteria
 	Discord synchronization works reliably
 	Permission validation prevents invalid actions
 	UI remains responsive and visually polished
+
+PULSIFY-54 — Temporary Roles Tab & Expiring Permissions (v0.54.0)
+
+Description
+	Upgrade the existing Server > Roles view by introducing a dedicated Temporary Roles tab that allows administrators to assign, manage, and monitor roles with automatic expiration.
+	Temporary Roles should integrate with existing Pulsify systems such as Economy, Marketplace, Giveaways, Events, Automations, Applications, and Moderation while providing a centralized interface for managing time-limited permissions.
+
+Goals
+	Extend the existing Roles management experience
+	Reduce manual role maintenance
+	Support temporary access and rewards
+	Improve automation capabilities
+	Centralize temporary role management
+
+Tasks
+	Roles View Upgrade
+		Update:
+			Server > Roles
+
+		Add new tab:
+			Temporary Roles
+
+		Maintain consistency with existing Roles UI and navigation
+
+	Temporary Role Assignments
+		Allow administrators to assign temporary roles to members
+
+		Display:
+			member
+			role
+			assigned by
+			assigned date
+			expiration date
+			remaining time
+			assignment source
+
+	Expiration Configuration
+		Support:
+			minutes
+			hours
+			days
+			weeks
+			months
+			custom expiration date
+
+		Examples:
+			VIP for 30 days
+			Event Access for 24 hours
+			Giveaway Winner for 7 days
+			Trial Moderator for 14 days
+
+	Automatic Expiration
+		Automatically:
+			remove expired roles
+			update role status
+			log expiration events
+			notify users if enabled
+			notify administrators if enabled
+
+	Assignment Sources
+		Track where temporary roles originated from:
+			Manual Assignment
+			Economy Purchase
+			Marketplace Reward
+			Giveaway Reward
+			Event Reward
+			Automation
+			Application Approval
+			Moderation Action
+			Other
+
+	Temporary Role Management
+		Allow administrators to:
+			assign temporary roles
+			extend expiration
+			shorten expiration
+			remove temporary roles
+			bulk remove temporary roles
+			search assignments
+			filter assignments
+
+	Monitoring Dashboard
+		Display:
+			active temporary roles
+			expiring soon
+			recently expired
+			most assigned temporary roles
+			role assignment trends
+
+	Notifications
+		Optional notifications for:
+			role assigned
+			role expiring soon
+			role expired
+			role extended
+
+		Use Pulse v2 embed styling
+
+	Discord Integration
+		Ensure role assignment and expiration synchronize correctly with Discord
+
+		Handle:
+			missing roles
+			deleted roles
+			permission issues
+			hierarchy conflicts
+
+	Audit Logs
+		Track:
+			role assigned
+			role extended
+			role shortened
+			role expired
+			role removed
+
+		Store:
+			actor
+			target user
+			timestamp
+			source
+
+	UX Improvements
+		Add countdown indicators
+		Add expiration badges
+		Add role status indicators
+		Add responsive layouts
+		Add loading states
+		Add empty states
+		Add success/error notifications
+
+Acceptance Criteria
+	Temporary Roles tab is available under Server > Roles
+	Temporary roles can be assigned successfully
+	Expiration dates are tracked accurately
+	Roles are removed automatically upon expiration
+	Assignment sources are tracked correctly
+	Notifications work correctly
+	Audit logs store all role lifecycle events
+	Discord synchronization functions correctly
+	UI remains responsive and visually polished

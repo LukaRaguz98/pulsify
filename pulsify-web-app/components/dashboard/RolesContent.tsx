@@ -31,6 +31,7 @@ import {
   ArrowUpToLine,
   Bot,
   ShieldAlert,
+  Clock,
 } from 'lucide-react'
 import { roleColor, snowflakeToDate, type DiscordRole } from '@/lib/discord'
 import { permissionKeysFromBits, dangerousKeysIn } from '@/lib/discord-permissions'
@@ -39,6 +40,7 @@ import { TableSkeleton } from '@/components/ui/table-skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { CategorySection } from '@/components/ui/category-section'
 import { RoleEditPanel } from './roles/RoleEditPanel'
+import { TemporaryRolesContent } from './roles/TemporaryRolesContent'
 import type { PermissionPreset } from '@/app/api/guilds/[guildId]/permission-presets/route'
 
 type Member = {
@@ -72,6 +74,8 @@ export function RolesContent({ guildId }: Props) {
 
   const [editingRole, setEditingRole] = useState<DiscordRole | null>(null)
   const [creating, setCreating] = useState(false)
+  // Sub-view: classic role management vs the Temporary Roles tab.
+  const [tab, setTab] = useState<'roles' | 'temporary'>('roles')
 
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -131,16 +135,27 @@ export function RolesContent({ guildId }: Props) {
     }
   }, [fetchAll])
 
-  // Deep-link: the command palette's "Create role" quick action lands here with
-  // ?new=1 — open the creator once, then strip the param so a refresh doesn't
-  // reopen it.
+  // Deep-link handling, read once on mount. The command palette's "Create role"
+  // quick action lands here with ?new=1 (open the creator); notification links
+  // land with ?tab=temporary (open the Temporary Roles tab). Strip whichever
+  // param fired so a refresh doesn't replay it.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    if (params.get('new') !== '1') return
-    openCreate()
-    params.delete('new')
-    const qs = params.toString()
-    window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''))
+    let changed = false
+    if (params.get('tab') === 'temporary') {
+      setTab('temporary')
+      params.delete('tab')
+      changed = true
+    }
+    if (params.get('new') === '1') {
+      openCreate()
+      params.delete('new')
+      changed = true
+    }
+    if (changed) {
+      const qs = params.toString()
+      window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''))
+    }
   }, [])
 
   useEffect(() => {
@@ -288,6 +303,32 @@ export function RolesContent({ guildId }: Props) {
         </div>
       )}
 
+      {/* Page-level tabs: classic role management vs Temporary Roles. */}
+      <div className="mb-6 inline-flex rounded-xl border p-1" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
+        {([
+          { id: 'roles' as const, label: 'Roles', icon: <Users size={15} /> },
+          { id: 'temporary' as const, label: 'Temporary Roles', icon: <Clock size={15} /> },
+        ]).map((t) => {
+          const active = tab === t.id
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className="flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors"
+              style={active ? { background: 'var(--p-soft)', color: 'var(--text)' } : { color: 'var(--text-2)' }}
+            >
+              <span style={active ? { color: 'var(--p-1)' } : { color: 'var(--text-3)' }}>{t.icon}</span>
+              {t.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {tab === 'temporary' && <TemporaryRolesContent guildId={guildId} roles={roles} />}
+
+      {tab === 'roles' && (
+      <>
       <div className="space-y-8">
         <CategorySection
           icon={<TrendingUp size={14} />}
@@ -384,6 +425,8 @@ export function RolesContent({ guildId }: Props) {
               .then((d: PermissionPreset[]) => setPresets(d))
           }}
         />
+      )}
+      </>
       )}
     </div>
   )

@@ -40,6 +40,7 @@ const { createEconomy } = require("./economy");
 const { createEconomyRewards } = require("./economy-rewards");
 const { createShop } = require("./shop");
 const { createPrivateChannels } = require("./private-channels");
+const { createTemporaryRoles } = require("./temporary-roles");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -177,6 +178,10 @@ const backups = createBackups(client, supabase);
 // empty channels. Registers its own `pc:` interaction listener; the join/leave
 // flow + channel-delete reconciliation are fed in from the gateway handlers below.
 const privateChannels = createPrivateChannels(client, supabase);
+
+// Temporary Roles: 60s sweep that removes expired role grants, logs the event
+// and (optionally) notifies the member + admins. Dashboard owns assignment.
+const temporaryRoles = createTemporaryRoles(client, supabase);
 
 /**
  * Shared helper for Discord-side activity → notifications row.
@@ -463,6 +468,10 @@ client.once(Events.ClientReady, async (readyClient) => {
   // Private Channels: load config, provision categories/triggers for enabled
   // guilds, register the `pc:` listener, and start the empty-channel sweep.
   await privateChannels.start();
+
+  // Temporary Roles: start the expiry sweep (removes lapsed grants, warns on
+  // ones expiring within 24h).
+  await temporaryRoles.start();
 
   // Startup banner — a clear, scannable success summary so an operator can
   // confirm at a glance which version is live, how many servers it serves, and

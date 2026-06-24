@@ -91,7 +91,7 @@ export function RulesForm({
     })
   }
 
-  const inputStyle: React.CSSProperties = { background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text-1)' }
+  const inputStyle: React.CSSProperties = { background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }
 
   return (
     <div className="space-y-8">
@@ -292,7 +292,7 @@ function NumberField({
         value={value}
         onChange={(e) => onChange(Math.max(min, Number(e.target.value) || min))}
         className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--p-1)]"
-        style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text-1)' }}
+        style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
       />
       {hint && <p className="mt-1 text-[11px]" style={{ color: 'var(--text-3)' }}>{hint}</p>}
     </div>

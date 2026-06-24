@@ -18,11 +18,27 @@ const path = require("node:path");
 // Current Pulse version. Used for the startup banner and as the displayed
 // version when no release files are reachable. Keep this in step with the
 // newest resources/notes/vX.Y.Z.txt on each release.
-const PULSE_VERSION = "0.53.0";
+const PULSE_VERSION = "0.54.0";
 
 // Manual/static fallback used only when the release-notes files can't be read.
 // Mirrors the shape produced by the parser so callers don't special-case it.
 const STATIC_RELEASES = [
+  {
+    version: "0.54.0",
+    title: "Temporary Roles",
+    date: "Jun 24, 2026",
+    description:
+      "A Temporary Roles tab in Server > Roles for time-limited access and rewards — Pulse assigns the role, then removes it automatically when it expires, logging every step.",
+    highlights: [
+      "**Assign with an expiry** — minutes, hours, days, weeks, months or a custom date, with presets like VIP 30d, Event Access 24h, Giveaway Winner 7d and Trial Moderator 14d.",
+      "**Automatic expiration** — a sweep removes expired roles, marks them expired, logs the event and optionally DMs the member (plus a 24h heads-up).",
+      "**Source tracking** — every grant is attributed to Manual, Economy, Marketplace, Giveaway, Event, Automation, Application, Moderation or Other.",
+      "**Monitoring + management** — active/expiring-soon/recently-expired stats, most-assigned roles, a 14-day trend, plus extend/shorten/remove, bulk actions and live countdowns.",
+      "**Audited & in sync** — an append-only log of assigned/extended/shortened/expired/removed events, with graceful handling of deleted roles, departed members and permission limits.",
+    ],
+    outro:
+      "Time-limited permissions, handled for you — assign once and Pulse cleans up on schedule.",
+  },
   {
     version: "0.53.0",
     title: "Server Assets Manager",
