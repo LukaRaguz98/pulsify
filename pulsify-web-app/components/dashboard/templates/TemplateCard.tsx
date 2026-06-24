@@ -1,10 +1,11 @@
 'use client'
 
-import { Download, Trash2, Pencil, Rocket, Star, Clock, Repeat2 } from 'lucide-react'
+import { Download, Trash2, Pencil, Rocket, Star, Clock, Repeat2, Power } from 'lucide-react'
 import {
   CATEGORY_META,
-  SECTION_META,
-  sectionKeysPresent,
+  FEATURE_META,
+  featureKeysEnabled,
+  featureKeysDecided,
   type ServerTemplate,
 } from '@/lib/templates'
 import { TemplateIcon } from './icons'
@@ -30,7 +31,9 @@ function timeAgo(iso: string): string {
 
 export function TemplateCard({ template, onApply, onExport, onEdit, onDelete }: Props) {
   const cat = CATEGORY_META[template.category]
-  const keys = sectionKeysPresent(template.sections)
+  const enabledKeys = featureKeysEnabled(template.features)
+  const decidedCount = featureKeysDecided(template.features).length
+  const offCount = decidedCount - enabledKeys.length
 
   return (
     <div
@@ -68,24 +71,35 @@ export function TemplateCard({ template, onApply, onExport, onEdit, onDelete }: 
         </p>
       )}
 
-      {/* Section chips — what this template carries. */}
-      <div className="mb-4 flex flex-wrap gap-1.5">
-        {keys.map((k) => {
-          const meta = SECTION_META[k]
-          return (
-            <span
-              key={k}
-              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium"
-              style={{ background: 'var(--bg-2)', color: 'var(--text-2)', border: '1px solid var(--line)' }}
-            >
-              <span style={{ color: meta.accent }}>
-                <TemplateIcon name={meta.icon} size={10} />
+      {/* Feature chips — what this profile turns ON. */}
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        {enabledKeys.length === 0 ? (
+          <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium" style={{ background: 'var(--bg-2)', color: 'var(--text-3)', border: '1px solid var(--line)' }}>
+            <Power size={10} /> Everything off
+          </span>
+        ) : (
+          enabledKeys.map((k) => {
+            const meta = FEATURE_META[k]
+            return (
+              <span
+                key={k}
+                className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium"
+                style={{ background: 'var(--bg-2)', color: 'var(--text-2)', border: '1px solid var(--line)' }}
+              >
+                <span style={{ color: meta.accent }}>
+                  <TemplateIcon name={meta.icon} size={10} />
+                </span>
+                {meta.label}
               </span>
-              {meta.label}
-            </span>
-          )
-        })}
+            )
+          })
+        )}
       </div>
+
+      <p className="mb-4 text-[11px]" style={{ color: 'var(--text-3)' }}>
+        <span style={{ color: '#34d399' }}>{enabledKeys.length} on</span>
+        {offCount > 0 && <> · {offCount} off</>}
+      </p>
 
       {/* Meta row */}
       <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]" style={{ color: 'var(--text-3)' }}>

@@ -60,6 +60,10 @@ export const NOTIFICATION_TYPES = [
   'milestone_reached',
   // economy
   'reward_purchased',
+  // security
+  'security_alert',
+  'security_mitigation',
+  'security_recovered',
   // bot
   'bot_warning',
   'bot_error',
@@ -83,6 +87,7 @@ export type NotificationCategory =
   | 'leveling'
   | 'milestones'
   | 'economy'
+  | 'security'
   | 'bot'
 
 export type NotificationSeverity = 'info' | 'success' | 'warning' | 'error'
@@ -122,6 +127,9 @@ export const TYPE_TO_CATEGORY: Record<NotificationType, NotificationCategory> = 
   level_up: 'leveling',
   milestone_reached: 'milestones',
   reward_purchased: 'economy',
+  security_alert: 'security',
+  security_mitigation: 'security',
+  security_recovered: 'security',
   bot_warning: 'bot',
   bot_error: 'bot',
 }
@@ -161,6 +169,9 @@ export const TYPE_TO_SEVERITY: Record<NotificationType, NotificationSeverity> = 
   level_up: 'success',
   milestone_reached: 'success',
   reward_purchased: 'success',
+  security_alert: 'warning',
+  security_mitigation: 'warning',
+  security_recovered: 'success',
   bot_warning: 'warning',
   bot_error: 'error',
 }
@@ -181,6 +192,7 @@ export const CATEGORY_LABELS: Record<NotificationCategory, string> = {
   leveling: 'Levels & XP',
   milestones: 'Milestones',
   economy: 'Economy',
+  security: 'Security',
   bot: 'Bot Status',
 }
 
@@ -218,6 +230,9 @@ export const TYPE_LABELS: Record<NotificationType, string> = {
   level_up: 'Member level-up',
   milestone_reached: 'Milestone reached',
   reward_purchased: 'Reward purchased',
+  security_alert: 'Security alert',
+  security_mitigation: 'Mitigation activated',
+  security_recovered: 'Mitigation lifted',
   bot_warning: 'Bot warnings',
   bot_error: 'Bot errors',
 }
@@ -257,6 +272,9 @@ export const TYPE_DESCRIPTIONS: Record<NotificationType, string> = {
   level_up: 'A member reaches a new level.',
   milestone_reached: 'A member earns a recognition milestone.',
   reward_purchased: 'A member buys a reward from the shop.',
+  security_alert: 'A suspicious traffic spike or abuse pattern is detected.',
+  security_mitigation: 'An automatic or manual protection action is applied.',
+  security_recovered: 'A protection action expires or is lifted.',
   bot_warning: 'Recoverable issues like failed welcome messages.',
   bot_error: 'Critical bot failures that need attention.',
 }

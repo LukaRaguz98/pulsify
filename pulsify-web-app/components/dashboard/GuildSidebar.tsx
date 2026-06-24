@@ -48,6 +48,7 @@ import {
   Crown,
   Vote,
   BarChart3,
+  Siren,
 } from 'lucide-react'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
 import { SearchTrigger } from '@/components/dashboard/search/SearchTrigger'
@@ -278,6 +279,7 @@ export function GuildSidebar({
         // Tickets module's own "Settings" button) — match it here so the nav
         // stays on Tickets while you're editing its config.
         { label: 'Tickets', href: `${base}/tickets`, icon: <LifeBuoy size={16} />, matchPrefixes: ['/ticket-settings'] },
+        { label: 'DDoS Protection', href: `${base}/security`, icon: <Siren size={16} />, matchPrefixes: ['/security-settings'] },
       ],
     },
     // Dashboard-level Preferences moved to the global /preferences route

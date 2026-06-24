@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Upload, AlertCircle, Loader2, FileJson, Check, AlertTriangle } from 'lucide-react'
 import {
   validateTemplateImport,
-  SECTION_META,
-  sectionKeysPresent,
+  FEATURE_META,
+  featureKeysEnabled,
   type ImportResult,
 } from '@/lib/templates'
 import { importTemplate } from '@/app/dashboard/[guildId]/(management)/templates/actions'
@@ -123,7 +123,7 @@ export function TemplateImportPanel({ guildId, onClose, onImported }: Props) {
           value={text}
           onChange={(e) => validate(e.target.value)}
           rows={8}
-          placeholder='{ "pulsifyTemplate": 1, "name": "...", "sections": { ... } }'
+          placeholder='{ "pulsifyTemplate": 2, "name": "...", "features": { "tickets": true } }'
           spellCheck={false}
           className="w-full resize-none rounded-lg border px-3 py-2 font-mono text-xs focus:outline-none focus:ring-1"
           style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
@@ -153,8 +153,8 @@ export function TemplateImportPanel({ guildId, onClose, onImported }: Props) {
               </p>
             )}
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {sectionKeysPresent(parsed.value.sections).map((k) => {
-                const meta = SECTION_META[k]
+              {featureKeysEnabled(parsed.value.features).map((k) => {
+                const meta = FEATURE_META[k]
                 return (
                   <span
                     key={k}

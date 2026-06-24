@@ -18,11 +18,27 @@ const path = require("node:path");
 // Current Pulse version. Used for the startup banner and as the displayed
 // version when no release files are reachable. Keep this in step with the
 // newest resources/notes/vX.Y.Z.txt on each release.
-const PULSE_VERSION = "0.49.0";
+const PULSE_VERSION = "0.52.0";
 
 // Manual/static fallback used only when the release-notes files can't be read.
 // Mirrors the shape produced by the parser so callers don't special-case it.
 const STATIC_RELEASES = [
+  {
+    version: "0.52.0",
+    title: "DDoS Protection & Security Monitoring",
+    date: "Jun 18, 2026",
+    description:
+      "A new Security section that watches your server for suspicious traffic, abuse and raids — detecting spikes, applying automatic mitigations and alerting you in the dashboard and Discord.",
+    highlights: [
+      "**Security › DDoS Protection** — a live status banner, an activity-spike graph, open detections, active mitigations and suspicious users in one view.",
+      "**Smart detection** — command/request spikes, excessive command usage, repeated failed actions, mass ticket/giveaway/application activity, API abuse, member-join bursts and automated spam.",
+      "**Rules & auto-lockdown** — per-pattern thresholds and windows, Relaxed/Balanced/Strict presets, and optional auto-lockdown for sustained attacks.",
+      "**Automatic mitigation + alerts** — increase cooldowns, restrict/block members, pause submissions, disable features or lock down — with dashboard + Discord alerts and self-healing recovery.",
+      "**Templates, reimagined** — Templates & Quick Setup now toggle which Pulsify features are on/off (start from a preset, apply in one click); premium features stay locked to your plan.",
+    ],
+    outro:
+      "Pulsify is ready for larger, public servers — with the visibility and controls to keep them safe.",
+  },
   {
     version: "0.49.0",
     title: "Economy Commands & Earning Visibility",

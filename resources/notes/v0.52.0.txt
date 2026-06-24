@@ -1,0 +1,23 @@
+**Pulsify v0.52.0 — DDoS Protection & Security Monitoring**
+A new DDoS Protection section that watches your server for suspicious traffic, abuse and raids — and responds automatically. Built for growing, public communities.
+
+**Protection at a glance**
+- **DDoS Protection** — a live status banner, an activity-spike graph, open detections, active mitigations and suspicious users in one view.
+
+**Detects the abuse that matters**
+- Command and request spikes, excessive command use, repeated failed actions, mass ticket/giveaway/application activity, API abuse, member-join bursts and automated spam.
+
+**Rules you control**
+- Set thresholds and time windows per pattern, pick a Relaxed / Balanced / Strict preset, and turn on optional **auto-lockdown** for sustained attacks.
+
+**Automatic mitigation**
+- When a rule trips, Pulse can increase cooldowns, restrict or block the offender, pause ticket/application submissions, disable a feature, or lock the server down — then lift temporary protections on their own.
+
+**Alerts & investigation**
+- Every detection alerts the dashboard and your security channel, with a full searchable log, severity badges, one-click resolve and manual mitigations.
+
+**Also — Templates reimagined**
+- Templates and Quick Setup now manage your **Pulsify feature setup**: choose which features are on or off (Welcome, Onboarding, Tickets, Private Channels, Levels, Economy, Pulse Guard, DDoS Protection and more) instead of fiddling with roles and channels.
+- Start from a preset (Essentials, Full Community, Gaming, Creator, Support, Public), tweak the toggles, then apply to any server in one click — and premium features stay locked to your plan.
+
+June 24, 2026

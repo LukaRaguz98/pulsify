@@ -71,6 +71,17 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
       </>
     ),
   },
+  'ddos-protection': {
+    title: 'DDoS Protection',
+    plan: 'pro',
+    body: (
+      <>
+        <p>Monitors Pulse-connected traffic for suspicious spikes and abuse — command floods, mass ticket / application / giveaway activity, member-join bursts and automated spam — then applies the protection rules and mitigations you configure.</p>
+        <p><strong>When to use:</strong> Turn it on before opening your server to the public. Start with the Balanced preset, watch the activity graph, then tighten thresholds or enable auto-lockdown for raid-prone servers.</p>
+        <p><strong>Heads up:</strong> Automatic mitigations are temporary and recover on their own; manual lockdown stays until you lift it.</p>
+      </>
+    ),
+  },
   'ai-setup': {
     title: 'Pulse Assistant',
     plan: 'free',
@@ -478,8 +489,8 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
     plan: 'free',
     body: (
       <>
-        <p>Capture a server&apos;s configuration as a reusable template, then apply it to another server, import, or export it.</p>
-        <p><strong>When to use:</strong> Spinning up a new community, or keeping sister servers in sync. References are sanitised so IDs don&apos;t leak across servers.</p>
+        <p>Save a profile of which Pulsify features are switched on (Pulse Guard, DDoS Protection, Tickets, Levels, …), then apply it to any server in one click — or start from an official preset.</p>
+        <p><strong>When to use:</strong> Spinning up a new community, or keeping sister servers in sync. Applying a template flips each feature&apos;s master switch; you still configure the specifics in each feature&apos;s settings.</p>
       </>
     ),
   },
