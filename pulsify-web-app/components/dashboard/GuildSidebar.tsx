@@ -49,6 +49,7 @@ import {
   Vote,
   BarChart3,
   Siren,
+  Smile,
 } from 'lucide-react'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
 import { SearchTrigger } from '@/components/dashboard/search/SearchTrigger'
@@ -237,6 +238,7 @@ export function GuildSidebar({
         { label: 'Channels', href: `${base}/channels`, icon: <Hash size={16} /> },
         { label: 'Members', href: `${base}/members`, icon: <UserRound size={16} />, matchPrefixes: ['/leveling-settings', '/leaderboard', '/profile', '/reputation'] },
         { label: 'Roles', href: `${base}/roles`, icon: <Users size={16} /> },
+        { label: 'Assets', href: `${base}/assets`, icon: <Smile size={16} /> },
         { label: 'Templates', href: `${base}/templates`, icon: <LayoutTemplate size={16} /> },
         { label: 'Backups', href: `${base}/backups`, icon: <DatabaseBackup size={16} /> },
       ],

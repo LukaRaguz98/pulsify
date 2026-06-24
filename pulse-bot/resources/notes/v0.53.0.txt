@@ -1,0 +1,23 @@
+**Pulsify v0.53.0 — Server Assets Manager**
+A dedicated Server › Assets page that puts your emojis, stickers and soundboard sounds in one place — with bulk tools, drag-and-drop uploads and one-click exports that beat Discord's native settings.
+
+**Everything in one view**
+- **Server › Assets** — separate tabs for Emojis, Stickers and Soundboard, with at-a-glance totals, animated-emoji counts and live slot-usage bars for every category (driven by your boost tier).
+
+**Manage emojis, stickers & sounds**
+- Search, filter and sort, switch between grid and list views, and open any asset for a full preview — including in-dashboard playback for soundboard sounds.
+- Rename, delete, duplicate emojis, and export any single asset straight to your computer.
+
+**Import without leaving Pulsify**
+- Drag-and-drop or browse to upload one or many files at once, with type and size validation, duplicate-name detection and rename-before-upload — Pulse pushes each one straight to Discord.
+
+**Bulk tools**
+- Select multiple assets to rename, export or delete them together, with confirmation prompts on anything destructive.
+
+**Export anything**
+- Export a single asset, your whole selection, an entire category, or a full server asset package — bundled as a ZIP with a metadata manifest of names and types.
+
+**Safe by design**
+- Clear errors when slots are full, file formats are invalid or Pulse is missing the Manage Expressions permission — and every change syncs straight back to Discord.
+
+June 24, 2026
