@@ -1,0 +1,23 @@
+**Pulsify v0.55.0 — Role Hierarchy**
+A new Hierarchy tab in Server > Roles that organizes your roles into clear groups, surfaces useful statistics and gives you a cleaner overview of how your server is structured.
+
+**Automatic categorization**
+- **Three clear buckets** — every role is sorted into Management, Bots or Community using simple, predictable rules. No AI, no setup.
+- **See the reasoning** — hover any role to read exactly why it landed where it did, whether it's a managed integration, a permission match or a name match.
+
+**A visual layout**
+- **Category cards** — each group is its own card with the roles inside, shown top-down by hierarchy position with colour, member count and rank.
+- **Compact or expanded** — switch between a detailed list and a dense chip view to suit how much you want to see at once.
+
+**Role statistics**
+- **The numbers that matter** — total roles, members with roles, per-category counts, empty roles and roles with members, all at a glance.
+- **Standouts** — the highest role in your hierarchy and the most-assigned role across the server.
+
+**Distribution at a glance**
+- **Where things sit** — bars for roles per category and members per category, plus an empty-vs-active gauge for how many roles are actually in use.
+
+**Built in, not bolted on**
+- **One click into editing** — selecting any role opens the same edit flow you already use, so organizing and managing stay together.
+- **Refresh and export** — pull fresh data on demand and export the hierarchy as a PNG to share or archive.
+
+June 26, 2026

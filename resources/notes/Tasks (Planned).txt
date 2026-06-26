@@ -1,134 +1,102 @@
-PULSIFY-56 — Self-Assign Roles, Button & Select Role Menus (v0.56.0)
+PULSIFY-57 — Server Statistics Channels & Analytics (v0.57.0)
 
 Description
-	Implement a Self-Assign Roles system that allows administrators to create interactive role menus where members can assign or remove roles themselves using Discord buttons or select menus.
-	The system should replace the traditional reaction-role approach with a modern Discord Components experience while maintaining compatibility with future role management features.
+	Implement a Server Statistics Channels system that automatically creates and updates Discord channels displaying live server statistics.
+	Administrators should be able to create configurable statistic channels that update automatically whenever the tracked value changes, providing members with real-time server information.
 
 Goals
-	Reduce administrator workload
-	Allow members to manage their own community roles
-	Improve onboarding and personalization
-	Replace external reaction role bots
-	Integrate with existing Roles module
+	Add live server statistic channels
+	Improve community transparency
+	Reduce manual statistic management
+	Integrate live Discord data with Pulsify
+	Provide a highly requested Discord community feature
 
 Tasks
-	Roles View Upgrade
-		Update:
-			Server > Roles
-
-		Add new tab:
-			Self-Assign Roles
-
-		Maintain consistency with existing Roles UI and navigation
-
-	Role Menu Builder
-		Allow administrators to create role menus
-
-		Configure:
-			menu title
-			description
-			target channel
-			menu message
-			menu type
-
-		Support:
-			Buttons
-			Select Menu
-
-	Role Assignment
-		Allow members to:
-			assign roles
-			remove roles
-			switch roles
-
-		Support:
-			single selection
-			multiple selection
-			required roles
-			mutually exclusive roles
-
-	Role Categories
-		Support role menus for:
-			Game Roles
-			Notification Roles
-			Platform Roles
-			Language Roles
-			Region Roles
-			Interest Roles
-			Color Roles
-			Custom Categories
-
-	Customization
-		Configure:
-			emojis
-			button styles/colors
-			role descriptions
-			role ordering
-			maximum selections
-			default selections where applicable
-
-	Preview
-		Add live preview before publishing
-		Preview both:
-			Button layout
-			Select Menu layout
-
-	Discord Integration
-		Publish role menus directly to Discord
-		Automatically update published menus after edits
-		Support message regeneration if deleted
-		Handle Discord component limitations gracefully
-
-	Role Menu Management
-		Allow administrators to:
-			edit menus
-			duplicate menus
-			enable/disable menus
-			archive menus
-			delete menus
-			republish menus
+	Statistics Channels View
+		Create a new view:
+			Server > Statistics Channels
 
 		Display:
-			menu status
-			channel
-			message ID
-			creation date
-			last updated
-			total assignments
+			active statistic channels
+			disabled channels
+			last update time
+			tracked statistic
+			channel preview
 
-	Analytics
-		Track:
-			role assignments
-			role removals
-			most selected roles
-			least selected roles
-			active role menus
-			menu interaction count
+	Channel Creation
+		Allow administrators to create statistic channels
+
+		Configure:
+			channel name template
+			statistic type
+			category
+			update mode
+			enabled/disabled
+
+	Supported Statistics
+		Support live statistics for:
+			Total Members
+			Human Members
+			Bots
+			Online Members
+			Server Boosts
+			Boost Level
+			Roles
+			Channels
+			Voice Channels
+			Text Channels
+			Emojis
+			Stickers
+			Server Age
+			New Members Today
+			New Members This Week
+			Total Messages (if tracked)
+			Active Members (if tracked)
+
+	Channel Templates
+		Support templates such as:
+			👥 Members: {members}
+			🤖 Bots: {bots}
+			🚀 Boosts: {boosts}
+			🎭 Roles: {roles}
+			💬 Messages: {messages}
+			📅 Created: {created}
+
+		Support custom prefixes and emojis
+
+	Automatic Synchronization
+		Automatically update channels when values change
+		Optimize updates to avoid unnecessary Discord API requests
+
+	Bulk Management
+		Allow administrators to:
+			create multiple statistic channels
+			edit multiple channels
+			delete multiple channels
+			duplicate existing channels
+
+	Preview
+		Display a live preview before creating channels
 
 	Permissions & Validation
 		Validate:
-			role hierarchy
-			Pulse permissions
-			assignable roles
-			duplicate roles within menus
-			conflicting role configurations
-
-		Display clear validation errors where required
+			Manage Channels permission
+			category existence
+			duplicate statistic channels
+			Discord channel limits
 
 	UX Improvements
-		Add responsive role menu builder
-		Add drag-and-drop role ordering
+		Add drag-and-drop ordering
 		Add search and filtering
-		Add loading/error/empty states
-		Add confirmation dialogs for destructive actions
+		Add loading/error/success states
+		Add responsive layouts
 		Use consistent Pulse v2 styling
 
 Acceptance Criteria
-	Self-Assign Roles tab is available under Server > Roles
-	Administrators can create self-assign role menus
-	Button and Select Menu modes function correctly
-	Members can assign, remove, and switch roles successfully
-	Role hierarchy and permission validation prevent invalid configurations
-	Analytics accurately track role menu usage
-	Published menus synchronize correctly with Discord
+	Administrators can create statistic channels
+	Channel names update automatically
+	Multiple statistic types are supported
+	Bulk management works correctly
+	Preview displays correctly
+	Discord synchronization is reliable
 	UI remains responsive and visually polished

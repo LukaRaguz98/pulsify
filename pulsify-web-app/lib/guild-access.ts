@@ -58,6 +58,10 @@ export const getGuildAccess = cache(
     const operator = isOperator(userId)
 
     let role: GuildRole | null = null
+    // Did the membership lookup actually complete? We must distinguish
+    // "lookup succeeded, user is not in this guild" from "lookup never ran or
+    // failed" — only the former is a safe basis for the operator override.
+    let lookupOk = false
     const token = await getValidDiscordToken({
       access_token: session.provider_token,
       refresh_token: session.provider_refresh_token,
@@ -65,21 +69,26 @@ export const getGuildAccess = cache(
     if (token) {
       try {
         const guilds = await fetchUserGuilds(token)
+        lookupOk = true
         const guild = guilds.find((g) => g.id === guildId)
         if (guild) role = hasManageGuild(guild.permissions) ? 'admin' : 'member'
       } catch {
-        // Transient Discord failure (rate limit, 5xx, network) — fail closed;
-        // the user can retry. Operators still get their fallback below.
+        // Transient Discord failure (rate limit, 5xx, network) — leave
+        // `lookupOk` false so we fail closed below; the user can retry.
       }
     }
 
-    // Operator override: grants admin access to guilds the operator is NOT a
-    // member of (support access to any server). Inside a guild they actually
-    // belong to, their REAL Discord role governs — so an operator who is only
-    // a member there gets the member experience, not a forced admin view.
-    // `role` is null here only when they're not in the guild (or the lookup
-    // failed), which is exactly when the support override should kick in.
-    if (operator && !role) role = 'admin'
+    // Operator support access: grant admin to guilds the operator is NOT a
+    // member of. This is ONLY safe when the lookup positively confirmed
+    // non-membership (`lookupOk && !role`). Inside a guild they actually
+    // belong to, their REAL Discord role already governs — so a member-only
+    // operator keeps the member experience instead of being force-promoted.
+    //
+    // Critically, we do NOT grant admin off a FAILED lookup (no token / Discord
+    // error): doing so would silently hand an operator the admin view of a
+    // server where they are only a member. When membership is unknown, fail
+    // closed and let the request retry.
+    if (operator && lookupOk && !role) role = 'admin'
     if (!role) return null
 
     // Member View: operator-only preview of the member experience.

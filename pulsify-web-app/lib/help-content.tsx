@@ -433,6 +433,19 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
       </>
     ),
   },
+  'role-hierarchy': {
+    title: 'How categorization works',
+    plan: 'free',
+    body: (
+      <>
+        <p>Every role is sorted into one bucket using simple, predictable rules — no AI:</p>
+        <p><strong>Bots</strong> — managed integration roles, or roles whose name reads like a bot.</p>
+        <p><strong>Management</strong> — roles with the Administrator or moderation permissions, or staff-style names (owner, admin, mod, support).</p>
+        <p><strong>Community</strong> — everything else (members, boosters, streamers).</p>
+        <p><strong>Tip:</strong> Hover any role to see exactly why it landed where it did.</p>
+      </>
+    ),
+  },
   channels: {
     title: 'Channels',
     plan: 'free',

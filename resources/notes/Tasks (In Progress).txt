@@ -1,16 +1,15 @@
-PULSIFY-55 — Roles Hierarchy Tab & Role Statistics (v0.55.0)
+PULSIFY-56 — Self-Assign Roles, Button & Select Role Menus (v0.56.0)
 
 Description
-	Upgrade the existing Server > Roles view by adding a new Hierarchy tab that visually organizes server roles into simple role groups.
-	For the first version, role categorization should focus on clear and reliable categories that can be automatically detected: Management, Bots, and Community.
-	The goal is to give administrators a cleaner overview of their role structure, member distribution, and server role organization.
+	Implement a Self-Assign Roles system that allows administrators to create interactive role menus where members can assign or remove roles themselves using Discord buttons or select menus.
+	The system should replace the traditional reaction-role approach with a modern Discord Components experience while maintaining compatibility with future role management features.
 
 Goals
-	Improve role visibility and organization
-	Add a visual hierarchy view inside existing Roles module
-	Automatically categorize obvious role types
-	Provide useful role statistics
-	Prepare foundation for future advanced role categorization
+	Reduce administrator workload
+	Allow members to manage their own community roles
+	Improve onboarding and personalization
+	Replace external reaction role bots
+	Integrate with existing Roles module
 
 Tasks
 	Roles View Upgrade
@@ -18,94 +17,118 @@ Tasks
 			Server > Roles
 
 		Add new tab:
-			Hierarchy
+			Self-Assign Roles
 
-		Existing tabs should remain unchanged
+		Maintain consistency with existing Roles UI and navigation
 
-	Role Categorization
-		Automatically categorize roles into:
+	Role Menu Builder
+		Allow administrators to create role menus
 
-		Management
-			Owner
-			Administrator
-			Moderator
-			Supporter
-			roles with administration/moderation permissions
+		Configure:
+			menu title
+			description
+			target channel
+			menu message
+			menu type
 
-		Bots
-			Pulse
-			Bot
-			Community Bot
-			Disboard Bot
-			Music Bot
-			Radio Bot
-			managed bot roles
+		Support:
+			Buttons
+			Select Menu
 
-		Community
-			Member
-			Booster
-			Streamer
-			general member/community roles
-			uncategorized roles by default
+	Role Assignment
+		Allow members to:
+			assign roles
+			remove roles
+			switch roles
 
-	Hierarchy Visualization
-		Create a visual role hierarchy layout
+		Support:
+			single selection
+			multiple selection
+			required roles
+			mutually exclusive roles
+
+	Role Categories
+		Support role menus for:
+			Game Roles
+			Notification Roles
+			Platform Roles
+			Language Roles
+			Region Roles
+			Interest Roles
+			Color Roles
+			Custom Categories
+
+	Customization
+		Configure:
+			emojis
+			button styles/colors
+			role descriptions
+			role ordering
+			maximum selections
+			default selections where applicable
+
+	Preview
+		Add live preview before publishing
+		Preview both:
+			Button layout
+			Select Menu layout
+
+	Discord Integration
+		Publish role menus directly to Discord
+		Automatically update published menus after edits
+		Support message regeneration if deleted
+		Handle Discord component limitations gracefully
+
+	Role Menu Management
+		Allow administrators to:
+			edit menus
+			duplicate menus
+			enable/disable menus
+			archive menus
+			delete menus
+			republish menus
 
 		Display:
-			category cards
-			role cards inside each category
-			role name
-			role color/icon
-			member count
-			hierarchy position where useful
+			menu status
+			channel
+			message ID
+			creation date
+			last updated
+			total assignments
 
-	Role Statistics
-		Add role statistics panel showing:
-			total roles
-			total members with roles
-			management roles count
-			bot roles count
-			community roles count
-			empty roles count
-			roles with members
-			highest role
-			most assigned role
+	Analytics
+		Track:
+			role assignments
+			role removals
+			most selected roles
+			least selected roles
+			active role menus
+			menu interaction count
 
-	Role Distribution
-		Add visual distribution indicators for:
-			role categories
-			member count per category
-			empty vs active roles
+	Permissions & Validation
+		Validate:
+			role hierarchy
+			Pulse permissions
+			assignable roles
+			duplicate roles within menus
+			conflicting role configurations
 
-	Interactions
-		Allow:
-			clicking role to open existing role details/edit flow
-			refreshing hierarchy data
-			switching between compact and expanded view
-			exporting hierarchy view as PNG if feasible
-
-	Categorization Rules
-		Use simple deterministic logic first:
-			bot/managed roles → Bots
-			administrator/moderation permissions → Management
-			role names containing admin/mod/moderator/owner/support → Management
-			all remaining roles → Community
-
-		Avoid advanced AI categorization in this version
+		Display clear validation errors where required
 
 	UX Improvements
-		Add loading state
-		Add empty state
-		Add error state
-		Add responsive layout
-		Match existing Pulsify role design
-		Add short explanation tooltip for how categorization works
+		Add responsive role menu builder
+		Add drag-and-drop role ordering
+		Add search and filtering
+		Add loading/error/empty states
+		Add confirmation dialogs for destructive actions
+		Use consistent Pulse v2 styling
 
 Acceptance Criteria
-	Hierarchy tab exists under Server > Roles
-	Roles are automatically grouped into Management, Bots, and Community
-	Role cards display name, color/icon, and member count
-	Statistics panel displays useful role metrics
-	Clicking a role opens the existing role detail/edit flow
-	Categorization logic is predictable and reliable
+	Self-Assign Roles tab is available under Server > Roles
+	Administrators can create self-assign role menus
+	Button and Select Menu modes function correctly
+	Members can assign, remove, and switch roles successfully
+	Role hierarchy and permission validation prevent invalid configurations
+	Analytics accurately track role menu usage
+	Published menus synchronize correctly with Discord
 	UI remains responsive and visually polished
