@@ -423,7 +423,9 @@ export function MemberProfile({ guildId, userId, viewerRole = 'admin', backHref,
         {/* Overview cards — server activity (members only) */}
         {isMember && (
         <CategorySection icon={<Activity size={14} />} title="Overview" description="Lifetime activity and standing for this member.">
-          <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+          {/* 7 cards for admins (incl. Infractions), 6 for members — match the
+              column count to the card count so the row fills the full width. */}
+          <div className={`grid gap-4 sm:grid-cols-3 lg:grid-cols-4 ${isAdmin ? 'xl:grid-cols-7' : 'xl:grid-cols-6'}`}>
             <StatsCard label="Messages" value={stats.message_count} sub={`Last active ${relativeTime(stats.last_active)}`} icon={<MessageSquare size={16} />} accent="var(--p-1)" />
             <StatsCard label="Voice Time" value={formatDuration(stats.voice_seconds)} sub={`${stats.voice_sessions.toLocaleString()} sessions`} icon={<Mic size={16} />} accent="var(--cyan)" />
             <StatsCard label="Commands" value={stats.command_count} sub="Bot commands used" icon={<Terminal size={16} />} accent="var(--amber)" />

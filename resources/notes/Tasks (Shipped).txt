@@ -4579,3 +4579,115 @@ Acceptance Criteria
 	Audit logs store all role lifecycle events
 	Discord synchronization functions correctly
 	UI remains responsive and visually polished
+
+PULSIFY-55 — Roles Hierarchy Tab & Role Statistics (v0.55.0)
+
+Description
+	Upgrade the existing Server > Roles view by adding a new Hierarchy tab that visually organizes server roles into simple role groups.
+	For the first version, role categorization should focus on clear and reliable categories that can be automatically detected: Management, Bots, and Community.
+	The goal is to give administrators a cleaner overview of their role structure, member distribution, and server role organization.
+
+Goals
+	Improve role visibility and organization
+	Add a visual hierarchy view inside existing Roles module
+	Automatically categorize obvious role types
+	Provide useful role statistics
+	Prepare foundation for future advanced role categorization
+
+Tasks
+	Roles View Upgrade
+		Update:
+			Server > Roles
+
+		Add new tab:
+			Hierarchy
+
+		Existing tabs should remain unchanged
+
+	Role Categorization
+		Automatically categorize roles into:
+
+		Management
+			Owner
+			Administrator
+			Moderator
+			Supporter
+			roles with administration/moderation permissions
+
+		Bots
+			Pulse
+			Bot
+			Community Bot
+			Disboard Bot
+			Music Bot
+			Radio Bot
+			managed bot roles
+
+		Community
+			Member
+			Booster
+			Streamer
+			general member/community roles
+			uncategorized roles by default
+
+	Hierarchy Visualization
+		Create a visual role hierarchy layout
+
+		Display:
+			category cards
+			role cards inside each category
+			role name
+			role color/icon
+			member count
+			hierarchy position where useful
+
+	Role Statistics
+		Add role statistics panel showing:
+			total roles
+			total members with roles
+			management roles count
+			bot roles count
+			community roles count
+			empty roles count
+			roles with members
+			highest role
+			most assigned role
+
+	Role Distribution
+		Add visual distribution indicators for:
+			role categories
+			member count per category
+			empty vs active roles
+
+	Interactions
+		Allow:
+			clicking role to open existing role details/edit flow
+			refreshing hierarchy data
+			switching between compact and expanded view
+			exporting hierarchy view as PNG if feasible
+
+	Categorization Rules
+		Use simple deterministic logic first:
+			bot/managed roles → Bots
+			administrator/moderation permissions → Management
+			role names containing admin/mod/moderator/owner/support → Management
+			all remaining roles → Community
+
+		Avoid advanced AI categorization in this version
+
+	UX Improvements
+		Add loading state
+		Add empty state
+		Add error state
+		Add responsive layout
+		Match existing Pulsify role design
+		Add short explanation tooltip for how categorization works
+
+Acceptance Criteria
+	Hierarchy tab exists under Server > Roles
+	Roles are automatically grouped into Management, Bots, and Community
+	Role cards display name, color/icon, and member count
+	Statistics panel displays useful role metrics
+	Clicking a role opens the existing role detail/edit flow
+	Categorization logic is predictable and reliable
+	UI remains responsive and visually polished

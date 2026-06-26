@@ -32,6 +32,7 @@ import {
   Bot,
   ShieldAlert,
   Clock,
+  Network,
 } from 'lucide-react'
 import { roleColor, snowflakeToDate, type DiscordRole } from '@/lib/discord'
 import { permissionKeysFromBits, dangerousKeysIn } from '@/lib/discord-permissions'
@@ -41,6 +42,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { CategorySection } from '@/components/ui/category-section'
 import { RoleEditPanel } from './roles/RoleEditPanel'
 import { TemporaryRolesContent } from './roles/TemporaryRolesContent'
+import { RoleHierarchyContent } from './roles/RoleHierarchyContent'
 import type { PermissionPreset } from '@/app/api/guilds/[guildId]/permission-presets/route'
 
 type Member = {
@@ -66,6 +68,9 @@ type Props = { guildId: string }
 export function RolesContent({ guildId }: Props) {
   const [roles, setRoles] = useState<DiscordRole[]>([])
   const [memberCountByRole, setMemberCountByRole] = useState<Map<string, number>>(new Map())
+  // Unique members holding at least one role — the Hierarchy tab needs this and
+  // it can't be derived from the per-role counts (members can hold many roles).
+  const [membersWithRoles, setMembersWithRoles] = useState(0)
   const [presets, setPresets] = useState<PermissionPreset[]>([])
   const [loading, setLoading] = useState(true)
   const [reordering, setReordering] = useState(false)
@@ -74,8 +79,8 @@ export function RolesContent({ guildId }: Props) {
 
   const [editingRole, setEditingRole] = useState<DiscordRole | null>(null)
   const [creating, setCreating] = useState(false)
-  // Sub-view: classic role management vs the Temporary Roles tab.
-  const [tab, setTab] = useState<'roles' | 'temporary'>('roles')
+  // Sub-view: classic role management, the Hierarchy overview, or Temporary Roles.
+  const [tab, setTab] = useState<'roles' | 'hierarchy' | 'temporary'>('roles')
 
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -113,10 +118,13 @@ export function RolesContent({ guildId }: Props) {
     if (membersRes.ok) {
       const members = (await membersRes.json()) as Member[]
       const counts = new Map<string, number>()
+      let withRoles = 0
       for (const m of members) {
+        if (m.roles.length > 0) withRoles++
         for (const rid of m.roles) counts.set(rid, (counts.get(rid) ?? 0) + 1)
       }
       setMemberCountByRole(counts)
+      setMembersWithRoles(withRoles)
     }
 
     if (presetsRes.ok) {
@@ -142,8 +150,9 @@ export function RolesContent({ guildId }: Props) {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     let changed = false
-    if (params.get('tab') === 'temporary') {
-      setTab('temporary')
+    const tabParam = params.get('tab')
+    if (tabParam === 'temporary' || tabParam === 'hierarchy') {
+      setTab(tabParam)
       params.delete('tab')
       changed = true
     }
@@ -308,6 +317,7 @@ export function RolesContent({ guildId }: Props) {
         {([
           { id: 'roles' as const, label: 'Roles', icon: <Users size={15} /> },
           { id: 'temporary' as const, label: 'Temporary Roles', icon: <Clock size={15} /> },
+          { id: 'hierarchy' as const, label: 'Hierarchy', icon: <Network size={15} /> },
         ]).map((t) => {
           const active = tab === t.id
           return (
@@ -326,6 +336,16 @@ export function RolesContent({ guildId }: Props) {
       </div>
 
       {tab === 'temporary' && <TemporaryRolesContent guildId={guildId} roles={roles} />}
+
+      {tab === 'hierarchy' && (
+        <RoleHierarchyContent
+          roles={roles}
+          memberCountByRole={memberCountByRole}
+          membersWithRoles={membersWithRoles}
+          onSelectRole={openEditor}
+          onRefresh={fetchAll}
+        />
+      )}
 
       {tab === 'roles' && (
       <>
@@ -407,7 +427,11 @@ export function RolesContent({ guildId }: Props) {
           )}
         </CategorySection>
       </div>
+      </>
+      )}
 
+      {/* Editor lives outside the tab switch so clicking a role from either the
+          Roles list or the Hierarchy view opens the same edit/create flow. */}
       {(editingRole || creating) && (
         <RoleEditPanel
           guildId={guildId}
@@ -425,8 +449,6 @@ export function RolesContent({ guildId }: Props) {
               .then((d: PermissionPreset[]) => setPresets(d))
           }}
         />
-      )}
-      </>
       )}
     </div>
   )

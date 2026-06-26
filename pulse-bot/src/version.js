@@ -18,11 +18,27 @@ const path = require("node:path");
 // Current Pulse version. Used for the startup banner and as the displayed
 // version when no release files are reachable. Keep this in step with the
 // newest resources/notes/vX.Y.Z.txt on each release.
-const PULSE_VERSION = "0.54.0";
+const PULSE_VERSION = "0.55.0";
 
 // Manual/static fallback used only when the release-notes files can't be read.
 // Mirrors the shape produced by the parser so callers don't special-case it.
 const STATIC_RELEASES = [
+  {
+    version: "0.55.0",
+    title: "Role Hierarchy",
+    date: "Jun 25, 2026",
+    description:
+      "A Hierarchy tab in Server > Roles that auto-groups your roles into Management, Bots and Community, with role statistics and distribution at a glance for a cleaner view of your server's structure.",
+    highlights: [
+      "**Automatic categorization** — every role is sorted into Management, Bots or Community using simple, deterministic rules (managed flags, permissions, name keywords) — no AI.",
+      "**Visual layout** — category cards with the roles inside, top-down by position, showing colour, member count and rank, in compact or expanded view.",
+      "**Role statistics** — total roles, members with roles, per-category counts, empty vs. active roles, the highest role and the most-assigned role.",
+      "**Distribution** — bars for roles and members per category plus an empty-vs-active gauge.",
+      "**Built in** — click any role to open the existing edit flow, refresh on demand and export the hierarchy as a PNG.",
+    ],
+    outro:
+      "A clearer picture of your role structure — grouped, measured and ready to manage.",
+  },
   {
     version: "0.54.0",
     title: "Temporary Roles",
