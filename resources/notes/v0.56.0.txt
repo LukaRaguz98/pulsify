@@ -26,4 +26,4 @@ A new Self-Assign Roles tab in Server > Roles for building interactive role menu
 - **On-brand** — menus use the same Pulse v2 look as the rest of the bot, so everything feels like one product.
 - **Split cleanly** — the dashboard owns menu creation and lifecycle while the bot handles every button and dropdown interaction, keeping selections instant and reliable.
 
-July 2, 2026
+July 10, 2026
