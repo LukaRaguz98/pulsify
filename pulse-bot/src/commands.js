@@ -85,19 +85,12 @@ function formatDuration(totalSeconds) {
 
 const n = (v) => Number(v ?? 0);
 
-/** Read the guild's configured Pulse Guard accent colour, defaulting to violet. */
+/** Read the guild's configured Pulse accent colour, defaulting to violet. This
+ *  is the single source of truth (guild_settings.embed_color) applied to every
+ *  Pulse embed — see src/guild-accent.js. */
 async function getPulseColor(supabase, guildId) {
-  try {
-    const { data } = await supabase
-      .from("ai_moderation_settings")
-      .select("settings")
-      .eq("guild_id", guildId)
-      .maybeSingle();
-    const color = data?.settings?.embed_color;
-    return /^#[0-9a-fA-F]{6}$/.test(color ?? "") ? color : DEFAULT_PULSE_COLOR;
-  } catch {
-    return DEFAULT_PULSE_COLOR;
-  }
+  const { getGuildAccentHex } = require("./guild-accent");
+  return getGuildAccentHex(supabase, guildId);
 }
 
 /**

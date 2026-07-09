@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
 import { recordNotification } from '@/lib/notifications-server'
+import { readGuildEmbedInt } from '@/lib/embed-color'
 import {
   fetchGuildChannels,
   checkBotPermissions,
@@ -26,10 +27,6 @@ import {
 export type ActionResult<T = undefined> =
   | (T extends undefined ? { ok: true } : { ok: true; data: T })
   | { ok: false; error: string }
-
-// Pulse brand violet — the accent on the /changelog embed; reused here so an
-// announcement reads as the same family of Pulse messages.
-const BRAND = 0x8b5cf6
 
 // Pulse announcement badge — attached as the header thumbnail, identical to the
 // icon the bot ships (pulse-annoucement.png) so an announcement looks the same
@@ -71,7 +68,7 @@ function formatLongDate(d: Date): string {
  * divider and a `Pulse — Announcement` footer. `publishedAt` dates the subtitle
  * (now, for a fresh publish or preview).
  */
-function announcementContainer(a: {
+function announcementContainer(accent: number, a: {
   title: string
   content: string
   publishedAt?: Date
@@ -97,7 +94,7 @@ function announcementContainer(a: {
   body.push(divider())
   body.push(td('-# Pulse — Announcement'))
 
-  return { type: 17, accent_color: BRAND, components: body } as unknown as V2TopLevelComponent
+  return { type: 17, accent_color: accent, components: body } as unknown as V2TopLevelComponent
 }
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
@@ -144,10 +141,11 @@ async function preflightChannel(guildId: string, channelId: string): Promise<str
 async function publishToDiscord(
   channelId: string,
   a: { title: string; content: string },
+  accent: number,
 ): Promise<{ ok: true; messageId: string } | { ok: false; error: string }> {
   return postChannelComponentsReturningId(
     channelId,
-    [announcementContainer({ title: a.title, content: a.content, publishedAt: new Date() })],
+    [announcementContainer(accent, { title: a.title, content: a.content, publishedAt: new Date() })],
     iconAttachments(),
   )
 }
@@ -247,7 +245,8 @@ async function finalizePublish(
   a: { title: string; content: string; channel_id: string },
   moderator: { userId: string; username: string | null; handle: string | null },
 ): Promise<ActionResult> {
-  const posted = await publishToDiscord(a.channel_id, a)
+  const accent = await readGuildEmbedInt(supabase, guildId)
+  const posted = await publishToDiscord(a.channel_id, a, accent)
   const nowIso = new Date().toISOString()
 
   if (!posted.ok) {

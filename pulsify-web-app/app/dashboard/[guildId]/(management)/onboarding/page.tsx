@@ -15,6 +15,7 @@ import {
   type MemberOnboardingConfig,
   type OnboardingStats,
 } from '@/lib/onboarding'
+import type { MemberEventConfig, PulseRulesConfig } from '@/app/dashboard/[guildId]/(management)/onboarding/actions'
 
 export default async function OnboardingPage({
   params,
@@ -50,6 +51,12 @@ export default async function OnboardingPage({
   const config: MemberOnboardingConfig = normalizeMemberOnboarding(
     settings.member_onboarding as Partial<MemberOnboardingConfig> | undefined,
   )
+  // Welcome/Goodbye greetings + Server Rules moved here from Automations. Read
+  // their stored slices straight from guild_settings and hand them to the
+  // Messages tab (they save back through the merge-based saveMemberMessages).
+  const initialWelcome = settings.welcome as Partial<MemberEventConfig> | undefined
+  const initialGoodbye = settings.goodbye as Partial<MemberEventConfig> | undefined
+  const initialRules   = settings.rules   as Partial<PulseRulesConfig> | undefined
 
   const textChannels = channels
     .filter((c) => c.type === 0 || c.type === 5)
@@ -84,6 +91,9 @@ export default async function OnboardingPage({
       perms={perms}
       initialConfig={config}
       stats={stats}
+      initialWelcome={initialWelcome}
+      initialGoodbye={initialGoodbye}
+      initialRules={initialRules}
     />
   )
 }

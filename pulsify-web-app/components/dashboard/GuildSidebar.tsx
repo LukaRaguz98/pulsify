@@ -10,8 +10,6 @@ import {
   Activity,
   CalendarDays,
   CalendarClock,
-  Zap,
-  Mic2,
   Shield,
   ShieldAlert,
   Users,
@@ -235,7 +233,7 @@ export function GuildSidebar({
       icon: <Server size={16} />,
       items: [
         { label: 'Onboarding', href: `${base}/onboarding`, icon: <Rocket size={16} /> },
-        { label: 'Channels', href: `${base}/channels`, icon: <Hash size={16} /> },
+        { label: 'Channels', href: `${base}/channels`, icon: <Hash size={16} />, matchPrefixes: ['/private-channels', '/private-channels-settings'] },
         { label: 'Members', href: `${base}/members`, icon: <UserRound size={16} />, matchPrefixes: ['/leveling-settings', '/leaderboard', '/profile', '/reputation'] },
         { label: 'Roles', href: `${base}/roles`, icon: <Users size={16} /> },
         { label: 'Assets', href: `${base}/assets`, icon: <Smile size={16} /> },
@@ -248,8 +246,6 @@ export function GuildSidebar({
       icon: <TerminalSquare size={16} />,
       items: [
         { label: 'Commands', href: `${base}/commands`, icon: <Command size={16} /> },
-        { label: 'Automations', href: `${base}/automations`, icon: <Zap size={16} /> },
-        { label: 'Private Channels', href: `${base}/private-channels`, icon: <Mic2 size={16} /> },
         { label: 'Integrations', href: `${base}/integrations`, icon: <Plug size={16} /> },
         // Presence is a bot-wide, operator-only surface — hide it from everyone
         // else (the page itself re-checks operator status server-side).

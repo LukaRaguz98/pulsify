@@ -121,10 +121,10 @@ export function AutomationList({
           <button
             type="button"
             onClick={onCreate}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white transition-all"
-            style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))', boxShadow: '0 4px 14px -4px var(--p-glow)' }}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white"
+            style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}
           >
-            <Plus size={14} />
+            <Plus size={15} />
             New workflow
           </button>
         </div>
@@ -144,11 +144,10 @@ export function AutomationList({
               <button
                 type="button"
                 onClick={onCreate}
-                className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-all"
+                className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white"
                 style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))', boxShadow: '0 4px 14px -4px var(--p-glow)' }}
               >
-                <Plus size={14} />
-                Create your first workflow
+                <Plus size={15} /> Create a workflow
               </button>
             ) : undefined
           }

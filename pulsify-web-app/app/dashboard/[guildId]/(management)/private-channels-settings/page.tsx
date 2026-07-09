@@ -39,7 +39,7 @@ export default async function PrivateChannelsSettingsPage({
         description="Configure the join-to-create trigger, channel naming, limits and who can use it. Changes apply live through the Pulse bot."
         action={
           <Link
-            href={`/dashboard/${guildId}/private-channels`}
+            href={`/dashboard/${guildId}/channels?tab=private`}
             className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors"
             style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
           >

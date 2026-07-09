@@ -234,7 +234,7 @@ function createPrivateChannels(client, supabase) {
       type: "bot_error",
       title: "Private Channels needs a permission",
       body: `Pulse is missing the “${permName}” permission and couldn't set up Private Channels.`,
-      link: `/dashboard/${guild.id}/automations`,
+      link: `/dashboard/${guild.id}/private-channels`,
     }).catch(() => {});
   }
 

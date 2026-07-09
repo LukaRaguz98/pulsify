@@ -1,47 +1,39 @@
 'use client'
 
-import { useMemo, useState, useTransition, type ReactNode } from 'react'
-import { saveAutomations, type AutomationSettings } from './actions'
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from 'react'
+import {
+  MessageSquare, LogOut, ShieldCheck,
+  AlertCircle, Sparkles, RotateCcw, Loader2, Check, Send,
+} from 'lucide-react'
+import {
+  saveMemberMessages,
+  type MemberEventConfig as MemberEventConfigBase,
+  type PulseRulesConfig,
+} from '@/app/dashboard/[guildId]/(management)/onboarding/actions'
 import { applyRules } from '@/app/dashboard/[guildId]/(management)/ai-setup/actions'
-import type { DiscordChannel, DiscordRole } from '@/lib/discord'
 import { AppEmbedPreview } from '@/components/dashboard/AppEmbedPreview'
 import { DiscordEmbedPreview, type EmbedData } from '@/components/dashboard/DiscordEmbedPreview'
+import { PreviewStage } from '@/components/dashboard/onboarding/PreviewStage'
 import { CategorySection } from '@/components/ui/category-section'
 import { SaveBar } from '@/components/ui/save-bar'
 import { usePreferences } from '@/components/ThemeProvider'
 import { THEMES } from '@/lib/themes'
-import {
-  MessageSquare, Star, Bell,
-  AlertCircle, Sparkles, RotateCcw,
-  ShieldCheck, Loader2, Check,
-  UserPlus, Shield, LogOut, Send,
-} from 'lucide-react'
+import { PULSE_PREFS_KEY, type PulsePrefs } from '@/components/dashboard/Pulse/PulseAssistantTab'
 
-type Props = {
-  guildId: string
-  guildName: string
-  channels: DiscordChannel[]
-  roles: DiscordRole[]
-  initialSettings: Record<string, unknown>
-}
+// Welcome / Goodbye greetings and the Server Rules embed used to live on the
+// Automations view. They moved here (Server › Onboarding) because they're part
+// of the member's first-touch experience. Storage shape is unchanged
+// (guild_settings.welcome / .goodbye / .rules) so the Pulse bot is unaffected —
+// see saveMemberMessages, which merges only the slices it's handed.
 
-type WelcomeConfig          = AutomationSettings['welcome']
-type GoodbyeConfig          = AutomationSettings['goodbye']
-type AutoRoleConfig         = AutomationSettings['auto_role']
-type ModerationAlertsConfig = AutomationSettings['moderation_alerts']
-// Welcome and Goodbye share the exact same shape — both can be a plain message or an embed.
-type MemberEventConfig      = WelcomeConfig
-
-type PulseRulesConfig      = { enabled: boolean; channel_id: string; title?: string; content: string }
-
-type GenerationResult = {
-  welcome_message: string
-  rules: string[]
-  onboarding: string
-  channels: { category: string; channels: string[] }[]
-}
-
+type Channel = { id: string; name: string }
+type MemberEventConfig = MemberEventConfigBase & { type: 'message' | 'embed'; message: string }
 type EmbedConfig = NonNullable<MemberEventConfig['embed']>
+
+const selectClass = `
+  w-full rounded-lg border px-3 py-2 text-sm text-foreground focus:outline-none transition
+  bg-[var(--bg-2)] border-[var(--line-strong)] focus:border-[var(--p-1)]
+`
 
 type CardDef = {
   icon: ReactNode
@@ -59,6 +51,8 @@ function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean
     <button
       type="button"
       onClick={() => onChange(!enabled)}
+      role="switch"
+      aria-checked={enabled}
       className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors"
       style={{
         background: enabled ? 'linear-gradient(90deg, var(--p-1), var(--p-2))' : 'var(--bg-2)',
@@ -74,120 +68,93 @@ function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean
   )
 }
 
-const selectClass = `
-  w-full rounded-lg border px-3 py-2 text-sm text-foreground focus:outline-none transition
-  bg-[var(--bg-2)] border-[var(--line-strong)] focus:border-[var(--p-1)]
-`
-
-function validate(
-  welcome: WelcomeConfig,
-  goodbye: GoodbyeConfig,
-  autoRole: AutoRoleConfig,
-  modAlerts: ModerationAlertsConfig,
-): string | null {
-  if (welcome.enabled && !welcome.channel_id) return 'Welcome Message: please select a channel.'
-  if (welcome.enabled && welcome.type !== 'embed' && !welcome.message.trim())
-    return 'Welcome Message: message text cannot be empty.'
-  if (goodbye.enabled && !goodbye.channel_id) return 'Goodbye Message: please select a channel.'
-  if (goodbye.enabled && goodbye.type !== 'embed' && !goodbye.message.trim())
-    return 'Goodbye Message: message text cannot be empty.'
-  if (autoRole.enabled && !autoRole.role_id) return 'Auto-Role: please select a role.'
-  if (modAlerts.enabled && !modAlerts.channel_id) return 'Moderation Alerts: please select a channel.'
-  return null
-}
-
-export function AutomationsForm({ guildId, guildName, channels, roles, initialSettings }: Props) {
+export function MemberMessagesManager({
+  guildId,
+  guildName,
+  channels,
+  initialWelcome,
+  initialGoodbye,
+  initialRules,
+}: {
+  guildId: string
+  guildName: string
+  channels: Channel[]
+  initialWelcome: Partial<MemberEventConfig> | undefined
+  initialGoodbye: Partial<MemberEventConfig> | undefined
+  initialRules: Partial<PulseRulesConfig> | undefined
+}) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
   const { theme } = usePreferences()
-  const accentHex = THEMES.find((t) => t.id === theme)?.accent ?? '#8b5cf6'
+  const themeAccent = THEMES.find((t) => t.id === theme)?.accent ?? '#8b5cf6'
 
-  const rawWelcome   = initialSettings.welcome            as Partial<WelcomeConfig>          | undefined
-  const rawGoodbye   = initialSettings.goodbye            as Partial<GoodbyeConfig>          | undefined
-  const rawAutoRole  = initialSettings.auto_role          as Partial<AutoRoleConfig>         | undefined
-  const rawModAlerts = initialSettings.moderation_alerts  as Partial<ModerationAlertsConfig> | undefined
+  // The Server Rules embed uses the configured Pulse embed colour (Server
+  // Settings › Pulse Assistant) so it matches every other Pulse embed. Fall back
+  // to the dashboard theme accent until prefs load.
+  const [accentHex, setAccentHex] = useState(themeAccent)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(PULSE_PREFS_KEY(guildId))
+      if (saved) {
+        const parsed = JSON.parse(saved) as Partial<PulsePrefs>
+        if (parsed?.embedColor) setAccentHex(parsed.embedColor)
+      }
+    } catch {}
+  }, [guildId])
 
-  const rawRules   = initialSettings.rules             as PulseRulesConfig      | undefined
-
-  const [welcome, setWelcome] = useState<WelcomeConfig>({
-    enabled:    rawWelcome?.enabled    ?? false,
-    channel_id: rawWelcome?.channel_id ?? '',
-    message:    rawWelcome?.message    ?? 'Welcome to {server}, {user}! 🎉',
-    type:       rawWelcome?.type       ?? 'message',
-    embed:      rawWelcome?.embed,
+  const [welcome, setWelcome] = useState<MemberEventConfig>({
+    enabled:    initialWelcome?.enabled    ?? false,
+    channel_id: initialWelcome?.channel_id ?? '',
+    message:    initialWelcome?.message    ?? 'Welcome to {server}, {user}! 🎉',
+    type:       initialWelcome?.type       ?? 'message',
+    embed:      initialWelcome?.embed,
+  })
+  const [goodbye, setGoodbye] = useState<MemberEventConfig>({
+    enabled:    initialGoodbye?.enabled    ?? false,
+    channel_id: initialGoodbye?.channel_id ?? '',
+    message:    initialGoodbye?.message    ?? "We'll miss you, {user}. Thanks for being part of {server}! 👋",
+    type:       initialGoodbye?.type       ?? 'message',
+    embed:      initialGoodbye?.embed,
   })
 
-  const [goodbye, setGoodbye] = useState<GoodbyeConfig>({
-    enabled:    rawGoodbye?.enabled    ?? false,
-    channel_id: rawGoodbye?.channel_id ?? '',
-    message:    rawGoodbye?.message    ?? "We'll miss you, {user}. Thanks for being part of {server}! 👋",
-    type:       rawGoodbye?.type       ?? 'message',
-    embed:      rawGoodbye?.embed,
-  })
-
-  const [autoRole, setAutoRole] = useState<AutoRoleConfig>({
-    enabled: rawAutoRole?.enabled ?? false,
-    role_id: rawAutoRole?.role_id ?? '',
-  })
-
-  const [modAlerts, setModAlerts] = useState<ModerationAlertsConfig>({
-    enabled:    rawModAlerts?.enabled    ?? false,
-    channel_id: rawModAlerts?.channel_id ?? '',
-  })
-
-  // Pulse content sections
-  const [rulesVisible,    setRulesVisible]    = useState(rawRules?.enabled    ?? false)
-  const [rulesChannel,    setRulesChannel]    = useState(rawRules?.channel_id ?? (channels[0]?.id ?? ''))
-  const [rulesTitle,      setRulesTitle]      = useState(rawRules?.title      ?? '📜 Server Rules')
-  const [rulesContent,    setRulesContent]    = useState(rawRules?.content    ?? '')
-  const [applyingRules,   setApplyingRules]   = useState(false)
-  const [rulesResult,     setRulesResult]     = useState<'success' | 'error' | null>(null)
-  const [rulesError,      setRulesError]      = useState('')
+  const [rulesVisible, setRulesVisible] = useState(initialRules?.enabled ?? false)
+  const [rulesChannel, setRulesChannel] = useState(initialRules?.channel_id ?? (channels[0]?.id ?? ''))
+  const [rulesTitle,   setRulesTitle]   = useState(initialRules?.title   ?? '📜 Server Rules')
+  const [rulesContent, setRulesContent] = useState(initialRules?.content ?? '')
+  const [applyingRules, setApplyingRules] = useState(false)
+  const [rulesResult, setRulesResult] = useState<'success' | 'error' | null>(null)
+  const [rulesError, setRulesError] = useState('')
 
   // Pulse generation
-  const [generatingSection,    setGeneratingSection]    = useState<string | null>(null)
-  const [pulseGenError,         setPulseGenError]         = useState<string | null>(null)
-  const [pulseGenErrorSection,  setPulseGenErrorSection]  = useState<string | null>(null)
+  const [generatingSection, setGeneratingSection] = useState<string | null>(null)
+  const [pulseGenError, setPulseGenError] = useState<string | null>(null)
+  const [pulseGenErrorSection, setPulseGenErrorSection] = useState<string | null>(null)
 
-  // Snapshot of last-saved state for dirty tracking. SaveBar uses the diff
-  // between this and the current values to render "N unsaved changes" and gate
-  // the Save/Reset buttons. Reset restores all editable state from here.
   type Snapshot = {
-    welcome: WelcomeConfig
-    goodbye: GoodbyeConfig
-    autoRole: AutoRoleConfig
-    modAlerts: ModerationAlertsConfig
+    welcome: MemberEventConfig
+    goodbye: MemberEventConfig
     rulesVisible: boolean; rulesChannel: string; rulesTitle: string; rulesContent: string
   }
-  const buildSnapshot = (): Snapshot => ({
-    welcome, goodbye, autoRole, modAlerts,
-    rulesVisible, rulesChannel, rulesTitle, rulesContent,
-  })
-  const [snapshot, setSnapshot] = useState<Snapshot>(() => ({
-    welcome, goodbye, autoRole, modAlerts,
-    rulesVisible, rulesChannel, rulesTitle, rulesContent,
-  }))
+  const buildSnapshot = (): Snapshot => ({ welcome, goodbye, rulesVisible, rulesChannel, rulesTitle, rulesContent })
+  const [snapshot, setSnapshot] = useState<Snapshot>(buildSnapshot)
 
   const current = buildSnapshot()
   const changedCount = useMemo(() => {
     let n = 0
-    const keys = Object.keys(snapshot) as (keyof Snapshot)[]
-    for (const k of keys) {
+    for (const k of Object.keys(snapshot) as (keyof Snapshot)[]) {
       if (JSON.stringify(current[k]) !== JSON.stringify(snapshot[k])) n += 1
     }
     return n
-    // current is rebuilt every render; comparison is cheap relative to render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshot, welcome, goodbye, autoRole, modAlerts,
-    rulesVisible, rulesChannel, rulesTitle, rulesContent])
+  }, [snapshot, welcome, goodbye, rulesVisible, rulesChannel, rulesTitle, rulesContent])
   const dirty = changedCount > 0
+
+  function clearFeedback() { setError(null) }
 
   function handleReset() {
     setWelcome(snapshot.welcome)
     setGoodbye(snapshot.goodbye)
-    setAutoRole(snapshot.autoRole)
-    setModAlerts(snapshot.modAlerts)
     setRulesVisible(snapshot.rulesVisible)
     setRulesChannel(snapshot.rulesChannel)
     setRulesTitle(snapshot.rulesTitle)
@@ -195,25 +162,29 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     setError(null)
   }
 
-  function clearFeedback() { setError(null) }
+  function validate(): string | null {
+    if (welcome.enabled && !welcome.channel_id) return 'Welcome Message: please select a channel.'
+    if (welcome.enabled && welcome.type !== 'embed' && !welcome.message.trim())
+      return 'Welcome Message: message text cannot be empty.'
+    if (goodbye.enabled && !goodbye.channel_id) return 'Goodbye Message: please select a channel.'
+    if (goodbye.enabled && goodbye.type !== 'embed' && !goodbye.message.trim())
+      return 'Goodbye Message: message text cannot be empty.'
+    return null
+  }
 
   function handleSave(): Promise<void> {
-    const validationError = validate(welcome, goodbye, autoRole, modAlerts)
+    const validationError = validate()
     if (validationError) { setError(validationError); return Promise.resolve() }
 
     return new Promise<void>((resolve) => {
       startTransition(async () => {
-        const result = await saveAutomations(guildId, {
+        const result = await saveMemberMessages(guildId, {
           welcome,
           goodbye,
-          auto_role: autoRole,
-          moderation_alerts: modAlerts,
           rules: { enabled: rulesVisible, channel_id: rulesChannel, title: rulesTitle, content: rulesContent },
         })
         if (result.ok) {
           setError(null)
-          // Snapshot the just-saved state so "dirty" resets to false and the
-          // save bar shows "All changes saved."
           setSnapshot(buildSnapshot())
         } else {
           setError(result.error)
@@ -232,21 +203,18 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     setApplyingRules(false)
   }
 
-  function getPulsePrefs() {
+  function getPulsePrefs(): PulsePrefs | null {
     try {
-      const saved = localStorage.getItem(`pulsify:Pulse-prefs:${guildId}`)
+      const saved = localStorage.getItem(PULSE_PREFS_KEY(guildId))
       if (!saved) return null
-      return JSON.parse(saved) as {
-        description: string; tone: string; customTone: string; language: string; customLanguage: string;
-        embedColor: string; serverSize: string; contentDepth: string; includeEmojis: boolean
-      }
+      return JSON.parse(saved) as PulsePrefs
     } catch { return null }
   }
 
-  async function generateWithPulse(section: string) {
+  async function generateWithPulse(section: 'welcome' | 'goodbye' | 'rules') {
     const prefs = getPulsePrefs()
     if (!prefs?.description?.trim()) {
-      setPulseGenError('Add a server description in Automations settings to get started.')
+      setPulseGenError('Add a server description in Server Settings › Pulse Assistant to get started.')
       setPulseGenErrorSection(section)
       return
     }
@@ -274,8 +242,8 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
         })
         const data = await res.json() as { result?: EmbedConfig; error?: string }
         if (!res.ok) { setPulseGenError(data.error ?? 'Generation failed.'); setPulseGenErrorSection(section); return }
-        if (section === 'welcome') setWelcome(prev => ({ ...prev, type: 'embed', embed: data.result }))
-        else setGoodbye(prev => ({ ...prev, type: 'embed', embed: data.result }))
+        if (section === 'welcome') setWelcome((prev) => ({ ...prev, type: 'embed', embed: data.result }))
+        else setGoodbye((prev) => ({ ...prev, type: 'embed', embed: data.result }))
         clearFeedback()
       } else {
         const res = await fetch('/api/ai/generate', {
@@ -292,13 +260,10 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
             includeEmojis: prefs.includeEmojis,
           }),
         })
-        const data = await res.json() as { result?: GenerationResult; error?: string }
+        const data = await res.json() as { result?: { rules: string[] }; error?: string }
         if (!res.ok) { setPulseGenError(data.error ?? 'Generation failed.'); setPulseGenErrorSection(section); return }
-        const result = data.result!
-        if (section === 'rules') {
-          setRulesContent(result.rules.map((r, i) => `${i + 1}. ${r}`).join('\n'))
-          setRulesVisible(true)
-        }
+        setRulesContent(data.result!.rules.map((r, i) => `${i + 1}. ${r}`).join('\n'))
+        setRulesVisible(true)
       }
     } catch {
       setPulseGenError('Network error. Please try again.')
@@ -308,19 +273,16 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     }
   }
 
-  const isEmbed = welcome.type === 'embed'
-  const isGoodbyeEmbed = goodbye.type === 'embed'
-
   const welcomeCard: CardDef = {
-    icon:        <MessageSquare size={16} />,
-    iconBg:      'rgba(59,130,246,0.12)',
-    iconColor:   '#3b82f6',
-    title:       'Welcome Message',
-    description: isEmbed
+    icon: <MessageSquare size={16} />,
+    iconBg: 'rgba(59,130,246,0.12)',
+    iconColor: '#3b82f6',
+    title: 'Welcome Message',
+    description: welcome.type === 'embed'
       ? 'Sends an AI-generated embed card when a new member joins.'
       : 'Send a message when a new member joins.',
-    enabled:  welcome.enabled,
-    onToggle: (v: boolean) => { setWelcome({ ...welcome, enabled: v }); clearFeedback() },
+    enabled: welcome.enabled,
+    onToggle: (v) => { setWelcome({ ...welcome, enabled: v }); clearFeedback() },
     extra: welcome.enabled && (
       <MemberEventExtra
         variant="welcome"
@@ -337,15 +299,15 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
   }
 
   const goodbyeCard: CardDef = {
-    icon:        <LogOut size={16} />,
-    iconBg:      'rgba(251,113,133,0.12)',
-    iconColor:   '#fb7185',
-    title:       'Goodbye Message',
-    description: isGoodbyeEmbed
+    icon: <LogOut size={16} />,
+    iconBg: 'rgba(251,113,133,0.12)',
+    iconColor: '#fb7185',
+    title: 'Goodbye Message',
+    description: goodbye.type === 'embed'
       ? 'Sends an AI-generated embed card when a member leaves.'
       : 'Send a message when a member leaves the server.',
-    enabled:  goodbye.enabled,
-    onToggle: (v: boolean) => { setGoodbye({ ...goodbye, enabled: v }); clearFeedback() },
+    enabled: goodbye.enabled,
+    onToggle: (v) => { setGoodbye({ ...goodbye, enabled: v }); clearFeedback() },
     extra: goodbye.enabled && (
       <MemberEventExtra
         variant="goodbye"
@@ -362,18 +324,15 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
   }
 
   const rulesCard: CardDef = {
-    icon:        <ShieldCheck size={16} />,
-    iconBg:      'rgba(245,158,11,0.12)',
-    iconColor:   '#f59e0b',
-    title:       'Server Rules',
+    icon: <ShieldCheck size={16} />,
+    iconBg: 'rgba(245,158,11,0.12)',
+    iconColor: '#f59e0b',
+    title: 'Server Rules',
     description: 'Post an AI-generated rules embed to a channel.',
-    enabled:  rulesVisible,
-    onToggle: (v: boolean) => { setRulesVisible(v); clearFeedback() },
+    enabled: rulesVisible,
+    onToggle: (v) => { setRulesVisible(v); clearFeedback() },
     extra: rulesVisible && (
       <PulseContentExtra
-        section="rules"
-        genLabel="rules"
-        mono
         channels={channels}
         channelId={rulesChannel}
         onChannelChange={setRulesChannel}
@@ -394,86 +353,25 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
     ),
   }
 
-  const autoRoleCard: CardDef = {
-    icon:        <Star size={16} />,
-    iconBg:      'rgba(16,185,129,0.12)',
-    iconColor:   '#10b981',
-    title:       'Auto-Role',
-    description: 'Automatically assign a role to new members.',
-    enabled:  autoRole.enabled,
-    onToggle: (v: boolean) => { setAutoRole({ ...autoRole, enabled: v }); clearFeedback() },
-    extra: autoRole.enabled && (
-      <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--line-strong)' }}>
-        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Role to assign</label>
-        <select
-          value={autoRole.role_id}
-          onChange={(e) => { setAutoRole({ ...autoRole, role_id: e.target.value }); clearFeedback() }}
-          className={selectClass}
-        >
-          <option value="">Select a role</option>
-          {roles.map((r) => (
-            <option key={r.id} value={r.id}>{r.name}</option>
-          ))}
-        </select>
-      </div>
-    ),
-  }
-
-  const modAlertsCard: CardDef = {
-    icon:        <Bell size={16} />,
-    iconBg:      'rgba(245,158,11,0.12)',
-    iconColor:   '#f59e0b',
-    title:       'Moderation Alerts',
-    description: 'Get notified when moderation actions occur.',
-    enabled:  modAlerts.enabled,
-    onToggle: (v: boolean) => { setModAlerts({ ...modAlerts, enabled: v }); clearFeedback() },
-    extra: modAlerts.enabled && (
-      <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--line-strong)' }}>
-        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Alert Channel</label>
-        <select
-          value={modAlerts.channel_id}
-          onChange={(e) => { setModAlerts({ ...modAlerts, channel_id: e.target.value }); clearFeedback() }}
-          className={selectClass}
-        >
-          <option value="">Select a channel</option>
-          {channels.map((c) => (
-            <option key={c.id} value={c.id}>#{c.name}</option>
-          ))}
-        </select>
-      </div>
-    ),
-  }
-
   return (
     <div className="space-y-8">
-      {/* ── Joining & Welcome ───────────────────────────────────────────── */}
       <CategorySection
-        icon={<UserPlus size={14} />}
-        title="Joining & Welcome"
-        description="Greet new members. For the full guided onboarding experience, see Server › Onboarding."
+        icon={<MessageSquare size={14} />}
+        title="Welcome & Goodbye messages"
+        description="Greet new members and send them off when they leave. Posted automatically by Pulse."
       >
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 items-start">
           <CardItem card={welcomeCard} />
           <CardItem card={goodbyeCard} />
-          {/* Rules spans the full row so it doesn't leave an empty half-cell as
-              the odd third card — and its expanded embed preview + content
-              editor read better at full width. */}
-          <div className="lg:col-span-2">
-            <CardItem card={rulesCard} />
-          </div>
         </div>
       </CategorySection>
 
-      {/* ── Moderation ──────────────────────────────────────────────────── */}
       <CategorySection
-        icon={<Shield size={14} />}
-        title="Moderation"
-        description="Automatic roles and alerts to keep your server in order."
+        icon={<ShieldCheck size={14} />}
+        title="Server Rules"
+        description="Generate and post a rules embed new members see before they take part."
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
-          <CardItem card={modAlertsCard} />
-          <CardItem card={autoRoleCard} />
-        </div>
+        <CardItem card={rulesCard} />
       </CategorySection>
 
       {error && (
@@ -487,12 +385,12 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
         dirty={dirty}
         changedCount={changedCount}
         saving={isPending}
-        saveLabel="Save Automations"
-        cleanText="All changes saved. Automations apply through the Pulse bot."
+        saveLabel="Save messages"
+        cleanText="All changes saved. Messages are posted by the Pulse bot."
         dirtyHintText="review and save to apply via the Pulse bot."
-        confirmTitle="Save automations?"
+        confirmTitle="Save member messages?"
         confirmDescription="These changes will be applied by the Pulse bot immediately."
-        confirmLabel="Save Automations"
+        confirmLabel="Save messages"
         onReset={handleReset}
         onSave={handleSave}
       />
@@ -504,10 +402,7 @@ export function AutomationsForm({ guildId, guildName, channels, roles, initialSe
 
 function CardItem({ card }: { card: CardDef }) {
   return (
-    <div
-      className="rounded-xl border p-5 transition-colors h-full"
-      style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
-    >
+    <div className="rounded-xl border p-5 transition-colors h-full" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: card.iconBg, color: card.iconColor }}>
@@ -536,7 +431,7 @@ function MemberEventExtra({
   config: MemberEventConfig
   onChange: (next: MemberEventConfig) => void
   guildName: string
-  channels: DiscordChannel[]
+  channels: Channel[]
   generatingSection: string | null
   onGenerate: () => void
   pulseGenError: string | null
@@ -580,10 +475,7 @@ function MemberEventExtra({
       </div>
 
       {/* Pulse generate */}
-      <div
-        className="rounded-lg border p-3 flex items-center justify-between gap-3"
-        style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)' }}
-      >
+      <div className="rounded-lg border p-3 flex items-center justify-between gap-3" style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)' }}>
         <div className="flex items-center gap-2 min-w-0">
           <Sparkles size={12} style={{ color: 'var(--p-1)' }} />
           <p className="text-xs font-medium text-foreground truncate">{genLabel}</p>
@@ -597,8 +489,7 @@ function MemberEventExtra({
         >
           {generatingSection === variant
             ? <><Loader2 size={11} className="animate-spin" /> Generating…</>
-            : <><Sparkles size={11} /> Generate</>
-          }
+            : <><Sparkles size={11} /> Generate</>}
         </button>
       </div>
       {pulseGenError && pulseGenErrorSection === variant && (
@@ -607,11 +498,14 @@ function MemberEventExtra({
 
       {isEmbed && previewEmbed && embed ? (
         <div className="space-y-3">
-          <DiscordEmbedPreview
-            embed={previewEmbed}
-            serverName={guildName}
-            footerFallback={variant === 'welcome' ? 'Pulse · Welcome' : 'Pulse · Goodbye'}
-          />
+          <PreviewStage>
+            <DiscordEmbedPreview
+              embed={previewEmbed}
+              serverName={guildName}
+              footerFallback={variant === 'welcome' ? 'Pulse · Welcome' : 'Pulse · Goodbye'}
+              floating
+            />
+          </PreviewStage>
           <div className="space-y-2">
             <div>
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Embed Title</label>
@@ -624,8 +518,7 @@ function MemberEventExtra({
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                Embed Description{' '}
-                <span className="text-subtle">({userHint}, {'{server}'} = server name)</span>
+                Embed Description <span className="text-subtle">({userHint}, {'{server}'} = server name)</span>
               </label>
               <textarea
                 value={embed.description}
@@ -650,8 +543,7 @@ function MemberEventExtra({
       ) : (
         <div>
           <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-            Message{' '}
-            <span className="text-subtle">({userHint}, {'{server}'} = server name)</span>
+            Message <span className="text-subtle">({userHint}, {'{server}'} = server name)</span>
           </label>
           <textarea
             value={config.message}
@@ -666,21 +558,16 @@ function MemberEventExtra({
 }
 
 // ─── PulseContentExtra ────────────────────────────────────────────────────────
-// Shared body for the Rules and Onboarding cards — Pulse generated content posted
-// to a channel as an embed. Mirrors the Welcome/Goodbye card layout.
+// Body for the Server Rules card — Pulse-generated content posted to a channel.
 
 function PulseContentExtra({
-  section, genLabel, mono,
   channels, channelId, onChannelChange,
   title, onTitleChange, content, onContentChange,
   accentHex, generatingSection, onGenerate,
   pulseGenError, pulseGenErrorSection,
   applying, applyResult, applyError, onRepost,
 }: {
-  section: string
-  genLabel: string
-  mono: boolean
-  channels: DiscordChannel[]
+  channels: Channel[]
   channelId: string
   onChannelChange: (v: string) => void
   title: string
@@ -700,16 +587,10 @@ function PulseContentExtra({
   return (
     <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--line-strong)' }}>
       <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
-        {/* Left: controls — channel, generation, title/content, post. The content
-            editor flexes to fill whatever height is left so it runs to the bottom. */}
         <div className="flex flex-col gap-3">
           <div>
             <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Channel</label>
-            <select
-              value={channelId}
-              onChange={(e) => onChannelChange(e.target.value)}
-              className={selectClass}
-            >
+            <select value={channelId} onChange={(e) => onChannelChange(e.target.value)} className={selectClass}>
               <option value="">Select a channel</option>
               {channels.map((c) => (
                 <option key={c.id} value={c.id}>#{c.name}</option>
@@ -717,14 +598,10 @@ function PulseContentExtra({
             </select>
           </div>
 
-          {/* Pulse generate */}
-          <div
-            className="rounded-lg border p-3 flex items-center justify-between gap-3"
-            style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)' }}
-          >
+          <div className="rounded-lg border p-3 flex items-center justify-between gap-3" style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)' }}>
             <div className="flex items-center gap-2 min-w-0">
               <Sparkles size={12} style={{ color: 'var(--p-1)' }} />
-              <p className="text-xs font-medium text-foreground truncate">Generate {genLabel} with Pulse</p>
+              <p className="text-xs font-medium text-foreground truncate">Generate rules with Pulse</p>
             </div>
             <button
               type="button"
@@ -733,31 +610,25 @@ function PulseContentExtra({
               className="shrink-0 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-all disabled:opacity-50"
               style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))' }}
             >
-              {generatingSection === section
+              {generatingSection === 'rules'
                 ? <><Loader2 size={11} className="animate-spin" /> Generating…</>
-                : <><Sparkles size={11} /> Generate</>
-              }
+                : <><Sparkles size={11} /> Generate</>}
             </button>
           </div>
-          {pulseGenError && pulseGenErrorSection === section && (
+          {pulseGenError && pulseGenErrorSection === 'rules' && (
             <p className="text-xs" style={{ color: '#f87171' }}>{pulseGenError}</p>
           )}
 
           <div>
             <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Embed Title</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => onTitleChange(e.target.value)}
-              className={selectClass}
-            />
+            <input type="text" value={title} onChange={(e) => onTitleChange(e.target.value)} className={selectClass} />
           </div>
           <div className="flex min-h-0 flex-1 flex-col">
             <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Edit content</label>
             <textarea
               value={content}
               onChange={(e) => onContentChange(e.target.value)}
-              className={selectClass + ' min-h-[20rem] flex-1 resize-none' + (mono ? ' font-mono' : '')}
+              className={selectClass + ' min-h-[20rem] flex-1 resize-none font-mono'}
             />
           </div>
 
@@ -781,22 +652,16 @@ function PulseContentExtra({
             >
               {applying
                 ? <><Loader2 size={11} className="animate-spin" /> Posting…</>
-                : <><Send size={11} /> Post to Discord</>
-              }
+                : <><Send size={11} /> Post to Discord</>}
             </button>
           </div>
         </div>
 
-        {/* Right: live preview. */}
         <div>
           <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Preview</label>
-          <AppEmbedPreview
-            title={title}
-            content={content}
-            color={accentHex}
-            icon={section === 'rules' ? '/pulse-info.png' : section === 'onboarding' ? '/pulse-onboarding.png' : undefined}
-            footer={section === 'rules' ? 'Pulse · Server Rules' : section === 'onboarding' ? 'Pulse · Onboarding Guide' : undefined}
-          />
+          <PreviewStage>
+            <AppEmbedPreview title={title} content={content} color={accentHex} icon="/pulse-info.png" footer="Pulse · Server Rules" floating />
+          </PreviewStage>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type JSX } from 'react'
+import { useEffect, useState, type JSX, type CSSProperties } from 'react'
 import Image from 'next/image'
 
 type EmbedField = { name: string; value: string; inline: boolean }
@@ -20,6 +20,10 @@ type Props = {
   /** Footer shown when the user left footer_text blank (e.g. 'Pulse — Welcome'),
    *  mirroring the bot's branded fallback. */
   footerFallback?: string
+  /** When true, render for the animated PreviewStage field: the outer card is
+   *  transparent and the V2 container becomes translucent glass so the field
+   *  glows through — matching the onboarding live preview. */
+  floating?: boolean
 }
 
 function renderMd(text: string, lineIdx: number) {
@@ -65,7 +69,7 @@ function renderContent(text: string) {
   })
 }
 
-export function DiscordEmbedPreview({ embed, serverName, footerFallback }: Props) {
+export function DiscordEmbedPreview({ embed, serverName, footerFallback, floating }: Props) {
   const resolve = (text: string) =>
     text.replace(/\{server\}/g, serverName).replace(/\{user\}/g, '@NewMember')
 
@@ -75,15 +79,43 @@ export function DiscordEmbedPreview({ embed, serverName, footerFallback }: Props
     setTimeStr(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
   }, [])
 
+  // Translucent glass V2 container when floating on the animated field.
+  const containerStyle: CSSProperties = floating
+    ? {
+        background: 'color-mix(in srgb, var(--panel-2) 55%, transparent)',
+        border: '1px solid var(--line)',
+        borderLeftWidth: '3px',
+        borderLeftColor: embed.color,
+        borderRadius: '8px',
+        overflow: 'hidden',
+        maxWidth: '432px',
+        padding: '12px 16px',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        boxShadow: '0 20px 55px -26px color-mix(in srgb, var(--text) 30%, transparent)',
+      }
+    : {
+        background: 'var(--bg-2)',
+        borderLeft: `4px solid ${embed.color}`,
+        borderRadius: '8px',
+        overflow: 'hidden',
+        maxWidth: '432px',
+        padding: '12px 16px',
+      }
+
   return (
     <div
-      style={{
-        background: 'var(--panel)',
-        borderRadius: '12px',
-        padding: '16px 16px 12px',
-        fontFamily: "'gg sans', 'Noto Sans', Arial, sans-serif",
-        border: '1px solid var(--line-strong)',
-      }}
+      style={
+        floating
+          ? { fontFamily: "'gg sans', 'Noto Sans', Arial, sans-serif" }
+          : {
+              background: 'var(--panel)',
+              borderRadius: '12px',
+              padding: '16px 16px 12px',
+              fontFamily: "'gg sans', 'Noto Sans', Arial, sans-serif",
+              border: '1px solid var(--line-strong)',
+            }
+      }
     >
       <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
         {/* Bot avatar */}
@@ -112,14 +144,7 @@ export function DiscordEmbedPreview({ embed, serverName, footerFallback }: Props
               accent stripe. Mirrors the bot's V2 builder: title → `#` heading,
               fields → stacked bold-label blocks, banner → media gallery,
               footer → subtext. No inline-field grid (V2 stacks them). */}
-          <div style={{
-            background: 'var(--bg-2)',
-            borderLeft: `4px solid ${embed.color}`,
-            borderRadius: '8px',
-            overflow: 'hidden',
-            maxWidth: '432px',
-            padding: '12px 16px',
-          }}>
+          <div style={containerStyle}>
             {/* Pulse label — matches the `**Pulse**` line the bot puts at the
                 top of the v2 container. */}
             <div style={{ color: 'var(--text-2)', fontWeight: 700, fontSize: '12px', marginBottom: '2px' }}>Pulse</div>

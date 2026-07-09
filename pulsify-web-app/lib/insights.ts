@@ -337,7 +337,7 @@ export function generateRecommendations(s: InsightSignals): Recommendation[] {
       title: 'Greet your new members',
       detail: `${s.current.joins} member${s.current.joins === 1 ? '' : 's'} joined over ${period}, but no welcome message is set up. A warm greeting boosts first-day retention.`,
       icon: 'Hand',
-      action: { label: 'Set up welcome', path: '/automations' },
+      action: { label: 'Set up welcome', path: '/onboarding' },
       source: 'rule',
     })
   }

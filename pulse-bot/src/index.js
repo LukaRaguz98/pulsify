@@ -41,6 +41,7 @@ const { createEconomyRewards } = require("./economy-rewards");
 const { createShop } = require("./shop");
 const { createPrivateChannels } = require("./private-channels");
 const { createTemporaryRoles } = require("./temporary-roles");
+const { createSelfRoles } = require("./self-roles");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -183,6 +184,11 @@ const privateChannels = createPrivateChannels(client, supabase);
 // and (optionally) notifies the member + admins. Dashboard owns assignment.
 const temporaryRoles = createTemporaryRoles(client, supabase);
 
+// Self-Assign Roles (PULSIFY-56): registers its own interaction listener for the
+// `sr:` role buttons + select menus, toggling a member's roles when they self-
+// assign. Dashboard owns the menu lifecycle + the posted message.
+const selfRoles = createSelfRoles(client, supabase);
+
 /**
  * Shared helper for Discord-side activity → notifications row.
  *
@@ -274,30 +280,6 @@ function buildMemberV2Container(cfg, resolve, hasBanner, footerLabel) {
     type: 17,
     accent_color: isNaN(colorInt) ? 0x6366f1 : colorInt,
     components,
-  };
-}
-
-/**
- * Build a Components V2 container for a moderation alert posted to a server's
- * configured alerts channel. Keeps a semantic accent (red = removal,
- * green = restore) but adopts the same v2 layout the rest of Pulse uses:
- * `#` heading, bold-label body lines, a divider, and a `-#` footer carrying a
- * relative timestamp. Falsy `lines` entries are skipped so optional fields
- * (moderator, reason) collapse cleanly.
- */
-function buildModAlertContainer({ colorInt, title, lines, footerLabel }) {
-  const unix = Math.floor(Date.now() / 1000);
-  return {
-    type: 17,
-    accent_color: colorInt,
-    components: [
-      { type: 10, content: "**Pulse**" },
-      { type: 10, content: `# ${title}` },
-      { type: 10, content: "-# Moderation alert" },
-      { type: 10, content: lines.filter(Boolean).join("\n") },
-      { type: 14, divider: true, spacing: 1 },
-      { type: 10, content: `-# Pulse — ${footerLabel} — <t:${unix}:R>` },
-    ],
   };
 }
 
@@ -473,6 +455,10 @@ client.once(Events.ClientReady, async (readyClient) => {
   // ones expiring within 24h).
   await temporaryRoles.start();
 
+  // Self-Assign Roles: load active menus into cache, subscribe to changes and
+  // register the `sr:` button/select listener.
+  await selfRoles.start();
+
   // Startup banner — a clear, scannable success summary so an operator can
   // confirm at a glance which version is live, how many servers it serves, and
   // that every command loaded. Mirrors the data /version reports.
@@ -559,7 +545,7 @@ client.on(Events.GuildMemberAdd, async (member) => {
         type: "bot_warning",
         title: "Welcome message failed to send",
         body: err.message,
-        link: `/dashboard/${member.guild.id}/automations`,
+        link: `/dashboard/${member.guild.id}/onboarding`,
         targetId: settings.welcome.channel_id,
         metadata: { automation: "welcome" },
       });
@@ -582,8 +568,8 @@ client.on(Events.GuildMemberAdd, async (member) => {
           guildId: member.guild.id,
           type: "bot_warning",
           title: "Auto-role is misconfigured",
-          body: `The configured role ID ${settings.auto_role.role_id} no longer exists. Pick a new role in Automations.`,
-          link: `/dashboard/${member.guild.id}/automations`,
+          body: `The configured role ID ${settings.auto_role.role_id} no longer exists. Pick a new role in Roles › Self-Assign Roles.`,
+          link: `/dashboard/${member.guild.id}/roles?tab=self`,
           metadata: {
             automation: "auto_role",
             role_id: settings.auto_role.role_id,
@@ -600,7 +586,7 @@ client.on(Events.GuildMemberAdd, async (member) => {
         type: "bot_warning",
         title: `Auto-role failed for ${member.user.tag}`,
         body: err.message,
-        link: `/dashboard/${member.guild.id}/automations`,
+        link: `/dashboard/${member.guild.id}/roles?tab=self`,
         targetId: member.id,
         targetName: member.user.tag,
         metadata: { automation: "auto_role" },
@@ -674,7 +660,7 @@ client.on(Events.GuildMemberRemove, async (member) => {
         type: "bot_warning",
         title: "Goodbye message failed to send",
         body: err.message,
-        link: `/dashboard/${member.guild.id}/automations`,
+        link: `/dashboard/${member.guild.id}/onboarding`,
         targetId: settings.goodbye.channel_id,
         metadata: { automation: "goodbye" },
       });
@@ -718,31 +704,6 @@ client.on(Events.GuildBanAdd, async (ban) => {
       metadata: { action: "ban" },
     });
   }
-
-  const settings = await getGuildSettings(ban.guild.id);
-  if (
-    settings?.moderation_alerts?.enabled &&
-    settings.moderation_alerts.channel_id
-  ) {
-    const channel = ban.guild.channels.cache.get(
-      settings.moderation_alerts.channel_id,
-    );
-    if (channel?.isTextBased()) {
-      const container = buildModAlertContainer({
-        colorInt: 0xef4444,
-        title: "Member banned",
-        lines: [
-          `**Member:** ${ban.user.tag} (\`${ban.user.id}\`)`,
-          actor?.actorName ? `**Moderator:** ${actor.actorName}` : null,
-          `**Reason:** ${actor?.reason ?? ban.reason ?? "No reason provided"}`,
-        ],
-        footerLabel: "Banned",
-      });
-      await channel
-        .send({ flags: MessageFlags.IsComponentsV2, components: [container] })
-        .catch(console.error);
-    }
-  }
 });
 
 client.on(Events.GuildBanRemove, async (ban) => {
@@ -777,31 +738,6 @@ client.on(Events.GuildBanRemove, async (ban) => {
       targetName: ban.user.tag,
       metadata: { action: "unban" },
     });
-  }
-
-  const settings = await getGuildSettings(ban.guild.id);
-  if (
-    settings?.moderation_alerts?.enabled &&
-    settings.moderation_alerts.channel_id
-  ) {
-    const channel = ban.guild.channels.cache.get(
-      settings.moderation_alerts.channel_id,
-    );
-    if (channel?.isTextBased()) {
-      const container = buildModAlertContainer({
-        colorInt: 0x22c55e,
-        title: "Member unbanned",
-        lines: [
-          `**Member:** ${ban.user.tag} (\`${ban.user.id}\`)`,
-          actor?.actorName ? `**Moderator:** ${actor.actorName}` : null,
-          actor?.reason ? `**Reason:** ${actor.reason}` : null,
-        ],
-        footerLabel: "Unbanned",
-      });
-      await channel
-        .send({ flags: MessageFlags.IsComponentsV2, components: [container] })
-        .catch(console.error);
-    }
   }
 });
 

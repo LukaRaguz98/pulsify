@@ -33,6 +33,7 @@ import {
   ShieldAlert,
   Clock,
   Network,
+  MousePointerClick,
 } from 'lucide-react'
 import { roleColor, snowflakeToDate, type DiscordRole } from '@/lib/discord'
 import { permissionKeysFromBits, dangerousKeysIn } from '@/lib/discord-permissions'
@@ -43,6 +44,7 @@ import { CategorySection } from '@/components/ui/category-section'
 import { RoleEditPanel } from './roles/RoleEditPanel'
 import { TemporaryRolesContent } from './roles/TemporaryRolesContent'
 import { RoleHierarchyContent } from './roles/RoleHierarchyContent'
+import { SelfRolesContent } from './roles/SelfRolesContent'
 import type { PermissionPreset } from '@/app/api/guilds/[guildId]/permission-presets/route'
 
 type Member = {
@@ -79,8 +81,9 @@ export function RolesContent({ guildId }: Props) {
 
   const [editingRole, setEditingRole] = useState<DiscordRole | null>(null)
   const [creating, setCreating] = useState(false)
-  // Sub-view: classic role management, the Hierarchy overview, or Temporary Roles.
-  const [tab, setTab] = useState<'roles' | 'hierarchy' | 'temporary'>('roles')
+  // Sub-view: classic role management, Self-Assign Roles, the Hierarchy
+  // overview, or Temporary Roles.
+  const [tab, setTab] = useState<'roles' | 'self' | 'hierarchy' | 'temporary'>('roles')
 
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -151,7 +154,7 @@ export function RolesContent({ guildId }: Props) {
     const params = new URLSearchParams(window.location.search)
     let changed = false
     const tabParam = params.get('tab')
-    if (tabParam === 'temporary' || tabParam === 'hierarchy') {
+    if (tabParam === 'temporary' || tabParam === 'hierarchy' || tabParam === 'self') {
       setTab(tabParam)
       params.delete('tab')
       changed = true
@@ -316,6 +319,7 @@ export function RolesContent({ guildId }: Props) {
       <div className="mb-6 inline-flex rounded-xl border p-1" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
         {([
           { id: 'roles' as const, label: 'Roles', icon: <Users size={15} /> },
+          { id: 'self' as const, label: 'Self-Assign Roles', icon: <MousePointerClick size={15} /> },
           { id: 'temporary' as const, label: 'Temporary Roles', icon: <Clock size={15} /> },
           { id: 'hierarchy' as const, label: 'Hierarchy', icon: <Network size={15} /> },
         ]).map((t) => {
@@ -334,6 +338,8 @@ export function RolesContent({ guildId }: Props) {
           )
         })}
       </div>
+
+      {tab === 'self' && <SelfRolesContent guildId={guildId} roles={roles} />}
 
       {tab === 'temporary' && <TemporaryRolesContent guildId={guildId} roles={roles} />}
 

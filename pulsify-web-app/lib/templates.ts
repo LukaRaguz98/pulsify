@@ -63,7 +63,7 @@ export const FEATURE_META: Record<FeatureKey, FeatureMeta> = {
     icon: 'Zap',
     accent: '#f59e0b',
     plan: 'free',
-    settingsPath: '/automations',
+    settingsPath: '/onboarding',
     group: 'experience',
   },
   onboarding: {

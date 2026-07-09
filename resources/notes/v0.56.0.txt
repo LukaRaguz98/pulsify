@@ -1,0 +1,29 @@
+**Pulsify v0.56.0 — Self-Assign Roles**
+A new Self-Assign Roles tab in Server > Roles for building interactive role menus your members use themselves in Discord — no moderator in the loop, and every pick is tracked.
+
+**Menus members actually use**
+- **Two control styles** — post a row of buttons for a handful of roles, or a dropdown select menu for a longer, tidier list.
+- **Single or multiple** — let members toggle as many roles as they like, or make a menu mutually exclusive so picking one swaps out the rest.
+
+**Made to fit your server**
+- **Organised by purpose** — tag each menu as game, notification, platform, language, region, interest, colour or custom.
+- **Polished to the last detail** — set a custom label, one-line description and emoji per role, and choose the colour for each button.
+- **Start from a preset** — Notifications, Games, Platform, Name colours or Region pre-fill the builder, then tweak from there.
+
+**Guardrails you control**
+- **Gate access** — require members to already hold certain roles before a menu will grant its roles, matching any or all of them.
+- **Sensible limits** — up to 25 roles per menu, with a live preview of exactly how the message will look in Discord before you post it.
+
+**A full menu lifecycle**
+- **From draft to live** — create, edit and duplicate menus, then publish when ready; Pulse posts and keeps the message in sync.
+- **Pause or retire** — disable a menu to stop accepting input, or archive it — the live message updates to say so, without deleting your history.
+
+**See how they're used**
+- **At a glance** — active menus, roles offered, total self-assignments and how many members have taken part.
+- **Usage analytics** — the most- and least-selected roles (so you can spot what's popular and what nobody wants) plus a 14-day add/remove trend.
+
+**Consistent, in sync, and hands-off**
+- **On-brand** — menus use the same Pulse v2 look as the rest of the bot, so everything feels like one product.
+- **Split cleanly** — the dashboard owns menu creation and lifecycle while the bot handles every button and dropdown interaction, keeping selections instant and reliable.
+
+July 2, 2026

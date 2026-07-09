@@ -56,6 +56,16 @@ export function FlowSection({ config, patch, channels }: SectionProps) {
 
   return (
     <div className="space-y-5">
+      <SubCard title="Onboarding" desc="Turn the interactive welcome on or off for new members.">
+        <label className="flex items-center justify-between gap-3 rounded-lg border p-3" style={{ borderColor: config.enabled ? 'var(--p-1)' : 'var(--line-strong)' }}>
+          <span className="text-sm text-foreground">
+            {config.enabled ? 'Onboarding is enabled' : 'Onboarding is off'}
+            <span className="block text-xs" style={{ color: 'var(--text-3)' }}>When on, Pulse delivers this experience to members as they join.</span>
+          </span>
+          <Toggle checked={config.enabled} onChange={(v) => patch({ enabled: v })} />
+        </label>
+      </SubCard>
+
       <SubCard title="Delivery" desc="Where new members receive the onboarding panel.">
         <div className="grid gap-4 sm:grid-cols-2">
           <Labeled label="Deliver via">

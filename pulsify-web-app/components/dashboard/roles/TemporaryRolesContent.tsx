@@ -269,20 +269,20 @@ export function TemporaryRolesContent({ guildId, roles }: Props) {
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-[200px] max-w-sm flex-1">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search member or role…" className="w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1" style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }} />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search member or role…" className="w-full rounded-lg border py-1.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-1" style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }} />
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as 'all' | TempRoleStatus)} className="rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1" style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as 'all' | TempRoleStatus)} className="rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-1" style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}>
               <option value="all">All statuses</option>
               <option value="active">Active</option>
               <option value="expired">Expired</option>
               <option value="removed">Removed</option>
             </select>
-            <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as 'all' | TempRoleSource)} className="rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1" style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}>
+            <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as 'all' | TempRoleSource)} className="rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-1" style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}>
               <option value="all">All sources</option>
               {TEMP_ROLE_SOURCES.map((s) => <option key={s} value={s}>{SOURCE_META[s].label}</option>)}
             </select>
-            <button type="button" onClick={() => setAssignOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition" style={{ background: 'var(--p-1)', color: '#fff' }}>
+            <button type="button" onClick={() => setAssignOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition" style={{ background: 'var(--p-1)', color: '#fff' }}>
               <Plus size={14} /> Assign role
             </button>
           </div>
@@ -307,7 +307,7 @@ export function TemporaryRolesContent({ guildId, roles }: Props) {
             description={assignments.length === 0 ? 'Assign a time-limited role — Pulse removes it automatically when it expires.' : 'Try a different search or filter.'}
             variant={assignments.length === 0 ? 'accent' : 'muted'}
             action={assignments.length === 0 ? (
-              <button type="button" onClick={() => setAssignOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}><Plus size={15} /> Assign a role</button>
+              <button type="button" onClick={() => setAssignOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-white" style={{ background: 'var(--p-1)' }}><Plus size={14} /> Assign a role</button>
             ) : undefined}
           />
         ) : (
