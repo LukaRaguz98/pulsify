@@ -48,12 +48,20 @@ export function PrivateChannelsContent({
   enabled,
   settingsHref,
   initialChannels,
+  embedded = false,
+  onControlsChange,
 }: {
   guildId: string
   guildName: string
   enabled: boolean
   settingsHref: string
   initialChannels: ActiveChannel[]
+  // When rendered as a tab inside the Channels view: no PageHeader / page-content
+  // wrapper — just the sections. The toolbar (status + settings + refresh) is
+  // reported up via onControlsChange so it can sit in the host page header's
+  // top-right, matching every other view.
+  embedded?: boolean
+  onControlsChange?: (controls: React.ReactNode) => void
 }) {
   const router = useRouter()
   const [channels, setChannels] = useState<ActiveChannel[]>(initialChannels)
@@ -179,6 +187,30 @@ export function PrivateChannelsContent({
     </Link>
   )
 
+  const controls = (
+    <div className="flex items-center gap-3">
+      <span
+        className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold"
+        style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)', color: 'var(--text-2)' }}
+      >
+        <span className="h-1.5 w-1.5 rounded-full" style={{ background: enabled ? '#22c55e' : 'var(--text-3)' }} />
+        {enabled ? 'Enabled' : 'Off'}
+      </span>
+      {settingsLink}
+      <RefreshButton onClick={refresh} refreshing={refreshing} />
+    </div>
+  )
+
+  // When embedded with a reporter, hand the toolbar to the host so it renders
+  // in the page header's top-right instead of a row below the tabs. Depend on
+  // the primitives the toolbar reflects (not the JSX identity) to avoid a
+  // render loop; `refresh` is a stable useCallback.
+  const liftControls = embedded && !!onControlsChange
+  useEffect(() => {
+    if (liftControls) onControlsChange!(controls)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liftControls, enabled, refreshing, settingsHref])
+
   const header = (
     <PageHeader
       title="Private Channels"
@@ -187,53 +219,84 @@ export function PrivateChannelsContent({
         <>
           Join-to-create temporary voice channels in{' '}
           <span className="font-medium text-foreground">{guildName || 'this server'}</span> — Pulse makes a
-          category + trigger channel, and members spin up their own private channels by joining the trigger.
+          category & trigger channel, members spin up their own private channels by joining the trigger.
         </>
       }
-      action={
-        <div className="flex items-center gap-3">
-          <span
-            className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold"
-            style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)', color: 'var(--text-2)' }}
-          >
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: enabled ? '#22c55e' : 'var(--text-3)' }} />
-            {enabled ? 'Enabled' : 'Off'}
-          </span>
-          {settingsLink}
-          <RefreshButton onClick={refresh} refreshing={refreshing} />
-        </div>
-      }
+      action={controls}
     />
   )
 
   // Not configured and nothing live → point the admin at Settings, the same way
   // other modules send you to their config surface before there's data.
   if (!enabled && channels.length === 0) {
-    return (
+    const empty = (
+      <EmptyState
+        icon={<Mic2 size={26} />}
+        title="Private Channels is off"
+        description="Turn it on in Private channels settings — Pulse will add a category and a join-to-create trigger, and member-created channels show up here."
+        action={
+          <Link
+            href={settingsHref}
+            className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white"
+            style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))', boxShadow: '0 4px 14px -4px var(--p-glow)' }}
+          >
+            <Settings size={15} /> Configure in settings
+          </Link>
+        }
+      />
+    )
+    return embedded ? (
+      <div>
+        {!liftControls && <div className="mb-6 flex justify-end">{controls}</div>}
+        {empty}
+      </div>
+    ) : (
       <div className="page-content">
         {header}
-        <EmptyState
-          icon={<Mic2 size={26} />}
-          title="Private Channels is off"
-          description="Turn it on in Private channels settings — Pulse will add a category and a join-to-create trigger, and member-created channels show up here."
-          action={
-            <Link
-              href={settingsHref}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white"
-              style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))', boxShadow: '0 4px 14px -4px var(--p-glow)' }}
-            >
-              <Settings size={15} /> Configure in settings
-            </Link>
-          }
-        />
+        {empty}
       </div>
     )
   }
 
-  return (
-    <div className="page-content">
-      {header}
+  const dialogs = (
+    <>
+      {deleting && (
+        <ConfirmDialog
+          title="Delete private channel?"
+          description={`This permanently deletes “${deleting.name || 'this channel'}” from Discord and disconnects anyone inside. This can't be undone.`}
+          confirmLabel="Delete channel"
+          tone="destructive"
+          busy={isPending}
+          error={dialogError}
+          onCancel={() => setDeleting(null)}
+          onConfirm={doDelete}
+        />
+      )}
+      {renaming && (
+        <ConfirmDialog
+          title="Rename private channel"
+          confirmLabel="Rename"
+          busy={isPending}
+          error={dialogError}
+          fields={[
+            {
+              key: 'name',
+              kind: 'text',
+              label: 'New channel name',
+              required: true,
+              maxLength: PRIVATE_CHANNEL_LIMITS.nameMax,
+              defaultValue: renaming.name ?? '',
+            },
+          ]}
+          onCancel={() => setRenaming(null)}
+          onConfirm={doRename}
+        />
+      )}
+    </>
+  )
 
+  const body = (
+    <>
       <div className="space-y-8">
         {/* At a glance */}
         <CategorySection
@@ -400,40 +463,20 @@ export function PrivateChannelsContent({
           )}
         </CategorySection>
       </div>
+    </>
+  )
 
-      {deleting && (
-        <ConfirmDialog
-          title="Delete private channel?"
-          description={`This permanently deletes “${deleting.name || 'this channel'}” from Discord and disconnects anyone inside. This can't be undone.`}
-          confirmLabel="Delete channel"
-          tone="destructive"
-          busy={isPending}
-          error={dialogError}
-          onCancel={() => setDeleting(null)}
-          onConfirm={doDelete}
-        />
-      )}
-
-      {renaming && (
-        <ConfirmDialog
-          title="Rename private channel"
-          confirmLabel="Rename"
-          busy={isPending}
-          error={dialogError}
-          fields={[
-            {
-              key: 'name',
-              kind: 'text',
-              label: 'New channel name',
-              required: true,
-              maxLength: PRIVATE_CHANNEL_LIMITS.nameMax,
-              defaultValue: renaming.name ?? '',
-            },
-          ]}
-          onCancel={() => setRenaming(null)}
-          onConfirm={doRename}
-        />
-      )}
+  return embedded ? (
+    <div>
+      {!liftControls && <div className="mb-6 flex justify-end">{controls}</div>}
+      {body}
+      {dialogs}
+    </div>
+  ) : (
+    <div className="page-content">
+      {header}
+      {body}
+      {dialogs}
     </div>
   )
 }

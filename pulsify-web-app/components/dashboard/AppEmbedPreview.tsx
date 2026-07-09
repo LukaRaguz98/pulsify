@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type JSX } from 'react'
+import { useEffect, useState, type JSX, type CSSProperties } from 'react'
 import Image from 'next/image'
 
 type Props = {
@@ -12,6 +12,9 @@ type Props = {
   icon?: string
   /** Footer line rendered under a divider (e.g. 'Pulse — Server Rules'). */
   footer?: string
+  /** When true, render for the animated PreviewStage field: transparent outer
+   *  card + translucent glass container so the field glows through. */
+  floating?: boolean
 }
 
 function renderMd(text: string, lineIdx: number) {
@@ -58,7 +61,7 @@ function renderContent(text: string) {
   })
 }
 
-export function AppEmbedPreview({ title, content, color, icon, footer }: Props) {
+export function AppEmbedPreview({ title, content, color, icon, footer, floating }: Props) {
   // Render an empty placeholder on the server, then fill in the actual
   // current time on the client. Avoids hydration mismatch when the SSR's
   // "Today at HH:MM" differs from the client's clock by a minute (and from
@@ -68,15 +71,41 @@ export function AppEmbedPreview({ title, content, color, icon, footer }: Props) 
     setTimeStr(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
   }, [])
 
+  // Translucent glass V2 container when floating on the animated field.
+  const containerStyle: CSSProperties = floating
+    ? {
+        border: '1px solid var(--line)',
+        borderLeftWidth: '3px',
+        borderLeftColor: color ?? 'var(--p-1)',
+        background: 'color-mix(in srgb, var(--panel-2) 55%, transparent)',
+        borderRadius: '8px',
+        padding: '12px 16px',
+        maxWidth: '432px',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        boxShadow: '0 20px 55px -26px color-mix(in srgb, var(--text) 30%, transparent)',
+      }
+    : {
+        borderLeft: `4px solid ${color ?? 'var(--p-1)'}`,
+        background: 'var(--bg-2)',
+        borderRadius: '8px',
+        padding: '12px 16px',
+        maxWidth: '432px',
+      }
+
   return (
     <div
-      style={{
-        background: 'var(--panel)',
-        borderRadius: '12px',
-        padding: '16px 16px 12px',
-        fontFamily: "'gg sans', 'Noto Sans', Arial, sans-serif",
-        border: '1px solid var(--line-strong)',
-      }}
+      style={
+        floating
+          ? { fontFamily: "'gg sans', 'Noto Sans', Arial, sans-serif" }
+          : {
+              background: 'var(--panel)',
+              borderRadius: '12px',
+              padding: '16px 16px 12px',
+              fontFamily: "'gg sans', 'Noto Sans', Arial, sans-serif",
+              border: '1px solid var(--line-strong)',
+            }
+      }
     >
       <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
         {/* Bot avatar */}
@@ -105,13 +134,7 @@ export function AppEmbedPreview({ title, content, color, icon, footer }: Props) 
               accent stripe. Mirrors the posted Pulse v2 embed: a `Pulse` label +
               `#` title heading beside the branded badge, the body, then a divider
               and footer (the /changelog + announcement style). */}
-          <div style={{
-            borderLeft: `4px solid ${color ?? 'var(--p-1)'}`,
-            background: 'var(--bg-2)',
-            borderRadius: '8px',
-            padding: '12px 16px',
-            maxWidth: '432px',
-          }}>
+          <div style={containerStyle}>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ color: 'var(--text-2)', fontWeight: 700, fontSize: '12px', marginBottom: '2px' }}>Pulse</div>

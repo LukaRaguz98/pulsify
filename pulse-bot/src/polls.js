@@ -25,6 +25,7 @@ const path = require("node:path");
 const { recordNotification } = require("./notifications");
 const { replyNotice } = require("./commands");
 const { computeReputation } = require("./reputation");
+const { getGuildAccent } = require("./guild-accent");
 
 const PV = "pv";
 const TICK_MS = 30 * 1000; // lifecycle scan every 30s
@@ -285,7 +286,7 @@ function createPolls(client, supabase) {
 
   /** The live poll container (active). Discord renders <t:unix:R> as a
    *  self-updating countdown; only the totals line needs editing on each vote. */
-  function activeContainer(p) {
+  async function activeContainer(p) {
     const req = normaliseRequirements(p.requirements);
     const gov = normaliseGovernance(p.governance);
     const options = pollOptions(p);
@@ -317,7 +318,8 @@ function createPolls(client, supabase) {
     body.push(divider());
     for (const row of voteControls(p, options)) body.push(row);
     body.push(td("-# Pulse — Poll"));
-    return { type: 17, accent_color: BRAND, components: body };
+    const accent = await getGuildAccent(supabase, p.guild_id);
+    return { type: 17, accent_color: accent, components: body };
   }
 
   /** The settled container (closed / archived) — results, no vote controls. */
@@ -467,7 +469,7 @@ function createPolls(client, supabase) {
     if (row) {
       Object.assign(row, patch);
       cache.set(pollId, row);
-      await editPollMessage(row, activeContainer(row));
+      await editPollMessage(row, await activeContainer(row));
     }
   }
 
@@ -580,8 +582,9 @@ function createPolls(client, supabase) {
       console.warn(`[Pulse] Poll ${p.id}: channel ${p.channel_id} not postable.`);
       return null;
     }
+    const container = await activeContainer(p);
     return channel
-      .send({ flags: MessageFlags.IsComponentsV2, components: [activeContainer(p)], files: iconFiles() })
+      .send({ flags: MessageFlags.IsComponentsV2, components: [container], files: iconFiles() })
       .catch((e) => {
         console.warn(`[Pulse] Poll ${p.id} post failed:`, e.message);
         return null;

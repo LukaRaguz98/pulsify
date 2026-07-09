@@ -18,11 +18,27 @@ const path = require("node:path");
 // Current Pulse version. Used for the startup banner and as the displayed
 // version when no release files are reachable. Keep this in step with the
 // newest resources/notes/vX.Y.Z.txt on each release.
-const PULSE_VERSION = "0.55.0";
+const PULSE_VERSION = "0.56.0";
 
 // Manual/static fallback used only when the release-notes files can't be read.
 // Mirrors the shape produced by the parser so callers don't special-case it.
 const STATIC_RELEASES = [
+  {
+    version: "0.56.0",
+    title: "Self-Assign Roles",
+    date: "Jun 27, 2026",
+    description:
+      "A Self-Assign Roles tab in Server > Roles for building interactive role menus where members pick their own roles with buttons or a dropdown — a modern replacement for reaction-role bots.",
+    highlights: [
+      "**Buttons or a select menu** — choose the control that fits the number of roles, post it into any text or announcement channel, and organise menus by category.",
+      "**Members self-serve** — assign, remove or switch roles with a tap; make a menu's roles mutually exclusive (single) or freely combinable (multiple), and gate it behind required roles.",
+      "**Customisation** — per-role labels, emojis and button colours, with drag-and-drop ordering and a live preview as you build.",
+      "**Usage analytics** — most and least selected roles, a 14-day add/remove trend, and active menus, roles offered and members served at a glance.",
+      "**Easy management** — edit, duplicate as a draft, disable temporarily, archive when done, plus search and status filters.",
+    ],
+    outro:
+      "Hand role management to your members — interactive, customisable and measured, with no reaction-role bot required.",
+  },
   {
     version: "0.55.0",
     title: "Role Hierarchy",

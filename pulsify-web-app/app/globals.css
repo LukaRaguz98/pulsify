@@ -737,6 +737,201 @@ html { overflow-x: clip; }
   .lp-bar   { animation: none; transform: none; }
 }
 
+/* Wrapper hosts an aura that pools *behind* and beyond the feathered stage, so
+   the whole preview sits in a soft pond of accent light bleeding into the page. */
+.ob-stage-wrap {
+  position: relative;
+  isolation: isolate;
+}
+.ob-aura {
+  --ob-glow: var(--p-1);
+  position: absolute;
+  inset: -14% -10%;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 32px;
+  background:
+    radial-gradient(60% 55% at 28% 18%, color-mix(in srgb, var(--ob-glow) 55%, transparent), transparent 70%),
+    radial-gradient(58% 62% at 80% 84%, color-mix(in srgb, var(--ob-glow) 44%, transparent), transparent 72%);
+  filter: blur(64px);
+  opacity: 0.72;
+  animation: ob-aura-pulse 9s ease-in-out infinite;
+}
+@keyframes ob-aura-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(0.96); }
+  50%      { opacity: 0.85; transform: scale(1.05); }
+}
+
+/* Channel-mention pill — tinted with the app's theme accent (--p-1) so the
+   mentions read in the accent colour and follow the selected theme. */
+.ob-chan {
+  background: color-mix(in srgb, var(--p-1) 22%, transparent);
+  color: var(--p-1);
+}
+
+/* Onboarding Builder — live-preview "stage". The bot render floats over an
+   ambient, animated field built entirely from the *global* theme accent
+   (--p-1, set in Server Settings). No Discord chrome colour shows through; the
+   card's edges are masked so it dissolves seamlessly into the dashboard. */
+.ob-stage {
+  --ob-glow: var(--p-1);
+  position: relative;
+  isolation: isolate;
+}
+/* The feathered background layer. Everything animated lives here, and every
+   edge is faded independently — four stacked gradients intersected — so the
+   field dissolves outward with no perceptible border line anywhere. The content
+   is a separate sibling above it and is never masked, so text stays crisp. */
+.ob-field {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  border-radius: inherit;
+  background:
+    radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, var(--ob-glow) 28%, transparent), transparent 56%),
+    radial-gradient(95% 90% at 84% 104%, color-mix(in srgb, var(--ob-glow) 22%, transparent), transparent 62%),
+    radial-gradient(80% 75% at 10% 92%, color-mix(in srgb, var(--ob-glow) 16%, transparent), transparent 64%),
+    linear-gradient(180deg, var(--bg-2), var(--bg));
+  -webkit-mask-image:
+    linear-gradient(to right, transparent 0, #000 30%, #000 70%, transparent 100%),
+    linear-gradient(to bottom, transparent 0, #000 26%, #000 74%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to right, transparent 0, #000 30%, #000 70%, transparent 100%),
+    linear-gradient(to bottom, transparent 0, #000 26%, #000 74%, transparent 100%);
+  mask-composite: intersect;
+}
+/* Accent grid gives the field depth. */
+.ob-field::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--ob-glow) 26%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--ob-glow) 26%, transparent) 1px, transparent 1px);
+  background-size: 30px 30px;
+  opacity: 0.35;
+  -webkit-mask-image: radial-gradient(95% 85% at 50% 20%, #000, transparent 82%);
+          mask-image: radial-gradient(95% 85% at 50% 20%, #000, transparent 82%);
+}
+/* Slow-rotating accent sheen — a living light that keeps the field from ever
+   looking static. */
+.ob-field::after {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  z-index: -1;
+  pointer-events: none;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in srgb, var(--ob-glow) 20%, transparent) 50deg,
+    transparent 125deg,
+    color-mix(in srgb, var(--ob-glow) 14%, transparent) 240deg,
+    transparent 330deg
+  );
+  opacity: 0.85;
+  animation: ob-spin 26s linear infinite;
+}
+.ob-glow {
+  position: absolute;
+  z-index: -1;
+  border-radius: 999px;
+  filter: blur(54px);
+  opacity: 0.7;
+  pointer-events: none;
+  will-change: transform;
+}
+.ob-glow-1 {
+  width: 150px;
+  height: 150px;
+  top: -50px;
+  left: -40px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--ob-glow) 78%, transparent), transparent 68%);
+  animation: ob-drift-1 18s ease-in-out infinite;
+}
+.ob-glow-2 {
+  width: 150px;
+  height: 150px;
+  bottom: -50px;
+  right: -40px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--ob-glow) 80%, transparent), transparent 68%);
+  animation: ob-drift-2 23s ease-in-out infinite;
+}
+/* A third, central bloom that gently breathes for extra life. */
+.ob-glow-3 {
+  width: 220px;
+  height: 220px;
+  top: 40%;
+  left: 42%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--ob-glow) 62%, transparent), transparent 70%);
+  animation: ob-breathe 12s ease-in-out infinite;
+}
+@keyframes ob-drift-1 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(36px, 26px, 0) scale(1.1); }
+}
+@keyframes ob-drift-2 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(-42px, -32px, 0) scale(1.14); }
+}
+@keyframes ob-breathe {
+  0%, 100% { transform: translate3d(-50%, -50%, 0) scale(0.9); opacity: 0.35; }
+  50%      { transform: translate3d(-50%, -50%, 0) scale(1.15); opacity: 0.6; }
+}
+@keyframes ob-spin {
+  to { transform: rotate(1turn); }
+}
+
+/* Slow-rising accent motes drifting up through the field for a touch of life. */
+.ob-particles {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(85% 85% at 50% 50%, #000, transparent 88%);
+          mask-image: radial-gradient(85% 85% at 50% 50%, #000, transparent 88%);
+}
+.ob-particle {
+  position: absolute;
+  bottom: -8px;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--ob-glow, var(--p-1));
+  box-shadow: 0 0 8px 1px color-mix(in srgb, var(--ob-glow, var(--p-1)) 70%, transparent);
+  opacity: 0;
+  animation: ob-rise linear infinite;
+}
+@keyframes ob-rise {
+  0%   { transform: translateY(0) scale(0.6); opacity: 0; }
+  12%  { opacity: 0.9; }
+  85%  { opacity: 0.7; }
+  100% { transform: translateY(-340px) scale(1); opacity: 0; }
+}
+
+/* Light theme: the same accent field, dialled down. On a bright page the glows
+   would otherwise read as harsh blobs, so we soften opacity and lean on the
+   accent's own hue (no white tint) to keep it tasteful in any theme. */
+[data-scheme="light"] .ob-glow      { opacity: 0.32; filter: blur(60px); }
+[data-scheme="light"] .ob-aura      { opacity: 0.48; filter: blur(70px); }
+[data-scheme="light"] .ob-field::after  { opacity: 0.55; }
+[data-scheme="light"] .ob-field::before { opacity: 0.25; }
+[data-scheme="light"] .ob-particles { opacity: 0.72; }
+[data-scheme="light"] .ob-aura { animation-name: ob-aura-pulse-light; }
+@keyframes ob-aura-pulse-light {
+  0%, 100% { opacity: 0.34; transform: scale(0.97); }
+  50%      { opacity: 0.55; transform: scale(1.04); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-glow, .ob-field::after, .ob-aura, .ob-particle { animation: none !important; }
+  .ob-particle { opacity: 0 !important; }
+}
+
 /* Shared lift-on-hover for feature/pricing cards. Scoped class so it only
    applies to landing cards (plain <div>s, untouched by the button rules). */
 .lp-card { transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease; }

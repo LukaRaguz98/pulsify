@@ -284,6 +284,107 @@ export async function saveMemberOnboarding(
   return { ok: true }
 }
 
+// ── Member messages (welcome / goodbye greetings + server rules) ────────────
+// Moved here from the old Automations view (which was removed). Merge-based:
+// each call writes only the slices it provides, preserving the rest of
+// guild_settings. The Pulse bot reads guild_settings.welcome / .goodbye / .rules
+// exactly as before.
+
+type EmbedConfig = {
+  color: string
+  title: string
+  description: string
+  fields: { name: string; value: string; inline: boolean }[]
+  footer_text: string
+  banner_color: string
+}
+
+export type MemberEventConfig = {
+  enabled:    boolean
+  channel_id: string
+  message:    string
+  type?:      'message' | 'embed'
+  embed?:     EmbedConfig
+}
+
+export type PulseRulesConfig = { enabled: boolean; channel_id: string; title: string; content: string }
+
+export type MemberMessages = {
+  welcome?: MemberEventConfig
+  goodbye?: MemberEventConfig
+  rules?:   PulseRulesConfig
+}
+
+export async function saveMemberMessages(
+  guildId: string,
+  messages: MemberMessages,
+): Promise<Result> {
+  const { supabase, user } = await requireUser()
+  if (!user) return { ok: false, error: 'Unauthorized.' }
+
+  const { welcome, goodbye, rules } = messages
+
+  if (welcome) {
+    if (welcome.enabled && !welcome.channel_id)
+      return { ok: false, error: 'Welcome Message: please select a channel.' }
+    if (welcome.enabled && welcome.type !== 'embed' && !welcome.message.trim())
+      return { ok: false, error: 'Welcome Message: message text cannot be empty.' }
+  }
+  if (goodbye) {
+    if (goodbye.enabled && !goodbye.channel_id)
+      return { ok: false, error: 'Goodbye Message: please select a channel.' }
+    if (goodbye.enabled && goodbye.type !== 'embed' && !goodbye.message.trim())
+      return { ok: false, error: 'Goodbye Message: message text cannot be empty.' }
+  }
+
+  if (!(await isBotInGuild(guildId)))
+    return { ok: false, error: 'The Pulse bot is not installed in this server. Add it first.' }
+
+  if (welcome?.enabled || goodbye?.enabled) {
+    const perms = await checkBotPermissions(guildId)
+    if (perms !== null) {
+      if (!perms.inGuild)
+        return { ok: false, error: 'Could not verify bot permissions. Is the bot still in the server?' }
+      if (!perms.administrator && !perms.sendMessages)
+        return { ok: false, error: 'Welcome / Goodbye messages require the bot to have the Send Messages permission.' }
+    }
+  }
+
+  const current = await readSettings(supabase, guildId)
+  const merged = {
+    ...current,
+    ...(welcome !== undefined ? { welcome } : {}),
+    ...(goodbye !== undefined ? { goodbye } : {}),
+    ...(rules   !== undefined ? { rules } : {}),
+  }
+
+  const { error } = await supabase
+    .from('guild_settings')
+    .upsert(
+      { guild_id: guildId, settings: merged, updated_at: new Date().toISOString() },
+      { onConflict: 'guild_id' },
+    )
+  if (error) return { ok: false, error: `Failed to save: ${error.message}` }
+
+  const claims = user.user_metadata?.custom_claims as { global_name?: string; username?: string } | undefined
+  const enabled: string[] = []
+  if (welcome?.enabled) enabled.push('Welcome')
+  if (goodbye?.enabled) enabled.push('Goodbye')
+  if (rules?.enabled) enabled.push('Server Rules')
+  await recordNotification({
+    guildId,
+    type: 'automation_saved',
+    title: 'Member messages saved',
+    body: enabled.length > 0 ? `Active: ${enabled.join(', ')}` : 'No member messages are currently enabled.',
+    link: `/dashboard/${guildId}/onboarding`,
+    actorId: user.user_metadata?.provider_id ?? user.id,
+    actorName: claims?.global_name ?? claims?.username ?? user.user_metadata?.full_name ?? null,
+    actorUsername: claims?.username ?? null,
+  }).catch(() => {})
+
+  return { ok: true }
+}
+
 function featureLabel(key: FeatureKey): string {
   return {
     welcome: 'Welcome',

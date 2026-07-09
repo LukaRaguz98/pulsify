@@ -3,7 +3,6 @@
 import { useMemo, useState, useTransition } from 'react'
 import {
   Bell,
-  Check,
   CheckCircle2,
   Hash,
   Palette,
@@ -27,7 +26,6 @@ import {
   SENSITIVITY_LABELS,
   SENSITIVITY_LEVELS,
 } from '@/lib/ai-moderation'
-import { THEMES } from '@/lib/themes'
 import { saveAIModerationSettings } from '@/app/dashboard/[guildId]/(management)/ai-moderation/actions'
 import { SaveBar } from '@/components/ui/save-bar'
 
@@ -308,107 +306,18 @@ export function AIModerationSettingsTab({
         title="Discord Output"
         description="How Pulse Guard's alerts appear when posted to Discord."
       >
-      {/* Embed Appearance — accent colour for the alert container + the
-          tinted moderation icon. Mirrors the Pulse Assistant > Embed
-          Appearance picker so the two settings panels feel like one
-          component. */}
+      {/* The embed accent is now a single server-wide setting; Pulse Guard
+          alerts inherit it (with a severity tint on the bar). */}
       <div
-        className="rounded-xl border p-5"
-        style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
+        className="rounded-xl border p-5 text-sm"
+        style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
       >
-        <div className="mb-3">
-          <h3 className="text-sm font-semibold text-foreground">Embed Appearance</h3>
-          <p className="text-xs text-subtle">Accent colour applied to the alert container and the Pulse Guard icon.</p>
-        </div>
-
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm font-semibold text-foreground">Embed Color</p>
-          <span
-            className="font-mono text-xs rounded px-1.5 py-0.5"
-            style={{ background: 'var(--bg-2)', color: 'var(--text-3)', border: '1px solid var(--line-strong)' }}
-          >
-            {draft.embed_color}
-          </span>
-        </div>
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-7">
-          {THEMES.map((t) => {
-            const active = draft.embed_color.toLowerCase() === t.accent.toLowerCase()
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => update('embed_color', t.accent)}
-                title={t.name}
-                className="group relative flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all duration-150"
-                style={{
-                  background: active ? `${t.accent}14` : 'var(--bg-2)',
-                  borderColor: active ? t.accent : 'var(--line-strong)',
-                  boxShadow: active ? `0 0 0 1px ${t.accent}40` : 'none',
-                }}
-              >
-                <div
-                  className="h-8 w-8 rounded-full"
-                  style={{
-                    background: `linear-gradient(135deg, ${t.accent}cc, ${t.accent})`,
-                    boxShadow: active ? `0 4px 12px -4px ${t.accent}80` : `0 2px 6px -4px ${t.accent}60`,
-                  }}
-                />
-                {active && (
-                  <span className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full" style={{ background: t.accent }}>
-                    <Check size={9} strokeWidth={3} color="white" />
-                  </span>
-                )}
-                <p className="text-xs font-medium text-foreground leading-none">{t.name}</p>
-              </button>
-            )
-          })}
-
-          {/* Custom — active when the embed colour is outside the preset
-              palette. Mirrors the Pulse Assistant custom card. */}
-          {(() => {
-            const presetHits = THEMES.some(
-              (t) => t.accent.toLowerCase() === draft.embed_color.toLowerCase(),
-            )
-            const customActive = !presetHits
-            const display = draft.embed_color
-            return (
-              <label
-                title="Custom color"
-                aria-label="Pick a custom embed color"
-                className="group relative flex cursor-pointer flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all duration-150"
-                style={{
-                  background: customActive ? `${display}14` : 'var(--bg-2)',
-                  borderColor: customActive ? display : 'var(--line-strong)',
-                  boxShadow: customActive ? `0 0 0 1px ${display}40` : 'none',
-                }}
-              >
-                <div
-                  className="h-8 w-8 rounded-full"
-                  style={{
-                    background: customActive
-                      ? `linear-gradient(135deg, ${display}cc, ${display})`
-                      : 'conic-gradient(from 0deg, #f43f5e, #f59e0b, #84cc16, #06b6d4, #6366f1, #ec4899, #f43f5e)',
-                    boxShadow: customActive
-                      ? `0 4px 12px -4px ${display}80`
-                      : '0 2px 6px -4px rgba(255,255,255,0.15)',
-                  }}
-                />
-                {customActive && (
-                  <span className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full" style={{ background: display }}>
-                    <Check size={9} strokeWidth={3} color="white" />
-                  </span>
-                )}
-                <p className="text-xs font-medium text-foreground leading-none">Custom</p>
-                <input
-                  type="color"
-                  value={display}
-                  onChange={(e) => update('embed_color', e.target.value)}
-                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                />
-              </label>
-            )
-          })()}
-        </div>
+        <p>
+          The embed accent colour is set once for the whole server in{' '}
+          <span className="font-medium text-foreground">Server Settings › Pulse Assistant → Embed Appearance</span>{' '}
+          and applies to every Pulse embed, including these alerts. Severity still tints the accent bar
+          (blue → red) by how serious the event is.
+        </p>
       </div>
 
       </CategorySection>

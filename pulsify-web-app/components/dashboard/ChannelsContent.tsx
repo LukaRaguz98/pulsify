@@ -53,6 +53,7 @@ import { TableSkeleton } from '@/components/ui/table-skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { CategorySection } from '@/components/ui/category-section'
 import { ChannelEditPanel } from './channels/ChannelEditPanel'
+import { PrivateChannelsContent, type ActiveChannel } from './private-channels/PrivateChannelsContent'
 
 const TRANSIENT_ERROR_HINT = "Couldn't verify your Discord access"
 const MAX_TRANSIENT_RETRIES = 15
@@ -60,9 +61,26 @@ const MAX_TRANSIENT_RETRIES = 15
 type Toast = { kind: 'ok' | 'err'; text: string }
 type TypeFilter = 'all' | 'text' | 'voice' | 'forum' | 'stage'
 
-type Props = { guildId: string }
+type Props = {
+  guildId: string
+  guildName: string
+  privateEnabled: boolean
+  privateChannels: ActiveChannel[]
+  privateSettingsHref: string
+}
 
-export function ChannelsContent({ guildId }: Props) {
+export function ChannelsContent({
+  guildId,
+  guildName,
+  privateEnabled,
+  privateChannels,
+  privateSettingsHref,
+}: Props) {
+  // Channels vs. the Private Channels monitor (moved here from its own page).
+  const [tab, setTab] = useState<'channels' | 'private'>('channels')
+  // The Private Channels tab reports its toolbar (status + settings + refresh)
+  // up here so it can live in the page header's top-right, like every view.
+  const [privateAction, setPrivateAction] = useState<React.ReactNode>(null)
   const [channels, setChannels] = useState<DiscordChannel[]>([])
   const [roles, setRoles] = useState<DiscordRole[]>([])
   const [botPerms, setBotPerms] = useState<BotPermissions | null>(null)
@@ -120,6 +138,19 @@ export function ChannelsContent({ guildId }: Props) {
     fetchAll()
     return () => { if (retryRef.current) clearTimeout(retryRef.current) }
   }, [fetchAll])
+
+  // Deep-link: /channels?tab=private (from the old Private Channels route /
+  // nav) opens the Private Channels tab. Strip the param so a refresh doesn't
+  // replay it.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('tab') === 'private') {
+      setTab('private')
+      params.delete('tab')
+      const qs = params.toString()
+      window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''))
+    }
+  }, [])
 
   useEffect(() => {
     if (!toast) return
@@ -219,15 +250,6 @@ export function ChannelsContent({ guildId }: Props) {
     setToast({ kind: 'ok', text: 'Order saved.' })
   }
 
-  if (loading) {
-    return (
-      <div className="page-content">
-        <PageHeader title="Channels" helpId="channels" description="Manage Discord channels and categories from the dashboard." />
-        <TableSkeleton rows={8} columns={3} className="mt-6" />
-      </div>
-    )
-  }
-
   const stats = computeStats(channels)
 
   return (
@@ -235,20 +257,64 @@ export function ChannelsContent({ guildId }: Props) {
       <PageHeader
         title="Channels"
         helpId="channels"
-        description="Browse, organize, and configure every channel on this server."
+        description={
+          tab === 'channels'
+            ? 'Browse, organize, and configure every channel on this server.'
+            : 'Join-to-create temporary voice channels — Pulse makes a category & trigger, members spin up their own private channels by joining it.'
+        }
         action={
-          <button
-            onClick={() => fetchAll()}
-            disabled={refreshing}
-            className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
-            style={{ borderColor: 'var(--line-strong)', color: 'var(--text-3)' }}
-          >
-            <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
-            Refresh
-          </button>
+          tab === 'channels' ? (
+            <button
+              onClick={() => fetchAll()}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+              style={{ borderColor: 'var(--line-strong)', color: 'var(--text-3)' }}
+            >
+              <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+              Refresh
+            </button>
+          ) : (
+            privateAction ?? undefined
+          )
         }
       />
 
+      {/* Section tabs: server channels vs. the Private Channels monitor. */}
+      <div className="mb-6 inline-flex rounded-xl border p-1" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
+        {([
+          { id: 'channels' as const, label: 'Channels', icon: <Hash size={15} /> },
+          { id: 'private' as const, label: 'Private Channels', icon: <Mic2 size={15} /> },
+        ]).map((t) => {
+          const active = tab === t.id
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className="flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors"
+              style={active ? { background: 'var(--p-soft)', color: 'var(--text)' } : { color: 'var(--text-2)' }}
+            >
+              <span style={active ? { color: 'var(--p-1)' } : { color: 'var(--text-3)' }}>{t.icon}</span>
+              {t.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {tab === 'private' ? (
+        <PrivateChannelsContent
+          embedded
+          onControlsChange={setPrivateAction}
+          guildId={guildId}
+          guildName={guildName}
+          enabled={privateEnabled}
+          settingsHref={privateSettingsHref}
+          initialChannels={privateChannels}
+        />
+      ) : loading ? (
+        <TableSkeleton rows={8} columns={3} className="mt-6" />
+      ) : (
+      <>
       {!canManage && (
         <div
           className="mb-4 flex items-start gap-2 rounded-lg border px-4 py-3 text-sm"
@@ -408,6 +474,8 @@ export function ChannelsContent({ guildId }: Props) {
           )}
         </CategorySection>
       </div>
+      </>
+      )}
 
       {(editing || createDraft) && (
         <ChannelEditPanel

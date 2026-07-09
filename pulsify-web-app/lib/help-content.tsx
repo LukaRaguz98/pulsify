@@ -433,6 +433,17 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
       </>
     ),
   },
+  'self-roles': {
+    title: 'Self-Assign Roles',
+    plan: 'free',
+    body: (
+      <>
+        <p>Post interactive menus where members pick their own roles with buttons or a dropdown — a modern replacement for reaction-role bots.</p>
+        <p><strong>Selection:</strong> <em>Multiple</em> lets members toggle any of the roles; <em>Single</em> is mutually exclusive — picking one switches off the others.</p>
+        <p><strong>Heads up:</strong> Every offered role must sit <em>below</em> Pulse&apos;s highest role in the hierarchy, or the bot can&apos;t assign it.</p>
+      </>
+    ),
+  },
   'role-hierarchy': {
     title: 'How categorization works',
     plan: 'free',

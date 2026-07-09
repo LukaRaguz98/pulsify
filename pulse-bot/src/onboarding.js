@@ -178,7 +178,7 @@ function createOnboarding(client, supabase, leveling = null, economyRewards = nu
           components.push({ type: 14, divider: true, spacing: 1 });
           components.push({
             type: 10,
-            content: `**${cat.label}**${cat.description ? `\n-# ${cat.description}` : ""}`,
+            content: `## ${cat.label}${cat.description ? `\n-# ${cat.description}` : ""}`,
           });
           components.push({
             type: 1,
@@ -213,7 +213,7 @@ function createOnboarding(client, supabase, leveling = null, economyRewards = nu
             .join("\n");
           components.push({
             type: 10,
-            content: `**Upcoming events**\n${body}`,
+            content: `## Upcoming events\n${body}`,
           });
         }
       } else if (step === "community") {
@@ -225,7 +225,7 @@ function createOnboarding(client, supabase, leveling = null, economyRewards = nu
           components.push({
             type: 10,
             content:
-              `**Explore ${member.guild.name}**\n` +
+              `## Explore ${member.guild.name}\n` +
               `-# The channels worth knowing before you dive in.\n` +
               links.join("\n"),
           });

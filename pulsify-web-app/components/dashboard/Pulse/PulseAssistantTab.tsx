@@ -1,16 +1,15 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import {
-  Check,
-  Palette,
-  Server,
-  Type,
-} from 'lucide-react'
+import { Check, Palette, Server, Type } from 'lucide-react'
 import { THEMES } from '@/lib/themes'
 import { SectionCard } from '@/components/ui/section-card'
 import { CategorySection } from '@/components/ui/category-section'
-import { SaveBar } from '@/components/ui/save-bar'
+
+// Pulse assistant preferences — what Pulse knows about the server when it
+// generates content, and how its embeds look. Everything except the embed
+// colour is client-only (localStorage); the embed colour is persisted to
+// guild_settings.embed_color so the Pulse bot can apply it to every embed.
+// These sections now live inside Server Settings (see ServerSettingsContent).
 
 export type PulsePrefs = {
   description: string
@@ -67,55 +66,18 @@ const PULSE_SERVER_SIZES = [
   { id: 'large'  as const, label: 'Thriving', sub: '1k+',    icon: '🌳' },
 ]
 
-type Props = { guildId: string }
+type SectionsProps = {
+  prefs: PulsePrefs
+  updatePref: <K extends keyof PulsePrefs>(key: K, value: PulsePrefs[K]) => void
+}
 
-export function PulseAssistantTab({ guildId }: Props) {
-  const [pulsePrefs, setPulsePrefs] = useState<PulsePrefs>(DEFAULT_PULSE_PREFS)
-  const [pulseSnapshot, setPulseSnapshot] = useState<PulsePrefs>(DEFAULT_PULSE_PREFS)
-
-  useEffect(() => {
-    if (!guildId) return
-    try {
-      const saved = localStorage.getItem(PULSE_PREFS_KEY(guildId))
-      if (saved) {
-        const parsed = { ...DEFAULT_PULSE_PREFS, ...JSON.parse(saved) as PulsePrefs }
-        setPulsePrefs(parsed)
-        setPulseSnapshot(parsed)
-      }
-    } catch {}
-  }, [guildId])
-
-  function updatePref<K extends keyof PulsePrefs>(key: K, value: PulsePrefs[K]) {
-    setPulsePrefs((prev) => ({ ...prev, [key]: value }))
-  }
-
-  const pulseChangedCount = useMemo(() => {
-    let n = 0
-    for (const k of Object.keys(pulseSnapshot) as (keyof PulsePrefs)[]) {
-      if (pulseSnapshot[k] !== pulsePrefs[k]) n += 1
-    }
-    return n
-  }, [pulseSnapshot, pulsePrefs])
-  const pulseDirty = pulseChangedCount > 0
-
-  function handleResetPulsePrefs() {
-    setPulsePrefs(pulseSnapshot)
-  }
-
-  function handleSavePulsePrefs() {
-    if (!guildId) return
-    try {
-      localStorage.setItem(PULSE_PREFS_KEY(guildId), JSON.stringify(pulsePrefs))
-      setPulseSnapshot(pulsePrefs)
-    } catch {}
-  }
-
+export function PulseAssistantSections({ prefs, updatePref }: SectionsProps) {
   return (
-    <div className="space-y-8">
+    <>
       {/* ── Server Context ───────────────────────────────────────────── */}
       <CategorySection
         icon={<Server size={14} />}
-        title="Server Context"
+        title="Pulse Assistant — Server Context"
         description="What Pulse knows about your server when generating content."
       >
         <SectionCard
@@ -123,7 +85,7 @@ export function PulseAssistantTab({ guildId }: Props) {
           description="Tell Pulse what your server is about. Used as context for every generation."
         >
           <textarea
-            value={pulsePrefs.description}
+            value={prefs.description}
             onChange={(e) => updatePref('description', e.target.value)}
             rows={3}
             placeholder="e.g. A competitive gaming community focused on Valorant and CS2. We host weekly tournaments and welcome players of all skill levels."
@@ -138,7 +100,7 @@ export function PulseAssistantTab({ guildId }: Props) {
       {/* ── Writing Style ────────────────────────────────────────────── */}
       <CategorySection
         icon={<Type size={14} />}
-        title="Writing Style"
+        title="Pulse Assistant — Writing Style"
         description="Tone, language and how much detail Pulse produces."
       >
         <SectionCard title="Voice & Language" description="Set the tone and language Pulse writes in.">
@@ -152,9 +114,9 @@ export function PulseAssistantTab({ guildId }: Props) {
                     onClick={() => updatePref('tone', t.id)}
                     className="flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all"
                     style={{
-                      borderColor: pulsePrefs.tone === t.id ? 'var(--p-1)' : 'var(--line-strong)',
-                      background:  pulsePrefs.tone === t.id ? 'var(--p-soft)' : 'var(--bg-2)',
-                      color:       pulsePrefs.tone === t.id ? 'var(--p-1)' : 'var(--text-2)',
+                      borderColor: prefs.tone === t.id ? 'var(--p-1)' : 'var(--line-strong)',
+                      background:  prefs.tone === t.id ? 'var(--p-soft)' : 'var(--bg-2)',
+                      color:       prefs.tone === t.id ? 'var(--p-1)' : 'var(--text-2)',
                     }}
                   >
                     <span>{t.emoji}</span>{t.label}
@@ -163,17 +125,17 @@ export function PulseAssistantTab({ guildId }: Props) {
               </div>
               <input
                 type="text"
-                value={pulsePrefs.customTone}
+                value={prefs.customTone}
                 onChange={(e) => updatePref('customTone', e.target.value)}
                 placeholder="e.g. Anime, Chill, Corporate…"
-                disabled={pulsePrefs.tone !== 'other'}
+                disabled={prefs.tone !== 'other'}
                 className="mt-2 w-full rounded-lg border px-3 py-1.5 text-xs outline-none transition-all"
                 style={{
                   background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)',
-                  opacity: pulsePrefs.tone === 'other' ? 1 : 0.35,
-                  cursor:  pulsePrefs.tone === 'other' ? 'text' : 'not-allowed',
+                  opacity: prefs.tone === 'other' ? 1 : 0.35,
+                  cursor:  prefs.tone === 'other' ? 'text' : 'not-allowed',
                 }}
-                onFocus={(e) => { if (pulsePrefs.tone === 'other') e.currentTarget.style.borderColor = 'var(--p-1)' }}
+                onFocus={(e) => { if (prefs.tone === 'other') e.currentTarget.style.borderColor = 'var(--p-1)' }}
                 onBlur={(e)  => { e.currentTarget.style.borderColor = 'var(--line-strong)' }}
               />
             </div>
@@ -187,9 +149,9 @@ export function PulseAssistantTab({ guildId }: Props) {
                     onClick={() => updatePref('language', l.id)}
                     className="flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all"
                     style={{
-                      borderColor: pulsePrefs.language === l.id ? 'var(--p-1)' : 'var(--line-strong)',
-                      background:  pulsePrefs.language === l.id ? 'var(--p-soft)' : 'var(--bg-2)',
-                      color:       pulsePrefs.language === l.id ? 'var(--p-1)' : 'var(--text-2)',
+                      borderColor: prefs.language === l.id ? 'var(--p-1)' : 'var(--line-strong)',
+                      background:  prefs.language === l.id ? 'var(--p-soft)' : 'var(--bg-2)',
+                      color:       prefs.language === l.id ? 'var(--p-1)' : 'var(--text-2)',
                     }}
                   >
                     <span>{l.flag}</span>{l.label}
@@ -199,20 +161,20 @@ export function PulseAssistantTab({ guildId }: Props) {
               <div className="mt-2 space-y-1">
                 <input
                   type="text"
-                  value={pulsePrefs.customLanguage}
+                  value={prefs.customLanguage}
                   onChange={(e) => updatePref('customLanguage', e.target.value)}
                   placeholder="e.g. Croatian, Korean…"
-                  disabled={pulsePrefs.language !== 'custom'}
+                  disabled={prefs.language !== 'custom'}
                   className="w-full rounded-lg border px-3 py-1.5 text-xs outline-none transition-all"
                   style={{
                     background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)',
-                    opacity: pulsePrefs.language === 'custom' ? 1 : 0.35,
-                    cursor:  pulsePrefs.language === 'custom' ? 'text' : 'not-allowed',
+                    opacity: prefs.language === 'custom' ? 1 : 0.35,
+                    cursor:  prefs.language === 'custom' ? 'text' : 'not-allowed',
                   }}
-                  onFocus={(e) => { if (pulsePrefs.language === 'custom') e.currentTarget.style.borderColor = 'var(--p-1)' }}
+                  onFocus={(e) => { if (prefs.language === 'custom') e.currentTarget.style.borderColor = 'var(--p-1)' }}
                   onBlur={(e)  => { e.currentTarget.style.borderColor = 'var(--line-strong)' }}
                 />
-                {pulsePrefs.language === 'custom' && (
+                {prefs.language === 'custom' && (
                   <p className="text-[10px]" style={{ color: 'var(--text-3)' }}>
                     Results in less common languages may be inconsistent — review before applying.
                   </p>
@@ -231,7 +193,7 @@ export function PulseAssistantTab({ guildId }: Props) {
               <p className="text-sm font-semibold text-foreground mb-2">Content Depth</p>
               <div className="grid grid-cols-3 gap-2">
                 {PULSE_CONTENT_DEPTHS.map((d) => {
-                  const active = pulsePrefs.contentDepth === d.id
+                  const active = prefs.contentDepth === d.id
                   return (
                     <button
                       key={d.id}
@@ -260,7 +222,7 @@ export function PulseAssistantTab({ guildId }: Props) {
               <p className="text-sm font-semibold text-foreground mb-2">Server Size</p>
               <div className="grid grid-cols-3 gap-2">
                 {PULSE_SERVER_SIZES.map((s) => {
-                  const active = pulsePrefs.serverSize === s.id
+                  const active = prefs.serverSize === s.id
                   return (
                     <button
                       key={s.id}
@@ -294,21 +256,21 @@ export function PulseAssistantTab({ guildId }: Props) {
             <div>
               <p className="text-sm font-semibold text-foreground">Emojis in Generated Content</p>
               <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
-                {pulsePrefs.includeEmojis
+                {prefs.includeEmojis
                   ? 'Emojis will be added throughout generated content'
                   : 'Generated content will use plain text only'}
               </p>
             </div>
             <button
-              onClick={() => updatePref('includeEmojis', !pulsePrefs.includeEmojis)}
+              onClick={() => updatePref('includeEmojis', !prefs.includeEmojis)}
               className="relative shrink-0 h-6 w-11 rounded-full transition-colors duration-200"
-              style={{ background: pulsePrefs.includeEmojis ? 'var(--p-1)' : 'var(--line-strong)' }}
-              aria-checked={pulsePrefs.includeEmojis}
+              style={{ background: prefs.includeEmojis ? 'var(--p-1)' : 'var(--line-strong)' }}
+              aria-checked={prefs.includeEmojis}
               role="switch"
             >
               <span
                 className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
-                style={{ transform: pulsePrefs.includeEmojis ? 'translateX(20px)' : 'translateX(0)' }}
+                style={{ transform: prefs.includeEmojis ? 'translateX(20px)' : 'translateX(0)' }}
               />
             </button>
           </div>
@@ -318,25 +280,25 @@ export function PulseAssistantTab({ guildId }: Props) {
       {/* ── Discord Output ───────────────────────────────────────────── */}
       <CategorySection
         icon={<Palette size={14} />}
-        title="Discord Output"
-        description="How Pulse's embeds appear when posted to Discord."
+        title="Embed Appearance"
+        description="The accent colour Pulse applies to every embed it posts to Discord."
       >
         <SectionCard
-          title="Embed Appearance"
-          description="The accent colour applied to embeds Pulse posts to Discord."
+          title="Embed Color"
+          description="Applied to all Pulse embeds across Discord — announcements, welcome, rules, polls, giveaways, tickets and more."
         >
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-semibold text-foreground">Embed Color</p>
+            <p className="text-sm font-semibold text-foreground">Accent Color</p>
             <span
               className="font-mono text-xs rounded px-1.5 py-0.5"
               style={{ background: 'var(--bg-2)', color: 'var(--text-3)', border: '1px solid var(--line-strong)' }}
             >
-              {pulsePrefs.embedColor}
+              {prefs.embedColor}
             </span>
           </div>
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-7">
             {THEMES.map((t) => {
-              const active = pulsePrefs.embedColor.toLowerCase() === t.accent.toLowerCase()
+              const active = prefs.embedColor.toLowerCase() === t.accent.toLowerCase()
               return (
                 <button
                   key={t.id}
@@ -369,10 +331,10 @@ export function PulseAssistantTab({ guildId }: Props) {
             {/* Custom — active when the embed color isn't in the THEMES palette. */}
             {(() => {
               const presetHits = THEMES.some(
-                (t) => t.accent.toLowerCase() === pulsePrefs.embedColor.toLowerCase(),
+                (t) => t.accent.toLowerCase() === prefs.embedColor.toLowerCase(),
               )
               const customActive = !presetHits
-              const display = pulsePrefs.embedColor
+              const display = prefs.embedColor
               return (
                 <label
                   title="Custom color"
@@ -413,19 +375,6 @@ export function PulseAssistantTab({ guildId }: Props) {
           </div>
         </SectionCard>
       </CategorySection>
-
-      <SaveBar
-        dirty={pulseDirty}
-        changedCount={pulseChangedCount}
-        saveLabel="Save Settings"
-        cleanText="All Pulse Assistant preferences saved."
-        dirtyHintText="review and save to keep these preferences."
-        confirmTitle="Save Pulse settings?"
-        confirmDescription="Pulse will use these settings for every generation in this server."
-        confirmLabel="Save Preferences"
-        onReset={handleResetPulsePrefs}
-        onSave={handleSavePulsePrefs}
-      />
-    </div>
+    </>
   )
 }

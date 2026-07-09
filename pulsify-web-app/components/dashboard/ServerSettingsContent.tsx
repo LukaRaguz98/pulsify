@@ -46,6 +46,13 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { SaveBar } from '@/components/ui/save-bar'
 import { BotBrandingCard } from '@/components/dashboard/server-settings/BotBrandingCard'
 import type { BotBrandingResponse } from '@/lib/bot-branding'
+import {
+  PulseAssistantSections,
+  DEFAULT_PULSE_PREFS,
+  PULSE_PREFS_KEY,
+  type PulsePrefs,
+} from '@/components/dashboard/Pulse/PulseAssistantTab'
+import { getEmbedColor, saveEmbedColor } from '@/app/dashboard/[guildId]/(management)/server-settings/actions'
 
 type Props = { guildId: string }
 
@@ -161,6 +168,13 @@ export function ServerSettingsContent({ guildId }: Props) {
   // '' = unchanged · data URI = new avatar · null = clear to default
   const [brandingAvatar, setBrandingAvatar] = useState<string | null | ''>('')
 
+  // Pulse assistant preferences (moved here from the old Automations settings).
+  // Generation prefs stay client-only (localStorage); the embed colour is also
+  // persisted to guild_settings so the bot applies it to every embed. Both are
+  // folded into the same Save bar below.
+  const [pulsePrefs, setPulsePrefs] = useState<PulsePrefs>(DEFAULT_PULSE_PREFS)
+  const [pulseSnapshot, setPulseSnapshot] = useState<PulsePrefs>(DEFAULT_PULSE_PREFS)
+
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -249,6 +263,24 @@ export function ServerSettingsContent({ guildId }: Props) {
   useEffect(() => { loadAll() }, [loadAll])
   useEffect(() => { loadInvites() }, [loadInvites])
 
+  // Load Pulse assistant prefs: localStorage for the generation prefs, then the
+  // DB embed_color (server-side source of truth) wins for the colour.
+  useEffect(() => {
+    let alive = true
+    let base = DEFAULT_PULSE_PREFS
+    try {
+      const saved = localStorage.getItem(PULSE_PREFS_KEY(guildId))
+      if (saved) base = { ...DEFAULT_PULSE_PREFS, ...(JSON.parse(saved) as PulsePrefs) }
+    } catch {}
+    getEmbedColor(guildId).then((color) => {
+      if (!alive) return
+      const merged = color ? { ...base, embedColor: color } : base
+      setPulsePrefs(merged)
+      setPulseSnapshot(merged)
+    })
+    return () => { alive = false }
+  }, [guildId])
+
   useEffect(() => {
     if (!toast) return
     const t = setTimeout(() => setToast(null), 4000)
@@ -279,6 +311,20 @@ export function ServerSettingsContent({ guildId }: Props) {
   const brandingDirty = brandingNameDirty || brandingAvatarDirty
   const brandingChangeCount = (brandingNameDirty ? 1 : 0) + (brandingAvatarDirty ? 1 : 0)
 
+  // Pulse assistant diff — also folded into the same Save bar.
+  const pulseChangeCount = useMemo(() => {
+    let n = 0
+    for (const k of Object.keys(pulseSnapshot) as (keyof PulsePrefs)[]) {
+      if (pulseSnapshot[k] !== pulsePrefs[k]) n += 1
+    }
+    return n
+  }, [pulseSnapshot, pulsePrefs])
+  const pulseDirty = pulseChangeCount > 0
+
+  function updatePref<K extends keyof PulsePrefs>(key: K, value: PulsePrefs[K]) {
+    setPulsePrefs((prev) => ({ ...prev, [key]: value }))
+  }
+
   const textChannels = useMemo(
     () => channels
       .filter((c) => c.type === CHANNEL_TYPES.TEXT || c.type === CHANNEL_TYPES.ANNOUNCEMENT)
@@ -302,6 +348,7 @@ export function ServerSettingsContent({ guildId }: Props) {
       setBrandingNick(branding.current.nickname ?? '')
       setBrandingAvatar('')
     }
+    setPulsePrefs(pulseSnapshot)
   }
 
   function onPickIcon(file: File) {
@@ -401,6 +448,19 @@ export function ServerSettingsContent({ guildId }: Props) {
         setBrandingNick(data.current.nickname ?? '')
         setBrandingAvatar('')
       }
+    }
+
+    // 3. Pulse assistant — persist generation prefs to localStorage and the
+    //    embed colour to guild_settings (the bot's source of truth).
+    if (pulseDirty) {
+      try {
+        localStorage.setItem(PULSE_PREFS_KEY(guildId), JSON.stringify(pulsePrefs))
+      } catch {}
+      if (pulsePrefs.embedColor !== pulseSnapshot.embedColor) {
+        const res = await saveEmbedColor(guildId, pulsePrefs.embedColor)
+        if (!res.ok) failures.push(res.error)
+      }
+      if (!failures.length) setPulseSnapshot(pulsePrefs)
     }
 
     setSaving(false)
@@ -512,7 +572,7 @@ export function ServerSettingsContent({ guildId }: Props) {
     k === 'name' || k === 'verification_level' || k === 'explicit_content_filter' || k === 'iconDataUri'
   // Branding (name/avatar) is member-visible, so treat it as a sensitive change.
   const sensitiveChange = changedKeys.some(isSensitive) || brandingDirty
-  const totalChangeCount = changedKeys.length + brandingChangeCount
+  const totalChangeCount = changedKeys.length + brandingChangeCount + pulseChangeCount
 
   return (
     <div className="page-content">
@@ -744,6 +804,11 @@ export function ServerSettingsContent({ guildId }: Props) {
             error={error}
           />
         </CategorySection>
+
+        {/* ── Pulse Assistant ──────────────────────────────────────────── */}
+        {/* Moved here from the old Automations settings. The embed colour is the
+            single source of truth applied to every Pulse embed on Discord. */}
+        <PulseAssistantSections prefs={pulsePrefs} updatePref={updatePref} />
 
         {/* ── Safety ───────────────────────────────────────────────────── */}
         <CategorySection
@@ -1065,12 +1130,12 @@ export function ServerSettingsContent({ guildId }: Props) {
       </div>
 
       <SaveBar
-        dirty={dirty || brandingDirty}
+        dirty={dirty || brandingDirty || pulseDirty}
         changedCount={totalChangeCount}
         saving={saving}
-        // Guild inputs are already disabled when the bot can't edit, so the
-        // only changes possible then are branding — keep Save reachable for it.
-        disabled={!botCanEdit && !brandingDirty}
+        // Guild inputs are already disabled when the bot can't edit, so the only
+        // changes possible then are branding or Pulse prefs — keep Save reachable.
+        disabled={!botCanEdit && !brandingDirty && !pulseDirty}
         saveLabel="Save Settings"
         cleanText="All changes saved. Edits sync to Discord on save."
         dirtyHintText="review and save to sync with Discord."

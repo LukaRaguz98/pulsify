@@ -22,6 +22,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { recordNotification } = require("./notifications");
 const { replyNotice } = require("./commands");
+const { getGuildAccent } = require("./guild-accent");
 
 const GW = "gw";
 const TICK_MS = 30 * 1000; // lifecycle scan every 30s
@@ -241,7 +242,7 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
   /** The live giveaway container (active). Discord renders <t:unix:R> as a
    *  self-updating countdown, so the "ends in" line never needs editing — only
    *  the entry-count button does. */
-  function activeContainer(g) {
+  async function activeContainer(g) {
     const req = normaliseRequirements(g.requirements);
     const endUnix = Math.floor(new Date(g.ends_at).getTime() / 1000);
     // No literal 🎉 prefix — preset titles already carry one, and the badge +
@@ -268,7 +269,8 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
     body.push(divider());
     body.push(joinRow(g.id, g.entry_count ?? 0));
     body.push(td("-# Pulse — Giveaway"));
-    return { type: 17, accent_color: BRAND, components: body };
+    const accent = await getGuildAccent(supabase, g.guild_id);
+    return { type: 17, accent_color: accent, components: body };
   }
 
   /** The settled container (ended / cancelled) — no Join button. */
@@ -468,7 +470,7 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
     await supabase.from("giveaways").update({ entry_count: entryCount }).eq("id", giveawayId);
     row.entry_count = entryCount;
     cache.set(giveawayId, row);
-    await editGiveawayMessage(row, activeContainer(row));
+    await editGiveawayMessage(row, await activeContainer(row));
 
     // Entering a giveaway is community engagement — award XP (no-op if leveling
     // is disabled for the guild; fire-and-forget so it never blocks the reply).
@@ -500,8 +502,9 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
       console.warn(`[Pulse] Giveaway ${g.id}: channel ${g.channel_id} not postable.`);
       return null;
     }
+    const container = await activeContainer(g);
     const sent = await channel
-      .send({ flags: MessageFlags.IsComponentsV2, components: [activeContainer(g)], files: iconFiles() })
+      .send({ flags: MessageFlags.IsComponentsV2, components: [container], files: iconFiles() })
       .catch((e) => {
         console.warn(`[Pulse] Giveaway ${g.id} post failed:`, e.message);
         return null;

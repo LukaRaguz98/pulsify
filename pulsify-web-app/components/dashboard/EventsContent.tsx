@@ -318,11 +318,11 @@ export function EventsContent({ guildId }: Props) {
             </div>
             <button
               onClick={openCreate}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition"
-              style={{ background: 'var(--p-1)', color: '#fff' }}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white"
+              style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}
             >
-              <Plus size={14} />
-              Create event
+              <Plus size={15} />
+              New event
             </button>
           </div>
 
@@ -330,11 +330,13 @@ export function EventsContent({ guildId }: Props) {
             <EventCalendar events={filtered} onEventClick={openEdit} />
           ) : (
             <ListView
+              total={events.length}
               live={live}
               upcoming={upcoming}
               past={past}
               onEdit={openEdit}
               onShowParticipants={setParticipantsOf}
+              onCreate={openCreate}
             />
           )}
         </CategorySection>
@@ -407,21 +409,40 @@ function ViewToggle({
 }
 
 function ListView({
-  live, upcoming, past, onEdit, onShowParticipants,
+  total, live, upcoming, past, onEdit, onShowParticipants, onCreate,
 }: {
+  total: number
   live: DiscordScheduledEvent[]
   upcoming: DiscordScheduledEvent[]
   past: DiscordScheduledEvent[]
   onEdit: (e: DiscordScheduledEvent) => void
   onShowParticipants: (e: DiscordScheduledEvent) => void
+  onCreate: () => void
 }) {
   if (live.length === 0 && upcoming.length === 0 && past.length === 0) {
-    return (
+    // Genuinely empty server vs. a filter that excluded everything: the former
+    // gets an accent CTA to create the first event, the latter a muted hint.
+    return total === 0 ? (
+      <EmptyState
+        icon={<CalendarDays size={26} />}
+        title="No events yet"
+        description="Create your first event — schedule a stage, voice or external event and Pulse will keep the whole server in the loop."
+        action={
+          <button
+            onClick={onCreate}
+            className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white"
+            style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))', boxShadow: '0 4px 14px -4px var(--p-glow)' }}
+          >
+            <Plus size={15} /> Create an event
+          </button>
+        }
+      />
+    ) : (
       <EmptyState
         variant="muted"
         icon={<CalendarDays size={24} />}
         title="No events match"
-        description="Try adjusting the search or filters, or create a new event."
+        description="Try adjusting the search or filters."
       />
     )
   }
