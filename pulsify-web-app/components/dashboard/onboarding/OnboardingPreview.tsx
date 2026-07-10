@@ -55,10 +55,10 @@ export function OnboardingPreview({
     // The bot render floats over the shared animated field (see PreviewStage).
     <PreviewStage>
       {/* Bot message row */}
-      <div className="flex gap-3">
+      <div className="flex gap-2.5 sm:gap-3">
         {/* The poster is the Pulse bot itself — use its brand mark as the mock
             avatar (not the server icon / a coloured plate). */}
-        <div className="mt-0.5 h-10 w-10 shrink-0 overflow-hidden rounded-full" style={{ background: 'var(--panel-2)' }}>
+        <div className="mt-0.5 h-9 w-9 shrink-0 overflow-hidden rounded-full sm:h-10 sm:w-10" style={{ background: 'var(--panel-2)' }}>
           <img src="/logo.png" alt="Pulse" className="h-full w-full object-cover" />
         </div>
         <div className="min-w-0 flex-1">
@@ -80,6 +80,8 @@ export function OnboardingPreview({
               boxShadow: '0 20px 55px -26px color-mix(in srgb, var(--text) 30%, transparent)',
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
+              overflowWrap: 'break-word',
+              wordBreak: 'break-word',
             }}
           >
             <div className="space-y-2.5 p-3.5 text-[14px] leading-[1.4]" style={{ color: C.body }}>

@@ -24,7 +24,7 @@ const PARTICLES = [
 export function PreviewStage({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <div className="ob-stage-wrap">
-      <div className={`ob-stage rounded-2xl px-6 pb-6 pt-0.5 sm:px-7 sm:pb-7 sm:pt-1 ${className ?? ''}`}>
+      <div className={`ob-stage rounded-2xl px-3 pb-4 pt-1 sm:px-7 sm:pb-7 ${className ?? ''}`}>
         {/* All the animated background lives in its own layer that is feathered
             on every edge, so the field dissolves with no visible border line
             while the content above it stays perfectly crisp. */}

@@ -42,6 +42,7 @@ const { createShop } = require("./shop");
 const { createPrivateChannels } = require("./private-channels");
 const { createTemporaryRoles } = require("./temporary-roles");
 const { createSelfRoles } = require("./self-roles");
+const { createStatisticsChannels } = require("./statistics-channels");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -188,6 +189,11 @@ const temporaryRoles = createTemporaryRoles(client, supabase);
 // `sr:` role buttons + select menus, toggling a member's roles when they self-
 // assign. Dashboard owns the menu lifecycle + the posted message.
 const selfRoles = createSelfRoles(client, supabase);
+
+// Statistics Channels (PULSIFY-57): provisions live "counter" channels and keeps
+// their names in sync with server stats via realtime + a 10-minute sweep. The
+// dashboard owns the config; this module owns every Discord operation.
+const statisticsChannels = createStatisticsChannels(client, supabase);
 
 /**
  * Shared helper for Discord-side activity → notifications row.
@@ -458,6 +464,10 @@ client.once(Events.ClientReady, async (readyClient) => {
   // Self-Assign Roles: load active menus into cache, subscribe to changes and
   // register the `sr:` button/select listener.
   await selfRoles.start();
+
+  // Statistics Channels: subscribe to config changes, provision channels for
+  // enabled rows, and start the 10-minute value-sync sweep.
+  await statisticsChannels.start();
 
   // Startup banner — a clear, scannable success summary so an operator can
   // confirm at a glance which version is live, how many servers it serves, and

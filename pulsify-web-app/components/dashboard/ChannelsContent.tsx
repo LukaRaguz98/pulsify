@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import {
   DndContext,
   closestCenter,
@@ -39,6 +40,8 @@ import {
   AlertTriangle,
   TrendingUp,
   Activity,
+  BarChart3,
+  Trash2,
 } from 'lucide-react'
 import {
   CHANNEL_TYPES,
@@ -52,8 +55,10 @@ import { PageHeader } from '@/components/ui/page-header'
 import { TableSkeleton } from '@/components/ui/table-skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { CategorySection } from '@/components/ui/category-section'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { ChannelEditPanel } from './channels/ChannelEditPanel'
 import { PrivateChannelsContent, type ActiveChannel } from './private-channels/PrivateChannelsContent'
+import { StatisticsChannelsContent } from './statistics-channels/StatisticsChannelsContent'
 
 const TRANSIENT_ERROR_HINT = "Couldn't verify your Discord access"
 const MAX_TRANSIENT_RETRIES = 15
@@ -77,7 +82,7 @@ export function ChannelsContent({
   privateSettingsHref,
 }: Props) {
   // Channels vs. the Private Channels monitor (moved here from its own page).
-  const [tab, setTab] = useState<'channels' | 'private'>('channels')
+  const [tab, setTab] = useState<'channels' | 'private' | 'stats'>('channels')
   // The Private Channels tab reports its toolbar (status + settings + refresh)
   // up here so it can live in the page header's top-right, like every view.
   const [privateAction, setPrivateAction] = useState<React.ReactNode>(null)
@@ -96,6 +101,7 @@ export function ChannelsContent({
 
   const [editing, setEditing] = useState<DiscordChannel | null>(null)
   const [createDraft, setCreateDraft] = useState<{ type: CreatableChannelType; parentId: string | null } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ channel: DiscordChannel; busy?: boolean; error?: string | null } | null>(null)
 
   const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -144,8 +150,9 @@ export function ChannelsContent({
   // replay it.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    if (params.get('tab') === 'private') {
-      setTab('private')
+    const t = params.get('tab')
+    if (t === 'private' || t === 'stats') {
+      setTab(t)
       params.delete('tab')
       const qs = params.toString()
       window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''))
@@ -197,6 +204,28 @@ export function ChannelsContent({
     setChannels((prev) => prev.filter((c) => c.id !== id))
     setToast({ kind: 'ok', text: 'Channel deleted.' })
     closeEditor()
+  }
+
+  // Inline delete (trash icon on a row / category header) — a quicker path than
+  // opening the edit panel. Funnels through the same DELETE route.
+  async function doInlineDelete() {
+    if (!deleteTarget) return
+    setDeleteTarget((t) => (t ? { ...t, busy: true, error: null } : t))
+    const res = await fetch(`/api/discord/guild/${guildId}/channels/${deleteTarget.channel.id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const data = (await res.json().catch(() => ({}))) as { error?: string }
+      setDeleteTarget((t) => (t ? { ...t, busy: false, error: data.error ?? 'Delete failed.' } : t))
+      return
+    }
+    const isCategory = deleteTarget.channel.type === CHANNEL_TYPES.CATEGORY
+    setChannels((prev) =>
+      prev
+        .filter((c) => c.id !== deleteTarget.channel.id)
+        // Deleting a category leaves its channels behind — Discord un-nests them.
+        .map((c) => (isCategory && c.parent_id === deleteTarget.channel.id ? { ...c, parent_id: null } : c)),
+    )
+    setToast({ kind: 'ok', text: `${isCategory ? 'Category' : 'Channel'} deleted.` })
+    setDeleteTarget(null)
   }
 
   function handleDuplicated(channel: DiscordChannel) {
@@ -260,7 +289,9 @@ export function ChannelsContent({
         description={
           tab === 'channels'
             ? 'Browse, organize, and configure every channel on this server.'
-            : 'Join-to-create temporary voice channels — Pulse makes a category & trigger, members spin up their own private channels by joining it.'
+            : tab === 'stats'
+              ? 'Live counter channels whose names show real-time server stats — members, boosts, roles, messages and more. Pulse keeps them in sync.'
+              : 'Join-to-create temporary voice channels — Pulse makes a category & trigger, members spin up their own private channels by joining it.'
         }
         action={
           tab === 'channels' ? (
@@ -284,6 +315,7 @@ export function ChannelsContent({
         {([
           { id: 'channels' as const, label: 'Channels', icon: <Hash size={15} /> },
           { id: 'private' as const, label: 'Private Channels', icon: <Mic2 size={15} /> },
+          { id: 'stats' as const, label: 'Statistics Channels', icon: <BarChart3 size={15} /> },
         ]).map((t) => {
           const active = tab === t.id
           return (
@@ -301,7 +333,9 @@ export function ChannelsContent({
         })}
       </div>
 
-      {tab === 'private' ? (
+      {tab === 'stats' ? (
+        <StatisticsChannelsContent guildId={guildId} guildName={guildName} />
+      ) : tab === 'private' ? (
         <PrivateChannelsContent
           embedded
           onControlsChange={setPrivateAction}
@@ -440,6 +474,7 @@ export function ChannelsContent({
                   sensors={sensors}
                   onReorder={reorderGroup}
                   onChannelClick={(c) => { setCreateDraft(null); setEditing(c) }}
+                  onDeleteChannel={(c) => setDeleteTarget({ channel: c })}
                   canManage={canManage}
                 />
               )}
@@ -463,6 +498,8 @@ export function ChannelsContent({
                       onClickCategory={() => { setCreateDraft(null); setEditing(cat.channel) }}
                       onClickChannel={(c) => { setCreateDraft(null); setEditing(c) }}
                       onAddChannel={(type) => openCreate(type, cat.id)}
+                      onDeleteCategory={() => setDeleteTarget({ channel: cat.channel })}
+                      onDeleteChannel={(c) => setDeleteTarget({ channel: c })}
                       onReorder={reorderGroup}
                       sensors={sensors}
                       canManage={canManage}
@@ -492,6 +529,23 @@ export function ChannelsContent({
           onSaved={handleSaved}
           onDeleted={handleDeleted}
           onDuplicated={handleDuplicated}
+        />
+      )}
+
+      {deleteTarget && (
+        <ConfirmDialog
+          title={deleteTarget.channel.type === CHANNEL_TYPES.CATEGORY ? 'Delete category?' : 'Delete channel?'}
+          description={
+            deleteTarget.channel.type === CHANNEL_TYPES.CATEGORY
+              ? `Delete “${deleteTarget.channel.name}”? Channels inside it are kept and moved out of the category. This can't be undone.`
+              : `Delete “${deleteTarget.channel.name}”? This permanently removes the channel and its messages. This can't be undone.`
+          }
+          confirmLabel="Delete"
+          tone="destructive"
+          busy={deleteTarget.busy}
+          error={deleteTarget.error ?? undefined}
+          onConfirm={doInlineDelete}
+          onCancel={() => setDeleteTarget(null)}
         />
       )}
     </div>
@@ -595,7 +649,7 @@ export function channelTypeIcon(type: number, size = 13) {
 
 function SortableCategory({
   category, childrenChannels, collapsed, onToggle, onClickCategory, onClickChannel,
-  onAddChannel, onReorder, sensors, canManage,
+  onAddChannel, onDeleteCategory, onDeleteChannel, onReorder, sensors, canManage,
 }: {
   category: DiscordChannel
   childrenChannels: DiscordChannel[]
@@ -604,6 +658,8 @@ function SortableCategory({
   onClickCategory: () => void
   onClickChannel: (c: DiscordChannel) => void
   onAddChannel: (type: CreatableChannelType) => void
+  onDeleteCategory: () => void
+  onDeleteChannel: (c: DiscordChannel) => void
   onReorder: (groupKey: string, fromId: string, toId: string) => void
   sensors: ReturnType<typeof useSensors>
   canManage: boolean
@@ -654,6 +710,15 @@ function SortableCategory({
         </button>
         <div className="flex items-center gap-1">
           <CategoryAdd disabled={!canManage} onPick={onAddChannel} />
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onDeleteCategory() }}
+            disabled={!canManage}
+            title="Delete category"
+            className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground transition hover:bg-[rgba(239,68,68,0.12)] hover:text-red-400 disabled:opacity-30"
+          >
+            <Trash2 size={13} />
+          </button>
         </div>
       </div>
 
@@ -676,6 +741,7 @@ function SortableCategory({
                     key={c.id}
                     channel={c}
                     onClick={() => onClickChannel(c)}
+                    onDelete={() => onDeleteChannel(c)}
                     canManage={canManage}
                   />
                 ))}
@@ -689,7 +755,7 @@ function SortableCategory({
 }
 
 function ChannelGroup({
-  groupKey, label, channels, sensors, onReorder, onChannelClick, canManage,
+  groupKey, label, channels, sensors, onReorder, onChannelClick, onDeleteChannel, canManage,
 }: {
   groupKey: string
   label: string
@@ -697,6 +763,7 @@ function ChannelGroup({
   sensors: ReturnType<typeof useSensors>
   onReorder: (groupKey: string, fromId: string, toId: string) => void
   onChannelClick: (c: DiscordChannel) => void
+  onDeleteChannel: (c: DiscordChannel) => void
   canManage: boolean
 }) {
   return (
@@ -720,7 +787,7 @@ function ChannelGroup({
         >
           <SortableContext items={channels.map((c) => c.id)} strategy={verticalListSortingStrategy}>
             {channels.map((c) => (
-              <SortableChannelRow key={c.id} channel={c} onClick={() => onChannelClick(c)} canManage={canManage} />
+              <SortableChannelRow key={c.id} channel={c} onClick={() => onChannelClick(c)} onDelete={() => onDeleteChannel(c)} canManage={canManage} />
             ))}
           </SortableContext>
         </DndContext>
@@ -730,10 +797,11 @@ function ChannelGroup({
 }
 
 function SortableChannelRow({
-  channel, onClick, canManage,
+  channel, onClick, onDelete, canManage,
 }: {
   channel: DiscordChannel
   onClick: () => void
+  onDelete: () => void
   canManage: boolean
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -791,43 +859,78 @@ function SortableChannelRow({
       {channel.topic && (
         <span className="ml-2 hidden truncate text-xs text-subtle sm:inline">— {channel.topic}</span>
       )}
-      {lastActive && (
-        <span className="ml-auto shrink-0 text-[10px] text-subtle" title={lastActive.toLocaleString()}>
-          {formatRelative(lastActive)}
-        </span>
-      )}
+      <div className="ml-auto flex shrink-0 items-center gap-2">
+        {lastActive && (
+          <span className="text-[10px] text-subtle" title={lastActive.toLocaleString()}>
+            {formatRelative(lastActive)}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onDelete() }}
+          disabled={!canManage}
+          title="Delete channel"
+          className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground opacity-0 transition hover:bg-[rgba(239,68,68,0.12)] hover:text-red-400 group-hover:opacity-100 disabled:opacity-30"
+        >
+          <Trash2 size={13} />
+        </button>
+      </div>
     </div>
   )
 }
 
 function CategoryAdd({ disabled, onPick }: { disabled: boolean; onPick: (type: CreatableChannelType) => void }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // The category card is `overflow-hidden`, which would clip a normally-
+  // positioned dropdown — and each sortable row is its own stacking context, so
+  // z-index alone can't lift it above later rows. Portal the menu to <body> with
+  // fixed positioning so it escapes both the clip and the stacking traps.
+  function toggle() {
+    if (open) { setOpen(false); return }
+    const r = btnRef.current?.getBoundingClientRect()
+    if (r) setPos({ top: r.bottom + 4, right: window.innerWidth - r.right })
+    setOpen(true)
+  }
 
   useEffect(() => {
     if (!open) return
     function onDown(e: MouseEvent) {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+      const t = e.target as Node
+      if (!btnRef.current?.contains(t) && !menuRef.current?.contains(t)) setOpen(false)
     }
+    function onScrollOrResize() { setOpen(false) }
     document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
+    window.addEventListener('resize', onScrollOrResize)
+    // Close on scroll — the fixed menu would otherwise detach from the button.
+    window.addEventListener('scroll', onScrollOrResize, true)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      window.removeEventListener('resize', onScrollOrResize)
+      window.removeEventListener('scroll', onScrollOrResize, true)
+    }
   }, [open])
 
   return (
-    <div ref={ref} className="relative">
+    <>
       <button
+        ref={btnRef}
         type="button"
-        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o) }}
+        onClick={(e) => { e.stopPropagation(); toggle() }}
         disabled={disabled}
         className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground transition hover:bg-[var(--panel)] hover:text-foreground disabled:opacity-30"
         title="Add channel to this category"
       >
         <Plus size={13} />
       </button>
-      {open && (
+      {open && pos && typeof document !== 'undefined' && createPortal(
         <div
-          className="absolute right-0 top-7 z-20 w-44 overflow-hidden rounded-lg border text-sm shadow-lg"
-          style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
+          ref={menuRef}
+          className="fixed z-[70] w-44 overflow-hidden rounded-lg border text-sm shadow-lg"
+          style={{ top: pos.top, right: pos.right, background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
         >
           {[
             { type: CHANNEL_TYPES.TEXT, label: 'Text channel', icon: <Hash size={12} /> },
@@ -841,14 +944,16 @@ function CategoryAdd({ disabled, onPick }: { disabled: boolean; onPick: (type: C
               type="button"
               onClick={(e) => { e.stopPropagation(); setOpen(false); onPick(opt.type as CreatableChannelType) }}
               className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-[var(--bg-2)]"
+              style={{ background: 'var(--panel)' }}
             >
               <span className="text-muted-foreground">{opt.icon}</span>
               {opt.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
-    </div>
+    </>
   )
 }
 

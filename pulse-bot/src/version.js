@@ -18,11 +18,27 @@ const path = require("node:path");
 // Current Pulse version. Used for the startup banner and as the displayed
 // version when no release files are reachable. Keep this in step with the
 // newest resources/notes/vX.Y.Z.txt on each release.
-const PULSE_VERSION = "0.56.0";
+const PULSE_VERSION = "0.57.0";
 
 // Manual/static fallback used only when the release-notes files can't be read.
 // Mirrors the shape produced by the parser so callers don't special-case it.
 const STATIC_RELEASES = [
+  {
+    version: "0.57.0",
+    title: "Server Statistics Channels",
+    date: "Jul 10, 2026",
+    description:
+      "A Statistics Channels tab in Server > Channels for live counter channels whose names show real-time server stats — members, boosts, roles, messages and more — kept in sync automatically by Pulse.",
+    highlights: [
+      "**17 statistics** — total/human/bot/online members, boosts and boost level, roles, channels (voice/text), emojis, stickers, server age, new members today/this week, total messages and active members.",
+      "**Your templates** — custom name templates like \"👥 Members: {members}\" with emojis, prefixes and a {value} placeholder, as a locked voice channel that's public to everyone or private (admins only).",
+      "**Hands-off sync** — Pulse provisions the channel and renames it only when the value changes, refreshing every 10 minutes to stay well within Discord's rate limits.",
+      "**Bulk management** — create, edit, duplicate, enable/disable and delete in bulk, with drag-and-drop ordering, search and filters.",
+      "**Live preview** — see exactly how the channel name will look, with the current value, before you create it.",
+    ],
+    outro:
+      "Put your server's pulse right in the channel list — live, on-brand and completely automatic.",
+  },
   {
     version: "0.56.0",
     title: "Self-Assign Roles",

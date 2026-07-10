@@ -80,8 +80,13 @@ export function DiscordEmbedPreview({ embed, serverName, footerFallback, floatin
   }, [])
 
   // Translucent glass V2 container when floating on the animated field.
+  // Let long, unbroken strings (URLs, long titles) wrap instead of overflowing
+  // the container and forcing horizontal scroll on narrow phones.
+  const wrap = { overflowWrap: 'break-word', wordBreak: 'break-word' } as const
+
   const containerStyle: CSSProperties = floating
     ? {
+        ...wrap,
         background: 'color-mix(in srgb, var(--panel-2) 55%, transparent)',
         border: '1px solid var(--line)',
         borderLeftWidth: '3px',
@@ -95,6 +100,7 @@ export function DiscordEmbedPreview({ embed, serverName, footerFallback, floatin
         boxShadow: '0 20px 55px -26px color-mix(in srgb, var(--text) 30%, transparent)',
       }
     : {
+        ...wrap,
         background: 'var(--bg-2)',
         borderLeft: `4px solid ${embed.color}`,
         borderRadius: '8px',
@@ -117,13 +123,14 @@ export function DiscordEmbedPreview({ embed, serverName, footerFallback, floatin
             }
       }
     >
-      <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+      <div className="flex items-start gap-2.5 sm:gap-4">
         {/* Bot avatar */}
         <Image
           src="/logo.png"
           alt="Pulse"
           width={40}
           height={40}
+          className="h-9 w-9 sm:h-10 sm:w-10"
           style={{ flexShrink: 0, borderRadius: '50%', marginTop: '2px', objectFit: 'cover' }}
         />
 
