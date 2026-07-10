@@ -605,13 +605,14 @@ function MenuPreview({ draft, bounds, accent }: { draft: MenuDraft; bounds: { mi
   return (
     <PreviewStage>
       <div style={{ fontFamily: "'gg sans', 'Noto Sans', Arial, sans-serif" }}>
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+        <div className="flex items-start gap-2.5 sm:gap-4">
           {/* Bot avatar */}
           <Image
             src="/logo.png"
             alt="Pulse"
             width={40}
             height={40}
+            className="h-9 w-9 sm:h-10 sm:w-10"
             style={{ flexShrink: 0, borderRadius: '50%', marginTop: '2px', objectFit: 'cover' }}
           />
 
@@ -641,6 +642,8 @@ function MenuPreview({ draft, bounds, accent }: { draft: MenuDraft; bounds: { mi
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
               boxShadow: '0 20px 55px -26px color-mix(in srgb, var(--text) 30%, transparent)',
+              overflowWrap: 'break-word',
+              wordBreak: 'break-word',
             }}>
               {/* Pulse label — matches the `**Pulse**` line the bot opens with. */}
               <div style={{ color: 'var(--text-2)', fontWeight: 700, fontSize: '12px', marginBottom: '2px' }}>Pulse</div>

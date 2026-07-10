@@ -1,0 +1,27 @@
+**Pulsify v0.57.0 — Server Statistics Channels**
+A new Statistics Channels tab in Server > Channels for live "counter" channels whose names show real-time server stats — members, boosts, roles, messages and more. Pulse creates them and keeps the numbers in sync automatically, so your community sees the server's pulse right in the channel list.
+
+**Stats members actually see**
+- **Seventeen statistics** — total, human, bot and online members; server boosts and boost level; roles, channels, voice channels and text channels; emojis and stickers; server age; new members today and this week; total messages and active members.
+- **Right in the sidebar** — each stat is a locked voice channel (nobody can join), so the number is always visible without opening anything.
+- **Public or private** — show a channel to everyone (voice icon with a small lock) or make it admins-only (a clean padlock, hidden from members).
+
+**Made to fit your server**
+- **Your own templates** — write names like "Members: {members}" or "Boosts: {boosts}" with custom emojis, prefixes and a {value} placeholder.
+- **Live preview** — see exactly how the channel name will look, with the current value, before you create it.
+- **Nest anywhere** — drop a channel under a category, or leave it at the top of the list.
+
+**Hands-off and reliable**
+- **Automatic sync** — Pulse provisions the channel and updates its name whenever the value changes, refreshing every 10 minutes.
+- **Rate-limit aware** — names change only when the number actually moves, so Pulse stays well within Discord's channel limits and never spams the API.
+- **Manual mode** — prefer to control it yourself? Set a channel to manual and refresh on demand with Sync now.
+
+**Manage them in bulk**
+- **Everything at once** — create, edit, duplicate, enable, disable and delete multiple channels together.
+- **Stay organised** — drag to reorder, search, and filter by active or disabled.
+
+**Consistent and in sync**
+- **Split cleanly** — the dashboard owns the configuration while the bot handles every Discord operation, keeping the two perfectly in step.
+- **On-brand** — the Statistics Channels tab uses the same Pulse v2 look as the rest of the dashboard.
+
+July 10, 2026

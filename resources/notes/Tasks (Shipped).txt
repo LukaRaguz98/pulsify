@@ -4826,3 +4826,106 @@ Acceptance Criteria
 	Analytics accurately track role menu usage
 	Published menus synchronize correctly with Discord
 	UI remains responsive and visually polished
+
+PULSIFY-57 — Server Statistics Channels & Analytics (v0.57.0)
+
+Description
+	Implement a Server Statistics Channels system that automatically creates and updates Discord channels displaying live server statistics.
+	Administrators should be able to create configurable statistic channels that update automatically whenever the tracked value changes, providing members with real-time server information.
+
+Goals
+	Add live server statistic channels
+	Improve community transparency
+	Reduce manual statistic management
+	Integrate live Discord data with Pulsify
+	Provide a highly requested Discord community feature
+
+Tasks
+	Statistics Channels View
+		Create a new view:
+			Server > Statistics Channels
+
+		Display:
+			active statistic channels
+			disabled channels
+			last update time
+			tracked statistic
+			channel preview
+
+	Channel Creation
+		Allow administrators to create statistic channels
+
+		Configure:
+			channel name template
+			statistic type
+			category
+			update mode
+			enabled/disabled
+
+	Supported Statistics
+		Support live statistics for:
+			Total Members
+			Human Members
+			Bots
+			Online Members
+			Server Boosts
+			Boost Level
+			Roles
+			Channels
+			Voice Channels
+			Text Channels
+			Emojis
+			Stickers
+			Server Age
+			New Members Today
+			New Members This Week
+			Total Messages (if tracked)
+			Active Members (if tracked)
+
+	Channel Templates
+		Support templates such as:
+			👥 Members: {members}
+			🤖 Bots: {bots}
+			🚀 Boosts: {boosts}
+			🎭 Roles: {roles}
+			💬 Messages: {messages}
+			📅 Created: {created}
+
+		Support custom prefixes and emojis
+
+	Automatic Synchronization
+		Automatically update channels when values change
+		Optimize updates to avoid unnecessary Discord API requests
+
+	Bulk Management
+		Allow administrators to:
+			create multiple statistic channels
+			edit multiple channels
+			delete multiple channels
+			duplicate existing channels
+
+	Preview
+		Display a live preview before creating channels
+
+	Permissions & Validation
+		Validate:
+			Manage Channels permission
+			category existence
+			duplicate statistic channels
+			Discord channel limits
+
+	UX Improvements
+		Add drag-and-drop ordering
+		Add search and filtering
+		Add loading/error/success states
+		Add responsive layouts
+		Use consistent Pulse v2 styling
+
+Acceptance Criteria
+	Administrators can create statistic channels
+	Channel names update automatically
+	Multiple statistic types are supported
+	Bulk management works correctly
+	Preview displays correctly
+	Discord synchronization is reliable
+	UI remains responsive and visually polished

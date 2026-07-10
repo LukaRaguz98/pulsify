@@ -1,102 +1,99 @@
-PULSIFY-57 — Server Statistics Channels & Analytics (v0.57.0)
+PULSIFY-58 — Birthday System & Community Celebrations (v0.58.0)
 
 Description
-	Implement a Server Statistics Channels system that automatically creates and updates Discord channels displaying live server statistics.
-	Administrators should be able to create configurable statistic channels that update automatically whenever the tracked value changes, providing members with real-time server information.
+	Implement a Birthday System that allows members to set their birthday and lets Pulse automatically celebrate birthdays inside Discord with configurable messages, roles, and rewards.
+	This feature should improve community engagement and add a more personal, social layer to Pulsify.
 
 Goals
-	Add live server statistic channels
-	Improve community transparency
-	Reduce manual statistic management
-	Integrate live Discord data with Pulsify
-	Provide a highly requested Discord community feature
+	Increase community engagement
+	Add member celebration automation
+	Improve community retention
+	Provide a lightweight social feature
+	Expand Pulse automation capabilities
 
 Tasks
-	Statistics Channels View
-		Create a new view:
-			Server > Statistics Channels
+	Birthday View
+		Create:
+			Engagement > Birthdays
 
 		Display:
-			active statistic channels
-			disabled channels
-			last update time
-			tracked statistic
-			channel preview
+			upcoming birthdays
+			today's birthdays
+			configured birthday channel
+			birthday settings
+			birthday history
 
-	Channel Creation
-		Allow administrators to create statistic channels
+	Member Birthday Setup
+		Allow members to set their birthday through:
+			Discord command
+			Pulsify member profile
 
-		Configure:
-			channel name template
-			statistic type
-			category
-			update mode
-			enabled/disabled
+		Support:
+			day/month
+			optional year
+			timezone preference
+			privacy settings
 
-	Supported Statistics
-		Support live statistics for:
-			Total Members
-			Human Members
-			Bots
-			Online Members
-			Server Boosts
-			Boost Level
-			Roles
-			Channels
-			Voice Channels
-			Text Channels
-			Emojis
-			Stickers
-			Server Age
-			New Members Today
-			New Members This Week
-			Total Messages (if tracked)
-			Active Members (if tracked)
+	Birthday Announcements
+		Automatically post birthday messages to the configured Discord channel
 
-	Channel Templates
-		Support templates such as:
-			👥 Members: {members}
-			🤖 Bots: {bots}
-			🚀 Boosts: {boosts}
-			🎭 Roles: {roles}
-			💬 Messages: {messages}
-			📅 Created: {created}
+		Support:
+			custom message templates
+			Pulse v2 embeds
+			mentions
+			images
+			buttons
 
-		Support custom prefixes and emojis
+	Birthday Rewards
+		Optional rewards:
+			temporary birthday role
+			Pulse Balance reward
+			Reputation reward
+			XP reward
+			custom role reward
 
-	Automatic Synchronization
-		Automatically update channels when values change
-		Optimize updates to avoid unnecessary Discord API requests
+	Birthday Role
+		Allow configuring:
+			birthday role
+			role duration
+			automatic assignment
+			automatic removal
 
-	Bulk Management
-		Allow administrators to:
-			create multiple statistic channels
-			edit multiple channels
-			delete multiple channels
-			duplicate existing channels
+	Commands
+		Add commands:
+			/birthday set
+			/birthday view
+			/birthday upcoming
+			/birthday remove
 
-	Preview
-		Display a live preview before creating channels
+	Privacy & Controls
+		Allow users to:
+			hide birthday year
+			show only month/day
+			remove birthday
+			disable birthday announcements
 
-	Permissions & Validation
-		Validate:
-			Manage Channels permission
-			category existence
-			duplicate statistic channels
-			Discord channel limits
+	Admin Settings
+		Allow administrators to configure:
+			birthday channel
+			announcement time
+			birthday role
+			rewards
+			announcement template
+			enabled/disabled state
 
 	UX Improvements
-		Add drag-and-drop ordering
-		Add search and filtering
-		Add loading/error/success states
-		Add responsive layouts
-		Use consistent Pulse v2 styling
+		Add birthday cards
+		Add calendar view
+		Add countdown labels
+		Add loading/error states
+		Add responsive layout
 
 Acceptance Criteria
-	Administrators can create statistic channels
-	Channel names update automatically
-	Multiple statistic types are supported
-	Bulk management works correctly
-	Preview displays correctly
-	Discord synchronization is reliable
-	UI remains responsive and visually polished
+	Members can set and manage birthdays
+	Birthday announcements post automatically
+	Birthday rewards are granted correctly
+	Birthday roles expire correctly
+	Privacy options work correctly
+	Commands function correctly
+	UI remains responsive and polished

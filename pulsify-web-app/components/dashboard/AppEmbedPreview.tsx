@@ -71,9 +71,13 @@ export function AppEmbedPreview({ title, content, color, icon, footer, floating 
     setTimeStr(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
   }, [])
 
+  // Let long, unbroken strings wrap instead of overflowing on narrow phones.
+  const wrap = { overflowWrap: 'break-word', wordBreak: 'break-word' } as const
+
   // Translucent glass V2 container when floating on the animated field.
   const containerStyle: CSSProperties = floating
     ? {
+        ...wrap,
         border: '1px solid var(--line)',
         borderLeftWidth: '3px',
         borderLeftColor: color ?? 'var(--p-1)',
@@ -86,6 +90,7 @@ export function AppEmbedPreview({ title, content, color, icon, footer, floating 
         boxShadow: '0 20px 55px -26px color-mix(in srgb, var(--text) 30%, transparent)',
       }
     : {
+        ...wrap,
         borderLeft: `4px solid ${color ?? 'var(--p-1)'}`,
         background: 'var(--bg-2)',
         borderRadius: '8px',
@@ -107,13 +112,14 @@ export function AppEmbedPreview({ title, content, color, icon, footer, floating 
             }
       }
     >
-      <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+      <div className="flex items-start gap-2.5 sm:gap-4">
         {/* Bot avatar */}
         <Image
           src="/logo.png"
           alt="Pulse"
           width={40}
           height={40}
+          className="h-9 w-9 sm:h-10 sm:w-10"
           style={{ flexShrink: 0, borderRadius: '50%', marginTop: '2px', objectFit: 'cover' }}
         />
 
