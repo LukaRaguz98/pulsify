@@ -15,7 +15,7 @@ import {
 } from '@/lib/onboarding'
 import {
   Labeled, TextInput, TextArea, NumberInput, ChannelSelect, RoleSelect,
-  RoleMultiSelect, Toggle, SubCard, DisabledHint, AccentColorPicker,
+  RoleMultiSelect, Toggle, SubCard, DisabledHint,
   type ChannelOpt, type RoleOpt, type EventOpt,
 } from './parts'
 
@@ -146,11 +146,10 @@ export function WelcomeSection({ config, patch, channels }: SectionProps) {
 
   return (
     <div className="space-y-5">
-      <SubCard title="Embed" desc="The greeting card shown to every new member. Use {user} and {server} placeholders.">
+      <SubCard title="Embed" desc="The greeting card shown to every new member. Use {user} and {server} placeholders. The accent colour follows Server Settings › Embed Appearance.">
         <div className="space-y-4">
           <Labeled label="Title"><TextInput value={w.title} onChange={(v) => setW({ title: v })} maxLength={256} placeholder="Welcome to {server}!" /></Labeled>
           <Labeled label="Description"><TextArea value={w.description} onChange={(v) => setW({ description: v })} rows={4} maxLength={2000} /></Labeled>
-          <AccentColorPicker value={w.color} onChange={(v) => setW({ color: v })} />
           <div className="grid gap-4 sm:grid-cols-2">
             <Labeled label="Thumbnail">
               <select value={w.thumbnail} onChange={(e) => setW({ thumbnail: e.target.value as typeof w.thumbnail })} className="w-full rounded-lg border px-3 py-2 text-sm outline-none" style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}>

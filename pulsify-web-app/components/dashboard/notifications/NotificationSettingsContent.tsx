@@ -38,6 +38,7 @@ export function NotificationSettingsContent({ guildId }: { guildId: string }) {
   }
   const [notifDraft, setNotifDraft] = useState<NotifDraft>(buildNotifDraft)
   const [notifSnapshot, setNotifSnapshot] = useState<NotifDraft>(buildNotifDraft)
+  const [saving, setSaving] = useState(false)
 
   // Resync draft when the provider's prefs change (initial fetch completes),
   // unless the user has unsaved edits in progress.
@@ -72,10 +73,12 @@ export function NotificationSettingsContent({ guildId }: { guildId: string }) {
   }
 
   async function handleSaveNotifPrefs() {
+    setSaving(true)
     await persistNotifPrefs({
       enabled_types: notifDraft.enabled_types,
       toast_enabled: notifDraft.toast_enabled,
     })
+    setSaving(false)
     setNotifSnapshot(notifDraft)
   }
 
@@ -200,6 +203,7 @@ export function NotificationSettingsContent({ guildId }: { guildId: string }) {
         <SaveBar
           dirty={notifDirty}
           changedCount={notifChangedCount}
+          saving={saving}
           saveLabel="Save Preferences"
           cleanText="All notification preferences saved."
           dirtyHintText="review and save to apply."

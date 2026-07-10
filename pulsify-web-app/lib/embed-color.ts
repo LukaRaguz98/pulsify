@@ -20,6 +20,13 @@ export function embedHexToInt(hex?: string | null): number {
   return Number.isNaN(n) ? DEFAULT_EMBED_INT : n
 }
 
+/** Pick the embed colour from an already-loaded `guild_settings.settings`
+ *  object (violet default) — avoids a second query when the caller has it. */
+export function embedHexFromSettings(settings: Record<string, unknown> | null | undefined): string {
+  const color = settings?.embed_color
+  return typeof color === 'string' && HEX.test(color) ? color : DEFAULT_EMBED_HEX
+}
+
 /** Read the guild's embed colour as `#rrggbb` (violet default). */
 export async function readGuildEmbedHex(supabase: SupabaseClient, guildId: string): Promise<string> {
   const { data } = await supabase

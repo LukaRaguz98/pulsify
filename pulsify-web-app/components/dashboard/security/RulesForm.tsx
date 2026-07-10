@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useMemo, useState } from 'react'
 import { Bell, Hash, ShieldOff } from 'lucide-react'
 import { CategorySection } from '@/components/ui/category-section'
 import { SaveBar } from '@/components/ui/save-bar'
@@ -39,7 +39,7 @@ export function RulesForm({
   const [alertChannel, setAlertChannel] = useState(initialConfig.alert_channel_id ?? '')
   const [rules, setRules] = useState<Record<SecurityPattern, SecurityRule>>(initialConfig.rules)
   const [autoLockdown, setAutoLockdown] = useState(initialConfig.auto_lockdown)
-  const [saving, startSave] = useTransition()
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const snapshot = useMemo(
@@ -78,17 +78,17 @@ export function RulesForm({
     setError(null)
   }
 
-  function save() {
+  async function save() {
     setError(null)
-    startSave(async () => {
-      const res = await saveSecurityConfig(guildId, {
-        enabled,
-        alert_channel_id: alertChannel || null,
-        rules,
-        auto_lockdown: autoLockdown,
-      })
-      if (!res.ok) setError(res.error)
+    setSaving(true)
+    const res = await saveSecurityConfig(guildId, {
+      enabled,
+      alert_channel_id: alertChannel || null,
+      rules,
+      auto_lockdown: autoLockdown,
     })
+    setSaving(false)
+    if (!res.ok) setError(res.error)
   }
 
   const inputStyle: React.CSSProperties = { background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }

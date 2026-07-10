@@ -241,7 +241,19 @@ export class DiscordFetchError extends Error {
 // cached (that was the bug the `cache: 'no-store'` comment below warns about),
 // so a transient 429/5xx still bubbles up and clears on the next try.
 const userGuildsCache = new Map<string, { at: number; guilds: DiscordGuild[] }>()
-const USER_GUILDS_TTL_MS = 20_000
+// 60s (up from 20s): the user's guild list + permissions barely change within a
+// session, and a longer window means fewer trips to Discord's tight
+// `/users/@me/guilds` bucket as the admin clicks between management pages — the
+// main source of the intermittent "Couldn't verify your Discord access" /
+// "you do not have access" errors. Still short enough that a permission or
+// membership change is picked up quickly.
+const USER_GUILDS_TTL_MS = 60_000
+// How long we'll wait out a Discord 429/5xx before giving up. Bounded so a
+// request never hangs — we honour Discord's own `Retry-After` but cap it.
+const MAX_RETRY_WAIT_MS = 3_000
+const MAX_ATTEMPTS = 3
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 export async function fetchUserGuilds(accessToken: string): Promise<DiscordGuild[]> {
   const hit = userGuildsCache.get(accessToken)
@@ -252,22 +264,59 @@ export async function fetchUserGuilds(accessToken: string): Promise<DiscordGuild
   // responses from Discord for the revalidate window — surfacing as bogus
   // "you are not a member" errors that only cleared after the cache expired.
   // Our in-memory cache above sidesteps that by storing successes only.
-  const res = await fetch(`${DISCORD_API}/users/@me/guilds?with_counts=true`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    cache: 'no-store',
-  })
-  if (!res.ok) {
-    throw new DiscordFetchError(
-      `Discord user-guilds fetch failed (${res.status})`,
-      res.status,
-    )
+  //
+  // Discord rate-limits this endpoint aggressively, so a brief 429 (or a 5xx
+  // blip) shouldn't bubble up as a hard "no access" error and bounce the admin
+  // out of the dashboard. We retry a couple of times, waiting out Discord's
+  // advertised `Retry-After` (bounded), and only throw once we're genuinely out
+  // of attempts — at which point the caller's retry-friendly messaging kicks in.
+  let lastStatus = 0
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    let res: Response
+    try {
+      res = await fetch(`${DISCORD_API}/users/@me/guilds?with_counts=true`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: 'no-store',
+      })
+    } catch {
+      // Network blip — retry after a short fixed backoff.
+      lastStatus = 0
+      if (attempt < MAX_ATTEMPTS - 1) { await sleep(400 * (attempt + 1)); continue }
+      break
+    }
+
+    if (res.ok) {
+      const guilds = (await res.json()) as DiscordGuild[]
+      // Bound the map so a long-lived process with many distinct tokens can't
+      // grow unbounded; the cache is a best-effort burst-smoother.
+      if (userGuildsCache.size > 500) userGuildsCache.clear()
+      userGuildsCache.set(accessToken, { at: Date.now(), guilds })
+      return guilds
+    }
+
+    lastStatus = res.status
+    // 401 = the token is genuinely bad; retrying won't help. Fail fast so the
+    // caller can prompt a reconnect instead of stalling.
+    if (res.status === 401) break
+
+    const retryable = res.status === 429 || res.status >= 500
+    if (!retryable || attempt === MAX_ATTEMPTS - 1) break
+
+    await sleep(retryAfterMs(res))
   }
-  const guilds = (await res.json()) as DiscordGuild[]
-  // Bound the map so a long-lived process with many distinct tokens can't grow
-  // unbounded; the cache is a best-effort burst-smoother, not a store of record.
-  if (userGuildsCache.size > 500) userGuildsCache.clear()
-  userGuildsCache.set(accessToken, { at: Date.now(), guilds })
-  return guilds
+
+  throw new DiscordFetchError(
+    `Discord user-guilds fetch failed (${lastStatus})`,
+    lastStatus,
+  )
+}
+
+/** Milliseconds to wait before retrying a throttled Discord response, from the
+ *  `Retry-After` header (seconds), bounded so a request never hangs. */
+function retryAfterMs(res: Response): number {
+  const header = Number(res.headers.get('retry-after'))
+  const ms = Number.isFinite(header) && header > 0 ? header * 1000 : 700
+  return Math.min(ms, MAX_RETRY_WAIT_MS)
 }
 
 export async function fetchGuild(guildId: string): Promise<DiscordGuildFull | null> {

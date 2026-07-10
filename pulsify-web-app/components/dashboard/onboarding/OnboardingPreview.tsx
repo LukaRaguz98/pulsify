@@ -25,17 +25,21 @@ const C = {
 }
 
 export function OnboardingPreview({
-  config, guildName, guildIcon, channels, events,
+  config, guildName, guildIcon, embedColor, channels, events,
 }: {
   config: MemberOnboardingConfig
   guildName: string
   guildIcon: string | null
+  embedColor: string
   channels: ChannelOpt[]
   roles: RoleOpt[]
   events: EventOpt[]
 }) {
   const resolve = (t: string) => t.replace(/\{user\}/g, '@NewMember').replace(/\{server\}/g, guildName)
   const w = config.welcome
+  // The embed accent is the guild's global colour (Server Settings › Embed
+  // Appearance) — the exact colour the bot posts with — not a per-message pick.
+  const accent = embedColor
   const chanName = (id: string) => channels.find((c) => c.id === id)?.name ?? 'channel'
   const ordered = config.steps.filter((s) => s.enabled)
 
@@ -72,7 +76,7 @@ export function OnboardingPreview({
               background: 'color-mix(in srgb, var(--panel-2) 55%, transparent)',
               border: '1px solid var(--line)',
               borderLeftWidth: '3px',
-              borderLeftColor: w.color,
+              borderLeftColor: accent,
               boxShadow: '0 20px 55px -26px color-mix(in srgb, var(--text) 30%, transparent)',
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
@@ -116,7 +120,7 @@ export function OnboardingPreview({
                 w.banner_url ? (
                   <div className="h-28 w-full rounded-md bg-cover bg-center" style={{ backgroundImage: `url("${w.banner_url}")`, backgroundColor: 'color-mix(in srgb, var(--text) 12%, transparent)' }} />
                 ) : (
-                  <div className="flex h-24 items-center justify-center rounded-md text-sm font-bold tracking-wide" style={{ background: `linear-gradient(135deg, ${w.color}, color-mix(in srgb, ${w.color} 45%, #000))`, color: '#fff' }}>
+                  <div className="flex h-24 items-center justify-center rounded-md text-sm font-bold tracking-wide" style={{ background: `linear-gradient(135deg, ${accent}, color-mix(in srgb, ${accent} 45%, #000))`, color: '#fff' }}>
                     {guildName}
                   </div>
                 )
@@ -188,7 +192,7 @@ export function OnboardingPreview({
                     <div key="rewards">
                       <Divider />
                       <div className="flex items-center gap-2 rounded-md px-3 py-2" style={{ background: 'color-mix(in srgb, var(--p-1) 10%, transparent)' }}>
-                        <Gift size={14} style={{ color: w.color }} />
+                        <Gift size={14} style={{ color: accent }} />
                         <span style={{ color: C.body }}>
                           Finish onboarding to earn{' '}
                           {parts.map((p, i) => (
@@ -210,7 +214,7 @@ export function OnboardingPreview({
                     {showVerify && (
                       <Btn bg="#248046"><ShieldCheck size={14} /> {config.verification.button_label || 'Verify me'}</Btn>
                     )}
-                    {showFinish && <Btn bg={w.color}>Finish onboarding</Btn>}
+                    {showFinish && <Btn bg={accent}>Finish onboarding</Btn>}
                     {linkButtons.map((b, i) => (
                       <Btn key={i} bg="#4e5058">{b.emoji} {b.label} <ExternalLink size={12} /></Btn>
                     ))}

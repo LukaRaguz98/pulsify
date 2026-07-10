@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
 import { createClient } from '@/lib/supabase-server'
-import { readGuildEmbedInt } from '@/lib/embed-color'
+import { readGuildEmbedInt, readGuildEmbedHex } from '@/lib/embed-color'
 import {
   fetchGuildRoles,
   getBotHighestRolePosition,
@@ -31,7 +31,7 @@ export async function GET(
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: 401 })
 
   const supabase = await createClient()
-  const [menusRes, assignmentsRes] = await Promise.all([
+  const [menusRes, assignmentsRes, embedColor] = await Promise.all([
     supabase
       .from('self_role_menus')
       .select('*')
@@ -46,11 +46,15 @@ export async function GET(
       .eq('guild_id', guildId)
       .order('created_at', { ascending: false })
       .limit(5000),
+    // The guild's configured embed accent — the builder preview uses it so it
+    // matches the colour the bot actually posts the menu with.
+    readGuildEmbedHex(supabase, guildId),
   ])
 
   return NextResponse.json({
     menus: menusRes.data ?? [],
     assignments: assignmentsRes.data ?? [],
+    embedColor,
   })
 }
 

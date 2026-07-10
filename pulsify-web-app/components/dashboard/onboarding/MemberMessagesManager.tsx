@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState, useTransition, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   MessageSquare, LogOut, ShieldCheck,
   AlertCircle, Sparkles, RotateCcw, Loader2, Check, Send,
@@ -83,7 +83,7 @@ export function MemberMessagesManager({
   initialGoodbye: Partial<MemberEventConfig> | undefined
   initialRules: Partial<PulseRulesConfig> | undefined
 }) {
-  const [isPending, startTransition] = useTransition()
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const { theme } = usePreferences()
@@ -172,26 +172,23 @@ export function MemberMessagesManager({
     return null
   }
 
-  function handleSave(): Promise<void> {
+  async function handleSave(): Promise<void> {
     const validationError = validate()
-    if (validationError) { setError(validationError); return Promise.resolve() }
+    if (validationError) { setError(validationError); return }
 
-    return new Promise<void>((resolve) => {
-      startTransition(async () => {
-        const result = await saveMemberMessages(guildId, {
-          welcome,
-          goodbye,
-          rules: { enabled: rulesVisible, channel_id: rulesChannel, title: rulesTitle, content: rulesContent },
-        })
-        if (result.ok) {
-          setError(null)
-          setSnapshot(buildSnapshot())
-        } else {
-          setError(result.error)
-        }
-        resolve()
-      })
+    setSaving(true)
+    const result = await saveMemberMessages(guildId, {
+      welcome,
+      goodbye,
+      rules: { enabled: rulesVisible, channel_id: rulesChannel, title: rulesTitle, content: rulesContent },
     })
+    setSaving(false)
+    if (result.ok) {
+      setError(null)
+      setSnapshot(buildSnapshot())
+    } else {
+      setError(result.error)
+    }
   }
 
   async function handleRepostRules() {
@@ -384,7 +381,7 @@ export function MemberMessagesManager({
       <SaveBar
         dirty={dirty}
         changedCount={changedCount}
-        saving={isPending}
+        saving={saving}
         saveLabel="Save messages"
         cleanText="All changes saved. Messages are posted by the Pulse bot."
         dirtyHintText="review and save to apply via the Pulse bot."

@@ -145,7 +145,7 @@ export function PrivateChannelsSettings({
 }) {
   const [config, setConfig] = useState<PrivateChannelConfig>({ ...DEFAULT_PRIVATE_CHANNEL_CONFIG, ...initialConfig })
   const [snapshot, setSnapshot] = useState<PrivateChannelConfig>({ ...DEFAULT_PRIVATE_CHANNEL_CONFIG, ...initialConfig })
-  const [isPending, startTransition] = useTransition()
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [reprovisioning, startReprovision] = useTransition()
   const [reprovisionNotice, setReprovisionNotice] = useState<string | null>(null)
@@ -185,24 +185,21 @@ export function PrivateChannelsSettings({
     setError(null)
   }
 
-  function handleSave(): Promise<void> {
+  async function handleSave(): Promise<void> {
     const invalid = validatePrivateChannelConfig(config)
     if (invalid) {
       setError(invalid)
-      return Promise.resolve()
+      return
     }
-    return new Promise<void>((resolve) => {
-      startTransition(async () => {
-        const res = await savePrivateChannels(guildId, config)
-        if (res.ok) {
-          setError(null)
-          setSnapshot(config)
-        } else {
-          setError(res.error)
-        }
-        resolve()
-      })
-    })
+    setSaving(true)
+    const res = await savePrivateChannels(guildId, config)
+    setSaving(false)
+    if (res.ok) {
+      setError(null)
+      setSnapshot(config)
+    } else {
+      setError(res.error)
+    }
   }
 
   return (
@@ -394,7 +391,7 @@ export function PrivateChannelsSettings({
       <SaveBar
         dirty={dirty}
         changedCount={changedCount}
-        saving={isPending}
+        saving={saving}
         saveLabel="Save Settings"
         cleanText="All changes saved. Private Channels apply through the Pulse bot."
         dirtyHintText="review and save to apply via the Pulse bot."

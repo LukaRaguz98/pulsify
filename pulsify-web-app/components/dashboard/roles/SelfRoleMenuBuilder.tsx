@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
+import Image from 'next/image'
 import {
   DndContext,
   closestCenter,
@@ -21,6 +22,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { X, Loader2, AlertTriangle, Plus, GripVertical, Search, Check, ChevronDown } from 'lucide-react'
 import { useDialogDismiss } from '@/components/ui/use-dialog-dismiss'
+import { PreviewStage } from '@/components/dashboard/onboarding/PreviewStage'
 import { roleColor, type DiscordRole } from '@/lib/discord'
 import {
   defaultDraft,
@@ -53,6 +55,9 @@ type Props = {
   channels: ChannelOption[]
   /** null = creating; otherwise editing this menu. */
   menu: SelfRoleMenu | null
+  /** The guild's configured embed accent (`#rrggbb`) — the colour the bot posts
+   *  the menu with. Chosen globally in Server Settings › Embed Appearance. */
+  embedColor: string
   onClose: () => void
   onSaved: (menu: SelfRoleMenu, isNew: boolean) => void
 }
@@ -79,7 +84,7 @@ function draftFromMenu(menu: SelfRoleMenu): MenuDraft {
   }
 }
 
-export function SelfRoleMenuBuilder({ guildId, roles, channels, menu, onClose, onSaved }: Props) {
+export function SelfRoleMenuBuilder({ guildId, roles, channels, menu, embedColor, onClose, onSaved }: Props) {
   const [draft, setDraft] = useState<MenuDraft>(() => (menu ? draftFromMenu(menu) : defaultDraft()))
   const [roleQuery, setRoleQuery] = useState('')
   const [showRolePicker, setShowRolePicker] = useState(false)
@@ -210,7 +215,7 @@ export function SelfRoleMenuBuilder({ guildId, roles, channels, menu, onClose, o
         aria-modal="true"
         aria-label={menu ? 'Edit role menu' : 'Create role menu'}
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border shadow-2xl"
+        className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border shadow-2xl"
         style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
       >
         <div className="flex shrink-0 items-center justify-between border-b px-5 py-4" style={{ borderColor: 'var(--line-strong)' }}>
@@ -219,7 +224,7 @@ export function SelfRoleMenuBuilder({ guildId, roles, channels, menu, onClose, o
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_440px]">
             {/* ── Form column ─────────────────────────────────────────── */}
             <div className="space-y-5">
               {/* Presets (create only) */}
@@ -400,7 +405,7 @@ export function SelfRoleMenuBuilder({ guildId, roles, channels, menu, onClose, o
             {/* ── Preview column ──────────────────────────────────────── */}
             <div className="lg:sticky lg:top-0 lg:self-start">
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Preview</label>
-              <MenuPreview draft={draft} bounds={bounds} />
+              <MenuPreview draft={draft} bounds={bounds} accent={embedColor} />
             </div>
           </div>
         </div>
@@ -583,43 +588,124 @@ const DISCORD_BTN_BG: Record<number, string> = {
   4: '#da373c',
 }
 
-function MenuPreview({ draft, bounds }: { draft: MenuDraft; bounds: { min: number; max: number } }) {
-  const accent = CATEGORY_META[draft.category].color
+function MenuPreview({ draft, bounds, accent }: { draft: MenuDraft; bounds: { min: number; max: number }; accent: string }) {
+  // The accent stripe uses the guild's configured embed colour (Server Settings
+  // › Embed Appearance) — the exact colour the bot posts the menu with — not the
+  // category colour, so the preview matches Discord.
   const described = draft.roles.filter((r) => r.description)
+
+  // The builder is a client-only modal (renders null during SSR), so computing
+  // the timestamp once on mount via a lazy initializer is hydration-safe and
+  // avoids an effect.
+  const [timeStr] = useState(() => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+
+  // Same floating glass V2 container the onboarding / messages previews use: the
+  // card is transparent so the animated PreviewStage field glows through the
+  // translucent, blurred container with its left accent stripe.
   return (
-    <div className="overflow-hidden rounded-lg border" style={{ borderColor: 'var(--line-strong)', background: 'var(--bg-2)' }}>
-      <div className="border-l-4 p-3" style={{ borderColor: accent }}>
-        <p className="text-[11px] font-semibold" style={{ color: 'var(--text-3)' }}>Pulse</p>
-        <p className="mt-0.5 text-sm font-semibold text-foreground">{draft.title || 'Untitled menu'}</p>
-        {draft.description && <p className="mt-1 text-xs" style={{ color: 'var(--text-2)' }}>{draft.description}</p>}
+    <PreviewStage>
+      <div style={{ fontFamily: "'gg sans', 'Noto Sans', Arial, sans-serif" }}>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+          {/* Bot avatar */}
+          <Image
+            src="/logo.png"
+            alt="Pulse"
+            width={40}
+            height={40}
+            style={{ flexShrink: 0, borderRadius: '50%', marginTop: '2px', objectFit: 'cover' }}
+          />
 
-        {draft.menu_type === 'buttons' && described.length > 0 && (
-          <div className="mt-2 space-y-0.5">
-            {described.map((r) => (
-              <p key={r.role_id} className="text-[11px]" style={{ color: 'var(--text-2)' }}>{r.emoji ? `${r.emoji} ` : ''}<strong>{r.label}</strong> — {r.description}</p>
-            ))}
-          </div>
-        )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {/* Username row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
+              <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: '14px' }}>Pulse</span>
+              <span style={{
+                background: '#5865f2', color: '#ffffff',
+                borderRadius: '3px', padding: '1px 5px',
+                fontSize: '9px', fontWeight: 700,
+                letterSpacing: '0.4px', textTransform: 'uppercase', lineHeight: '1.4',
+              }}>APP</span>
+              <span style={{ color: 'var(--text-3)', fontSize: '12px' }}>Today at {timeStr}</span>
+            </div>
 
-        <div className="my-2 h-px" style={{ background: 'var(--line-strong)' }} />
+            {/* Translucent glass V2 container */}
+            <div style={{
+              background: 'color-mix(in srgb, var(--panel-2) 55%, transparent)',
+              border: '1px solid var(--line)',
+              borderLeftWidth: '3px',
+              borderLeftColor: accent,
+              borderRadius: '8px',
+              overflow: 'hidden',
+              maxWidth: '520px',
+              padding: '12px 16px',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              boxShadow: '0 20px 55px -26px color-mix(in srgb, var(--text) 30%, transparent)',
+            }}>
+              {/* Pulse label — matches the `**Pulse**` line the bot opens with. */}
+              <div style={{ color: 'var(--text-2)', fontWeight: 700, fontSize: '12px', marginBottom: '2px' }}>Pulse</div>
 
-        {draft.roles.length === 0 ? (
-          <p className="text-xs" style={{ color: 'var(--text-3)' }}>Add roles to see the controls.</p>
-        ) : draft.menu_type === 'buttons' ? (
-          <div className="flex flex-wrap gap-1.5">
-            {draft.roles.map((r) => (
-              <span key={r.role_id} className="inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium text-white" style={{ background: DISCORD_BTN_BG[BUTTON_STYLE_ID[r.button_style]] }}>
-                {r.emoji ? <span>{r.emoji}</span> : null}{r.label}
-              </span>
-            ))}
+              {/* Title — H1 heading */}
+              <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: '20px', margin: '0 0 6px', lineHeight: '1.3' }}>
+                {draft.title || 'Title'}
+              </div>
+
+              {/* Description */}
+              {draft.description && (
+                <div style={{ color: 'var(--text-2)', fontSize: '14px', margin: '0 0 10px', lineHeight: '1.45' }}>
+                  {draft.description}
+                </div>
+              )}
+
+              {/* Per-role descriptions (buttons list them above the controls) */}
+              {draft.menu_type === 'buttons' && described.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '10px' }}>
+                  {described.map((r) => (
+                    <div key={r.role_id} style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: '1.4' }}>
+                      {r.emoji ? `${r.emoji} ` : ''}<strong style={{ color: 'var(--text)' }}>{r.label}</strong> — {r.description}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Controls */}
+              {draft.roles.length === 0 ? (
+                <div style={{ fontSize: '13px', color: 'var(--text-3)' }}>Add roles to see the controls.</div>
+              ) : draft.menu_type === 'buttons' ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {draft.roles.map((r) => (
+                    <span
+                      key={r.role_id}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                        borderRadius: '4px', padding: '6px 12px',
+                        fontSize: '13px', fontWeight: 500, color: '#ffffff',
+                        background: DISCORD_BTN_BG[BUTTON_STYLE_ID[r.button_style]],
+                      }}
+                    >
+                      {r.emoji ? <span>{r.emoji}</span> : null}{r.label}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  borderRadius: '4px', border: '1px solid var(--line-strong)',
+                  background: 'color-mix(in srgb, var(--panel-2) 60%, transparent)',
+                  padding: '8px 12px', fontSize: '13px', color: 'var(--text-3)',
+                }}>
+                  <span>{draft.selection_mode === 'single' ? 'Pick a role' : `Pick your roles${bounds.max > 1 ? ` (up to ${bounds.max})` : ''}`}</span>
+                  <span>▾</span>
+                </div>
+              )}
+
+              {/* Divider + footer — the standardized Pulse v2 close. */}
+              <div style={{ borderTop: '1px solid var(--line-strong)', margin: '12px 0 8px' }} />
+              <div style={{ color: 'var(--text-3)', fontSize: '12px', lineHeight: '1.3' }}>Pulse — Self Roles</div>
+            </div>
           </div>
-        ) : (
-          <div className="rounded-md border px-2 py-1.5 text-[11px]" style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)', color: 'var(--text-3)' }}>
-            {draft.selection_mode === 'single' ? 'Pick a role' : `Pick your roles${bounds.max > 1 ? ` (up to ${bounds.max})` : ''}`} ▾
-          </div>
-        )}
-        <p className="mt-2 text-[10px]" style={{ color: 'var(--text-3)' }}>Pulse — Self Roles</p>
+        </div>
       </div>
-    </div>
+    </PreviewStage>
   )
 }

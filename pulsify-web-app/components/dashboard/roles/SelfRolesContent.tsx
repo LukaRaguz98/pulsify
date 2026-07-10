@@ -64,6 +64,9 @@ export function SelfRolesContent({ guildId, roles }: Props) {
   const [menus, setMenus] = useState<SelfRoleMenu[]>([])
   const [assignments, setAssignments] = useState<AssignmentRow[]>([])
   const [channels, setChannels] = useState<ChannelOption[]>([])
+  // The guild's configured embed accent (Server Settings → Embed Appearance) —
+  // the builder preview uses it so it matches what the bot posts.
+  const [embedColor, setEmbedColor] = useState('#8b5cf6')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [toast, setToast] = useState<Toast | null>(null)
@@ -87,9 +90,10 @@ export function SelfRolesContent({ guildId, roles }: Props) {
       setLoading(false)
       return
     }
-    const data = (await menusRes.json()) as { menus: Record<string, unknown>[]; assignments: AssignmentRow[] }
+    const data = (await menusRes.json()) as { menus: Record<string, unknown>[]; assignments: AssignmentRow[]; embedColor?: string }
     setMenus(data.menus.map(normaliseMenu))
     setAssignments(data.assignments ?? [])
+    if (data.embedColor) setEmbedColor(data.embedColor)
     if (channelsRes.ok) {
       const chans = (await channelsRes.json()) as { id: string; name: string; type: number }[]
       // Text (0) + announcement (5) channels can hold a menu message.
@@ -285,6 +289,7 @@ export function SelfRolesContent({ guildId, roles }: Props) {
           roles={roles}
           channels={channels}
           menu={builder.menu}
+          embedColor={embedColor}
           onClose={() => setBuilder(null)}
           onSaved={onSaved}
         />

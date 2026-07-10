@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Bell,
   CheckCircle2,
@@ -46,7 +46,7 @@ export function AIModerationSettingsTab({
   initialSettings,
   onSaved,
 }: Props) {
-  const [pending, startTransition] = useTransition()
+  const [saving, setSaving] = useState(false)
   const [snapshot, setSnapshot] = useState(initialSettings)
   const [draft, setDraft] = useState<AIModerationSettings>(initialSettings)
   const [error, setError] = useState<string | null>(null)
@@ -102,7 +102,7 @@ export function AIModerationSettingsTab({
     setSaved(false)
   }
 
-  function handleSave() {
+  async function handleSave() {
     // Parse the comma/space-separated user IDs at save time so the user can
     // type freely without re-parsing on every keystroke.
     const parsedUserIds = userIdsInput
@@ -111,19 +111,19 @@ export function AIModerationSettingsTab({
       .filter((s) => /^\d{10,}$/.test(s))
     const next: AIModerationSettings = { ...draft, whitelisted_user_ids: parsedUserIds }
 
-    startTransition(async () => {
-      setError(null)
-      const res = await saveAIModerationSettings(guildId, next)
-      if (!res.ok) {
-        setError(res.error)
-        return
-      }
-      setSnapshot(next)
-      setDraft(next)
-      setUserIdsInput(parsedUserIds.join(', '))
-      setSaved(true)
-      onSaved(next)
-    })
+    setSaving(true)
+    setError(null)
+    const res = await saveAIModerationSettings(guildId, next)
+    setSaving(false)
+    if (!res.ok) {
+      setError(res.error)
+      return
+    }
+    setSnapshot(next)
+    setDraft(next)
+    setUserIdsInput(parsedUserIds.join(', '))
+    setSaved(true)
+    onSaved(next)
   }
 
   return (
@@ -441,7 +441,7 @@ export function AIModerationSettingsTab({
       <SaveBar
         dirty={dirty}
         changedCount={changedCount}
-        saving={pending}
+        saving={saving}
         saveLabel="Save Settings"
         confirmTitle="Save Pulse settings?"
         confirmDescription="These settings drive real-time auto-actions. Changes take effect immediately."

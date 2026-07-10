@@ -62,12 +62,13 @@ const BUILDER_SECTIONS: {
 ]
 
 export function OnboardingManager({
-  guildId, guildName, guildIcon, channels, roles, events, perms, initialConfig, stats,
+  guildId, guildName, guildIcon, embedColor, channels, roles, events, perms, initialConfig, stats,
   initialWelcome, initialGoodbye, initialRules,
 }: {
   guildId: string
   guildName: string
   guildIcon: string | null
+  embedColor: string
   channels: ChannelOpt[]
   roles: RoleOpt[]
   events: EventOpt[]
@@ -264,7 +265,7 @@ export function OnboardingManager({
         {showPreview && (
           <aside className="min-w-0">
             <div className="sticky top-6">
-              <OnboardingPreview config={config} guildName={guildName} guildIcon={guildIcon} channels={channels} roles={roles} events={events} />
+              <OnboardingPreview config={config} guildName={guildName} guildIcon={guildIcon} embedColor={embedColor} channels={channels} roles={roles} events={events} />
             </div>
           </aside>
         )}

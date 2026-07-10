@@ -12,16 +12,15 @@ import { Reveal } from '@/components/landing/Reveal'
 import { LandingBackdrop } from '@/components/landing/LandingBackdrop'
 import { ScrollProgress } from '@/components/landing/ScrollProgress'
 import { BackToTop } from '@/components/landing/BackToTop'
-import { createClient } from '@/lib/supabase-server'
+import { isDashboardReady } from '@/lib/auth-state'
 
 export default async function Home() {
   // Resolve auth state server-side so the nav renders the correct CTA on first
-  // paint (no "Sign in" flash for logged-in visitors).
-  const supabase = await createClient()
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-  const isAuthed = !!session
+  // paint (no "Sign in" flash for logged-in visitors). isDashboardReady requires
+  // a validated session AND a live Discord token, so an expired session or a
+  // dead Discord connection correctly shows "Sign in" rather than a misleading
+  // "Open Dashboard" that would only dump the user on the Reconnect screen.
+  const isAuthed = await isDashboardReady()
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">

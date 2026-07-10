@@ -15,6 +15,7 @@
 
 const { Events, MessageFlags } = require("discord.js");
 const { replyNotice } = require("./commands");
+const { getGuildAccentHex } = require("./guild-accent");
 
 const OB = "ob";
 const BRAND = 0x6366f1;
@@ -116,8 +117,10 @@ function createOnboarding(client, supabase, leveling = null, economyRewards = nu
     return lines;
   }
 
-  /** Build the full panel container + any attachments. */
-  function buildPanel(cfg, member, events) {
+  /** Build the full panel container + any attachments. `accent` is the guild's
+   *  global embed colour (Server Settings › Embed Appearance) — the single
+   *  source of truth for every Pulse embed, applied here too. */
+  function buildPanel(cfg, member, events, accent) {
     const w = cfg.welcome;
     const resolve = (t) =>
       String(t ?? "")
@@ -295,7 +298,7 @@ function createOnboarding(client, supabase, leveling = null, economyRewards = nu
       content: `-# ${w.footer_text ? resolve(w.footer_text) : "Pulse — Welcome"}`,
     });
 
-    const container = { type: 17, accent_color: colorInt(w.color), components };
+    const container = { type: 17, accent_color: colorInt(accent), components };
 
     const payload = {
       flags: MessageFlags.IsComponentsV2,
@@ -304,7 +307,7 @@ function createOnboarding(client, supabase, leveling = null, economyRewards = nu
     // Only attach the generated banner when no custom URL is supplied.
     if (w.banner && !bannerUrl(w)) {
       const appUrl = process.env.APP_URL ?? "http://localhost:3000";
-      const bannerColor = String(w.color ?? "#6366f1").replace("#", "");
+      const bannerColor = String(accent ?? "#6366f1").replace("#", "");
       payload.files = [
         {
           attachment: `${appUrl}/api/banner?name=${encodeURIComponent(member.guild.name)}&color=${bannerColor}`,
@@ -351,7 +354,8 @@ function createOnboarding(client, supabase, leveling = null, economyRewards = nu
         }
       }
 
-      const payload = buildPanel(cfg, member, events);
+      const accent = await getGuildAccentHex(supabase, member.guild.id);
+      const payload = buildPanel(cfg, member, events, accent);
 
       if (cfg.delivery === "dm") {
         await member.send(payload).catch(() => {});

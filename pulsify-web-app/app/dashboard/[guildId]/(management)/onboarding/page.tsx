@@ -15,6 +15,7 @@ import {
   type MemberOnboardingConfig,
   type OnboardingStats,
 } from '@/lib/onboarding'
+import { embedHexFromSettings } from '@/lib/embed-color'
 import type { MemberEventConfig, PulseRulesConfig } from '@/app/dashboard/[guildId]/(management)/onboarding/actions'
 
 export default async function OnboardingPage({
@@ -48,6 +49,9 @@ export default async function OnboardingPage({
   }
 
   const settings = (settingsRow.data?.settings as Record<string, unknown>) ?? {}
+  // The guild's global embed accent (Server Settings › Embed Appearance) — the
+  // colour the bot posts every Pulse embed with, including onboarding.
+  const embedColor = embedHexFromSettings(settings)
   const config: MemberOnboardingConfig = normalizeMemberOnboarding(
     settings.member_onboarding as Partial<MemberOnboardingConfig> | undefined,
   )
@@ -85,6 +89,7 @@ export default async function OnboardingPage({
       guildId={guildId}
       guildName={guild.name}
       guildIcon={guildIconUrl(guild.id, guild.icon, 64) || null}
+      embedColor={embedColor}
       channels={textChannels}
       roles={assignableRoles}
       events={upcomingEvents}
