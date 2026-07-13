@@ -91,6 +91,7 @@ const NAV_CATALOG: NavDef[] = [
   { id: 'nav-ddos-protection', label: 'DDoS Protection', icon: 'Siren', path: '/security', keywords: 'security ddos protection abuse spike raid rate limit lockdown mitigation alerts monitoring traffic flood' },
   { id: 'nav-giveaways', label: 'Giveaways', icon: 'Gift', path: '/giveaways', keywords: 'giveaway contest raffle prize draw winners engagement' },
   { id: 'nav-milestones', label: 'Milestones', icon: 'Award', path: '/milestones', keywords: 'milestones recognition rewards achievements anniversary tenure veteran loyalty roles retention' },
+  { id: 'nav-birthdays', label: 'Birthdays', icon: 'Cake', path: '/birthdays', keywords: 'birthday birthdays celebrate celebration cake age member profile announcement role reward engagement social upcoming calendar' },
   { id: 'nav-economy', label: 'Economy', icon: 'Coins', path: '/economy', keywords: 'economy coins balance wallet reputation global currency transactions ledger leaderboard richest pay transfer circulation overview' },
   { id: 'nav-economy-earning', label: 'Earnings settings', icon: 'Sparkles', path: '/economy-earning', keywords: 'earnings settings rewards earning earn coins activity messages voice reactions daily weekly streak multipliers anti-abuse onboarding events giveaways simulator config how to earn' },
   { id: 'nav-shop', label: 'Shop', icon: 'ShoppingBag', path: '/economy/shop', keywords: 'shop store rewards spend buy purchase roles perks boosters cosmetics coins marketplace' },
@@ -105,6 +106,7 @@ const NAV_CATALOG: NavDef[] = [
   { id: 'nav-pulse-assistant', label: 'Pulse assistant', icon: 'Sparkles', path: '/server-settings', keywords: 'assistant ai chat generation content tone language embed color colour server settings' },
   { id: 'nav-notification-settings', label: 'Notification settings', icon: 'Bell', path: '/notification-settings', keywords: 'notifications alerts toasts events preferences' },
   { id: 'nav-leveling-settings', label: 'Level settings', icon: 'Trophy', path: '/leveling-settings', keywords: 'levels xp leveling rewards roles curve cooldown progression rank' },
+  { id: 'nav-birthday-settings', label: 'Birthday settings', icon: 'Cake', path: '/birthday-settings', keywords: 'birthday birthdays settings channel announcement time timezone role reward message template celebrate config setup' },
 ]
 
 type ActionDef = {
@@ -131,6 +133,7 @@ const ACTION_CATALOG: ActionDef[] = [
   { id: 'act-open-tickets', label: 'Open tickets', subtitle: 'Manage support tickets', icon: 'LifeBuoy', keywords: 'support tickets help desk', action: { kind: 'navigate', href: '/tickets' } },
   { id: 'act-create-giveaway', label: 'Create giveaway', subtitle: 'Launch a new Discord giveaway', icon: 'Gift', keywords: 'new giveaway contest raffle prize draw', action: { kind: 'navigate', href: '/giveaways?new=1' } },
   { id: 'act-create-milestone', label: 'Create milestone', subtitle: 'Reward members for activity & tenure', icon: 'Award', keywords: 'new milestone recognition reward achievement anniversary tenure veteran role', action: { kind: 'navigate', href: '/milestones?new=1' } },
+  { id: 'act-configure-birthdays', label: 'Configure birthdays', subtitle: 'Channel, time, role & rewards', icon: 'Cake', keywords: 'birthday birthdays celebrate settings channel announcement time role reward', action: { kind: 'navigate', href: '/birthday-settings' } },
   { id: 'act-open-leaderboard', label: 'Open leaderboard', subtitle: 'Top members by level, XP & reputation', icon: 'Trophy', keywords: 'leaderboard ranking levels xp top members rank progression', action: { kind: 'navigate', href: '/members?tab=leaderboard' } },
   { id: 'act-open-economy', label: 'Open economy', subtitle: 'Global balance, reputation & transactions', icon: 'Coins', keywords: 'economy coins balance wallet reputation transactions leaderboard grant remove adjust', action: { kind: 'navigate', href: '/economy' } },
   { id: 'act-trigger-sync', label: 'Trigger server sync', subtitle: 'Refresh dashboard data from Discord', icon: 'RefreshCw', keywords: 'sync refresh resync update reload', action: { kind: 'command', commandId: 'sync' } },

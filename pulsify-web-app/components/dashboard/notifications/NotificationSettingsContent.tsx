@@ -204,12 +204,12 @@ export function NotificationSettingsContent({ guildId }: { guildId: string }) {
           dirty={notifDirty}
           changedCount={notifChangedCount}
           saving={saving}
-          saveLabel="Save Preferences"
+          saveLabel="Save settings"
           cleanText="All notification preferences saved."
           dirtyHintText="review and save to apply."
           confirmTitle="Save notification preferences?"
           confirmDescription="These preferences are stored per user, per server."
-          confirmLabel="Save Preferences"
+          confirmLabel="Save settings"
           onReset={handleResetNotifPrefs}
           onSave={handleSaveNotifPrefs}
         />

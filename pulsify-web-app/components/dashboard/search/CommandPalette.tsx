@@ -10,7 +10,7 @@ import {
   CalendarPlus, Plus, AlertCircle, Clock, LineChart, RefreshCw, Compass,
   Bot, Volume2, Folder, Megaphone, Radio, MessagesSquare, Image as ImageIcon,
   Lightbulb, LifeBuoy, Gift, Trophy, Plug, Award, LayoutTemplate, Upload, UserCog,
-  Coins, Store, Crown, ShoppingBag, Backpack, Smile,
+  Coins, Store, Crown, ShoppingBag, Backpack, Smile, Cake,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -32,7 +32,7 @@ const ICONS: Record<string, LucideIcon> = {
   CalendarPlus, Plus, AlertCircle, Clock, LineChart, RefreshCw, Compass, History,
   Bot, Volume2, Folder, Megaphone, Radio, MessagesSquare, Image: ImageIcon,
   Lightbulb, LifeBuoy, Gift, Trophy, Plug, Award, LayoutTemplate, Upload, UserCog,
-  Coins, Store, Crown, ShoppingBag, Backpack, Smile,
+  Coins, Store, Crown, ShoppingBag, Backpack, Smile, Cake,
 }
 
 function Icon({ name, size = 16 }: { name: string; size?: number }) {

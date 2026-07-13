@@ -392,7 +392,7 @@ export function PrivateChannelsSettings({
         dirty={dirty}
         changedCount={changedCount}
         saving={saving}
-        saveLabel="Save Settings"
+        saveLabel="Save settings"
         cleanText="All changes saved. Private Channels apply through the Pulse bot."
         dirtyHintText="review and save to apply via the Pulse bot."
         confirmTitle="Save Private Channels?"

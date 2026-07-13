@@ -13,7 +13,7 @@ type Props = {
   saving?: boolean
   /** Hard-disable both buttons regardless of dirty state. */
   disabled?: boolean
-  /** Button text — e.g. "Save Settings", "Save Automations", "Save Preferences". */
+  /** Button text. Settings surfaces all use the same label: "Save settings". */
   saveLabel: string
   /** Sentence rendered on the bar's left side when not dirty. */
   cleanText?: string

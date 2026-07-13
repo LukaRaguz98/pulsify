@@ -280,12 +280,12 @@ export function OnboardingManager({
       <SaveBar
         dirty={dirty}
         saving={saving}
-        saveLabel="Save onboarding"
+        saveLabel="Save settings"
         cleanText="Onboarding configuration saved."
         dirtyHintText="Review and save to update the member experience."
         confirmTitle="Save onboarding configuration?"
         confirmDescription={config.enabled ? 'This updates the live onboarding experience for new members.' : 'Onboarding is currently disabled — it won’t run until enabled.'}
-        confirmLabel="Save"
+        confirmLabel="Save settings"
         onReset={() => setConfig(baseline)}
         onSave={handleSave}
       />

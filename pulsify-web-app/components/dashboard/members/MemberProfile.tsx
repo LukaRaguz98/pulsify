@@ -54,6 +54,7 @@ import { ModerationHistory } from '@/components/dashboard/members/ModerationHist
 import { ModerationNotes } from '@/components/dashboard/members/ModerationNotes'
 import { MemberQuickActions } from '@/components/dashboard/members/MemberQuickActions'
 import { MemberMilestones } from '@/components/dashboard/members/MemberMilestones'
+import { MemberBirthdayCard } from '@/components/dashboard/members/MemberBirthdayCard'
 import { GlobalPulseProfile } from '@/components/dashboard/members/GlobalPulseProfile'
 
 type Props = {
@@ -66,6 +67,9 @@ type Props = {
    *  default admin Members/Moderation link, `undefined` uses the admin default. */
   backHref?: string | null
   backLabel?: string
+  /** True when the signed-in viewer is looking at their OWN profile — unlocks
+   *  the editable birthday card. */
+  isSelf?: boolean
 }
 
 // Spelled-out age ("9 years and 1 month", "26 days") used for the joined/account
@@ -117,7 +121,7 @@ function fillDaily(daily: { day: string; messages: number; voice_seconds: number
   return out
 }
 
-export function MemberProfile({ guildId, userId, viewerRole = 'admin', backHref, backLabel }: Props) {
+export function MemberProfile({ guildId, userId, viewerRole = 'admin', backHref, backLabel, isSelf = false }: Props) {
   const isAdmin = viewerRole === 'admin'
   const [bundle, setBundle] = useState<MemberProfileBundle | null>(null)
   const [loading, setLoading] = useState(true)
@@ -481,6 +485,12 @@ export function MemberProfile({ guildId, userId, viewerRole = 'admin', backHref,
               level: levelProgress.level,
             }}
           />
+        )}
+
+        {/* Birthday — members can set/manage their own; others see it read-only
+            (respecting the member's privacy choices). */}
+        {isMember && (
+          <MemberBirthdayCard guildId={guildId} userId={userId} isSelf={isSelf} />
         )}
 
         {/* Reputation & trust — the trust score is GLOBAL, so it shows for

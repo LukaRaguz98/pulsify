@@ -18,5 +18,5 @@ export default async function MemberProfilePage({
   const access = await getGuildAccess(guildId)
   if (!access) redirect('/dashboard')
 
-  return <MemberProfile guildId={guildId} userId={access.userId} viewerRole="member" backHref={null} />
+  return <MemberProfile guildId={guildId} userId={access.userId} viewerRole="member" backHref={null} isSelf />
 }

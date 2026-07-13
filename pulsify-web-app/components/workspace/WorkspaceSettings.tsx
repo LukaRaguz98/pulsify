@@ -191,7 +191,7 @@ export function WorkspaceSettings() {
               </div>
 
               <button type="button" onClick={saveBranding} disabled={busy || !name.trim()} className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white transition disabled:opacity-50" style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}>
-                {busy && <Loader2 size={14} className="animate-spin" />} Save changes
+                {busy && <Loader2 size={14} className="animate-spin" />} Save settings
               </button>
             </div>
           </section>

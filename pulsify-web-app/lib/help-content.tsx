@@ -175,6 +175,16 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
       </>
     ),
   },
+  birthdays: {
+    title: 'Birthdays',
+    plan: 'free',
+    body: (
+      <>
+        <p>Members set their birthday (with /birthday or from their profile) and Pulse celebrates them automatically — a configurable announcement, an optional temporary birthday role, and rewards like Pulse Coins, XP or custom roles.</p>
+        <p><strong>Tip:</strong> Birthdays are off until you enable them and pick a channel. Members can hide their birth year or opt out of announcements, so privacy stays in their hands. The sweep runs on the hour you choose, in your server timezone.</p>
+      </>
+    ),
+  },
   economy: {
     title: 'Global Economy',
     plan: 'free',

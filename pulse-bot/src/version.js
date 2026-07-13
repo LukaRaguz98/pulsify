@@ -18,11 +18,27 @@ const path = require("node:path");
 // Current Pulse version. Used for the startup banner and as the displayed
 // version when no release files are reachable. Keep this in step with the
 // newest resources/notes/vX.Y.Z.txt on each release.
-const PULSE_VERSION = "0.57.0";
+const PULSE_VERSION = "0.58.0";
 
 // Manual/static fallback used only when the release-notes files can't be read.
 // Mirrors the shape produced by the parser so callers don't special-case it.
 const STATIC_RELEASES = [
+  {
+    version: "0.58.0",
+    title: "Birthday System",
+    date: "Jul 11, 2026",
+    description:
+      "A Birthdays view in Engagement that celebrates members automatically — they set their birthday (with privacy controls), and on the day Pulse posts an announcement, grants a temporary birthday role and hands out rewards.",
+    highlights: [
+      "**Members set it, their way** — with /birthday set or from the Pulsify profile, with an optional year and timezone; /birthday view, upcoming and remove round out the commands.",
+      "**Privacy first** — hide your age, show only day and month, opt out of announcements, or remove your birthday anytime.",
+      "**Automatic celebrations** — an on-brand Pulse v2 announcement with a custom message, mentions, image and button, at the channel and hour you choose.",
+      "**Role & rewards** — a temporary birthday role that auto-removes, plus optional Pulse Coins, XP and custom roles (reputation stays computed, never granted).",
+      "**A view built for it** — today's and upcoming birthdays, a month calendar, countdown labels, celebration history and one settings panel with a live preview and Send test.",
+    ],
+    outro:
+      "Give your community a reason to celebrate — automatic, personal and completely in your members' control.",
+  },
   {
     version: "0.57.0",
     title: "Server Statistics Channels",

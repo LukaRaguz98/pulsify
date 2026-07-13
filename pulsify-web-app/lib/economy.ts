@@ -102,6 +102,7 @@ export const TRANSACTION_REASON_LABELS: Record<string, string> = {
   onboarding_roles: 'Role selection',
   daily: 'Daily reward',
   weekly: 'Weekly reward',
+  birthday: 'Birthday reward',
   transfer: 'Member transfer',
   admin: 'Administrative',
 }

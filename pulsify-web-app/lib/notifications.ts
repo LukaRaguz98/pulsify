@@ -62,6 +62,8 @@ export const NOTIFICATION_TYPES = [
   'level_up',
   // milestones
   'milestone_reached',
+  // birthdays
+  'birthday_today',
   // economy
   'reward_purchased',
   // security
@@ -90,6 +92,7 @@ export type NotificationCategory =
   | 'integrations'
   | 'leveling'
   | 'milestones'
+  | 'birthdays'
   | 'economy'
   | 'security'
   | 'bot'
@@ -134,6 +137,7 @@ export const TYPE_TO_CATEGORY: Record<NotificationType, NotificationCategory> = 
   integration_error: 'integrations',
   level_up: 'leveling',
   milestone_reached: 'milestones',
+  birthday_today: 'birthdays',
   reward_purchased: 'economy',
   security_alert: 'security',
   security_mitigation: 'security',
@@ -180,6 +184,7 @@ export const TYPE_TO_SEVERITY: Record<NotificationType, NotificationSeverity> = 
   integration_error: 'error',
   level_up: 'success',
   milestone_reached: 'success',
+  birthday_today: 'success',
   reward_purchased: 'success',
   security_alert: 'warning',
   security_mitigation: 'warning',
@@ -203,6 +208,7 @@ export const CATEGORY_LABELS: Record<NotificationCategory, string> = {
   integrations: 'Integrations',
   leveling: 'Levels & XP',
   milestones: 'Milestones',
+  birthdays: 'Birthdays',
   economy: 'Economy',
   security: 'Security',
   bot: 'Bot Status',
@@ -245,6 +251,7 @@ export const TYPE_LABELS: Record<NotificationType, string> = {
   integration_error: 'Integration error',
   level_up: 'Member level-up',
   milestone_reached: 'Milestone reached',
+  birthday_today: 'Birthday today',
   reward_purchased: 'Reward purchased',
   security_alert: 'Security alert',
   security_mitigation: 'Mitigation activated',
@@ -291,6 +298,7 @@ export const TYPE_DESCRIPTIONS: Record<NotificationType, string> = {
   integration_error: 'An integration connection or sync failed.',
   level_up: 'A member reaches a new level.',
   milestone_reached: 'A member earns a recognition milestone.',
+  birthday_today: 'A member’s birthday is celebrated today.',
   reward_purchased: 'A member buys a reward from the shop.',
   security_alert: 'A suspicious traffic spike or abuse pattern is detected.',
   security_mitigation: 'An automatic or manual protection action is applied.',

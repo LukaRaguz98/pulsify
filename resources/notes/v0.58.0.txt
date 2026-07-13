@@ -1,0 +1,25 @@
+**Pulsify v0.58.0 — Birthday System**
+A new Birthdays view in Engagement lets Pulse celebrate your members automatically. Members set their birthday, and on the day Pulse posts a warm announcement, hands out a special role and rewards — a personal, social touch that keeps your community coming back.
+
+**Members set it, Pulse remembers**
+- **Their birthday, their way** — set it with /birthday set or right from the Pulsify profile, with an optional year and timezone so the day lands at the right time.
+- **Privacy first** — hide your age, show only the day and month, opt out of a public shout-out, or remove your birthday entirely, anytime.
+- **Handy commands** — /birthday view, /birthday upcoming and /birthday remove round out the set.
+
+**Automatic celebrations**
+- **On-brand announcements** — a Pulse v2 embed with your own message template, mentions, an optional image and a link button, posted to the channel you choose at the hour you pick.
+- **Birthday role** — grant a special role on the day that Pulse removes automatically after a duration you set.
+- **Rewards** — optionally gift Pulse Coins, an XP bonus or custom roles. (Reputation stays a computed trust score, so it's never handed out.)
+
+**A view built for it**
+- **At a glance** — today's birthdays, the next up, who's celebrated this year and your configured channel.
+- **Cards, calendar & countdowns** — browse upcoming birthdays as cards, jump around a month calendar, and see "Today", "Tomorrow" or "in 5 days" at a glance.
+- **History** — every celebration Pulse has run, with the rewards that were granted.
+
+**Admin controls**
+- **One place to tune it** — channel, announce time and timezone, the birthday role and its duration, rewards and the message template, all with a live preview and a "Send test" button.
+- **Off until you're ready** — birthdays start disabled; enable them and pick a channel to begin.
+
+Give your community a reason to celebrate — automatic, personal and completely in your members' control.
+
+July 11, 2026

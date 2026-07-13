@@ -51,6 +51,8 @@ const ICON_FILES = {
   info: "pulse-info.png",
   // Global economy glyph (/balance, /pay, /earn, global boards).
   money: "pulse-money.png",
+  // Birthday cake glyph (/birthday, birthday announcements).
+  birthday: "pulse-birthday.png",
 };
 const localIconCache = {};
 
@@ -1099,6 +1101,93 @@ const COMMANDS = [
         return;
       }
       await milestones.handleMilestonesCommand({ interaction, guild, ephemeral });
+    },
+  },
+  {
+    name: "birthday",
+    category: "information",
+    defaultPermission: PERMISSION.EVERYONE,
+    data: (() => {
+      const MONTH_CHOICES = [
+        { name: "January", value: 1 },
+        { name: "February", value: 2 },
+        { name: "March", value: 3 },
+        { name: "April", value: 4 },
+        { name: "May", value: 5 },
+        { name: "June", value: 6 },
+        { name: "July", value: 7 },
+        { name: "August", value: 8 },
+        { name: "September", value: 9 },
+        { name: "October", value: 10 },
+        { name: "November", value: 11 },
+        { name: "December", value: 12 },
+      ];
+      const TZ_CHOICES = [
+        { name: "UTC", value: "UTC" },
+        { name: "Pacific (Los Angeles)", value: "America/Los_Angeles" },
+        { name: "Mountain (Denver)", value: "America/Denver" },
+        { name: "Central (Chicago)", value: "America/Chicago" },
+        { name: "Eastern (New York)", value: "America/New_York" },
+        { name: "Brazil (Sao Paulo)", value: "America/Sao_Paulo" },
+        { name: "UK (London)", value: "Europe/London" },
+        { name: "Central Europe (Paris)", value: "Europe/Paris" },
+        { name: "Eastern Europe (Athens)", value: "Europe/Athens" },
+        { name: "Moscow", value: "Europe/Moscow" },
+        { name: "Gulf (Dubai)", value: "Asia/Dubai" },
+        { name: "India (Kolkata)", value: "Asia/Kolkata" },
+        { name: "Singapore", value: "Asia/Singapore" },
+        { name: "Japan (Tokyo)", value: "Asia/Tokyo" },
+        { name: "Sydney", value: "Australia/Sydney" },
+        { name: "New Zealand (Auckland)", value: "Pacific/Auckland" },
+      ];
+      const maxYear = new Date().getUTCFullYear() - 13;
+      return new SlashCommandBuilder()
+        .setName("birthday")
+        .setDescription("Set and view birthdays in this server")
+        .addSubcommand((sc) =>
+          sc
+            .setName("set")
+            .setDescription("Set your birthday so Pulse can celebrate you")
+            .addIntegerOption((o) =>
+              o.setName("month").setDescription("Birth month").setRequired(true).addChoices(...MONTH_CHOICES),
+            )
+            .addIntegerOption((o) =>
+              o.setName("day").setDescription("Day of the month (1-31)").setRequired(true).setMinValue(1).setMaxValue(31),
+            )
+            .addIntegerOption((o) =>
+              o.setName("year").setDescription("Birth year (optional)").setRequired(false).setMinValue(1900).setMaxValue(maxYear),
+            )
+            .addStringOption((o) =>
+              o.setName("timezone").setDescription("Your timezone (optional)").setRequired(false).addChoices(...TZ_CHOICES),
+            )
+            .addBooleanOption((o) =>
+              o.setName("hide_year").setDescription("Hide your age / birth year").setRequired(false),
+            )
+            .addBooleanOption((o) =>
+              o.setName("announce").setDescription("Allow a public birthday announcement (default: yes)").setRequired(false),
+            ),
+        )
+        .addSubcommand((sc) =>
+          sc
+            .setName("view")
+            .setDescription("View a member's birthday")
+            .addUserOption((o) =>
+              o.setName("user").setDescription("The member to look up (defaults to you)").setRequired(false),
+            ),
+        )
+        .addSubcommand((sc) =>
+          sc.setName("upcoming").setDescription("See the next upcoming birthdays in this server"),
+        )
+        .addSubcommand((sc) =>
+          sc.setName("remove").setDescription("Remove your birthday from this server"),
+        );
+    })(),
+    async execute({ interaction, guild, birthdays }) {
+      if (!birthdays?.handleBirthdayCommand) {
+        await replyNotice(interaction, "Birthdays aren't available right now.");
+        return;
+      }
+      await birthdays.handleBirthdayCommand({ interaction, guild });
     },
   },
   {

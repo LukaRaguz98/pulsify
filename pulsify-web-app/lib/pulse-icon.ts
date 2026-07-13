@@ -40,6 +40,8 @@ export const PULSE_ICONS = {
   info: 'pulse-info.png',
   /** Coin glyph — the global-economy embeds (/balance, /pay, /earn). */
   money: 'pulse-money.png',
+  /** Cake glyph — the birthday announcement + /birthday embeds. */
+  birthday: 'pulse-birthday.png',
 } as const
 
 export type PulseIconName = keyof typeof PULSE_ICONS

@@ -243,7 +243,7 @@ export function RulesForm({
       <SaveBar
         dirty={dirty}
         saving={saving}
-        saveLabel="Save protection settings"
+        saveLabel="Save settings"
         confirmTitle="Save DDoS Protection settings?"
         confirmDescription="The Pulse bot picks up the new rules, alert channel and auto-lockdown trigger immediately."
         onReset={reset}
