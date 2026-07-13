@@ -4929,3 +4929,104 @@ Acceptance Criteria
 	Preview displays correctly
 	Discord synchronization is reliable
 	UI remains responsive and visually polished
+
+PULSIFY-58 — Birthday System & Member Celebrations (v0.58.0)
+
+Description
+	Implement a Birthday System that allows members to set their birthday and lets Pulse automatically celebrate birthdays inside Discord with configurable messages, roles, and rewards.
+	This feature should improve community engagement and add a more personal, social layer to Pulsify.
+
+Goals
+	Increase community engagement
+	Add member celebration automation
+	Improve community retention
+	Provide a lightweight social feature
+	Expand Pulse automation capabilities
+
+Tasks
+
+	Birthday View
+		Create:
+			Engagement > Birthdays
+
+		Display:
+			upcoming birthdays
+			today's birthdays
+			configured birthday channel
+			birthday settings
+			birthday history
+
+	Member Birthday Setup
+		Allow members to set their birthday through:
+			Discord command
+			Pulsify member profile
+
+		Support:
+			day/month
+			optional year
+			timezone preference
+			privacy settings
+
+	Birthday Announcements
+		Automatically post birthday messages to the configured Discord channel
+
+		Support:
+			custom message templates
+			Pulse v2 embeds
+			mentions
+			images
+			buttons
+
+	Birthday Rewards
+		Optional rewards:
+			temporary birthday role
+			Pulse Balance reward
+			Reputation reward
+			XP reward
+			custom role reward
+
+	Birthday Role
+		Allow configuring:
+			birthday role
+			role duration
+			automatic assignment
+			automatic removal
+
+	Commands
+		Add commands:
+			/birthday set
+			/birthday view
+			/birthday upcoming
+			/birthday remove
+
+	Privacy & Controls
+		Allow users to:
+			hide birthday year
+			show only month/day
+			remove birthday
+			disable birthday announcements
+
+	Admin Settings
+		Allow administrators to configure:
+			birthday channel
+			announcement time
+			birthday role
+			rewards
+			announcement template
+			enabled/disabled state
+
+	UX Improvements
+		Add birthday cards
+		Add calendar view
+		Add countdown labels
+		Add loading/error states
+		Add responsive layout
+
+Acceptance Criteria
+	Members can set and manage birthdays
+	Birthday announcements post automatically
+	Birthday rewards are granted correctly
+	Birthday roles expire correctly
+	Privacy options work correctly
+	Commands function correctly
+	UI remains responsive and polished
