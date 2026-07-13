@@ -1136,7 +1136,7 @@ export function ServerSettingsContent({ guildId }: Props) {
         // Guild inputs are already disabled when the bot can't edit, so the only
         // changes possible then are branding or Pulse prefs — keep Save reachable.
         disabled={!botCanEdit && !brandingDirty && !pulseDirty}
-        saveLabel="Save Settings"
+        saveLabel="Save settings"
         cleanText="All changes saved. Edits sync to Discord on save."
         dirtyHintText="review and save to sync with Discord."
         confirmTitle="Apply server settings?"

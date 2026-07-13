@@ -382,12 +382,12 @@ export function MemberMessagesManager({
         dirty={dirty}
         changedCount={changedCount}
         saving={saving}
-        saveLabel="Save messages"
+        saveLabel="Save settings"
         cleanText="All changes saved. Messages are posted by the Pulse bot."
         dirtyHintText="review and save to apply via the Pulse bot."
         confirmTitle="Save member messages?"
         confirmDescription="These changes will be applied by the Pulse bot immediately."
-        confirmLabel="Save messages"
+        confirmLabel="Save settings"
         onReset={handleReset}
         onSave={handleSave}
       />

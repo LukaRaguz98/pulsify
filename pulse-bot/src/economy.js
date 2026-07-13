@@ -90,6 +90,7 @@ function describeTransaction(t) {
     onboarding_roles: "Role selection",
     daily: "Daily reward",
     weekly: "Weekly reward",
+    birthday: "Birthday reward",
     admin: "Administrative",
   };
   if (t.kind === "transfer_in") return `Transfer from ${t.counterparty_name ?? "a member"}`;

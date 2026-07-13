@@ -171,7 +171,7 @@ export function ScheduleCard({ guildId, schedule }: { guildId: string; schedule:
           style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))' }}
         >
           {busy && <Loader2 size={13} className="animate-spin" />}
-          {busy ? 'Saving…' : 'Save schedule'}
+          {busy ? 'Saving…' : 'Save settings'}
         </button>
       </div>
     </div>

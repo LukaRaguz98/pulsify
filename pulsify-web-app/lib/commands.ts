@@ -96,6 +96,15 @@ export const COMMAND_CATALOG: CommandDefinition[] = [
       'Lists the recognition milestones a member has earned (time in server, messages, voice, events, giveaways, XP/level) and how close they are to the next ones. Milestones are configured in the dashboard under Engagement › Milestones. Defaults to your own.',
   },
   {
+    name: 'birthday',
+    description: 'Set and view birthdays in this server',
+    category: 'information',
+    defaultPermission: 'everyone',
+    examples: ['/birthday set month:March day:14', '/birthday view', '/birthday upcoming', '/birthday remove'],
+    detail:
+      'Members set their birthday (day/month, optional year, optional timezone) so Pulse can celebrate them automatically. Subcommands: set (add or update yours, with privacy options to hide your year or opt out of announcements), view (see yours or another member\'s), upcoming (the next birthdays in the server) and remove. Admins configure the announcement channel, time, role and rewards under Engagement › Birthdays.',
+  },
+  {
     name: 'balance',
     description: "Show a member's global Pulse balance, reputation and ranking",
     category: 'information',

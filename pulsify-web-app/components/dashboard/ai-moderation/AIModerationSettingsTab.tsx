@@ -442,7 +442,7 @@ export function AIModerationSettingsTab({
         dirty={dirty}
         changedCount={changedCount}
         saving={saving}
-        saveLabel="Save Settings"
+        saveLabel="Save settings"
         confirmTitle="Save Pulse settings?"
         confirmDescription="These settings drive real-time auto-actions. Changes take effect immediately."
         onReset={handleReset}

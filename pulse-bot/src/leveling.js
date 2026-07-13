@@ -465,6 +465,23 @@ function createLeveling(client, supabase, rewards = null, shop = null) {
     }
   }
 
+  /**
+   * One-off XP grant used by other systems (e.g. the Birthday reward). Unlike the
+   * activity hooks this ignores the enabled/ignored gates — the caller has opted
+   * in explicitly — but still runs through addXp so the guild multiplier, level
+   * cache, reward roles and level-up announcement all stay consistent.
+   */
+  async function awardBonusXp(guild, member, amount) {
+    try {
+      if (!guild || !member || member.user?.bot) return;
+      if (!Number.isFinite(amount) || amount <= 0) return;
+      const cfg = await getConfig(guild.id);
+      await addXp(guild, member, amount, cfg, null);
+    } catch (err) {
+      console.warn("[Pulse] awardBonusXp failed:", err.message);
+    }
+  }
+
   // ── Voice XP tick ────────────────────────────────────────────────────────────
 
   async function voiceTick() {
@@ -626,6 +643,7 @@ function createLeveling(client, supabase, rewards = null, shop = null) {
     awardCommand,
     awardGiveawayEntry,
     awardEventInterest,
+    awardBonusXp,
     getLevelInfo: rankInfo,
     handleLeaderboardCommand,
   };

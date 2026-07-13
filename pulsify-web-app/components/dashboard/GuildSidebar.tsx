@@ -48,6 +48,7 @@ import {
   BarChart3,
   Siren,
   Smile,
+  Cake,
 } from 'lucide-react'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
 import { SearchTrigger } from '@/components/dashboard/search/SearchTrigger'
@@ -264,6 +265,7 @@ export function GuildSidebar({
         { label: 'Giveaways', href: `${base}/giveaways`, icon: <Gift size={16} /> },
         { label: 'Polls', href: `${base}/polls`, icon: <Vote size={16} /> },
         { label: 'Milestones', href: `${base}/milestones`, icon: <Award size={16} /> },
+        { label: 'Birthdays', href: `${base}/birthdays`, icon: <Cake size={16} />, matchPrefixes: ['/birthday-settings'] },
       ],
     },
     economyGroup,

@@ -42,6 +42,7 @@ const { createShop } = require("./shop");
 const { createPrivateChannels } = require("./private-channels");
 const { createTemporaryRoles } = require("./temporary-roles");
 const { createSelfRoles } = require("./self-roles");
+const { createBirthdays } = require("./birthdays");
 const { createStatisticsChannels } = require("./statistics-channels");
 
 const supabase = createClient(
@@ -194,6 +195,13 @@ const selfRoles = createSelfRoles(client, supabase);
 // their names in sync with server stats via realtime + a 10-minute sweep. The
 // dashboard owns the config; this module owns every Discord operation.
 const statisticsChannels = createStatisticsChannels(client, supabase);
+
+// Birthday System (PULSIFY-58): a 15-minute sweep that, once the configured
+// local hour is reached, celebrates members whose birthday is "today" — posting
+// the announcement, granting rewards (coins via economy, XP via leveling, custom
+// roles) and assigning a temporary birthday role. Members author their own
+// birthday; the dashboard owns the per-guild configuration.
+const birthdays = createBirthdays(client, supabase, economy, leveling);
 
 /**
  * Shared helper for Discord-side activity → notifications row.
@@ -468,6 +476,10 @@ client.once(Events.ClientReady, async (readyClient) => {
   // Statistics Channels: subscribe to config changes, provision channels for
   // enabled rows, and start the 10-minute value-sync sweep.
   await statisticsChannels.start();
+
+  // Birthdays: load per-guild config into cache, subscribe to changes and start
+  // the daily celebration sweep.
+  await birthdays.start();
 
   // Startup banner — a clear, scannable success summary so an operator can
   // confirm at a glance which version is live, how many servers it serves, and
@@ -1166,6 +1178,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       milestones,
       economy,
       economyRewards,
+      birthdays,
       ephemeral: verdict.ephemeral,
     });
     verdict.commit();

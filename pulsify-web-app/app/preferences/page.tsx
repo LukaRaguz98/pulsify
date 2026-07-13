@@ -438,12 +438,12 @@ export default function PreferencesPage() {
         <SaveBar
           dirty={appDirty}
           changedCount={appChangedCount}
-          saveLabel="Save Preferences"
+          saveLabel="Save settings"
           cleanText="All preferences saved. Changes preview live as you edit."
           dirtyHintText="review and save to keep these preferences."
           confirmTitle="Save preferences?"
           confirmDescription="Your dashboard preferences will be kept across sessions."
-          confirmLabel="Save Preferences"
+          confirmLabel="Save settings"
           onReset={handleResetAppPrefs}
           onSave={handleSaveAppPrefs}
         />

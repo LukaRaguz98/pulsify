@@ -245,7 +245,7 @@ export function PresenceContent({
                   style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))', boxShadow: '0 12px 30px -12px var(--p-glow)' }}
                 >
                   {pending ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-                  {dirty ? 'Save changes' : 'Saved'}
+                  {dirty ? 'Save settings' : 'Saved'}
                 </button>
                 {lastUpdated && mounted && (
                   <p className="mt-2 text-center text-[11px]" style={{ color: 'var(--text-3)' }} suppressHydrationWarning>
