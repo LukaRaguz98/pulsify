@@ -35,7 +35,7 @@ import {
 import {
   saveBirthdaySettings,
   testBirthdayAnnouncement,
-} from '@/app/dashboard/[guildId]/(management)/birthdays/actions'
+} from '@/app/dashboard/[guildId]/birthdays/actions'
 
 type Option = { id: string; name: string; color?: number }
 type Props = {

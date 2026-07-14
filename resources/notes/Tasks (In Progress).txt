@@ -1,133 +1,182 @@
-PULSIFY-59 — Alt Risk Detection & Investigation System (v0.59.0)
+PULSIFY-60 — Invite Tracking, Rewards & Referral System (v0.60.0)
 
 Description
-	Implement an Alt Risk Detection system under the Safety module that analyzes Discord accounts for indicators commonly associated with alternate (alt) accounts, throwaway accounts, and suspicious member behavior.
-	Rather than attempting to definitively identify alternate accounts, the system should calculate a Risk Score based on multiple signals and display Potential Linked Accounts with confidence indicators where sufficient evidence exists.
+	Implement a complete Invite Tracking and Referral system that allows server administrators to track who invited each member, measure invite performance, prevent invite abuse, and automatically reward members for successful referrals.
+	The system should integrate with existing Pulsify modules such as Economy, Reputation, Levels & XP, Roles, Achievements, Analytics, and Automations.
 
 Goals
-	Improve community safety
-	Help moderators identify suspicious accounts
-	Detect potential alternate accounts
-	Reduce ban evasion and abuse
-	Provide a centralized account risk assessment tool
+	Track member invites accurately
+	Reward members for successful referrals
+	Improve community growth and engagement
+	Prevent fake or abusive invite farming
+	Give administrators clear invite analytics
 
 Tasks
-	Safety View
-		Create:
-			Safety > Alt Detection
+
+	Invite Tracking
+		Track all Discord server invites and record:
+			inviter
+			invited member
+			invite code
+			invite creation date
+			invite usage count
+			member join date
+			member leave date
+			invite source where available
+
+		Detect which invite was used when a member joins the server
+
+	Invite Statistics
+		Create a dedicated view:
+			Engagement > Invites
 
 		Display:
-			account lookup
-			risk score
-			account summary
-			potential linked accounts
-			investigation history
+			total invites
+			valid invites
+			fake invites
+			left members
+			bonus invites
+			current invite score
+			top inviters
+			recent invited members
 
-	User Lookup
-		Allow administrators to search using:
-			Discord User ID
-			Username
-			Mention
+	Invite Leaderboard
+		Add an invite leaderboard showing:
+			ranking position
+			inviter
+			total invites
+			valid invites
+			retained members
+			fake invites
+			rewards earned
 
-		Display:
-			username
-			display name
-			avatar
-			Discord ID
-			account creation date
-			server join date
-			roles
-			current status
+		Support filtering by:
+			daily
+			weekly
+			monthly
+			all time
 
-	Risk Analysis
-		Calculate an Alt Risk Score based on factors such as:
-			account age
-			recent server join
-			default avatar
-			activity history
-			moderation history
-			reputation
-			economy activity
-			giveaway participation
-			application history
-			onboarding completion
-			verification status
-			previous safety flags
+	Invite Rewards
+		Allow administrators to configure milestone rewards
 
-		Display a risk level:
-			Low
-			Moderate
-			High
-			Critical
+		Supported rewards:
+			Global Balance
+			Global Reputation
+			Server XP
+			Discord Roles
+			Temporary Roles
+			Achievements
+			Marketplace Items
+			Custom Rewards
 
-	Potential Linked Accounts
-		Display accounts that may be related based on available platform data and behavioral signals
+		Example milestones:
+			5 valid invites → 250 Pulse Coins
+			10 valid invites → VIP role
+			25 valid invites → 500 XP
+			50 valid invites → Special Badge
 
-		Examples of correlation:
-			similar usernames
-			similar join times
-			shared moderation history
-			shared economy interactions
-			similar activity patterns
-			previous moderator links
+	Reward Configuration
+		Allow administrators to:
+			create reward milestones
+			edit reward milestones
+			enable or disable rewards
+			configure whether rewards stack
+			choose whether rewards are removed if invite count drops
+			preview reward progression
 
-		Display:
-			confidence percentage
-			matching indicators
-			risk level
+	Valid Invite Rules
+		Allow administrators to configure what counts as a valid invite
 
-		Note:
-			These accounts should be presented as Potential Linked Accounts, not confirmed alternate accounts
+		Possible requirements:
+			minimum account age
+			minimum server stay duration
+			completed onboarding
+			completed verification
+			no active moderation flags
+			minimum activity requirement
+			not detected as a likely alt account
 
-	Investigation History
+	Anti-Abuse Protection
+		Detect and prevent:
+			self-invites
+			alt account farming
+			rapid join-and-leave abuse
+			suspicious invite spikes
+			duplicate reward claims
+			fake or invalid invites
+			repeated invite code manipulation
+
+		Integrate with Safety > Alt Detection where applicable
+
+	Invite Retention
+		Track whether invited members:
+			completed onboarding
+			remained in the server
+			became active
+			left shortly after joining
+			received moderation actions
+
+		Display invite quality and retention metrics per inviter
+
+	Invite Analytics
 		Track:
-			previous lookups
-			moderator notes
-			safety flags
-			investigation outcomes
-			manual links between accounts
+			invite growth over time
+			invite conversion rate
+			member retention by inviter
+			highest-quality inviters
+			reward distribution
+			suspicious invite activity
+			most-used invite links
 
-	Manual Linking
-		Allow moderators to:
-			mark accounts as related
-			remove manual links
-			add investigation notes
-			assign investigation status
+		Add charts and trends
 
-	Safety Dashboard
-		Display:
-			highest risk accounts
-			recently detected risks
-			investigation queue
-			resolved investigations
-			linked account groups
+	Discord Commands
+		Add commands such as:
+			/invites
+			/invites user
+			/invite-leaderboard
+			/invite-rewards
 
-	Discord Integration
-		Add moderation command:
-			/alt-check
+		Display Pulse-styled v2 embeds
 
-		Display:
-			account age
-			risk score
-			risk factors
-			potential linked accounts
-			recommendation summary
+	Discord Notifications
+		Optionally notify users when:
+			an invited member joins
+			an invite becomes valid
+			an invite milestone is reached
+			a reward is earned
+			an invite is marked invalid
 
-		Use Pulse v2 embed styling
+		Allow selecting a destination channel
+
+	Admin Management
+		Allow administrators to:
+			manually add or remove invite credits
+			invalidate an invite
+			approve a suspicious invite
+			grant missed rewards
+			reset invite statistics
+			view invite history
+
+		All manual changes must be added to audit logs
 
 	UX Improvements
-		Add risk badges
-		Add confidence indicators
-		Add investigation timeline
-		Add search & filtering
+		Add invite progress cards
+		Add milestone progress bars
+		Add inviter profile drawer
 		Add responsive layouts
-		Add loading/error/empty states
+		Add search and filtering
+		Add loading, error, and empty states
+		Maintain consistency with Pulsify design language
 
 Acceptance Criteria
-	Administrators can search for any Discord user
-	Account information is displayed correctly
-	Risk Score is calculated using available signals
-	Potential Linked Accounts are displayed with confidence indicators
-	Manual investigation notes and links persist correctly
-	/alt-check displays account risk information
+	Pulsify correctly identifies which invite was used when a member joins
+	Invite statistics are tracked accurately
+	Valid and invalid invites are distinguished correctly
+	Invite rewards are granted automatically
+	Anti-abuse rules prevent common invite farming methods
+	Invite leaderboards display correct rankings
+	Invite retention analytics work correctly
+	Discord commands return accurate information
+	Manual admin actions are logged
 	UI remains responsive and visually polished

@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
 import { recordNotification } from '@/lib/notifications-server'
+import { readGuildEmbedInt } from '@/lib/embed-color'
 import {
   postChannelComponentsReturningId,
   editChannelComponents,
@@ -27,8 +28,10 @@ export type ActionResult<T = undefined> =
   | (T extends undefined ? { ok: true } : { ok: true; data: T })
   | { ok: false; error: string }
 
-const BRAND = 0x8b5cf6
-const GREY = 0x94a3b8
+// Every giveaway embed — live or cancelled — wears the guild's accent
+// (guild_settings.embed_color, set in Server Settings). No per-state colours: the
+// state is spelled out in the embed's text, and the colour is the server's brand.
+// Mirrors pulse-bot/src/giveaways.js.
 
 // Pulse giveaway badge — attached as a header thumbnail on the embed the
 // dashboard posts, identical bytes to the copy the bot ships so a giveaway
@@ -117,6 +120,7 @@ function activeContainer(g: {
   host_id: string | null
   host_name: string | null
   requirements: GiveawayRequirements
+  accent: number
 }): V2TopLevelComponent {
   const req = g.requirements
   const endUnix = Math.floor(new Date(g.ends_at).getTime() / 1000)
@@ -153,10 +157,10 @@ function activeContainer(g: {
     ],
   })
   body.push(td('-# Pulse — Giveaway'))
-  return { type: 17, accent_color: BRAND, components: body } as unknown as V2TopLevelComponent
+  return { type: 17, accent_color: g.accent, components: body } as unknown as V2TopLevelComponent
 }
 
-function cancelledContainer(g: { title: string; description: string | null; prize: string }): V2TopLevelComponent {
+function cancelledContainer(g: { title: string; description: string | null; prize: string; accent: number }): V2TopLevelComponent {
   // Mirrors giveaways.js endedContainer (cancelled branch): prize in the header
   // beside the badge, description below, then the cancelled notice.
   const body: Record<string, unknown>[] = [...headerBlocks(g.title, `**Prize:** ${g.prize}`)]
@@ -164,7 +168,7 @@ function cancelledContainer(g: { title: string; description: string | null; priz
   body.push({ type: 14, divider: true, spacing: 1 })
   body.push(td('This giveaway was cancelled.'))
   body.push(td('-# Pulse — Giveaway cancelled'))
-  return { type: 17, accent_color: GREY, components: body } as unknown as V2TopLevelComponent
+  return { type: 17, accent_color: g.accent, components: body } as unknown as V2TopLevelComponent
 }
 
 // ── Create ────────────────────────────────────────────────────────────────────
@@ -221,7 +225,7 @@ export async function createGiveaway(
   if (!scheduled) {
     const res = await postChannelComponentsReturningId(
       draft.channel_id,
-      [activeContainer({ ...insert, id, host_name: hostName })],
+      [activeContainer({ ...insert, id, host_name: hostName, accent: await readGuildEmbedInt(supabase, guildId) })],
       iconAttachments(),
     )
     if (res.ok) {
@@ -294,7 +298,7 @@ export async function updateGiveaway(
   // Re-render the live message if one is already posted.
   if (g.message_id && g.status === 'active') {
     await editChannelComponents(g.channel_id, g.message_id, [
-      activeContainer({ ...g, ...update, id, host_name: g.host_name }),
+      activeContainer({ ...g, ...update, id, host_name: g.host_name, accent: await readGuildEmbedInt(supabase, guildId) }),
     ])
   }
 
@@ -370,7 +374,12 @@ export async function cancelGiveaway(guildId: string, id: string): Promise<Actio
   // Flip the live message to its cancelled state, if one was posted.
   if (g.message_id) {
     await editChannelComponents(g.channel_id, g.message_id, [
-      cancelledContainer({ title: g.title, description: g.description, prize: g.prize }),
+      cancelledContainer({
+        title: g.title,
+        description: g.description,
+        prize: g.prize,
+        accent: await readGuildEmbedInt(supabase, guildId),
+      }),
     ])
   }
 

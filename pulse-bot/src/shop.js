@@ -21,7 +21,6 @@ const { recordNotification } = require("./notifications");
 const {
   buildPulseContainer,
   getPulseColor,
-  loadPulseIcon,
   text,
   divider,
 } = require("./commands");
@@ -83,7 +82,6 @@ function createShop(client, supabase) {
     const snap = purchase.reward_snapshot ?? {};
     const guildId = purchase.guild_id;
     const colorHex = await getPulseColor(supabase, guildId ?? "");
-    const icon = await loadPulseIcon("money", colorHex);
 
     const label = CATEGORY_LABELS[snap.category] ?? "Reward";
     const guild = guildId ? client.guilds.cache.get(guildId) : null;
@@ -107,8 +105,9 @@ function createShop(client, supabase) {
       body.push(text("-# It now decorates your global Pulse profile."));
     }
 
+    // No header badge: a receipt is three short lines (see the embed conventions
+    // on buildPulseContainer).
     const container = buildPulseContainer({
-      iconUrl: icon ? `attachment://${icon.name}` : null,
       colorHex,
       title: "Purchase confirmed",
       subtitle: snap.name ?? undefined,
@@ -120,7 +119,7 @@ function createShop(client, supabase) {
       const user = await client.users.fetch(purchase.user_id).catch(() => null);
       if (user) {
         await user
-          .send({ flags: MessageFlags.IsComponentsV2, components: [container], files: icon ? [icon] : [] })
+          .send({ flags: MessageFlags.IsComponentsV2, components: [container] })
           .catch(() => {});
       }
     } catch {

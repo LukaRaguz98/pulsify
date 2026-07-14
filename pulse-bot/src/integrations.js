@@ -22,7 +22,9 @@ const path = require("path");
 const { MessageFlags } = require("discord.js");
 const { recordNotification } = require("./notifications");
 const { POLLERS, UNSUPPORTED } = require("./integration-providers");
+const { getGuildAccent } = require("./guild-accent");
 
+// Last-resort fallback only — the real colour always comes from the guild accent.
 const BRAND = 0x8b5cf6;
 
 // ── Brand icon ──────────────────────────────────────────────────────────────
@@ -71,9 +73,10 @@ function providerName(id) {
   );
 }
 
-// Brand accent per provider so each service's notification reads distinctly (the
-// container's left bar). Mirrors `accent` in pulsify-web-app/lib/integrations.ts.
-// Falls back to the Pulse violet BRAND for anything unmapped.
+// Provider brand colours. These no longer tint the embed — every Pulse embed
+// wears the GUILD's accent (guild_settings.embed_color, set in the dashboard's
+// Server Settings) — but the map is kept because the dashboard still shows each
+// provider in its own brand colour.
 const PROVIDER_ACCENTS = {
   github: 0x8b949e,
   gitlab: 0xfc6d26,
@@ -176,7 +179,7 @@ function renderTemplate(template, ctx) {
 // rendered body (raw URL line stripped), a divider + labeled details block, a
 // source-link button, then the `-# Pulse — Integrations` footer. Accent is the
 // provider's brand colour. An optional leading mention line pings a role.
-function buildContainer(provider, label, body, mentionLine, ctx = {}) {
+function buildContainer(provider, label, body, mentionLine, ctx = {}, accent = BRAND) {
   const text = (content) => ({ type: 10, content });
   const headerLines = [
     text("**Pulse**"),
@@ -228,7 +231,6 @@ function buildContainer(provider, label, body, mentionLine, ctx = {}) {
 
   components.push({ type: 14, divider: true, spacing: 1 });
   components.push(text("-# Pulse — Integrations"));
-  const accent = PROVIDER_ACCENTS[provider];
   return {
     type: 17,
     accent_color: typeof accent === "number" ? accent : BRAND,
@@ -344,6 +346,7 @@ function createIntegrations(client, supabase) {
       body,
       mentionLine,
       placeholders,
+      await getGuildAccent(supabase, row.guild_id),
     );
     await channel.send({
       flags: MessageFlags.IsComponentsV2,

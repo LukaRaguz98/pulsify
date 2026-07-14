@@ -9,7 +9,7 @@ import {
   type V2Attachment,
 } from '@/lib/discord'
 import { getTintedPulseIcon, pulseIconFilename } from '@/lib/pulse-icon'
-import { normaliseSettings, type AIModerationSettings } from '@/lib/ai-moderation'
+import { readGuildEmbedHex } from '@/lib/embed-color'
 import type { TimeseriesPoint } from '@/lib/analytics'
 import {
   splitWindow,
@@ -105,13 +105,12 @@ export async function postInsightsRecap(
   const windowSince = new Date(now - windowDays * DAY_MS).toISOString()
   const heatmapSince = new Date(now - HEATMAP_DAYS * DAY_MS).toISOString()
 
-  const [guild, tsRes, sumRes, heatRes, topRes, aiRow] = await Promise.all([
+  const [guild, tsRes, sumRes, heatRes, topRes] = await Promise.all([
     fetchGuild(guildId),
     supabase.rpc('get_analytics_timeseries', { p_guild_id: guildId, p_since: trendSince, p_trunc: 'day' }),
     supabase.rpc('get_analytics_summary', { p_guild_id: guildId, p_since: windowSince }),
     supabase.rpc('get_activity_heatmap', { p_guild_id: guildId, p_since: heatmapSince }),
     supabase.rpc('get_top_channels', { p_guild_id: guildId, p_since: windowSince, p_limit: 1 }),
-    supabase.from('ai_moderation_settings').select('settings').eq('guild_id', guildId).maybeSingle(),
   ])
 
   if (!guild) return { ok: false, error: 'Could not load this server.' }
@@ -132,11 +131,9 @@ export async function postInsightsRecap(
   const input: RecapInput = { windowDays, current, trends, activeUsers, totalMembers, peakSlot, topChannel }
   const items = buildRecap(input)
 
-  // Accent + icon tint follow the guild's Pulse Guard colour, matching the
-  // app's other embeds. Falls back to Pulsify violet.
-  const embedColor = normaliseSettings(
-    (aiRow.data?.settings ?? {}) as Partial<AIModerationSettings>,
-  ).embed_color
+  // Accent + icon tint follow the guild's embed colour from Server Settings —
+  // the single source of truth for every Pulse embed. Falls back to Pulsify violet.
+  const embedColor = await readGuildEmbedHex(supabase, guildId)
   const iconBuffer = await getTintedPulseIcon('recap', embedColor)
   const attachments: V2Attachment[] = iconBuffer
     ? [{ filename: RECAP_ICON, data: iconBuffer, contentType: 'image/png' }]

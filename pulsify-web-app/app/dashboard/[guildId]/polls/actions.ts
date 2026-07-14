@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
 import { recordNotification } from '@/lib/notifications-server'
+import { readGuildEmbedInt } from '@/lib/embed-color'
 import {
   postChannelComponentsReturningId,
   editChannelComponents,
@@ -35,8 +36,8 @@ export type ActionResult<T = undefined> =
   | (T extends undefined ? { ok: true } : { ok: true; data: T })
   | { ok: false; error: string }
 
-const BRAND = 0x8b5cf6
-const GREY = 0x94a3b8
+// Every poll embed — open or archived — wears the guild accent (Server Settings).
+// Mirrors pulse-bot/src/polls.js: no per-state colours, the state is in the text.
 
 // Poll badge — attached as the embed header thumbnail. Falls back to the
 // giveaway badge so the embed always has the Pulse mark. Loaded once; absent ⇒
@@ -176,6 +177,7 @@ function activeContainer(p: {
   host_name: string | null
   requirements: PollRequirements
   governance: PollGovernance
+  accent: number
 }): V2TopLevelComponent {
   const req = p.requirements
   const gov = p.governance
@@ -211,15 +213,15 @@ function activeContainer(p: {
   body.push({ type: 14, divider: true, spacing: 1 })
   for (const row of voteControls(p)) body.push(row)
   body.push(td('-# Pulse — Poll'))
-  return { type: 17, accent_color: BRAND, components: body } as unknown as V2TopLevelComponent
+  return { type: 17, accent_color: p.accent, components: body } as unknown as V2TopLevelComponent
 }
 
-function archivedContainer(p: { title: string; description: string | null }): V2TopLevelComponent {
+function archivedContainer(p: { title: string; description: string | null; accent: number }): V2TopLevelComponent {
   const body: Record<string, unknown>[] = [...headerBlocks(p.title, p.description?.slice(0, 1500) ?? null)]
   body.push({ type: 14, divider: true, spacing: 1 })
   body.push(td('This poll was archived.'))
   body.push(td('-# Pulse — Poll archived'))
-  return { type: 17, accent_color: GREY, components: body } as unknown as V2TopLevelComponent
+  return { type: 17, accent_color: p.accent, components: body } as unknown as V2TopLevelComponent
 }
 
 // ── Create ────────────────────────────────────────────────────────────────────
@@ -277,7 +279,7 @@ export async function createPoll(guildId: string, draft: PollDraft): Promise<Act
   if (!scheduled) {
     const res = await postChannelComponentsReturningId(
       draft.channel_id,
-      [activeContainer({ ...insert, id })],
+      [activeContainer({ ...insert, id, accent: await readGuildEmbedInt(supabase, guildId) })],
       iconAttachments(),
     )
     if (res.ok) {
@@ -384,6 +386,7 @@ export async function updatePoll(
         host_name: p.host_name,
         requirements,
         governance,
+        accent: await readGuildEmbedInt(supabase, guildId),
       }),
     ])
   }
@@ -438,7 +441,11 @@ export async function archivePoll(guildId: string, id: string): Promise<ActionRe
 
   if (p.message_id) {
     await editChannelComponents(p.channel_id, p.message_id, [
-      archivedContainer({ title: p.title, description: p.description }),
+      archivedContainer({
+        title: p.title,
+        description: p.description,
+        accent: await readGuildEmbedInt(supabase, guildId),
+      }),
     ])
   }
   revalidate(guildId)

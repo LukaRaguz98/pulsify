@@ -29,9 +29,11 @@ const { getGuildAccent } = require("./guild-accent");
 
 const PV = "pv";
 const TICK_MS = 30 * 1000; // lifecycle scan every 30s
-const BRAND = 0x8b5cf6; // Pulsify violet — the poll accent
-const GREY = 0x94a3b8; // archived
-const CLOSED = 0xa855f7; // settled / results
+// Every poll embed — open, archived or closed — wears the guild's accent
+// (guild_settings.embed_color, set in the dashboard's Server Settings). No
+// per-state colours: the state is written in the embed's own text ("This poll
+// was archived", the results block, the footer), and the colour belongs to the
+// server's brand.
 const BUTTON_OPTION_LIMIT = 5;
 const DISCORD_EPOCH = 1420070400000n;
 
@@ -323,7 +325,8 @@ function createPolls(client, supabase) {
   }
 
   /** The settled container (closed / archived) — results, no vote controls. */
-  function closedContainer(p, results) {
+  async function closedContainer(p, results) {
+    const accent = await getGuildAccent(supabase, p.guild_id);
     const gov = normaliseGovernance(p.governance);
     const body = [...headerBlocks(p.title, p.description ? String(p.description).slice(0, 1500) : null)];
     body.push(divider());
@@ -331,7 +334,7 @@ function createPolls(client, supabase) {
     if (p.status === "archived" && !results) {
       body.push(td("This poll was archived."));
       body.push(td("-# Pulse — Poll archived"));
-      return { type: 17, accent_color: GREY, components: body };
+      return { type: 17, accent_color: accent, components: body };
     }
 
     const r = results || { options: [], winner_ids: [], total_votes: 0, total_voters: 0, approved: false, participation_met: true };
@@ -353,7 +356,7 @@ function createPolls(client, supabase) {
       body.push(td("No votes were cast."));
     }
     body.push(td("-# Pulse — Poll closed"));
-    return { type: 17, accent_color: CLOSED, components: body };
+    return { type: 17, accent_color: accent, components: body };
   }
 
   async function editPollMessage(p, container) {
@@ -638,7 +641,7 @@ function createPolls(client, supabase) {
       Object.assign(fresh, patch);
       cache.delete(fresh.id);
 
-      await editPollMessage(fresh, closedContainer(fresh, results));
+      await editPollMessage(fresh, await closedContainer(fresh, results));
 
       // Announce the result in-channel.
       const channel = await client.channels.fetch(fresh.channel_id).catch(() => null);
@@ -655,7 +658,7 @@ function createPolls(client, supabase) {
             components: [
               {
                 type: 17,
-                accent_color: CLOSED,
+                accent_color: await getGuildAccent(supabase, fresh.guild_id),
                 components: [
                   ...headerBlocks("Poll closed", headline),
                   link ? td(`-# [Jump to the poll](${link})`) : null,

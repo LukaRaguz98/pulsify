@@ -55,8 +55,9 @@ function createTemporaryRoles(client, supabase) {
               text(`Your temporary ${roleLabel} role in **${guild.name}** expires soon.`),
               text(`-# Expires <t:${Math.floor(new Date(row.expires_at).getTime() / 1000)}:R>`),
             ];
+      // No header thumbnail: this DM is one or two lines (see the embed
+      // conventions on buildPulseContainer).
       const container = buildPulseContainer({
-        iconUrl: guild.iconURL?.({ size: 128 }) || member.displayAvatarURL({ size: 128 }),
         colorHex,
         title: kind === "expired" ? "Temporary role expired" : "Temporary role expiring",
         subtitle: guild.name,

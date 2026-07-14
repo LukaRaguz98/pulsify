@@ -5030,3 +5030,137 @@ Acceptance Criteria
 	Privacy options work correctly
 	Commands function correctly
 	UI remains responsive and polished
+
+PULSIFY-59 — Alt Risk Detection & Investigation System (v0.59.0)
+
+Description
+	Implement an Alt Risk Detection system under the Safety module that analyzes Discord accounts for indicators commonly associated with alternate (alt) accounts, throwaway accounts, and suspicious member behavior.
+	Rather than attempting to definitively identify alternate accounts, the system should calculate a Risk Score based on multiple signals and display Potential Linked Accounts with confidence indicators where sufficient evidence exists.
+
+Goals
+	Improve community safety
+	Help moderators identify suspicious accounts
+	Detect potential alternate accounts
+	Reduce ban evasion and abuse
+	Provide a centralized account risk assessment tool
+
+Tasks
+	Safety View
+		Create:
+			Safety > Alt Detection
+
+		Display:
+			account lookup
+			risk score
+			account summary
+			potential linked accounts
+			investigation history
+
+	User Lookup
+		Allow administrators to search using:
+			Discord User ID
+			Username
+			Mention
+
+		Display:
+			username
+			display name
+			avatar
+			Discord ID
+			account creation date
+			server join date
+			roles
+			current status
+
+	Risk Analysis
+		Calculate an Alt Risk Score based on factors such as:
+			account age
+			recent server join
+			default avatar
+			activity history
+			moderation history
+			reputation
+			economy activity
+			giveaway participation
+			application history
+			onboarding completion
+			verification status
+			previous safety flags
+
+		Display a risk level:
+			Low
+			Moderate
+			High
+			Critical
+
+	Potential Linked Accounts
+		Display accounts that may be related based on available platform data and behavioral signals
+
+		Examples of correlation:
+			similar usernames
+			similar join times
+			shared moderation history
+			shared economy interactions
+			similar activity patterns
+			previous moderator links
+
+		Display:
+			confidence percentage
+			matching indicators
+			risk level
+
+		Note:
+			These accounts should be presented as Potential Linked Accounts, not confirmed alternate accounts
+
+	Investigation History
+		Track:
+			previous lookups
+			moderator notes
+			safety flags
+			investigation outcomes
+			manual links between accounts
+
+	Manual Linking
+		Allow moderators to:
+			mark accounts as related
+			remove manual links
+			add investigation notes
+			assign investigation status
+
+	Safety Dashboard
+		Display:
+			highest risk accounts
+			recently detected risks
+			investigation queue
+			resolved investigations
+			linked account groups
+
+	Discord Integration
+		Add moderation command:
+			/alt-check
+
+		Display:
+			account age
+			risk score
+			risk factors
+			potential linked accounts
+			recommendation summary
+
+		Use Pulse v2 embed styling
+
+	UX Improvements
+		Add risk badges
+		Add confidence indicators
+		Add investigation timeline
+		Add search & filtering
+		Add responsive layouts
+		Add loading/error/empty states
+
+Acceptance Criteria
+	Administrators can search for any Discord user
+	Account information is displayed correctly
+	Risk Score is calculated using available signals
+	Potential Linked Accounts are displayed with confidence indicators
+	Manual investigation notes and links persist correctly
+	/alt-check displays account risk information
+	UI remains responsive and visually polished

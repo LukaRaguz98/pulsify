@@ -70,6 +70,8 @@ export const NOTIFICATION_TYPES = [
   'security_alert',
   'security_mitigation',
   'security_recovered',
+  // alt detection
+  'alt_risk_flagged',
   // bot
   'bot_warning',
   'bot_error',
@@ -142,6 +144,7 @@ export const TYPE_TO_CATEGORY: Record<NotificationType, NotificationCategory> = 
   security_alert: 'security',
   security_mitigation: 'security',
   security_recovered: 'security',
+  alt_risk_flagged: 'security',
   bot_warning: 'bot',
   bot_error: 'bot',
 }
@@ -189,6 +192,7 @@ export const TYPE_TO_SEVERITY: Record<NotificationType, NotificationSeverity> = 
   security_alert: 'warning',
   security_mitigation: 'warning',
   security_recovered: 'success',
+  alt_risk_flagged: 'warning',
   bot_warning: 'warning',
   bot_error: 'error',
 }
@@ -256,6 +260,7 @@ export const TYPE_LABELS: Record<NotificationType, string> = {
   security_alert: 'Security alert',
   security_mitigation: 'Mitigation activated',
   security_recovered: 'Mitigation lifted',
+  alt_risk_flagged: 'Alt risk flagged',
   bot_warning: 'Bot warnings',
   bot_error: 'Bot errors',
 }
@@ -303,6 +308,7 @@ export const TYPE_DESCRIPTIONS: Record<NotificationType, string> = {
   security_alert: 'A suspicious traffic spike or abuse pattern is detected.',
   security_mitigation: 'An automatic or manual protection action is applied.',
   security_recovered: 'A protection action expires or is lifted.',
+  alt_risk_flagged: 'A joining account scores High or Critical for alt-account risk.',
   bot_warning: 'Recoverable issues like failed welcome messages.',
   bot_error: 'Critical bot failures that need attention.',
 }

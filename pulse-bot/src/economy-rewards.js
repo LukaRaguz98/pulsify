@@ -874,7 +874,8 @@ function createEconomyRewards(client, supabase, economy) {
       return;
     }
 
-    const icon = await loadPulseIcon("money", colorHex);
+    // Short claim confirmation — no header badge (see the embed conventions on
+    // buildPulseContainer): three lines don't carry a thumbnail.
     const body = [
       text(`You claimed your ${kind} reward!`),
       divider(),
@@ -884,14 +885,13 @@ function createEconomyRewards(client, supabase, economy) {
     await replyContainer(
       interaction,
       buildPulseContainer({
-        iconUrl: icon ? `attachment://${icon.name}` : null,
         colorHex,
         title: label,
         subtitle: member.displayName,
         body,
         footer: "Pulse — Global economy",
       }),
-      icon,
+      null,
       ephemeral,
     );
   }

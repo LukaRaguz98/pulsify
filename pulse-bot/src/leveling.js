@@ -257,8 +257,10 @@ function createLeveling(client, supabase, rewards = null, shop = null) {
     if (rewards.length > 0) {
       body.push(text(`-# Unlocked: ${rewards.map((r) => `<@&${r.role_id}>`).join(", ")}`));
     }
+    // No header thumbnail: a level-up is one line, and the avatar beside it took
+    // more room than the message (see the embed conventions on
+    // buildPulseContainer). The level heading is the visual.
     return buildPulseContainer({
-      iconUrl: member.displayAvatarURL({ size: 128 }),
       colorHex,
       title: `Level ${newLevel}`,
       subtitle: member.displayName,

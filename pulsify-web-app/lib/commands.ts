@@ -152,6 +152,18 @@ export const COMMAND_CATALOG: CommandDefinition[] = [
     detail:
       'Transfers Pulse Coins between global balances — the transfer is atomic, refused if the sender cannot afford it, and recorded in both members’ transaction history. Public by default so the recipient sees it land.',
   },
+  {
+    name: 'alt-check',
+    description: "Check an account's alt risk — score, factors and potential linked accounts",
+    category: 'moderation',
+    defaultPermission: 'moderator',
+    options: [
+      { name: 'user', description: 'The account to check', type: 'user', required: true },
+    ],
+    examples: ['/alt-check user:@username'],
+    detail:
+      'Scores an account against the alt-account indicators Pulse can see — account age, join recency, default avatar, activity, moderation history, reputation, economy footprint, giveaways, onboarding and prior safety flags — then lists the accounts that may be related, each with a confidence percentage. Nothing here proves an alt: Discord exposes no IP or device data, so treat the score as evidence to review. Every check is recorded in the Alt Detection view. Moderators only.',
+  },
 ]
 
 export const CATALOG_BY_NAME: Record<string, CommandDefinition> = Object.fromEntries(

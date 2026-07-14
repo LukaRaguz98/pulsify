@@ -38,7 +38,6 @@ import type { ActionResult } from '@/app/dashboard/[guildId]/(management)/ticket
 import { saveTicketConfig, postTicketPanel } from '@/app/dashboard/[guildId]/(management)/tickets/actions'
 import { SaveBar } from '@/components/ui/save-bar'
 import { HelpTip } from '@/components/ui/help-tip'
-import { ColorPicker } from './ColorPicker'
 
 type RunAction = <T>(fn: () => Promise<ActionResult<T>>, successMsg?: string) => Promise<ActionResult<T>>
 
@@ -224,22 +223,9 @@ export function TicketSettings({ guildId, config, channels, categories, roles, r
           <Field label="Title">
             <input value={draft.panel.title} maxLength={100} onChange={(e) => patchPanel({ title: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm" style={inputStyle} />
           </Field>
-          <div>
-            <div className="mb-1.5 flex items-center justify-between">
-              <label className="block text-xs font-medium" style={{ color: 'var(--text-2)' }}>Accent colour</label>
-              {/* Hex badge mirrors App Design › Accent Colour. */}
-              <span
-                className="rounded px-1.5 py-0.5 font-mono text-xs"
-                style={{ background: 'var(--bg-2)', color: 'var(--text-3)', border: '1px solid var(--line-strong)' }}
-              >
-                {draft.panel.color}
-              </span>
-            </div>
-            <ColorPicker value={draft.panel.color} onChange={(c) => patchPanel({ color: c })} />
-            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
-              Defaults to your App Design accent. Used for the panel and ticket embeds.
-            </p>
-          </div>
+          {/* No accent picker here any more: every Pulse embed — the ticket panel
+              included — uses the server's embed colour from Server Settings, so
+              there is one colour to change and it applies everywhere. */}
           <Field label="Description">
             <textarea value={draft.panel.description} maxLength={500} rows={2} onChange={(e) => patchPanel({ description: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm" style={inputStyle} />
           </Field>

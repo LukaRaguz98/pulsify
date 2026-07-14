@@ -1,11 +1,10 @@
 'use server'
 
-import { readFileSync } from 'node:fs'
-import path from 'node:path'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
-import { fetchGuild, postChannelComponents, type V2TopLevelComponent, type V2Attachment } from '@/lib/discord'
+import { readGuildEmbedInt } from '@/lib/embed-color'
+import { fetchGuild, postChannelComponents, type V2TopLevelComponent } from '@/lib/discord'
 import {
   normaliseBirthdaySettings,
   serialiseBirthdaySettings,
@@ -16,28 +15,18 @@ import {
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
 
-const BRAND = 0x8b5cf6
-
-// Pulse birthday badge — attached as a header thumbnail on the sample embed the
-// dashboard posts via "Send test". Identical bytes to the copy the bot ships so
-// a birthday looks the same whoever posted it (mirrors milestones/actions.ts).
-const ICON_NAME = 'pulse-birthday.png'
-let ICON_BUFFER: Buffer | null = null
-try {
-  ICON_BUFFER = readFileSync(path.join(process.cwd(), 'public', ICON_NAME))
-} catch {
-  ICON_BUFFER = null
-}
-const HAS_ICON = ICON_BUFFER !== null
-const iconAttachments = (): V2Attachment[] | undefined =>
-  HAS_ICON ? [{ filename: ICON_NAME, data: ICON_BUFFER!, contentType: 'image/png' }] : undefined
-
 function revalidate(guildId: string) {
   revalidatePath(`/dashboard/${guildId}/birthdays`)
   revalidatePath(`/dashboard/${guildId}/birthday-settings`)
 }
 
 // ── Discord embed (MUST match pulse-bot/src/birthdays.js buildAnnouncement) ────
+//
+// No header badge: the announcement is a single sentence (plus an optional
+// image), so a thumbnail would take more room than the message — the same rule
+// the bot follows (see the embed conventions on buildPulseContainer in
+// pulse-bot/src/commands.js). The colour is the guild's accent, like every other
+// Pulse embed.
 
 const td = (content: string) => ({ type: 10, content })
 
@@ -48,18 +37,13 @@ function birthdayContainer(opts: {
   buttonLabel: string | null
   buttonUrl: string | null
   subtitle: string
+  accent: number
 }): V2TopLevelComponent {
-  const headerLines: Record<string, unknown>[] = [td('**Pulse**'), td('# Happy Birthday'), td(`-# ${opts.subtitle}`)]
-  const header: Record<string, unknown>[] = HAS_ICON
-    ? [
-        {
-          type: 9,
-          components: headerLines,
-          accessory: { type: 11, media: { url: `attachment://${ICON_NAME}` }, description: 'Pulse birthday' },
-        },
-      ]
-    : headerLines
-  const body: Record<string, unknown>[] = [...header]
+  const body: Record<string, unknown>[] = [
+    td('**Pulse**'),
+    td('# Happy Birthday'),
+    td(`-# ${opts.subtitle}`),
+  ]
   if (!opts.imageUrl) body.push(td(`-# ${'⠀'.repeat(44)}`)) // width spacer (skipped when an image defines width)
   body.push(td(opts.rendered))
   if (opts.ageLine) body.push(td(`-# ${opts.ageLine}`))
@@ -68,7 +52,7 @@ function birthdayContainer(opts: {
   if (opts.buttonLabel && opts.buttonUrl) {
     body.push({ type: 1, components: [{ type: 2, style: 5, label: opts.buttonLabel, url: opts.buttonUrl }] })
   }
-  return { type: 17, accent_color: BRAND, components: body } as unknown as V2TopLevelComponent
+  return { type: 17, accent_color: opts.accent, components: body } as unknown as V2TopLevelComponent
 }
 
 // ── Save settings ─────────────────────────────────────────────────────────────
@@ -125,20 +109,20 @@ export async function testBirthdayAnnouncement(
     date: formatBirthday(3, 14, 2004, true),
   })
 
-  const res = await postChannelComponents(
-    channelId,
-    [
-      birthdayContainer({
-        rendered,
-        ageLine: 'Turning 21 today',
-        imageUrl: clean.image_url,
-        buttonLabel: clean.button_label,
-        buttonUrl: clean.button_url,
-        subtitle: auth.moderator.username ?? 'A member',
-      }),
-    ],
-    iconAttachments(),
-  )
+  const supabase = await createClient()
+  const accent = await readGuildEmbedInt(supabase, guildId)
+
+  const res = await postChannelComponents(channelId, [
+    birthdayContainer({
+      rendered,
+      ageLine: 'Turning 21 today',
+      imageUrl: clean.image_url,
+      buttonLabel: clean.button_label,
+      buttonUrl: clean.button_url,
+      subtitle: auth.moderator.username ?? 'A member',
+      accent,
+    }),
+  ])
   if (!res.ok) return { ok: false, error: `Couldn't post the test: ${res.error}` }
   return { ok: true }
 }

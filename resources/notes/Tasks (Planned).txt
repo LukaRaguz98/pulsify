@@ -1,182 +1,214 @@
-PULSIFY-60 — Invite Tracking, Rewards & Referral System (v0.60.0)
+PULSIFY-61 — Slash Commands Expansion & Full Feature Parity (v0.61.0)
 
 Description
-	Implement a complete Invite Tracking and Referral system that allows server administrators to track who invited each member, measure invite performance, prevent invite abuse, and automatically reward members for successful referrals.
-	The system should integrate with existing Pulsify modules such as Economy, Reputation, Levels & XP, Roles, Achievements, Analytics, and Automations.
+	Expand Pulse's slash command set so that core actions already implemented across Pulsify modules can also be executed directly from Discord, not only through the web dashboard.
+	All commands must follow existing Pulse v2 embed styling and conventions established by /sync, /changelog, /balance, /pay, /leaderboard, /earn, /birthday, /alt-check, and /invites.
+	Sensitive commands are restricted to Admin/Moderator permission levels, while safe read-only and self-service commands are available to all members.
 
 Goals
-	Track member invites accurately
-	Reward members for successful referrals
-	Improve community growth and engagement
-	Prevent fake or abusive invite farming
-	Give administrators clear invite analytics
+	Bring dashboard-only actions to Discord via slash commands
+	Achieve near-full feature parity between the web app and Discord
+	Maintain strict permission separation between admin and member commands
+	Ensure consistent Pulse v2 embed design across all commands
+	Reduce the need to open the web app for common administrative tasks
+	Keep command behavior synchronized with dashboard-configured settings and permissions
+
+Already Implemented (Reference Only)
+	/balance
+	/pay
+	/leaderboard
+	/earn
+	/birthday set
+	/birthday view
+	/birthday upcoming
+	/birthday remove
+	/alt-check
+	/invites
+	/invites user
+	/invite-leaderboard
+	/invite-rewards
+	/changelog [version]
+	/sync
 
 Tasks
 
-	Invite Tracking
-		Track all Discord server invites and record:
-			inviter
-			invited member
-			invite code
-			invite creation date
-			invite usage count
-			member join date
-			member leave date
-			invite source where available
+	Moderation Commands (Admin/Moderator)
+		Implement:
+			/warn [user] [reason]
+			/timeout [user] [duration] [reason]
+			/untimeout [user]
+			/kick [user] [reason]
+			/ban [user] [reason] [delete_days]
+			/unban [user_id] [reason]
+			/warnings [user]
+			/purge [amount] [user (optional)]
+			/modlogs [user (optional)]
 
-		Detect which invite was used when a member joins the server
+		Ensure moderation actions synchronize with:
+			Moderation History
+			Management Analytics
+			Audit Logs
 
-	Invite Statistics
-		Create a dedicated view:
-			Engagement > Invites
+	Pulse Guard Commands (Admin/Moderator)
+		Implement:
+			/guard status
+			/guard whitelist add
+			/guard whitelist remove
+			/guard review
 
-		Display:
-			total invites
-			valid invites
-			fake invites
-			left members
-			bonus invites
-			current invite score
-			top inviters
-			recent invited members
+	Roles Commands (Admin)
+		Implement:
+			/role add [user] [role]
+			/role remove [user] [role]
+			/temprole [user] [role] [duration]
+			/role info [role]
+			/role hierarchy
 
-	Invite Leaderboard
-		Add an invite leaderboard showing:
-			ranking position
-			inviter
-			total invites
-			valid invites
-			retained members
-			fake invites
-			rewards earned
+	Self-Assign Roles (Member)
+		Implement:
+			/roles menu [category]
 
-		Support filtering by:
-			daily
-			weekly
-			monthly
-			all time
+	Channels Commands (Admin)
+		Implement:
+			/channel lock [channel (optional)]
+			/channel unlock [channel (optional)]
+			/channel slowmode [seconds]
+			/channel stats [channel (optional)]
 
-	Invite Rewards
-		Allow administrators to configure milestone rewards
+	Tickets & Applications
+		Implement:
+			/ticket close [reason (optional)]
+			/ticket claim
+			/ticket add [user]
+			/ticket priority [level]
+			/application status
 
-		Supported rewards:
-			Global Balance
-			Global Reputation
-			Server XP
-			Discord Roles
-			Temporary Roles
-			Achievements
-			Marketplace Items
-			Custom Rewards
+	Events
+		Implement:
+			/event list
+			/event info [event]
+			/event create
+			/event cancel [event]
 
-		Example milestones:
-			5 valid invites → 250 Pulse Coins
-			10 valid invites → VIP role
-			25 valid invites → 500 XP
-			50 valid invites → Special Badge
+	Giveaways
+		Implement:
+			/giveaway create
+			/giveaway reroll [giveaway]
+			/giveaway end [giveaway]
+			/giveaway list
 
-	Reward Configuration
-		Allow administrators to:
-			create reward milestones
-			edit reward milestones
-			enable or disable rewards
-			configure whether rewards stack
-			choose whether rewards are removed if invite count drops
-			preview reward progression
+	Polls
+		Implement:
+			/poll create
+			/poll results [poll]
+			/poll close [poll]
 
-	Valid Invite Rules
-		Allow administrators to configure what counts as a valid invite
+	Member & Community
+		Implement:
+			/userinfo [user (optional)]
+			/serverinfo
+			/rank [user (optional)]
+			/milestones [user (optional)]
+			/reputation [user (optional)]
 
-		Possible requirements:
-			minimum account age
-			minimum server stay duration
-			completed onboarding
-			completed verification
-			no active moderation flags
-			minimum activity requirement
-			not detected as a likely alt account
+	Private Channels
+		Implement:
+			/privatechannel lock
+			/privatechannel unlock
+			/privatechannel invite [user]
+			/privatechannel kick [user]
+			/privatechannel rename [name]
 
-	Anti-Abuse Protection
-		Detect and prevent:
-			self-invites
-			alt account farming
-			rapid join-and-leave abuse
-			suspicious invite spikes
-			duplicate reward claims
-			fake or invalid invites
-			repeated invite code manipulation
+	Announcements
+		Implement:
+			/announce [channel] [message]
+			/announcements recent
 
-		Integrate with Safety > Alt Detection where applicable
+	Automations
+		Implement:
+			/automation list
+			/automation toggle [automation]
+			/automation run [automation]
+			/automation logs [automation]
 
-	Invite Retention
-		Track whether invited members:
-			completed onboarding
-			remained in the server
-			became active
-			left shortly after joining
-			received moderation actions
+	Analytics & Insights
+		Implement:
+			/stats overview
+			/stats channel [channel]
+			/insights
+			/management stats [staff (optional)]
 
-		Display invite quality and retention metrics per inviter
+	Verification & Onboarding
+		Implement:
+			/verify [user]
+			/verification status [user (optional)]
+			/onboarding resend
+			/onboarding stats
 
-	Invite Analytics
-		Track:
-			invite growth over time
-			invite conversion rate
-			member retention by inviter
-			highest-quality inviters
-			reward distribution
-			suspicious invite activity
-			most-used invite links
+	Server Settings & Assets
+		Implement:
+			/serversettings view
+			/presence set [type] [text]
+			/presence reset
+			/emoji list
+			/emoji info [name]
+			/sticker list
+			/sticker info [name]
+			/soundboard list
+			/soundboard play [name]
+			/statchannel refresh
 
-		Add charts and trends
+	Backup & Recovery
+		Implement:
+			/backup create
+			/backup list
 
-	Discord Commands
-		Add commands such as:
-			/invites
-			/invites user
-			/invite-leaderboard
-			/invite-rewards
+	Integrations & Templates
+		Implement:
+			/integrations status
+			/template apply [template]
 
-		Display Pulse-styled v2 embeds
+	Notifications & Feedback
+		Implement:
+			/notifications preferences
+			/feedback submit
 
-	Discord Notifications
-		Optionally notify users when:
-			an invited member joins
-			an invite becomes valid
-			an invite milestone is reached
-			a reward is earned
-			an invite is marked invalid
+	Cross-Cutting Improvements
+		Create a shared permission-check helper supporting:
+			Admin
+			Moderator
+			Support Staff
+			Member
 
-		Allow selecting a destination channel
+		Ensure every command:
+			respects dashboard feature enable/disable settings
+			respects subscription plan feature gating
+			returns clear upgrade prompts where required
+			logs write actions with source "Discord Command"
+			uses the shared Pulse v2 embed builder
+			implements cooldowns where appropriate
+			returns consistent permission and validation errors
+			supports autocomplete where applicable
 
-	Admin Management
-		Allow administrators to:
-			manually add or remove invite credits
-			invalidate an invite
-			approve a suspicious invite
-			grant missed rewards
-			reset invite statistics
-			view invite history
+		Command Center Integration
+			Update Command Center (PULSIFY-15)
 
-		All manual changes must be added to audit logs
-
-	UX Improvements
-		Add invite progress cards
-		Add milestone progress bars
-		Add inviter profile drawer
-		Add responsive layouts
-		Add search and filtering
-		Add loading, error, and empty states
-		Maintain consistency with Pulsify design language
+			Automatically synchronize:
+				command list
+				command category
+				required permission level
+				module association
+				enabled/disabled state
 
 Acceptance Criteria
-	Pulsify correctly identifies which invite was used when a member joins
-	Invite statistics are tracked accurately
-	Valid and invalid invites are distinguished correctly
-	Invite rewards are granted automatically
-	Anti-abuse rules prevent common invite farming methods
-	Invite leaderboards display correct rankings
-	Invite retention analytics work correctly
-	Discord commands return accurate information
-	Manual admin actions are logged
-	UI remains responsive and visually polished
+	All listed slash commands are implemented
+	Permission restrictions function correctly
+	Member-facing commands work without elevated permissions
+	Commands respect module enable/disable settings
+	Commands respect subscription feature gating
+	Dashboard and Discord remain fully synchronized
+	Actions executed through Discord are logged identically to dashboard actions
+	All embeds follow Pulse v2 design standards
+	Autocomplete and validation prevent invalid input
+	Command Center automatically lists all implemented commands
+	UI and command experience remain polished, responsive, and consistent

@@ -5,6 +5,7 @@ import path from 'node:path'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
+import { readGuildEmbedInt } from '@/lib/embed-color'
 import { recordNotification } from '@/lib/notifications-server'
 import {
   fetchGuildChannels,
@@ -65,15 +66,12 @@ const divider = () => ({ type: 14, divider: true, spacing: 1 })
 // announcements container) so short notifications don't render cramped.
 const WIDTH_SPACER = td(`-# ${'⠀'.repeat(40)}`)
 
-/** Parse a #rrggbb accent into the int Discord wants, falling back to Pulse violet. */
-function accentInt(hex: string | undefined): number {
-  const n = parseInt(String(hex ?? '').replace('#', ''), 16)
-  return Number.isNaN(n) ? BRAND : n
-}
-
 /**
  * Build the integration notification container — the rich Pulse v2 layout shared
- * with the bot's live deliveries (pulse-bot/src/integrations.js). Top to bottom:
+ * with the bot's live deliveries (pulse-bot/src/integrations.js). `accent` is the
+ * GUILD's accent (guild_settings.embed_color, set in Server Settings), like every
+ * other Pulse embed — the provider is already named in the header, so it doesn't
+ * need a colour of its own. Top to bottom:
  * a `Pulse` label + integration heading + `-# <Provider> — Integration` subtitle
  * beside the Pulse badge, a width spacer, a `-# <when>` timestamp chip, the
  * rendered body (with the now-redundant raw URL line stripped), a divider, a
@@ -86,6 +84,7 @@ function notificationContainer(
   body: string,
   ctx: Record<string, string>,
   opts: { isTest?: boolean } = {},
+  accent: number = BRAND,
 ): V2TopLevelComponent {
   const headerLines = [td('**Pulse**'), td(`# ${label}`), td(`-# ${provider.name} — Integration`)]
   const components: Record<string, unknown>[] = []
@@ -123,7 +122,7 @@ function notificationContainer(
 
   components.push(divider())
   components.push(td('-# Pulse — Integrations'))
-  return { type: 17, accent_color: accentInt(provider.accent), components } as unknown as V2TopLevelComponent
+  return { type: 17, accent_color: accent, components } as unknown as V2TopLevelComponent
 }
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
@@ -472,7 +471,7 @@ export async function testConnection(guildId: string, id: string): Promise<Actio
 
   const posted = await postChannelComponentsReturningId(
     integration.channel_id,
-    [notificationContainer(provider, integration.label, body, ctx, { isTest: true })],
+    [notificationContainer(provider, integration.label, body, ctx, { isTest: true }, await readGuildEmbedInt(supabase, guildId))],
     iconAttachments(),
   )
 

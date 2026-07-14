@@ -366,7 +366,6 @@ function createMilestones(client, supabase, rewards = null) {
 
   async function milestoneContainer(guild, member, milestone, value) {
     const colorHex = await getPulseColor(supabase, guild.id);
-    const icon = await loadPulseIcon("milestone", colorHex);
     const rendered = renderMilestoneMessage(milestone.message || DEFAULT_MILESTONE_MESSAGE, {
       user: member.displayName,
       mention: `<@${member.id}>`,
@@ -378,15 +377,17 @@ function createMilestones(client, supabase, rewards = null) {
     if (milestone.rewards.length > 0) {
       body.push(text(`-# Unlocked: ${milestone.rewards.map((r) => `<@&${r.role_id}>`).join(", ")}`));
     }
+    // No header badge: the unlock message is a sentence (plus the reward roles),
+    // so a thumbnail would dominate it — see the embed conventions on
+    // buildPulseContainer. The milestone name is the heading and carries it.
     const container = buildPulseContainer({
-      iconUrl: icon ? `attachment://${icon.name}` : member.displayAvatarURL({ size: 128 }),
       colorHex,
       title: milestone.name,
       subtitle: member.displayName,
       body,
       footer: "Pulse — Milestone",
     });
-    return { container, files: icon ? [icon] : [] };
+    return { container, files: [] };
   }
 
   async function announce(guild, member, milestone, value) {
