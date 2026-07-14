@@ -49,6 +49,7 @@ import {
   Siren,
   Smile,
   Cake,
+  Fingerprint,
 } from 'lucide-react'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
 import { SearchTrigger } from '@/components/dashboard/search/SearchTrigger'
@@ -213,6 +214,9 @@ export function GuildSidebar({
         { label: 'Events', href: `${base}/events`, icon: <CalendarDays size={16} /> },
         { label: 'Giveaways', href: `${base}/giveaways`, icon: <Gift size={16} /> },
         { label: 'Polls', href: `${base}/polls`, icon: <Vote size={16} /> },
+        // Read-only for members: who's celebrating today, who's next, and the
+        // calendar. Setting their own birthday lives on their profile.
+        { label: 'Birthdays', href: `${base}/birthdays`, icon: <Cake size={16} /> },
         { label: 'Announcements', href: `${base}/announcements`, icon: <Megaphone size={16} /> },
       ],
     },
@@ -280,6 +284,7 @@ export function GuildSidebar({
         // stays on Tickets while you're editing its config.
         { label: 'Tickets', href: `${base}/tickets`, icon: <LifeBuoy size={16} />, matchPrefixes: ['/ticket-settings'] },
         { label: 'DDoS Protection', href: `${base}/security`, icon: <Siren size={16} />, matchPrefixes: ['/security-settings'] },
+        { label: 'Alt Detection', href: `${base}/alt-detection`, icon: <Fingerprint size={16} /> },
       ],
     },
     // Dashboard-level Preferences moved to the global /preferences route

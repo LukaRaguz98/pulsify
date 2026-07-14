@@ -118,7 +118,8 @@
       "Bash(awk NR>=218 && NR<=295 *)",
       "Bash(git check-ignore *)",
       "Bash(echo \"exit=$?\")",
-      "Bash(git mv *)"
+      "Bash(git mv *)",
+      "Bash(grep -v \"^--$\")"
     ]
   }
 }

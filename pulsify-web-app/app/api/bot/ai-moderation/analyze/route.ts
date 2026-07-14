@@ -19,6 +19,7 @@ import {
 } from '@/lib/discord'
 import type { V2Attachment } from '@/lib/discord'
 import { recordNotification } from '@/lib/notifications-server'
+import { readGuildEmbedHex } from '@/lib/embed-color'
 import { getTintedPulseIcon, pulseIconFilename } from '@/lib/pulse-icon'
 import { sendPulseGuardWarningDM } from '@/lib/pulse-guard-dm'
 
@@ -230,12 +231,17 @@ export async function POST(req: Request) {
     )
   }
 
+  // Every Pulse embed wears the guild accent from Server Settings
+  // (guild_settings.embed_color) — Pulse Guard is no exception, so the alert and
+  // the warning DM share the same colour as the rest of the bot.
+  const accentHex = await readGuildEmbedHex(supabase, guildId)
+
   // Discord alert post + dashboard notification — only for actual violations.
   if (verdict.violates) {
     if (settings.alert_channel_id) {
-      // Tint the icon to match settings.embed_color so the alert chrome
-      // and the icon share one accent. Cached per colour after first call.
-      const iconBuffer = await getTintedPulseIcon('guard', settings.embed_color)
+      // Tint the icon to match the guild accent so the alert chrome and the icon
+      // share one colour. Cached per colour after the first call.
+      const iconBuffer = await getTintedPulseIcon('guard', accentHex)
       const attachments: V2Attachment[] = iconBuffer
         ? [{ filename: PULSE_GUARD_ICON_FILENAME, data: iconBuffer, contentType: 'image/png' }]
         : []
@@ -254,7 +260,7 @@ export async function POST(req: Request) {
             authorUsername: body.author_username ?? null,
             messageContent: content,
             hasIcon: iconBuffer !== null,
-            accentColor: hexToInt(settings.embed_color),
+            accentColor: hexToInt(accentHex),
           }),
         ],
         attachments,
@@ -296,7 +302,7 @@ export async function POST(req: Request) {
         reason: verdict.aiReasoning ?? verdict.reasoning,
         categoryLabel: verdict.topCategory ? CATEGORY_LABELS[verdict.topCategory] : null,
         severityLabel: SEVERITY_LABEL[verdict.severity],
-        embedColor: settings.embed_color,
+        embedColor: accentHex,
       })
     }
   }

@@ -17,6 +17,7 @@ const {
   GuildScheduledEventPrivacyLevel,
 } = require("discord.js");
 const { recordNotification } = require("./notifications");
+const { getGuildAccent } = require("./guild-accent");
 
 /**
  * Components V2 container for scheduled reports — matches the look of the bot's
@@ -384,7 +385,7 @@ function createScheduler(client, supabase) {
     const periodLabel = period === "24h" ? "last 24 hours" : period === "7d" ? "last 7 days" : "last 30 days";
     const net = joins - leaves;
     const container = buildScheduleContainer({
-      colorInt: 0x8b5cf6,
+      colorInt: await getGuildAccent(supabase, guild.id),
       title: "Activity digest",
       subtitle: guild.name,
       body: [
@@ -521,9 +522,11 @@ function createScheduler(client, supabase) {
       }
     }
 
-    const sample = inactive.slice(0, 25).map((m) => `• ${m.user.tag}`).join("\n");
+    // One member per line, no bullet markers — see the embed conventions on
+    // buildPulseContainer in commands.js.
+    const sample = inactive.slice(0, 25).map((m) => m.user.tag).join("\n");
     const container = buildScheduleContainer({
-      colorInt: 0x94a3b8,
+      colorInt: await getGuildAccent(supabase, guild.id),
       title: "Inactivity report",
       subtitle: guild.name,
       body: [

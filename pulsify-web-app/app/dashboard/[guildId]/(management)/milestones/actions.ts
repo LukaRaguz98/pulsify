@@ -1,12 +1,11 @@
 'use server'
 
-import { readFileSync } from 'node:fs'
-import path from 'node:path'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
 import { recordNotification } from '@/lib/notifications-server'
-import { fetchGuild, postChannelComponents, type V2TopLevelComponent, type V2Attachment } from '@/lib/discord'
+import { readGuildEmbedInt } from '@/lib/embed-color'
+import { fetchGuild, postChannelComponents, type V2TopLevelComponent } from '@/lib/discord'
 import {
   validateMilestoneDraft,
   draftToRow,
@@ -20,23 +19,6 @@ export type ActionResult<T = undefined> =
   | (T extends undefined ? { ok: true } : { ok: true; data: T })
   | { ok: false; error: string }
 
-const BRAND = 0x8b5cf6
-
-// Pulse milestone badge — attached as a header thumbnail on the sample embed the
-// dashboard posts via "Send test". Identical bytes to the copy the bot ships so
-// a milestone looks the same whoever posted it. Loaded once; absent ⇒ plain
-// heading (mirrors giveaways/actions.ts).
-const ICON_NAME = 'pulse-milestone.png'
-let ICON_BUFFER: Buffer | null = null
-try {
-  ICON_BUFFER = readFileSync(path.join(process.cwd(), 'public', ICON_NAME))
-} catch {
-  ICON_BUFFER = null
-}
-const HAS_ICON = ICON_BUFFER !== null
-const iconAttachments = (): V2Attachment[] | undefined =>
-  HAS_ICON ? [{ filename: ICON_NAME, data: ICON_BUFFER!, contentType: 'image/png' }] : undefined
-
 function revalidate(guildId: string) {
   revalidatePath(`/dashboard/${guildId}/milestones`)
 }
@@ -47,34 +29,29 @@ const td = (content: string) => ({ type: 10, content })
 
 /**
  * Build the milestone congratulations container exactly as the bot does
- * (milestones.js milestoneContainer): a header Section carrying the milestone
- * badge, the rendered message, an optional "Unlocked roles" line, and the
- * `Pulse — Milestone` footer. Used by the "Send test" preview so what the admin
- * sees is what members will get.
+ * (milestones.js milestoneContainer): the rendered message, an optional
+ * "Unlocked roles" line, and the `Pulse — Milestone` footer. Used by the "Send
+ * test" preview so what the admin sees is what members will get.
+ *
+ * No header badge — an unlock is a sentence, and a thumbnail beside it takes
+ * more room than the message (the rule the bot follows; see the embed
+ * conventions on buildPulseContainer in pulse-bot/src/commands.js). The colour is
+ * the guild's accent, like every other Pulse embed.
  */
 function milestoneContainer(opts: {
   name: string
   message: string
   rewardRoleIds: string[]
   rendered: string
+  accent: number
 }): V2TopLevelComponent {
-  const headerLines: Record<string, unknown>[] = [td('**Pulse**'), td(`# ${opts.name}`)]
-  const header: Record<string, unknown>[] = HAS_ICON
-    ? [
-        {
-          type: 9,
-          components: headerLines,
-          accessory: { type: 11, media: { url: `attachment://${ICON_NAME}` }, description: 'Pulse milestone' },
-        },
-      ]
-    : headerLines
-  const body: Record<string, unknown>[] = [...header]
+  const body: Record<string, unknown>[] = [td('**Pulse**'), td(`# ${opts.name}`)]
   body.push(td(opts.rendered))
   if (opts.rewardRoleIds.length > 0) {
     body.push(td(`-# Unlocked: ${opts.rewardRoleIds.map((id) => `<@&${id}>`).join(', ')}`))
   }
   body.push(td('-# Pulse — Milestone'))
-  return { type: 17, accent_color: BRAND, components: body } as unknown as V2TopLevelComponent
+  return { type: 17, accent_color: opts.accent, components: body } as unknown as V2TopLevelComponent
 }
 
 // ── Create ────────────────────────────────────────────────────────────────────
@@ -211,11 +188,18 @@ export async function testMilestone(
     value: formatMetricValue(row.metric, row.threshold),
   })
 
-  const res = await postChannelComponents(
-    channelId,
-    [milestoneContainer({ name: row.name, message: row.message, rewardRoleIds: row.rewards.map((r) => r.role_id), rendered })],
-    iconAttachments(),
-  )
+  const supabase = await createClient()
+  const accent = await readGuildEmbedInt(supabase, guildId)
+
+  const res = await postChannelComponents(channelId, [
+    milestoneContainer({
+      name: row.name,
+      message: row.message,
+      rewardRoleIds: row.rewards.map((r) => r.role_id),
+      rendered,
+      accent,
+    }),
+  ])
   if (!res.ok) return { ok: false, error: `Couldn't post the test: ${res.error}` }
   return { ok: true }
 }

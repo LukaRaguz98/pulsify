@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
 import { recordNotification } from '@/lib/notifications-server'
+import { readGuildEmbedInt } from '@/lib/embed-color'
 import { postChannelComponents, type V2TopLevelComponent } from '@/lib/discord'
 import {
   normaliseConfig,
@@ -33,15 +34,23 @@ function revalidate(guildId: string) {
 
 const td = (content: string) => ({ type: 10, content })
 
-/** Post a security alert to the configured channel (best-effort). */
+/**
+ * Post a security alert to the configured channel (best-effort).
+ *
+ * The colour is the guild's accent (Server Settings), like every other Pulse
+ * embed — the severity is already stated in the title and the footer, so it
+ * doesn't need a colour to carry it.
+ */
 async function sendDiscordAlert(
+  guildId: string,
   alertChannelId: string | null,
   opts: { title: string; lines: string[]; severity: SecuritySeverity },
 ): Promise<void> {
   if (!alertChannelId) return
+  const supabase = await createClient()
   const container: V2TopLevelComponent = {
     type: 17,
-    accent_color: parseInt(SEVERITY_META[opts.severity].color.replace('#', ''), 16),
+    accent_color: await readGuildEmbedInt(supabase, guildId),
     components: [
       td('**Pulse — Security**'),
       td(`# ${opts.title}`),
@@ -182,7 +191,7 @@ export async function triggerManualMitigation(
     targetId: meta.targets === 'user' ? input.target_user_id ?? null : null,
   })
 
-  await sendDiscordAlert(config.alert_channel_id, {
+  await sendDiscordAlert(guildId, config.alert_channel_id, {
     title: `Mitigation applied — ${meta.label}`,
     lines: [
       `**Target:** ${target}`,
@@ -297,7 +306,7 @@ export async function setLockdown(
     actorUsername: auth.moderator.handle,
   })
 
-  await sendDiscordAlert(config.alert_channel_id, {
+  await sendDiscordAlert(guildId, config.alert_channel_id, {
     title: on ? 'Server lockdown ENABLED' : 'Server lockdown lifted',
     lines: [
       on
@@ -392,7 +401,7 @@ export async function simulateDetection(
     actorUsername: auth.moderator.handle,
   })
 
-  await sendDiscordAlert(config.alert_channel_id, {
+  await sendDiscordAlert(guildId, config.alert_channel_id, {
     title: `Test alert — ${meta.label}`,
     lines: ['This is a simulated detection raised from the dashboard to verify alerts.'],
     severity: sev,

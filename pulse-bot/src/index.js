@@ -43,6 +43,8 @@ const { createPrivateChannels } = require("./private-channels");
 const { createTemporaryRoles } = require("./temporary-roles");
 const { createSelfRoles } = require("./self-roles");
 const { createBirthdays } = require("./birthdays");
+const { createAltDetection } = require("./alt-detection");
+const { getGuildAccent } = require("./guild-accent");
 const { createStatisticsChannels } = require("./statistics-channels");
 
 const supabase = createClient(
@@ -203,6 +205,12 @@ const statisticsChannels = createStatisticsChannels(client, supabase);
 // birthday; the dashboard owns the per-guild configuration.
 const birthdays = createBirthdays(client, supabase, economy, leveling);
 
+// Alt Risk Detection (PULSIFY-59): answers /alt-check with an account's risk
+// score, the factors behind it and its potential linked accounts, and scores
+// every joining account so high/critical ones land in the dashboard's
+// investigation queue before a moderator has to go looking for them.
+const altDetection = createAltDetection(client, supabase);
+
 /**
  * Shared helper for Discord-side activity → notifications row.
  *
@@ -249,8 +257,11 @@ const MEMBER_WIDTH_SPACER = `-# ${"⠀".repeat(44)}`;
  * when the user left footer_text blank. Returns the raw container object — the
  * caller sends it with the IS_COMPONENTS_V2 flag.
  */
-function buildMemberV2Container(cfg, resolve, hasBanner, footerLabel) {
-  const colorInt = parseInt((cfg.color ?? "#6366f1").replace("#", ""), 16);
+function buildMemberV2Container(cfg, resolve, hasBanner, footerLabel, accentInt) {
+  // The colour is the GUILD's accent (guild_settings.embed_color, chosen in the
+  // dashboard's Server Settings) — the single source of truth for every Pulse
+  // embed. `cfg.color` is no longer read here.
+  const colorInt = accentInt;
   const components = [{ type: 10, content: "**Pulse**" }];
 
   const title = resolve(cfg.title ?? "");
@@ -481,6 +492,9 @@ client.once(Events.ClientReady, async (readyClient) => {
   // the daily celebration sweep.
   await birthdays.start();
 
+  // Alt detection: listen for joins so risky accounts are scored on arrival.
+  altDetection.start();
+
   // Startup banner — a clear, scannable success summary so an operator can
   // confirm at a glance which version is live, how many servers it serves, and
   // that every command loaded. Mirrors the data /version reports.
@@ -535,7 +549,8 @@ client.on(Events.GuildMemberAdd, async (member) => {
         if (settings.welcome.type === "embed" && settings.welcome.embed) {
           const cfg = settings.welcome.embed;
           const hasBanner = !!cfg.banner_color;
-          const container = buildMemberV2Container(cfg, resolve, hasBanner, "Welcome");
+          const accentInt = await getGuildAccent(supabase, member.guild.id);
+          const container = buildMemberV2Container(cfg, resolve, hasBanner, "Welcome", accentInt);
           const payload = {
             flags: MessageFlags.IsComponentsV2,
             components: [container],
@@ -652,7 +667,8 @@ client.on(Events.GuildMemberRemove, async (member) => {
         if (settings.goodbye.type === "embed" && settings.goodbye.embed) {
           const cfg = settings.goodbye.embed;
           const hasBanner = !!cfg.banner_color;
-          const container = buildMemberV2Container(cfg, resolve, hasBanner, "Goodbye");
+          const accentInt = await getGuildAccent(supabase, member.guild.id);
+          const container = buildMemberV2Container(cfg, resolve, hasBanner, "Goodbye", accentInt);
           const payload = {
             flags: MessageFlags.IsComponentsV2,
             components: [container],
@@ -1179,6 +1195,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       economy,
       economyRewards,
       birthdays,
+      altDetection,
       ephemeral: verdict.ephemeral,
     });
     verdict.commit();

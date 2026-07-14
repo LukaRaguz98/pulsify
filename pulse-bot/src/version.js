@@ -18,11 +18,27 @@ const path = require("node:path");
 // Current Pulse version. Used for the startup banner and as the displayed
 // version when no release files are reachable. Keep this in step with the
 // newest resources/notes/vX.Y.Z.txt on each release.
-const PULSE_VERSION = "0.58.0";
+const PULSE_VERSION = "0.59.0";
 
 // Manual/static fallback used only when the release-notes files can't be read.
 // Mirrors the shape produced by the parser so callers don't special-case it.
 const STATIC_RELEASES = [
+  {
+    version: "0.59.0",
+    title: "Alt Risk Detection",
+    date: "Jul 14, 2026",
+    description:
+      "An Alt Detection view in Safety that scores any account against the alt-account signals Pulse can see, surfaces potential linked accounts with a confidence percentage, and gives moderators one place to investigate ban evasion and throwaway accounts.",
+    highlights: [
+      "**Account lookup** — search any member by username, mention or Discord ID (including accounts that left or were banned) and get their profile, activity, moderation history and a 0-100 Alt Risk Score banded Low, Moderate, High or Critical.",
+      "**Explainable signals** — twelve inputs (account age, join recency, default avatar, activity, moderation, reputation, economy, giveaways, applications, onboarding, verification, prior flags), each listed with the points it contributed — including the ones that count in the account's favour.",
+      "**Potential linked accounts** — similar usernames, near-simultaneous joins, accounts created together, shared moderation history, coin transfers and matching activity hours, each with a confidence percentage and the indicators behind it. Never presented as confirmed.",
+      "**Investigations** — Pulse flags high and critical accounts as they join, so the queue is already waiting; cases carry statuses, moderator notes, outcomes, manual account links and a full timeline.",
+      "**/alt-check** — the same report in Discord: account age, risk score, risk factors, potential linked accounts and a recommendation, recorded in the dashboard's lookup history.",
+    ],
+    outro:
+      "Judgement stays with your moderators — Pulse just makes sure they have the evidence in front of them.",
+  },
   {
     version: "0.58.0",
     title: "Birthday System",

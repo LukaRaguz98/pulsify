@@ -82,6 +82,17 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
       </>
     ),
   },
+  'alt-detection': {
+    title: 'Alt Detection',
+    plan: 'pro',
+    body: (
+      <>
+        <p>Scores every account against the signals Pulse can see — account age, join recency, default avatar, activity, moderation history, reputation, economy, giveaways, onboarding and prior safety flags — and surfaces accounts that may be related.</p>
+        <p><strong>When to use:</strong> Check an account before you action it, and work the investigation queue after a raid or a ban-evasion wave.</p>
+        <p><strong>Heads up:</strong> Discord exposes no IP or device data, so nothing here proves an alt. A high score is evidence to review, and linked accounts are <em>potential</em> matches — the judgement stays yours.</p>
+      </>
+    ),
+  },
   'ai-setup': {
     title: 'Pulse Assistant',
     plan: 'free',

@@ -53,6 +53,8 @@ const ICON_FILES = {
   money: "pulse-money.png",
   // Birthday cake glyph (/birthday, birthday announcements).
   birthday: "pulse-birthday.png",
+  // Shield glyph — account safety (/alt-check).
+  safety: "pulse-guard.png",
 };
 const localIconCache = {};
 
@@ -138,11 +140,39 @@ async function loadPulseIcon(iconKey, colorHex) {
 
 /**
  * Build a themed Components V2 container. `body` is an array of pre-built V2
- * components (use text()/divider()). `iconUrl` is the header thumbnail — either
- * an `attachment://<name>` reference or an external https URL (server icon /
- * avatar). When omitted the header renders without a thumbnail. `actions` is an
- * array of action rows (buttons / select menus) rendered inside the container,
- * below the footer, so interactive controls sit within the embed itself.
+ * components (use text()/divider()). `actions` is an array of action rows
+ * (buttons / select menus) rendered inside the container, below the footer, so
+ * interactive controls sit within the embed itself.
+ *
+ * ── Embed conventions (apply these to EVERY Pulse embed) ─────────────────────
+ *
+ * 1. HEADER THUMBNAIL (`iconUrl`) — an `attachment://<name>` badge or an https
+ *    URL (server icon / member avatar). It is OPTIONAL, and the rule is about
+ *    balance: a thumbnail is a fixed-size block, so on a one- or two-line reply
+ *    it takes up more room than the message itself and the embed looks
+ *    lopsided. So:
+ *      • KEEP it on content-rich embeds — /help, /profile, /changelog,
+ *        /leaderboard, /balance, /info, /milestones, /alt-check, /birthday
+ *        upcoming: multi-section bodies where the badge sits beside real text.
+ *      • DROP it on short confirmations and notices — /pay, /daily, /weekly,
+ *        /birthday set|view|remove, shop purchases, level-ups, milestone and
+ *        birthday announcements, temporary-role DMs. The accent bar + the title
+ *        already brand them.
+ *    When omitted, the header renders as plain text lines (no Section), which
+ *    is exactly what a short embed wants.
+ *
+ * 2. NO DASH BULLETS — body lists are plain lines, never `- item` / `• item`.
+ *    Most Pulse embeds already read as `**Label** — value` lines or bare
+ *    sentences; the few that used leading dashes looked like a different
+ *    product. One line per item, `**bold**` for the label, ` — ` as the
+ *    separator.
+ *
+ * 3. COLOUR — never hardcode. `colorHex` must come from getPulseColor() (i.e.
+ *    guild_settings.embed_color, chosen in the dashboard's Server Settings), so
+ *    every embed a server sees is in that server's colour. There are no
+ *    per-state or per-feature exceptions.
+ *
+ * 4. NO EMOJI in embed bodies (the accent bar and the badge carry the branding).
  */
 function buildPulseContainer({
   iconUrl,
@@ -420,11 +450,16 @@ async function renderHelp({ supabase, guild, member, getAllowedCommands, page })
   return { components, files: icon ? [icon] : [] };
 }
 
-/** Render a release's highlights as a bulleted text block (trimmed + capped). */
+/**
+ * Render a release's highlights as a text block (trimmed + capped). One
+ * highlight per line, no dash bullets — highlights already lead with a bold
+ * title (`**Title** — body`), so a marker in front of them is noise (see the
+ * embed conventions on buildPulseContainer).
+ */
 function highlightsBlock(highlights) {
   const shown = (highlights ?? []).slice(0, HIGHLIGHT_MAX);
   if (shown.length === 0) return null;
-  const lines = shown.map((h) => `- ${truncate(h, HIGHLIGHT_LINE_MAX)}`);
+  const lines = shown.map((h) => truncate(h, HIGHLIGHT_LINE_MAX));
   const extra = (highlights?.length ?? 0) - shown.length;
   if (extra > 0)
     lines.push(`-# …and ${extra} more — see the full release notes`);
@@ -1328,6 +1363,24 @@ const COMMANDS = [
         return;
       }
       await economyRewards.handleClaimCommand({ interaction, guild, ephemeral }, "weekly");
+    },
+  },
+  {
+    name: "alt-check",
+    category: "moderation",
+    defaultPermission: PERMISSION.MODERATOR,
+    data: new SlashCommandBuilder()
+      .setName("alt-check")
+      .setDescription("Check an account's alt risk — score, factors and potential linked accounts")
+      .addUserOption((o) =>
+        o.setName("user").setDescription("The account to check").setRequired(true),
+      ),
+    async execute({ interaction, guild, altDetection, ephemeral }) {
+      if (!altDetection?.handleAltCheckCommand) {
+        await replyNotice(interaction, "Alt detection isn't available right now.");
+        return;
+      }
+      await altDetection.handleAltCheckCommand({ interaction, guild, ephemeral });
     },
   },
 ];

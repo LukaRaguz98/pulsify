@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
 import { recordNotification } from '@/lib/notifications-server'
+import { readGuildEmbedInt } from '@/lib/embed-color'
 import {
   fetchChannelMessages,
   fetchGuildChannels,
@@ -19,8 +20,6 @@ import {
 import {
   normaliseConfig,
   validateConfig,
-  hexToInt,
-  isHexColor,
   openCustomId,
   SELECT_CUSTOM_ID,
   TICKET_MEMBER_ALLOW,
@@ -108,9 +107,7 @@ async function postNotice(
   channelId: string,
   lines: string[],
 ): Promise<void> {
-  const { data } = await supabase.from('ticket_configs').select('panel').eq('guild_id', guildId).maybeSingle()
-  const color = (data?.panel as { color?: string } | null)?.color
-  const accent = hexToInt(isHexColor(color) ? (color as string) : '#5865f2')
+  const accent = await readGuildEmbedInt(supabase, guildId)
   await postChannelComponents(channelId, [ticketNoticeContainer(accent, lines)])
 }
 
@@ -217,7 +214,7 @@ export async function postTicketPanel(guildId: string): Promise<ActionResult> {
   const enabledTypes = config.ticket_types.filter((t) => t.enabled)
   if (enabledTypes.length === 0) return { ok: false, error: 'Enable at least one ticket type first.' }
 
-  const accent = hexToInt(panel.color)
+  const accent = await readGuildEmbedInt(supabase, guildId)
   const container: Record<string, unknown> = {
     type: 17,
     accent_color: accent,
@@ -560,7 +557,7 @@ export async function closeTicket(
   // A V2 container builder tinted with the configured panel accent — used for
   // both the in-channel close notice and the transcript-channel summary.
   const config = await loadConfig(supabase, guildId)
-  const accent = hexToInt(config.panel.color)
+  const accent = await readGuildEmbedInt(supabase, guildId)
   const v2 = (lines: string[], footer = 'Ticket update') => [ticketNoticeContainer(accent, lines, footer)]
 
   // Lock the channel: opener keeps read access, loses the ability to post.

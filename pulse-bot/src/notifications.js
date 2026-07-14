@@ -41,6 +41,7 @@ const TYPE_TO_CATEGORY = {
   security_alert: 'security',
   security_mitigation: 'security',
   security_recovered: 'security',
+  alt_risk_flagged: 'security',
   bot_warning: 'bot',
   bot_error: 'bot',
 };
@@ -80,6 +81,7 @@ const TYPE_TO_SEVERITY = {
   security_alert: 'warning',
   security_mitigation: 'warning',
   security_recovered: 'success',
+  alt_risk_flagged: 'warning',
   bot_warning: 'warning',
   bot_error: 'error',
 };

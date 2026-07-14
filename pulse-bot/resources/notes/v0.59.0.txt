@@ -1,0 +1,29 @@
+**Pulsify v0.59.0 — Alt Risk Detection**
+A new Alt Detection view in Safety scores any account against the alt-account signals Pulse can see, surfaces the accounts that may be related, and gives your team one place to investigate — so ban evasion and throwaway accounts stop being a guessing game.
+
+**Account lookup**
+- **Search any account** — by username, @mention or Discord ID, including members who already left or were banned.
+- **The whole picture** — avatar, display name, ID, account creation date, server join date, roles, current status, activity and moderation history, in one report.
+- **An Alt Risk Score** — 0-100, banded Low, Moderate, High or Critical, with every factor that moved it listed and weighted.
+
+**Signals, not guesses**
+- **Twelve inputs** — account age, join recency, default avatar, activity, moderation history, reputation, economy footprint, giveaway entries, applications, onboarding, verification and prior safety flags.
+- **Evidence in its favour, too** — an established account, a long activity history or a trusted reputation pull the score back down; the report shows both sides.
+- **Tuned to be useful** — a legitimate newcomer lands in Moderate, not Critical: signals that need time (activity, onboarding) stay quiet until a member has had a fair chance.
+
+**Potential linked accounts**
+- **Correlated, never confirmed** — similar usernames, near-simultaneous joins, accounts created together, shared moderation history, coin transfers between accounts and matching activity hours.
+- **A confidence percentage** — each potential match shows how strong the evidence is and exactly which indicators fired. Automatic confidence is capped below certain on purpose: Discord exposes no IP or device data, so nothing here proves an alt.
+- **Your call, recorded** — link two accounts yourself when you're sure, and the link becomes the one thing Pulse treats as certain.
+
+**Investigations**
+- **A real queue** — Pulse scores every account as it joins and opens an investigation for the high and critical ones, so the suspicious joins of the past week are already waiting for you.
+- **Case files** — statuses (Open, Monitoring, Cleared, Confirmed alt, Banned), moderator notes, outcomes and a timeline of every decision your team made.
+- **Linked account groups** — accounts linked indirectly (A to B, B to C) are collected into one group.
+
+**In Discord**
+- **/alt-check** — a moderator command that returns the account's age, risk score, risk factors, potential linked accounts and a recommendation, in a Pulse embed. Every check is recorded in the dashboard's lookup history.
+
+Judgement stays with your moderators — Pulse just makes sure they have the evidence in front of them.
+
+July 14, 2026

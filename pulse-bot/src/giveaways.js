@@ -26,9 +26,10 @@ const { getGuildAccent } = require("./guild-accent");
 
 const GW = "gw";
 const TICK_MS = 30 * 1000; // lifecycle scan every 30s
-const BRAND = 0x8b5cf6; // Pulsify violet — the giveaway accent
-const GREY = 0x94a3b8; // cancelled
-const ENDED = 0xa855f7; // settled / winner announcement
+// Every giveaway embed — live, cancelled or settled — wears the guild's accent
+// (guild_settings.embed_color, set in the dashboard's Server Settings). There
+// are no per-state colours: the state is spelled out in the embed's text, and
+// the colour belongs to the server's brand. See getGuildAccent below.
 const ANTI_ALT_DEFAULT_DAYS = 30;
 const DISCORD_EPOCH = 1420070400000n;
 
@@ -273,17 +274,25 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
     return { type: 17, accent_color: accent, components: body };
   }
 
-  /** The settled container (ended / cancelled) — no Join button. */
-  function endedContainer(g, winners) {
+  /**
+   * The settled container (ended / cancelled) — no Join button.
+   *
+   * Every state wears the guild's accent (guild_settings.embed_color): the colour
+   * is the server's brand, not a status light. The state is already unmistakable
+   * in the text — "This giveaway was cancelled", the winners line, the footer —
+   * so it never needed a colour to carry it.
+   */
+  async function endedContainer(g, winners) {
     // Prize rides in the header beside the badge so the top stays filled; the
     // description (if any) follows underneath.
     const body = [...headerBlocks(g.title, `**Prize:** ${g.prize}`)];
     if (g.description) body.push(td(String(g.description).slice(0, 1500)));
     body.push(divider());
+    const accent = await getGuildAccent(supabase, g.guild_id);
     if (g.status === "cancelled") {
       body.push(td("This giveaway was cancelled."));
       body.push(td("-# Pulse — Giveaway cancelled"));
-      return { type: 17, accent_color: GREY, components: body };
+      return { type: 17, accent_color: accent, components: body };
     }
     if (winners && winners.length > 0) {
       body.push(td(`**Winner${winners.length === 1 ? "" : "s"}:** ${winners.map((w) => `<@${w.id}>`).join(", ")}`));
@@ -292,7 +301,7 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
     }
     const n = g.entry_count ?? 0;
     body.push(td(`-# Pulse — Giveaway ended — ${n} entr${n === 1 ? "y" : "ies"}`));
-    return { type: 17, accent_color: ENDED, components: body };
+    return { type: 17, accent_color: accent, components: body };
   }
 
   async function editGiveawayMessage(g, container) {
@@ -597,7 +606,7 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
       }
 
       // Edit the original message to its settled state and announce winners.
-      await editGiveawayMessage(fresh, endedContainer(fresh, winners));
+      await editGiveawayMessage(fresh, await endedContainer(fresh, winners));
       const channel = await client.channels.fetch(fresh.channel_id).catch(() => null);
       if (channel?.isTextBased?.()) {
         const link = fresh.message_id ? `https://discord.com/channels/${fresh.guild_id}/${fresh.channel_id}/${fresh.message_id}` : null;
@@ -618,7 +627,9 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
         await channel
           .send({
             flags: MessageFlags.IsComponentsV2,
-            components: [{ type: 17, accent_color: ENDED, components: lines }],
+            components: [
+              { type: 17, accent_color: await getGuildAccent(supabase, fresh.guild_id), components: lines },
+            ],
             allowedMentions: { users: winnerIds },
             files: iconFiles(),
           })

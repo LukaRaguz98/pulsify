@@ -287,6 +287,7 @@ export function MemberMessagesManager({
         onChange={(next) => { setWelcome(next); clearFeedback() }}
         guildName={guildName}
         channels={channels}
+        accentHex={accentHex}
         generatingSection={generatingSection}
         onGenerate={() => generateWithPulse('welcome')}
         pulseGenError={pulseGenError}
@@ -312,6 +313,7 @@ export function MemberMessagesManager({
         onChange={(next) => { setGoodbye(next); clearFeedback() }}
         guildName={guildName}
         channels={channels}
+        accentHex={accentHex}
         generatingSection={generatingSection}
         onGenerate={() => generateWithPulse('goodbye')}
         pulseGenError={pulseGenError}
@@ -421,7 +423,7 @@ function CardItem({ card }: { card: CardDef }) {
 // Shared body for the Welcome and Goodbye cards — both are a plain message or an embed.
 
 function MemberEventExtra({
-  variant, config, onChange, guildName, channels,
+  variant, config, onChange, guildName, channels, accentHex,
   generatingSection, onGenerate, pulseGenError, pulseGenErrorSection,
 }: {
   variant: 'welcome' | 'goodbye'
@@ -429,6 +431,8 @@ function MemberEventExtra({
   onChange: (next: MemberEventConfig) => void
   guildName: string
   channels: Channel[]
+  /** The guild embed colour (Server Settings) — the colour the bot actually posts. */
+  accentHex: string
   generatingSection: string | null
   onGenerate: () => void
   pulseGenError: string | null
@@ -442,7 +446,8 @@ function MemberEventExtra({
     : ''
   const previewEmbed: EmbedData | null = embed
     ? {
-        color: embed.color,
+        // The bot posts every embed in the guild accent, so the preview must too.
+        color: accentHex,
         title: embed.title,
         description: embed.description,
         fields: embed.fields ?? [],

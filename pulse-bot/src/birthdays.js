@@ -247,7 +247,6 @@ function createBirthdays(client, supabase, economy, leveling) {
 
   async function buildAnnouncement(guild, member, cfg, birthday, celebrationYear) {
     const colorHex = await getPulseColor(supabase, guild.id);
-    const icon = await loadPulseIcon("birthday", colorHex);
     const age = birthday.show_year ? ageInYear(birthday.birth_year, celebrationYear) : null;
     const mentionText =
       cfg.mention === "everyone" ? "@everyone" : cfg.mention === "here" ? "@here" : `<@${member.id}>`;
@@ -268,8 +267,12 @@ function createBirthdays(client, supabase, economy, leveling) {
       actions.push({ type: 1, components: [{ type: 2, style: 5, label: cfg.button_label, url: cfg.button_url }] });
     }
 
+    // No header badge: the announcement is a single warm sentence (plus an
+    // optional image), so a thumbnail would outweigh the message itself — see the
+    // embed conventions on buildPulseContainer. The accent bar and the "Happy
+    // Birthday" heading carry the branding, and the image (when set) is the
+    // visual.
     const container = buildPulseContainer({
-      iconUrl: icon ? `attachment://${icon.name}` : guild.iconURL?.({ size: 128 }) || member.displayAvatarURL({ size: 128 }),
       colorHex,
       title: "Happy Birthday",
       subtitle: member.displayName,
@@ -286,7 +289,7 @@ function createBirthdays(client, supabase, economy, leveling) {
           ? { users: [member.id] }
           : { parse: ["everyone"] };
 
-    return { container, files: icon ? [icon] : [], allowedMentions };
+    return { container, files: [], allowedMentions };
   }
 
   // ── Rewards + roles ─────────────────────────────────────────────────────────
@@ -477,11 +480,17 @@ function createBirthdays(client, supabase, economy, leveling) {
 
   // ── Slash command (/birthday set|view|upcoming|remove) ────────────────────────
 
-  async function replyEphemeral(interaction, guild, title, lines) {
+  /**
+   * Ephemeral Pulse reply. `withIcon` follows the embed conventions on
+   * buildPulseContainer: /birthday upcoming lists up to ten members, so the badge
+   * has text to sit beside; set/view/remove are one- or two-line confirmations
+   * where a thumbnail would take more room than the message, so they carry none.
+   */
+  async function replyEphemeral(interaction, guild, title, lines, withIcon = false) {
     const colorHex = await getPulseColor(supabase, guild.id);
-    const icon = await loadPulseIcon("birthday", colorHex);
+    const icon = withIcon ? await loadPulseIcon("birthday", colorHex) : null;
     const container = buildPulseContainer({
-      iconUrl: icon ? `attachment://${icon.name}` : guild.iconURL?.({ size: 128 }),
+      iconUrl: icon ? `attachment://${icon.name}` : undefined,
       colorHex,
       title,
       body: lines.map((l) => text(l)),
@@ -598,7 +607,7 @@ function createBirthdays(client, supabase, economy, leveling) {
       const dateStr = formatBirthday(b.birth_month, b.birth_day, b.birth_year, b.show_year);
       return `<@${b.user_id}> — **${dateStr}** (${countdownLabel(days)})`;
     });
-    await replyEphemeral(interaction, guild, "Upcoming birthdays", lines);
+    await replyEphemeral(interaction, guild, "Upcoming birthdays", lines, true);
   }
 
   async function handleRemove(interaction, guild) {

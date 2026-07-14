@@ -410,10 +410,11 @@ function createEconomy(client, supabase) {
 
     const senderName = interaction.user.globalName ?? interaction.user.username;
     const targetName = target.globalName ?? target.username;
-    const icon = await loadPulseIcon("money", colorHex);
 
     // Confirmation embed that headlines the amount and makes the direction of the
-    // transfer unmistakable.
+    // transfer unmistakable. No header badge: this is a short confirmation, and a
+    // thumbnail beside three lines takes more room than the message (see the
+    // embed conventions on buildPulseContainer).
     const body = [
       text(`## ${fmt(amount)} ${CURRENCY_NAME}`),
       text(`Sent from <@${interaction.user.id}> to <@${target.id}>.`),
@@ -426,14 +427,13 @@ function createEconomy(client, supabase) {
     await replyContainer(
       interaction,
       buildPulseContainer({
-        iconUrl: icon ? `attachment://${icon.name}` : null,
         colorHex,
         title: "Transfer complete",
         subtitle: `${senderName} → ${targetName}`,
         body,
         footer: "Pulse — Global economy",
       }),
-      icon,
+      null,
       ephemeral,
     );
   }
@@ -707,27 +707,30 @@ function createEconomy(client, supabase) {
   // Reputation) and per-server progression (XP + Levels), kept concise so it all
   // fits in one tidy container.
 
+  // Each way to earn is one plain line — no dash bullets (see the embed
+  // conventions on buildPulseContainer): the bold lead already opens the line,
+  // so a marker in front of it only adds noise.
   function infoBody() {
     return [
       text("Pulse **Balance** and **Reputation** are global — they follow you everywhere. **XP** and **Levels** are per-server."),
       divider(),
       text(
         "**Pulse Balance**\n" +
-          "- Join **events** and **giveaways** (more for winning)\n" +
-          "- Complete **onboarding** and hit **milestones**\n" +
-          "- Claim **/daily** and **/weekly** to build a streak",
+          "Join **events** and **giveaways** — more for winning\n" +
+          "Complete **onboarding** and hit **milestones**\n" +
+          "Claim **/daily** and **/weekly** to build a streak",
       ),
       divider(),
       text(
         "**Reputation** — a 0–100 trust score, *earned, not bought*\n" +
-          "- Grows with steady, positive activity over time\n" +
-          "- A higher score can boost how much you earn",
+          "Grows with steady, positive activity over time\n" +
+          "A higher score can boost how much you earn",
       ),
       divider(),
       text(
         "**Server XP & Levels**\n" +
-          "- Earn XP from **messages**, **voice** and day-to-day activity\n" +
-          "- Level up to unlock **role rewards** and climb the board",
+          "Earn XP from **messages**, **voice** and day-to-day activity\n" +
+          "Level up to unlock **role rewards** and climb the board",
       ),
       divider(),
       text("-# Check your standing with **/balance** — see the rankings with **/leaderboard**"),

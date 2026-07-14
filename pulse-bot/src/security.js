@@ -14,17 +14,18 @@
 
 const { Events, MessageFlags } = require("discord.js");
 const { recordNotification } = require("./notifications");
+const { getGuildAccent } = require("./guild-accent");
 
 const TICK_MS = 30 * 1000; // recovery + window-prune sweep
 // Per (guild,pattern[,actor]) cooldown between raising duplicate events, so one
 // sustained flood produces a steady trickle of events, not thousands.
 const DETECT_COOLDOWN_MS = 60 * 1000;
-const BRAND = 0xef4444;
 
 // ── Catalogue (mirror of lib/security.ts) ─────────────────────────────────────
 
 const SEVERITY_ORDER = ["low", "medium", "high", "critical"];
-const SEVERITY_COLOR = { low: 0x3b82f6, medium: 0xf59e0b, high: 0xf97316, critical: 0xef4444 };
+// Severity has no colour of its own: security alerts wear the guild's accent
+// like every other Pulse embed, and the level is stated in the alert's text.
 const SEVERITY_LABEL = { low: "Low", medium: "Medium", high: "High", critical: "Critical" };
 
 function normSeverity(v) {
@@ -384,7 +385,10 @@ function createSecurity(client, supabase) {
         components: [
           {
             type: 17,
-            accent_color: SEVERITY_COLOR[normSeverity(severity)] || BRAND,
+            // The guild's accent, like every other Pulse embed — the severity is
+            // spelled out in the title and the footer ("… — Critical"), so it
+            // doesn't need a colour to carry it.
+            accent_color: await getGuildAccent(supabase, cfg.guild_id),
             components: [
               { type: 10, content: "**Pulse — Security**" },
               { type: 10, content: `# ${title}` },

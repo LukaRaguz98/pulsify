@@ -25,6 +25,7 @@ const { readFile } = require("node:fs/promises");
 const path = require("node:path");
 const { recordNotification } = require("./notifications");
 const { replyNotice, editNotice } = require("./commands");
+const { getGuildAccentHex, DEFAULT_ACCENT_HEX } = require("./guild-accent");
 const {
   APL,
   OTHER_TYPE_ID,
@@ -159,10 +160,34 @@ function createTickets(client, supabase, economyRewards = null) {
 
   // ── V2 helpers (every bot message is a Components V2 container) ──────────────
 
-  /** Guild accent (the colour chosen in ticket settings), as a Discord int. */
+  // ── Accent ──
+  // Every ticket embed wears the GUILD's accent (guild_settings.embed_color, set
+  // in the dashboard's Server Settings) — not a per-panel or per-type colour, so
+  // tickets match every other Pulse embed in the server.
+  //
+  // These stay SYNCHRONOUS because they're called from deep inside the embed
+  // builders (a sync call site returning a Promise would send `accent_color:
+  // {}` to Discord). So they read a local cache and kick a background refresh;
+  // getGuildAccentHex has its own 60s TTL, so the refresh is cheap. The cache is
+  // warmed for every configured guild on load, so the first embed after a
+  // restart is already in the right colour.
+  const accentCache = new Map(); // guildId -> "#rrggbb"
+
+  function accentHexFor(guildId) {
+    void getGuildAccentHex(supabase, guildId)
+      .then((hex) => accentCache.set(guildId, hex))
+      .catch(() => {});
+    return accentCache.get(guildId) ?? DEFAULT_ACCENT_HEX;
+  }
+
+  /** The guild's accent as a Discord int. */
   function accentFor(guildId) {
-    const cfg = configCache.get(guildId);
-    return hexToInt(cfg?.panel?.color);
+    return hexToInt(accentHexFor(guildId));
+  }
+
+  async function warmAccent(guildId) {
+    const hex = await getGuildAccentHex(supabase, guildId).catch(() => null);
+    if (hex) accentCache.set(guildId, hex);
   }
 
   /** A Pulse-styled notice container tinted with the guild accent. */
@@ -207,6 +232,9 @@ function createTickets(client, supabase, economyRewards = null) {
     } else {
       configCache.clear();
       for (const row of configs ?? []) configCache.set(row.guild_id, normaliseConfig(row));
+      // Warm each configured guild's accent so the first ticket embed after a
+      // restart already carries the server's colour (see accentHexFor).
+      await Promise.all([...configCache.keys()].map((guildId) => warmAccent(guildId)));
     }
 
     const { data: open } = await supabase
@@ -290,7 +318,7 @@ function createTickets(client, supabase, economyRewards = null) {
   // tinted) ticket badge, the opening message, the submitted form answers, a
   // support-role ping line, and the Claim/Close controls.
   function controlContainer(config, ticket, type, answers, supportRoleIds, hasIcon) {
-    const accent = hexToInt(type?.color || config.panel.color);
+    const accent = accentFor(ticket.guild_id ?? config.guild_id);
     const opening = (config.opening_message || "A staff member will be with you shortly.")
       .replace(/\{user\}/g, `<@${ticket.opener_id}>`)
       .replace(/\{type\}/g, type?.label || "ticket");
@@ -538,7 +566,7 @@ function createTickets(client, supabase, economyRewards = null) {
       // One V2 message carries the opening embed (with the accent-tinted ticket
       // badge) AND the pings — the opener is mentioned in the opening text and
       // support roles in the ping line, with allowed_mentions set so both fire.
-      const icon = await loadTicketIcon(type.color || config.panel.color);
+      const icon = await loadTicketIcon(accentHexFor(guild.id));
       await channel
         .send({
           flags: MessageFlags.IsComponentsV2,
@@ -1098,7 +1126,7 @@ function createTickets(client, supabase, economyRewards = null) {
       components: [
         {
           type: 17,
-          accent_color: hexToInt(config.panel.color),
+          accent_color: accentFor(config.guild_id),
           components: [
             td("**Pulse**"),
             td("# Open a ticket"),
