@@ -17,6 +17,7 @@ import {
   Heart,
   Shield,
   Gem,
+  UserPlus,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -41,6 +42,7 @@ const ICONS: Record<string, LucideIcon> = {
   Heart,
   Shield,
   Gem,
+  UserPlus,
 }
 
 /** Icon names offered in the editor's icon picker. */
@@ -60,6 +62,7 @@ export const MILESTONE_ICON_CHOICES: string[] = [
   'Mic',
   'Gift',
   'TrendingUp',
+  'UserPlus',
 ]
 
 export function MilestoneIcon({ name, size = 16 }: { name: string; size?: number }) {

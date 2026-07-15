@@ -46,6 +46,7 @@ const { createBirthdays } = require("./birthdays");
 const { createAltDetection } = require("./alt-detection");
 const { getGuildAccent } = require("./guild-accent");
 const { createStatisticsChannels } = require("./statistics-channels");
+const { createInvites } = require("./invites");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -58,6 +59,9 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
+    // Invite Tracking (PULSIFY-60): receive InviteCreate/Delete + let the bot
+    // fetch each guild's invite list so a join can be attributed to a code.
+    GatewayIntentBits.GuildInvites,
     GatewayIntentBits.GuildModeration,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildVoiceStates,
@@ -210,6 +214,16 @@ const birthdays = createBirthdays(client, supabase, economy, leveling);
 // every joining account so high/critical ones land in the dashboard's
 // investigation queue before a moderator has to go looking for them.
 const altDetection = createAltDetection(client, supabase);
+
+// Invite Tracking & Referral System (PULSIFY-60): mirrors each guild's Discord
+// invite list, attributes every join to the invite (and inviter) used, scores
+// the join against the guild's valid-invite + anti-abuse rules, and reacts to
+// leaves/rejoins. Referral REWARDS are Member Milestones with the `invites`
+// metric — the milestone sweep grants them against the valid-invite count this
+// module maintains. Registers its own InviteCreate/Delete + GuildMember
+// add/remove listeners; /invites, /invite-leaderboard and /invite-rewards route
+// through the command handler below.
+const invites = createInvites(client, supabase);
 
 /**
  * Shared helper for Discord-side activity → notifications row.
@@ -494,6 +508,10 @@ client.once(Events.ClientReady, async (readyClient) => {
 
   // Alt detection: listen for joins so risky accounts are scored on arrival.
   altDetection.start();
+
+  // Invite tracking: prime the invite cache, attribute joins, grant referral
+  // rewards. Registers its own invite + member listeners.
+  await invites.start();
 
   // Startup banner — a clear, scannable success summary so an operator can
   // confirm at a glance which version is live, how many servers it serves, and
@@ -1196,6 +1214,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       economyRewards,
       birthdays,
       altDetection,
+      invites,
       ephemeral: verdict.ephemeral,
     });
     verdict.commit();

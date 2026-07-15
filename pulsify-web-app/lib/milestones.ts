@@ -22,6 +22,7 @@ export type MilestoneMetric =
   | 'voice_minutes'
   | 'events'
   | 'giveaways'
+  | 'invites'
   | 'xp'
   | 'level'
 
@@ -31,9 +32,19 @@ export const MILESTONE_METRICS: MilestoneMetric[] = [
   'voice_minutes',
   'events',
   'giveaways',
+  'invites',
   'xp',
   'level',
 ]
+
+/**
+ * Metrics that depend on another feature being enabled. The editor hides these
+ * options unless the feature is on (e.g. an invite milestone only makes sense
+ * with invite tracking enabled — see Engagement › Invites).
+ */
+export const FEATURE_GATED_METRICS: Partial<Record<MilestoneMetric, 'invites'>> = {
+  invites: 'invites',
+}
 
 export type MetricMeta = {
   label: string
@@ -82,6 +93,13 @@ export const METRIC_META: Record<MilestoneMetric, MetricMeta> = {
     icon: 'Gift',
     hint: 'Giveaways the member has entered.',
     suggestions: [1, 5, 10, 25],
+  },
+  invites: {
+    label: 'Valid invites',
+    unit: 'invite',
+    icon: 'UserPlus',
+    hint: 'Valid referrals the member has brought in (needs invite tracking).',
+    suggestions: [5, 10, 25, 50, 100],
   },
   xp: {
     label: 'Total XP',
@@ -148,6 +166,7 @@ export type MemberMetrics = {
   voice_minutes: number
   events: number
   giveaways: number
+  invites: number
   xp: number
   level: number
 }
@@ -292,6 +311,8 @@ export function metricValue(metrics: MemberMetrics, metric: MilestoneMetric): nu
       return metrics.events
     case 'giveaways':
       return metrics.giveaways
+    case 'invites':
+      return metrics.invites
     case 'xp':
       return metrics.xp
     case 'level':
@@ -434,6 +455,7 @@ export const MILESTONE_PRESETS: MilestonePreset[] = [
   { name: '1,000 Messages', description: 'A thousand messages sent.', metric: 'messages', threshold: 1000, icon: 'MessageSquare' },
   { name: 'Voice Veteran', description: '10 hours in voice channels.', metric: 'voice_minutes', threshold: 600, icon: 'Mic' },
   { name: 'Giveaway Regular', description: 'Entered 10 giveaways.', metric: 'giveaways', threshold: 10, icon: 'Gift' },
+  { name: 'Top Recruiter', description: 'Brought in 25 valid invites.', metric: 'invites', threshold: 25, icon: 'UserPlus' },
   { name: 'Event Goer', description: 'Joined 5 events.', metric: 'events', threshold: 5, icon: 'CalendarDays' },
   { name: 'Level 25', description: 'Reached level 25.', metric: 'level', threshold: 25, icon: 'TrendingUp' },
 ]
@@ -515,7 +537,7 @@ export function computeMilestoneStats(
 
 /** Build a MemberMetrics from the get_member_milestone_metrics RPC row + join age. */
 export function metricsFromRow(
-  row: { messages?: number; voice_seconds?: number; events?: number; giveaways?: number; xp?: number; level?: number } | null | undefined,
+  row: { messages?: number; voice_seconds?: number; events?: number; giveaways?: number; invites?: number; xp?: number; level?: number } | null | undefined,
   joinAgeDays: number,
 ): MemberMetrics {
   return {
@@ -524,6 +546,7 @@ export function metricsFromRow(
     voice_minutes: Math.floor(Number(row?.voice_seconds ?? 0) / 60),
     events: Number(row?.events ?? 0),
     giveaways: Number(row?.giveaways ?? 0),
+    invites: Number(row?.invites ?? 0),
     xp: Number(row?.xp ?? 0),
     level: Number(row?.level ?? 0),
   }

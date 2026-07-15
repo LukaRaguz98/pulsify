@@ -45,21 +45,26 @@ export function MemberMilestones({
 }) {
   const [milestones, setMilestones] = useState<Milestone[]>([])
   const [completions, setCompletions] = useState<CompletionRow[]>([])
-  const [counts, setCounts] = useState<{ giveaways: number; events: number }>({ giveaways: 0, events: 0 })
+  const [counts, setCounts] = useState<{ giveaways: number; events: number; invites: number }>({ giveaways: 0, events: 0, invites: 0 })
   const [loaded, setLoaded] = useState(false)
   const [page, setPage] = useState(0)
 
   const load = useCallback(async () => {
     const supabase = createSupabase()
-    const [defs, comp, gw, evt] = await Promise.all([
+    const [defs, comp, gw, evt, inv, bonus] = await Promise.all([
       supabase.from('milestones').select('*').eq('guild_id', guildId).eq('enabled', true),
       supabase.from('member_milestones').select('milestone_id, value, completed_at').eq('guild_id', guildId).eq('user_id', userId),
       supabase.from('giveaway_entries').select('user_id', { count: 'exact', head: true }).eq('guild_id', guildId).eq('user_id', userId),
       supabase.from('member_event_participation').select('user_id', { count: 'exact', head: true }).eq('guild_id', guildId).eq('user_id', userId),
+      // Valid invites this member has brought in (as inviter) + bonus credits,
+      // for the invite milestone metric.
+      supabase.from('invited_members').select('user_id', { count: 'exact', head: true }).eq('guild_id', guildId).eq('inviter_id', userId).eq('status', 'valid'),
+      supabase.from('invite_adjustments').select('amount').eq('guild_id', guildId).eq('user_id', userId).eq('kind', 'bonus'),
     ])
     setMilestones((defs.data ?? []).map((r) => normaliseMilestone(r as Record<string, unknown>)))
     setCompletions((comp.data ?? []) as CompletionRow[])
-    setCounts({ giveaways: gw.count ?? 0, events: evt.count ?? 0 })
+    const bonusInvites = (bonus.data ?? []).reduce((s, a) => s + Number((a as { amount?: number }).amount ?? 0), 0)
+    setCounts({ giveaways: gw.count ?? 0, events: evt.count ?? 0, invites: Math.max(0, (inv.count ?? 0) + bonusInvites) })
     setLoaded(true)
   }, [guildId, userId])
 
@@ -87,6 +92,7 @@ export function MemberMilestones({
       voice_minutes: base.voice_minutes,
       events: counts.events,
       giveaways: counts.giveaways,
+      invites: counts.invites,
       xp: base.xp,
       level: base.level,
     }),

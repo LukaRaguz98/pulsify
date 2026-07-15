@@ -26,6 +26,8 @@ function valueForMetric(row: MemberMetricRow, metric: MilestoneMetric): number |
       return row.events
     case 'giveaways':
       return row.giveaways
+    case 'invites':
+      return row.invites
     case 'xp':
       return row.xp
     case 'level':

@@ -12,6 +12,7 @@ export type MemberMetricRow = {
   voice_minutes: number
   events: number
   giveaways: number
+  invites: number
   xp: number
   level: number
 }
@@ -28,7 +29,7 @@ export default async function MilestonesPage({
   } = await supabase.auth.getUser()
   if (!user) redirect('/')
 
-  const [guild, channels, roles, { data: rows }, { data: completionRows }, { data: metricRows }] =
+  const [guild, channels, roles, { data: rows }, { data: completionRows }, { data: metricRows }, inviteSettings] =
     await Promise.all([
       fetchGuild(guildId),
       fetchGuildChannels(guildId),
@@ -46,7 +47,12 @@ export default async function MilestonesPage({
         .order('completed_at', { ascending: false })
         .limit(500),
       supabase.rpc('get_member_milestone_metrics', { p_guild_id: guildId }),
+      supabase.from('invite_settings').select('enabled').eq('guild_id', guildId).maybeSingle(),
     ])
+
+  // Invite milestones only make sense when invite tracking is on, so the editor
+  // hides the metric otherwise.
+  const inviteTrackingEnabled = inviteSettings.data?.enabled === true
 
   const textChannels = channels
     .filter((c) => c.type === CHANNEL_TYPES.TEXT || c.type === CHANNEL_TYPES.ANNOUNCEMENT)
@@ -72,6 +78,7 @@ export default async function MilestonesPage({
     voice_minutes: Math.floor(Number(m.voice_seconds ?? 0) / 60),
     events: Number(m.events ?? 0),
     giveaways: Number(m.giveaways ?? 0),
+    invites: Number(m.invites ?? 0),
     xp: Number(m.xp ?? 0),
     level: Number(m.level ?? 0),
   }))
@@ -85,6 +92,7 @@ export default async function MilestonesPage({
       metrics={metrics}
       channels={textChannels}
       roles={assignableRoles}
+      inviteTrackingEnabled={inviteTrackingEnabled}
     />
   )
 }

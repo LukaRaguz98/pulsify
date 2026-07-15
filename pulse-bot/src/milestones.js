@@ -35,6 +35,7 @@ const MILESTONE_METRICS = [
   "voice_minutes",
   "events",
   "giveaways",
+  "invites",
   "xp",
   "level",
 ];
@@ -45,6 +46,7 @@ const METRIC_META = {
   voice_minutes: { label: "Voice activity", unit: "minute", icon: "Mic" },
   events: { label: "Event participation", unit: "event", icon: "CalendarDays" },
   giveaways: { label: "Giveaway participation", unit: "giveaway", icon: "Gift" },
+  invites: { label: "Valid invites", unit: "invite", icon: "UserPlus" },
   xp: { label: "Total XP", unit: "XP", icon: "Sparkles" },
   level: { label: "Level reached", unit: "level", icon: "TrendingUp" },
 };
@@ -127,6 +129,8 @@ function metricValue(metrics, metric) {
       return metrics.events;
     case "giveaways":
       return metrics.giveaways;
+    case "invites":
+      return metrics.invites;
     case "xp":
       return metrics.xp;
     case "level":
@@ -228,6 +232,7 @@ function metricsFromRow(row, joinAgeDays) {
     voice_minutes: Math.floor(Number(row?.voice_seconds ?? 0) / 60),
     events: Number(row?.events ?? 0),
     giveaways: Number(row?.giveaways ?? 0),
+    invites: Number(row?.invites ?? 0),
     xp: Number(row?.xp ?? 0),
     level: Number(row?.level ?? 0),
   };
@@ -318,7 +323,7 @@ function createMilestones(client, supabase, rewards = null) {
 
   async function getMemberMetrics(guild, member) {
     const userId = member.id;
-    const [profile, gw, evt, lvl] = await Promise.all([
+    const [profile, gw, evt, lvl, inv] = await Promise.all([
       supabase
         .rpc("get_member_profile_stats", { p_guild_id: guild.id, p_user_id: userId, p_since: null })
         .then((r) => (Array.isArray(r.data) ? r.data[0] : r.data) ?? null)
@@ -345,7 +350,30 @@ function createMilestones(client, supabase, rewards = null) {
         .maybeSingle()
         .then((r) => r.data ?? null)
         .catch(() => null),
+      // Valid invites this member has brought in (as inviter). Bonus credits
+      // are added below so a manual credit still moves an invite milestone.
+      supabase
+        .from("invited_members")
+        .select("user_id", { count: "exact", head: true })
+        .eq("guild_id", guild.id)
+        .eq("inviter_id", userId)
+        .eq("status", "valid")
+        .then((r) => r.count ?? 0)
+        .catch(() => 0),
     ]);
+
+    let bonusInvites = 0;
+    try {
+      const { data: adj } = await supabase
+        .from("invite_adjustments")
+        .select("amount")
+        .eq("guild_id", guild.id)
+        .eq("user_id", userId)
+        .eq("kind", "bonus");
+      bonusInvites = (adj ?? []).reduce((s, a) => s + (a.amount ?? 0), 0);
+    } catch {
+      /* invite tracking not set up — treat as zero */
+    }
 
     const joinAgeDays = member.joinedTimestamp
       ? (Date.now() - member.joinedTimestamp) / 86_400_000
@@ -357,6 +385,7 @@ function createMilestones(client, supabase, rewards = null) {
       voice_minutes: Math.floor(Number(profile?.voice_seconds ?? 0) / 60),
       events: Number(evt),
       giveaways: Number(gw),
+      invites: Math.max(0, Number(inv) + bonusInvites),
       xp: Number(lvl?.xp ?? 0),
       level: Number(lvl?.level ?? 0),
     };
