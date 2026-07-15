@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   AlertTriangle,
+  BarChart3,
   ClipboardList,
   Fingerprint,
   History,
@@ -17,6 +18,7 @@ import {
   X,
 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
+import { CategorySection } from '@/components/ui/category-section'
 import { EmptyState } from '@/components/ui/empty-state'
 import { TableSkeleton } from '@/components/ui/table-skeleton'
 import { createClient as createSupabase } from '@/lib/supabase'
@@ -335,40 +337,42 @@ function OverviewTab({
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile
-          icon={<AlertTriangle size={16} />}
-          label="Need a look"
-          value={stats.actionable}
-          accent={RISK_META.high.color}
-          hint="High + Critical"
-        />
-        <StatTile
-          icon={<ListChecks size={16} />}
-          label="Open investigations"
-          value={stats.openCases}
-          accent="#60a5fa"
-        />
-        <StatTile
-          icon={<Link2 size={16} />}
-          label="Linked account groups"
-          value={stats.linkedGroups}
-          accent="#a78bfa"
-        />
-        <StatTile
-          icon={<ShieldCheck size={16} />}
-          label="Resolved"
-          value={stats.resolvedCases}
-          accent={RISK_META.low.color}
-        />
-      </div>
+      <CategorySection icon={<ShieldCheck size={14} />} title="At a glance" description="What needs attention across the server right now.">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatTile
+            icon={<AlertTriangle size={16} />}
+            label="Need a look"
+            value={stats.actionable}
+            accent={RISK_META.high.color}
+            hint="High + Critical"
+          />
+          <StatTile
+            icon={<ListChecks size={16} />}
+            label="Open investigations"
+            value={stats.openCases}
+            accent="#60a5fa"
+          />
+          <StatTile
+            icon={<Link2 size={16} />}
+            label="Linked account groups"
+            value={stats.linkedGroups}
+            accent="#a78bfa"
+          />
+          <StatTile
+            icon={<ShieldCheck size={16} />}
+            label="Resolved"
+            value={stats.resolvedCases}
+            accent={RISK_META.low.color}
+          />
+        </div>
+      </CategorySection>
 
       {/* Band distribution — the shape of the server, at a glance. */}
-      <section
+      <CategorySection icon={<BarChart3 size={14} />} title="Risk distribution" description="How members fall across the risk bands. Click a band to filter the list below.">
+      <div
         className="rounded-xl border p-5"
         style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
       >
-        <h2 className="mb-4 font-semibold text-foreground">Risk distribution</h2>
         <div className="flex h-3 w-full overflow-hidden rounded-full" style={{ background: 'var(--bg-2)' }}>
           {RISK_LEVELS.map((l) => {
             const pct = stats.scanned > 0 ? (stats.byLevel[l] / stats.scanned) * 100 : 0
@@ -402,14 +406,15 @@ function OverviewTab({
             </button>
           ))}
         </div>
-      </section>
+      </div>
+      </CategorySection>
 
       {/* Highest risk accounts */}
-      <section>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <AlertTriangle size={15} style={{ color: RISK_META.high.color }} /> Highest risk accounts
-          </h2>
+      <CategorySection
+        icon={<AlertTriangle size={14} style={{ color: RISK_META.high.color }} />}
+        title="Highest risk accounts"
+        description="Members with the strongest alt-account signals — open one to see the full report."
+        action={
           <div className="relative">
             <Search
               size={13}
@@ -420,12 +425,12 @@ function OverviewTab({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Filter by name or ID"
-              className="w-56 rounded-lg border py-1.5 pl-8 pr-3 text-xs outline-none transition-colors focus:border-[var(--p-1)]"
+              className="w-52 rounded-lg border py-1.5 pl-8 pr-3 text-xs outline-none transition-colors focus:border-[var(--p-1)]"
               style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
             />
           </div>
-        </div>
-
+        }
+      >
         {accounts.length === 0 ? (
           <EmptyState
             icon={<ShieldCheck size={26} />}
@@ -462,14 +467,11 @@ function OverviewTab({
             ))}
           </div>
         )}
-      </section>
+      </CategorySection>
 
       <div className="grid gap-8 lg:grid-cols-2">
         {/* Investigation queue */}
-        <section>
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-            <ListChecks size={15} style={{ color: 'var(--p-1)' }} /> Investigation queue
-          </h2>
+        <CategorySection icon={<ListChecks size={14} />} title="Investigation queue" description="Open cases waiting on your team.">
           {openCases.length === 0 ? (
             <EmptyState
               icon={<ClipboardList size={20} />}
@@ -501,13 +503,10 @@ function OverviewTab({
               ))}
             </div>
           )}
-        </section>
+        </CategorySection>
 
         {/* Recently detected — what Pulse has caught lately, newest first. */}
-        <section>
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Radar size={15} style={{ color: 'var(--p-1)' }} /> Recently detected
-          </h2>
+        <CategorySection icon={<Radar size={14} />} title="Recently detected" description="High and critical accounts, newest first.">
           {recent.length === 0 ? (
             <EmptyState
               icon={<Radar size={20} />}
@@ -541,14 +540,11 @@ function OverviewTab({
               ))}
             </div>
           )}
-        </section>
+        </CategorySection>
       </div>
 
       {/* Lookup history — the audit trail: who checked whom, and from where. */}
-      <section>
-        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-          <History size={15} style={{ color: 'var(--p-1)' }} /> Recent lookups
-        </h2>
+      <CategorySection icon={<History size={14} />} title="Recent lookups" description="Who checked whom — here or with /alt-check.">
         {lookups.length === 0 ? (
           <EmptyState
             icon={<Search size={20} />}
@@ -582,7 +578,7 @@ function OverviewTab({
             ))}
           </div>
         )}
-      </section>
+      </CategorySection>
     </div>
   )
 }
@@ -614,6 +610,7 @@ function LookupTab({
 }) {
   return (
     <div className="space-y-6">
+      <CategorySection icon={<Fingerprint size={14} />} title="Account lookup" description="Score any member against every alt-account signal Pulse can see.">
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -655,6 +652,7 @@ function LookupTab({
           Check account
         </button>
       </form>
+      </CategorySection>
 
       {error && (
         <div
@@ -710,27 +708,27 @@ function InvestigationsTab({
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-end">
-        <div className="relative">
-          <Search
-            size={13}
-            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"
-            style={{ color: 'var(--text-3)' }}
-          />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Filter cases"
-            className="w-56 rounded-lg border py-1.5 pl-8 pr-3 text-xs outline-none transition-colors focus:border-[var(--p-1)]"
-            style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
-          />
-        </div>
-      </div>
-
-      <section>
-        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-          <ListChecks size={15} style={{ color: 'var(--p-1)' }} /> Open ({open.length})
-        </h2>
+      <CategorySection
+        icon={<ListChecks size={14} />}
+        title={`Open (${open.length})`}
+        description="Cases your team is actively working."
+        action={
+          <div className="relative">
+            <Search
+              size={13}
+              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"
+              style={{ color: 'var(--text-3)' }}
+            />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Filter cases"
+              className="w-52 rounded-lg border py-1.5 pl-8 pr-3 text-xs outline-none transition-colors focus:border-[var(--p-1)]"
+              style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
+            />
+          </div>
+        }
+      >
         {open.length === 0 ? (
           <EmptyState
             icon={<ClipboardList size={20} />}
@@ -745,12 +743,9 @@ function InvestigationsTab({
             ))}
           </div>
         )}
-      </section>
+      </CategorySection>
 
-      <section>
-        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-          <ShieldCheck size={15} style={{ color: RISK_META.low.color }} /> Resolved ({resolved.length})
-        </h2>
+      <CategorySection icon={<ShieldCheck size={14} style={{ color: RISK_META.low.color }} />} title={`Resolved (${resolved.length})`} description="Cleared, confirmed or banned — the closed cases.">
         {resolved.length === 0 ? (
           <p className="text-sm text-subtle">No cases have been closed yet.</p>
         ) : (
@@ -760,12 +755,9 @@ function InvestigationsTab({
             ))}
           </div>
         )}
-      </section>
+      </CategorySection>
 
-      <section>
-        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-          <History size={15} style={{ color: 'var(--p-1)' }} /> Activity
-        </h2>
+      <CategorySection icon={<History size={14} />} title="Activity" description="Notes, status changes and links as your team works the queue.">
         {events.length === 0 ? (
           <p className="text-sm text-subtle">
             Notes, status changes and links show up here as your team works the queue.
@@ -799,7 +791,7 @@ function InvestigationsTab({
             ))}
           </div>
         )}
-      </section>
+      </CategorySection>
     </div>
   )
 }
@@ -867,11 +859,11 @@ function LinksTab({
   }
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm" style={{ color: 'var(--text-3)' }}>
-        Groups of accounts a moderator has marked as related. Accounts linked indirectly (A to B, B to C) are
-        collected into one group.
-      </p>
+    <CategorySection
+      icon={<Link2 size={14} />}
+      title="Linked account groups"
+      description="Accounts a moderator marked as related. Accounts linked indirectly (A to B, B to C) are collected into one group."
+    >
       {groups.map((group) => (
         <section
           key={group.members.map((m) => m.userId).join('-')}
@@ -913,6 +905,6 @@ function LinksTab({
           )}
         </section>
       ))}
-    </div>
+    </CategorySection>
   )
 }

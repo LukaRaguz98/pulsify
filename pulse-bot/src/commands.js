@@ -55,6 +55,8 @@ const ICON_FILES = {
   birthday: "pulse-birthday.png",
   // Shield glyph — account safety (/alt-check).
   safety: "pulse-guard.png",
+  // Invite / referral glyph (/invites, /invite-leaderboard, /invite-rewards).
+  invite: "pulse-invite.png",
 };
 const localIconCache = {};
 
@@ -1223,6 +1225,66 @@ const COMMANDS = [
         return;
       }
       await birthdays.handleBirthdayCommand({ interaction, guild });
+    },
+  },
+  {
+    name: "invites",
+    category: "information",
+    defaultPermission: PERMISSION.EVERYONE,
+    data: new SlashCommandBuilder()
+      .setName("invites")
+      .setDescription("Show your invite stats (or another member's)")
+      .addUserOption((o) =>
+        o.setName("user").setDescription("The member to look up (defaults to you)").setRequired(false),
+      ),
+    async execute({ interaction, guild, invites }) {
+      if (!invites?.handleInvitesCommand) {
+        await replyNotice(interaction, "Invite tracking isn't available right now.");
+        return;
+      }
+      await invites.handleInvitesCommand({ interaction, guild });
+    },
+  },
+  {
+    name: "invite-leaderboard",
+    category: "information",
+    defaultPermission: PERMISSION.EVERYONE,
+    data: new SlashCommandBuilder()
+      .setName("invite-leaderboard")
+      .setDescription("See the top inviters in this server")
+      .addStringOption((o) =>
+        o
+          .setName("period")
+          .setDescription("Time range for the leaderboard")
+          .setRequired(false)
+          .addChoices(
+            { name: "Today", value: "day" },
+            { name: "This week", value: "week" },
+            { name: "This month", value: "month" },
+            { name: "All time", value: "all" },
+          ),
+      ),
+    async execute({ interaction, guild, invites }) {
+      if (!invites?.handleLeaderboardCommand) {
+        await replyNotice(interaction, "Invite tracking isn't available right now.");
+        return;
+      }
+      await invites.handleLeaderboardCommand({ interaction, guild });
+    },
+  },
+  {
+    name: "invite-rewards",
+    category: "information",
+    defaultPermission: PERMISSION.EVERYONE,
+    data: new SlashCommandBuilder()
+      .setName("invite-rewards")
+      .setDescription("See the invite reward milestones and your progress"),
+    async execute({ interaction, guild, invites }) {
+      if (!invites?.handleRewardsCommand) {
+        await replyNotice(interaction, "Invite tracking isn't available right now.");
+        return;
+      }
+      await invites.handleRewardsCommand({ interaction, guild });
     },
   },
   {

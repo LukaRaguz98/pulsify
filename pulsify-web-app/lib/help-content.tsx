@@ -196,6 +196,16 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
       </>
     ),
   },
+  invites: {
+    title: 'Invite Tracking & Referrals',
+    plan: 'free',
+    body: (
+      <>
+        <p>Pulse works out which invite each member used to join, scores every inviter (valid vs fake vs left), and rewards members automatically when they reach a number of valid invites — with Pulse Coins, XP, roles, temporary roles or custom badges.</p>
+        <p><strong>Tip:</strong> Tracking is off until you enable it. Tune what counts as a valid invite (account age, stay time, onboarding, no active flags, not a likely alt) and the anti-abuse rules (self-invites, alt farming, rapid rejoins, spikes) under Settings. Joins are recorded even while off, so you keep the history.</p>
+      </>
+    ),
+  },
   economy: {
     title: 'Global Economy',
     plan: 'free',

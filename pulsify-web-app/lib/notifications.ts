@@ -72,6 +72,12 @@ export const NOTIFICATION_TYPES = [
   'security_recovered',
   // alt detection
   'alt_risk_flagged',
+  // invites
+  'invite_joined',
+  'invite_valid',
+  'invite_invalid',
+  'invite_reward',
+  'invite_spike',
   // bot
   'bot_warning',
   'bot_error',
@@ -97,6 +103,7 @@ export type NotificationCategory =
   | 'birthdays'
   | 'economy'
   | 'security'
+  | 'invites'
   | 'bot'
 
 export type NotificationSeverity = 'info' | 'success' | 'warning' | 'error'
@@ -145,6 +152,11 @@ export const TYPE_TO_CATEGORY: Record<NotificationType, NotificationCategory> = 
   security_mitigation: 'security',
   security_recovered: 'security',
   alt_risk_flagged: 'security',
+  invite_joined: 'invites',
+  invite_valid: 'invites',
+  invite_invalid: 'invites',
+  invite_reward: 'invites',
+  invite_spike: 'invites',
   bot_warning: 'bot',
   bot_error: 'bot',
 }
@@ -193,6 +205,11 @@ export const TYPE_TO_SEVERITY: Record<NotificationType, NotificationSeverity> = 
   security_mitigation: 'warning',
   security_recovered: 'success',
   alt_risk_flagged: 'warning',
+  invite_joined: 'info',
+  invite_valid: 'success',
+  invite_invalid: 'info',
+  invite_reward: 'success',
+  invite_spike: 'warning',
   bot_warning: 'warning',
   bot_error: 'error',
 }
@@ -215,6 +232,7 @@ export const CATEGORY_LABELS: Record<NotificationCategory, string> = {
   birthdays: 'Birthdays',
   economy: 'Economy',
   security: 'Security',
+  invites: 'Invites',
   bot: 'Bot Status',
 }
 
@@ -261,6 +279,11 @@ export const TYPE_LABELS: Record<NotificationType, string> = {
   security_mitigation: 'Mitigation activated',
   security_recovered: 'Mitigation lifted',
   alt_risk_flagged: 'Alt risk flagged',
+  invite_joined: 'Invited member joined',
+  invite_valid: 'Invite became valid',
+  invite_invalid: 'Invite marked invalid',
+  invite_reward: 'Invite reward earned',
+  invite_spike: 'Suspicious invite spike',
   bot_warning: 'Bot warnings',
   bot_error: 'Bot errors',
 }
@@ -309,6 +332,11 @@ export const TYPE_DESCRIPTIONS: Record<NotificationType, string> = {
   security_mitigation: 'An automatic or manual protection action is applied.',
   security_recovered: 'A protection action expires or is lifted.',
   alt_risk_flagged: 'A joining account scores High or Critical for alt-account risk.',
+  invite_joined: 'A member joins through a tracked invite.',
+  invite_valid: 'An invited member meets the valid-invite rules.',
+  invite_invalid: 'An invite is marked invalid or fake by the rules or an admin.',
+  invite_reward: 'An inviter reaches a milestone and earns a referral reward.',
+  invite_spike: 'One inviter drives an unusual burst of joins — possible farming.',
   bot_warning: 'Recoverable issues like failed welcome messages.',
   bot_error: 'Critical bot failures that need attention.',
 }

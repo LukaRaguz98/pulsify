@@ -44,6 +44,8 @@ export const PULSE_ICONS = {
   birthday: 'pulse-birthday.png',
   /** Shield glyph — the account-safety embeds (/alt-check). */
   safety: 'pulse-guard.png',
+  /** Invite / referral glyph — the invite embeds (/invites, boards, rewards). */
+  invite: 'pulse-invite.png',
 } as const
 
 export type PulseIconName = keyof typeof PULSE_ICONS

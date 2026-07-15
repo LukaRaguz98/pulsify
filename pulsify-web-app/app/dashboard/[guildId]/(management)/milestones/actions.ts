@@ -23,6 +23,22 @@ function revalidate(guildId: string) {
   revalidatePath(`/dashboard/${guildId}/milestones`)
 }
 
+/**
+ * Invite milestones (metric `invites`) are granted against the invite-tracking
+ * system, so they can only be saved when that system is enabled. Returns an
+ * error result to short-circuit with, or null when the save may proceed.
+ */
+async function ensureInviteTracking(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  guildId: string,
+  metric: string,
+): Promise<{ ok: false; error: string } | null> {
+  if (metric !== 'invites') return null
+  const { data } = await supabase.from('invite_settings').select('enabled').eq('guild_id', guildId).maybeSingle()
+  if (data?.enabled === true) return null
+  return { ok: false, error: 'Turn on invite tracking (Engagement › Invites) before saving an invite milestone.' }
+}
+
 // ── Discord embed (MUST match pulse-bot/src/milestones.js milestoneContainer) ──
 
 const td = (content: string) => ({ type: 10, content })
@@ -67,6 +83,10 @@ export async function createMilestone(
   if (!auth.ok) return { ok: false, error: auth.error }
 
   const supabase = await createClient()
+
+  // Invite milestones only make sense with invite tracking on.
+  const inviteGuard = await ensureInviteTracking(supabase, guildId, draft.metric)
+  if (inviteGuard) return inviteGuard
 
   // Guard against unbounded milestone counts per guild.
   const { count } = await supabase
@@ -118,6 +138,10 @@ export async function updateMilestone(
   if (!auth.ok) return { ok: false, error: auth.error }
 
   const supabase = await createClient()
+
+  const inviteGuard = await ensureInviteTracking(supabase, guildId, draft.metric)
+  if (inviteGuard) return inviteGuard
+
   const row = draftToRow(draft)
   const { error } = await supabase
     .from('milestones')

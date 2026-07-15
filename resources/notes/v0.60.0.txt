@@ -1,0 +1,25 @@
+**Pulsify v0.60.0 — Invite Tracking & Referrals**
+A new Invites view in Engagement that works out who invited each member, scores every inviter fairly, rewards your best recruiters automatically, and shuts down invite farming — so growing your community actually pays off for the people who do it.
+
+**Know who invited who**
+- **Automatic attribution** — Pulse mirrors your server's invite links and, the moment someone joins, works out which invite (or the vanity URL) they used and who owns it.
+- **The full story** — inviter, invited member, invite code, join and leave dates, account age and source, all recorded even before you turn tracking on.
+- **Live stats** — total, valid, fake, left and bonus invites, an invite score and retention rate, top inviters and the most recent joins, at a glance.
+
+**Fair scoring**
+- **Valid-invite rules** — decide what counts: minimum account age, minimum time in the server, completed onboarding, verification, no active moderation flags, a minimum activity level, and excluding likely alt accounts.
+- **Anti-abuse built in** — self-invites, alt-account farming, rapid join-and-leave, suspicious spikes and duplicate reward claims are caught and marked, with a hook into Safety › Alt Detection.
+- **A real leaderboard** — rank inviters by score for today, this week, this month or all time, with retention and reward counts, and a profile drawer for every inviter.
+
+**Rewards that run themselves**
+- **Invite milestones** — referral rewards are Member Milestones: create one in Engagement › Milestones with the new "Valid invites" trigger (e.g. "25 valid invites → VIP role"). The option appears once invite tracking is on.
+- **Granted automatically** — the milestone sweep hands out the role the moment an inviter crosses the threshold, and announces it — the same recognition every other milestone uses.
+- **Fair by design** — only VALID invites count toward the milestone, so farming and fake joins never earn a reward.
+
+**In Discord & for admins**
+- **/invites, /invite-leaderboard, /invite-rewards** — members check their score, the top inviters and their reward progress, in on-brand Pulse embeds.
+- **Full control** — add or remove bonus credits, invalidate or approve a join, grant a missed reward and reset an inviter's stats, all written to an audit log.
+
+Reward the members who grow your community — and make sure the numbers are real.
+
+July 15, 2026

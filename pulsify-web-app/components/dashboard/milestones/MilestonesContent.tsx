@@ -48,6 +48,7 @@ type Props = {
   metrics: MemberMetricRow[]
   channels: Channel[]
   roles: Role[]
+  inviteTrackingEnabled?: boolean
 }
 
 type Tab = 'milestones' | 'members' | 'analytics'
@@ -61,6 +62,7 @@ export function MilestonesContent({
   metrics,
   channels,
   roles,
+  inviteTrackingEnabled = false,
 }: Props) {
   const router = useRouter()
   const [tab, setTab] = useState<Tab>('milestones')
@@ -382,6 +384,7 @@ export function MilestonesContent({
           channels={channels}
           roles={roles}
           editing={editing}
+          inviteTrackingEnabled={inviteTrackingEnabled}
           onClose={() => {
             setCreating(false)
             setEditing(null)

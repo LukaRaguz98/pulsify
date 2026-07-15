@@ -5164,3 +5164,186 @@ Acceptance Criteria
 	Manual investigation notes and links persist correctly
 	/alt-check displays account risk information
 	UI remains responsive and visually polished
+
+PULSIFY-60 — Invite Tracking, Rewards & Referral System (v0.60.0)
+
+Description
+	Implement a complete Invite Tracking and Referral system that allows server administrators to track who invited each member, measure invite performance, prevent invite abuse, and automatically reward members for successful referrals.
+	The system should integrate with existing Pulsify modules such as Economy, Reputation, Levels & XP, Roles, Achievements, Analytics, and Automations.
+
+Goals
+	Track member invites accurately
+	Reward members for successful referrals
+	Improve community growth and engagement
+	Prevent fake or abusive invite farming
+	Give administrators clear invite analytics
+
+Tasks
+
+	Invite Tracking
+		Track all Discord server invites and record:
+			inviter
+			invited member
+			invite code
+			invite creation date
+			invite usage count
+			member join date
+			member leave date
+			invite source where available
+
+		Detect which invite was used when a member joins the server
+
+	Invite Statistics
+		Create a dedicated view:
+			Engagement > Invites
+
+		Display:
+			total invites
+			valid invites
+			fake invites
+			left members
+			bonus invites
+			current invite score
+			top inviters
+			recent invited members
+
+	Invite Leaderboard
+		Add an invite leaderboard showing:
+			ranking position
+			inviter
+			total invites
+			valid invites
+			retained members
+			fake invites
+			rewards earned
+
+		Support filtering by:
+			daily
+			weekly
+			monthly
+			all time
+
+	Invite Rewards
+		Allow administrators to configure milestone rewards
+
+		Supported rewards:
+			Global Balance
+			Global Reputation
+			Server XP
+			Discord Roles
+			Temporary Roles
+			Achievements
+			Marketplace Items
+			Custom Rewards
+
+		Example milestones:
+			5 valid invites → 250 Pulse Coins
+			10 valid invites → VIP role
+			25 valid invites → 500 XP
+			50 valid invites → Special Badge
+
+	Reward Configuration
+		Allow administrators to:
+			create reward milestones
+			edit reward milestones
+			enable or disable rewards
+			configure whether rewards stack
+			choose whether rewards are removed if invite count drops
+			preview reward progression
+
+	Valid Invite Rules
+		Allow administrators to configure what counts as a valid invite
+
+		Possible requirements:
+			minimum account age
+			minimum server stay duration
+			completed onboarding
+			completed verification
+			no active moderation flags
+			minimum activity requirement
+			not detected as a likely alt account
+
+	Anti-Abuse Protection
+		Detect and prevent:
+			self-invites
+			alt account farming
+			rapid join-and-leave abuse
+			suspicious invite spikes
+			duplicate reward claims
+			fake or invalid invites
+			repeated invite code manipulation
+
+		Integrate with Safety > Alt Detection where applicable
+
+	Invite Retention
+		Track whether invited members:
+			completed onboarding
+			remained in the server
+			became active
+			left shortly after joining
+			received moderation actions
+
+		Display invite quality and retention metrics per inviter
+
+	Invite Analytics
+		Track:
+			invite growth over time
+			invite conversion rate
+			member retention by inviter
+			highest-quality inviters
+			reward distribution
+			suspicious invite activity
+			most-used invite links
+
+		Add charts and trends
+
+	Discord Commands
+		Add commands such as:
+			/invites
+			/invites user
+			/invite-leaderboard
+			/invite-rewards
+
+		Display Pulse-styled v2 embeds
+
+	Discord Notifications
+		Optionally notify users when:
+			an invited member joins
+			an invite becomes valid
+			an invite milestone is reached
+			a reward is earned
+			an invite is marked invalid
+
+		Allow selecting a destination channel
+
+	Admin Management
+		Allow administrators to:
+			manually add or remove invite credits
+			invalidate an invite
+			approve a suspicious invite
+			grant missed rewards
+			reset invite statistics
+			view invite history
+
+		All manual changes must be added to audit logs
+
+	UX Improvements
+		Add invite progress cards
+		Add milestone progress bars
+		Add inviter profile drawer
+		Add responsive layouts
+		Add search and filtering
+		Add loading, error, and empty states
+		Maintain consistency with Pulsify design language
+
+Acceptance Criteria
+	Pulsify correctly identifies which invite was used when a member joins
+	Invite statistics are tracked accurately
+	Valid and invalid invites are distinguished correctly
+	Invite rewards are granted automatically
+	Anti-abuse rules prevent common invite farming methods
+	Invite leaderboards display correct rankings
+	Invite retention analytics work correctly
+	Discord commands return accurate information
+	Manual admin actions are logged
+	UI remains responsive and visually polished

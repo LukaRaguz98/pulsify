@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useDialogDismiss } from '@/components/ui/use-dialog-dismiss'
 import { useRouter } from 'next/navigation'
 import {
@@ -43,6 +44,8 @@ type Props = {
   roles: Role[]
   editing: Milestone | null
   onClose: () => void
+  /** Invite tracking gates the "Valid invites" metric — hidden when off. */
+  inviteTrackingEnabled?: boolean
 }
 
 const FIELD_CLASS =
@@ -75,7 +78,7 @@ const ANNOUNCE_OPTIONS: { value: AnnounceMode; label: string; hint: string }[] =
   { value: 'off', label: 'Off', hint: 'No announcement' },
 ]
 
-export function MilestoneEditPanel({ guildId, guildName, channels, roles, editing, onClose }: Props) {
+export function MilestoneEditPanel({ guildId, guildName, channels, roles, editing, onClose, inviteTrackingEnabled = false }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -159,6 +162,10 @@ export function MilestoneEditPanel({ guildId, guildName, channels, roles, editin
 
   async function submit() {
     setError(null)
+    if (draft.metric === 'invites' && !inviteTrackingEnabled) {
+      setError('Turn on invite tracking (Engagement › Invites) before saving an invite milestone.')
+      return
+    }
     if (Object.keys(fieldErrors).length > 0) {
       setTouched({ name: true, threshold: true, announce_channel_id: true })
       setError('Fix the highlighted fields before saving.')
@@ -346,6 +353,24 @@ export function MilestoneEditPanel({ guildId, guildName, channels, roles, editin
               </Field>
             </div>
             <p className="text-xs" style={{ color: 'var(--text-3)' }}>{METRIC_META[draft.metric].hint}</p>
+            {draft.metric === 'invites' && !inviteTrackingEnabled && (
+              <div
+                className="flex flex-col gap-2 rounded-lg border px-3 py-2.5 text-xs sm:flex-row sm:items-center sm:justify-between"
+                style={{ borderColor: 'rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.08)', color: '#f59e0b' }}
+              >
+                <div className="flex items-start gap-2">
+                  <AlertCircle size={13} className="mt-0.5 shrink-0" />
+                  <span>Invite milestones need <span className="font-semibold">invite tracking</span> turned on before they can be saved.</span>
+                </div>
+                <Link
+                  href={`/dashboard/${guildId}/invite-settings`}
+                  className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-md border px-2.5 py-1 font-medium transition"
+                  style={{ borderColor: 'rgba(245,158,11,0.4)', color: '#f59e0b' }}
+                >
+                  Enable it
+                </Link>
+              </div>
+            )}
             <div className="flex flex-wrap gap-1.5">
               {METRIC_META[draft.metric].suggestions.map((s) => (
                 <button

@@ -42,6 +42,11 @@ const TYPE_TO_CATEGORY = {
   security_mitigation: 'security',
   security_recovered: 'security',
   alt_risk_flagged: 'security',
+  invite_joined: 'invites',
+  invite_valid: 'invites',
+  invite_invalid: 'invites',
+  invite_reward: 'invites',
+  invite_spike: 'invites',
   bot_warning: 'bot',
   bot_error: 'bot',
 };
@@ -82,6 +87,11 @@ const TYPE_TO_SEVERITY = {
   security_mitigation: 'warning',
   security_recovered: 'success',
   alt_risk_flagged: 'warning',
+  invite_joined: 'info',
+  invite_valid: 'success',
+  invite_invalid: 'info',
+  invite_reward: 'success',
+  invite_spike: 'warning',
   bot_warning: 'warning',
   bot_error: 'error',
 };

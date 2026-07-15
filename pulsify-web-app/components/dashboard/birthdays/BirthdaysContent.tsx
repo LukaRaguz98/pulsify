@@ -16,6 +16,7 @@ import {
   Gift,
 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
+import { CategorySection } from '@/components/ui/category-section'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { createClient as createSupabase } from '@/lib/supabase'
@@ -201,20 +202,17 @@ export function BirthdaysContent({
 
       {tab === 'overview' && !off && (
         <div className="space-y-8">
-          {/* At a glance */}
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <StatCard icon={<PartyPopper size={16} />} label="Today" value={stats.todayCount} accent="#f472b6" />
-            <StatCard icon={<CalendarDays size={16} />} label="Next 7 days" value={stats.next7} accent="#a78bfa" />
-            <StatCard icon={<Cake size={16} />} label="Birthdays set" value={stats.total} accent="#60a5fa" />
-            <StatCard icon={<PartyPopper size={16} />} label="Celebrated this year" value={stats.celebratedThisYear} accent="#34d399" />
-          </div>
+          <CategorySection icon={<Cake size={14} />} title="At a glance" description="Birthdays coming up and celebrations so far this year.">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <StatCard icon={<PartyPopper size={16} />} label="Today" value={stats.todayCount} accent="#f472b6" />
+              <StatCard icon={<CalendarDays size={16} />} label="Next 7 days" value={stats.next7} accent="#a78bfa" />
+              <StatCard icon={<Cake size={16} />} label="Birthdays set" value={stats.total} accent="#60a5fa" />
+              <StatCard icon={<PartyPopper size={16} />} label="Celebrated this year" value={stats.celebratedThisYear} accent="#34d399" />
+            </div>
+          </CategorySection>
 
-          {/* Today */}
           {today.length > 0 && (
-            <section>
-              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-                <PartyPopper size={15} style={{ color: '#f472b6' }} /> Today’s birthdays
-              </h2>
+            <CategorySection icon={<PartyPopper size={14} />} title="Today’s birthdays" description="Members Pulse is celebrating today.">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {today.map((u) => (
                   <BirthdayCardView
@@ -226,45 +224,42 @@ export function BirthdaysContent({
                   />
                 ))}
               </div>
-            </section>
+            </CategorySection>
           )}
 
-          {/* Upcoming + calendar */}
-          <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
-            <section>
-              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-                <CalendarDays size={15} style={{ color: 'var(--p-1)' }} /> Upcoming
-              </h2>
-              {soon.length === 0 && today.length === 0 ? (
-                <EmptyState
-                  icon={<Cake size={20} />}
-                  title="No birthdays yet"
-                  description="Members can set theirs with /birthday set or from their Pulsify profile."
-                  variant="muted"
-                />
-              ) : soon.length === 0 ? (
-                <p className="text-sm text-subtle">No more birthdays coming up — check back after today’s celebrations.</p>
-              ) : (
-                <div className="space-y-2">
-                  {soon.map((u) => (
-                    <UpcomingRow
-                      key={u.birthday.user_id}
-                      u={u}
-                      avatar={avatarFor(u.birthday.user_id)}
-                      onRemove={() => setRemoving(u.birthday)}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
+          <CategorySection icon={<CalendarDays size={14} />} title="Upcoming & calendar" description="Who’s next, and the month at a glance.">
+            <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
+              <div>
+                <h3 className="mb-3 text-sm font-semibold text-foreground">Upcoming</h3>
+                {soon.length === 0 && today.length === 0 ? (
+                  <EmptyState
+                    icon={<Cake size={20} />}
+                    title="No birthdays yet"
+                    description="Members can set theirs with /birthday set or from their Pulsify profile."
+                    variant="muted"
+                  />
+                ) : soon.length === 0 ? (
+                  <p className="text-sm text-subtle">No more birthdays coming up — check back after today’s celebrations.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {soon.map((u) => (
+                      <UpcomingRow
+                        key={u.birthday.user_id}
+                        u={u}
+                        avatar={avatarFor(u.birthday.user_id)}
+                        onRemove={() => setRemoving(u.birthday)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
 
-            <section>
-              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-                <CalendarDays size={15} style={{ color: 'var(--p-1)' }} /> Calendar
-              </h2>
-              <BirthdayCalendar birthdays={initialBirthdays} guildTz={guildTz} />
-            </section>
-          </div>
+              <div>
+                <h3 className="mb-3 text-sm font-semibold text-foreground">Calendar</h3>
+                <BirthdayCalendar birthdays={initialBirthdays} guildTz={guildTz} />
+              </div>
+            </div>
+          </CategorySection>
         </div>
       )}
 

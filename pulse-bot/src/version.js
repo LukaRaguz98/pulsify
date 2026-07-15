@@ -18,11 +18,27 @@ const path = require("node:path");
 // Current Pulse version. Used for the startup banner and as the displayed
 // version when no release files are reachable. Keep this in step with the
 // newest resources/notes/vX.Y.Z.txt on each release.
-const PULSE_VERSION = "0.59.0";
+const PULSE_VERSION = "0.60.0";
 
 // Manual/static fallback used only when the release-notes files can't be read.
 // Mirrors the shape produced by the parser so callers don't special-case it.
 const STATIC_RELEASES = [
+  {
+    version: "0.60.0",
+    title: "Invite Tracking & Referrals",
+    date: "Jul 15, 2026",
+    description:
+      "An Invites view in Engagement that attributes every join to the invite (and inviter) used, scores inviters on valid vs fake vs left, rewards referrals automatically, and blocks invite farming — with a hook into Safety › Alt Detection.",
+    highlights: [
+      "**Automatic attribution** — Pulse mirrors each server's invite links and diffs the use counts on every join to work out which invite (or the vanity URL) was used and who owns it.",
+      "**Fair scoring** — configurable valid-invite rules (account age, minimum stay, onboarding, verification, no active flags, activity, exclude alts) plus anti-abuse for self-invites, alt farming, rapid rejoins, spikes and duplicate claims.",
+      "**Leaderboard & analytics** — rank inviters by score for today, this week, this month or all time, with retention, fake counts, rewards earned and a per-inviter profile drawer.",
+      "**Referral rewards** — created as Member Milestones with the new \"Valid invites\" trigger (e.g. 25 valid invites → VIP role); the milestone sweep grants the role automatically once invite tracking is on.",
+      "**/invites, /invite-leaderboard, /invite-rewards** — plus admin tools to add/remove bonus credits, invalidate or approve a join, grant missed rewards and reset stats, all written to an audit log.",
+    ],
+    outro:
+      "Reward the members who grow your community — and make sure the numbers are real.",
+  },
   {
     version: "0.59.0",
     title: "Alt Risk Detection",
