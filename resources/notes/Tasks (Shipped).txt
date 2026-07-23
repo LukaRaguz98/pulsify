@@ -5562,3 +5562,193 @@ Acceptance Criteria
 	Autocomplete and validation prevent invalid input
 	Command Center automatically lists all implemented commands
 	UI and command experience remain polished, responsive, and consistent
+
+PULSIFY-62 — Pricing Plan Feature Audit & Gating Synchronization (v0.62.0)
+
+Description
+	Since the original Pricing Plans and Stripe integration (v0.29.0), Pulsify has expanded significantly with dozens of new modules, automations, Discord commands, analytics, security tools, and economy features. Many of these were introduced without being explicitly assigned to a subscription tier.
+	This task performs a complete audit of every existing Pulsify feature, classifies each one into the appropriate pricing tier, synchronizes backend feature gating, updates the public pricing page, and ensures the billing experience accurately reflects the current product offering.
+	The goal is to establish a single source of truth for feature availability and ensure all future features are pricing-aware by default.
+
+Goals
+	Audit every existing Pulsify feature and module
+	Assign all features to an appropriate pricing tier
+	Synchronize dashboard, backend, Discord commands, and pricing page
+	Enforce feature gating consistently across the platform
+	Prepare the pricing system for future feature releases
+
+Non Goals
+	No changes to pricing amounts
+	No introduction of new subscription plans
+	No implementation of new product features
+	Focus exclusively on auditing, classification, and synchronization
+
+Tasks
+	Feature Inventory & Audit
+		Perform a complete audit of every shippable Pulsify feature
+
+		Include:
+			dashboard modules
+			server management
+			automations
+			moderation
+			Pulse Guard
+			analytics
+			economy
+			reputation
+			tickets
+			applications
+			events
+			giveaways
+			onboarding
+			integrations
+			Discord commands
+			safety features
+			templates
+			backup & restore
+			workspaces
+			billing
+			member-facing features
+
+		For every feature determine:
+			current gating status
+			intended pricing tier
+			missing gating
+			incorrect gating
+			usage limitations
+			Discord command equivalents
+
+	Plan Classification
+		Assign every feature to one of the existing plans:
+			Free
+			Plus
+			Pro
+			Enterprise
+
+		Review newly introduced systems including:
+			Contextual Help
+			Management Analytics
+			Global Economy
+			Marketplace
+			Invite Tracking & Rewards
+			Birthday System
+			Community Polls
+			Alt Detection
+			Private Channels
+			Temporary Roles
+			Roles Hierarchy
+			Self-Assign Roles
+			Statistics Channels
+			Server Assets
+			DDoS Protection
+			Backup & Restore
+			Integrations
+			Templates
+			Economy Rewards
+			Slash Commands
+			Workspaces
+			Pulse Guard features
+			AI Moderation
+			All remaining modules introduced after v0.29.0
+
+	Usage Limits
+		Define limits where applicable, including:
+			maximum servers
+			active automations
+			analytics retention
+			log retention
+			integrations
+			templates
+			statistic channels
+			self-assign role menus
+			private channels
+			economy items
+			marketplace items
+			polls
+			giveaways
+			events
+			storage limits
+			API usage (where applicable)
+
+		Ensure limits are scalable across plans
+
+	Backend Feature Gating
+		Review and synchronize backend enforcement
+
+		Ensure:
+			every premium feature is validated server-side
+			feature limits are enforced
+			disabled features cannot be bypassed
+			API endpoints respect plan permissions
+			dashboard and backend remain synchronized
+
+	Discord Command Synchronization
+		Audit all Pulse slash commands
+
+		Ensure:
+			command availability matches dashboard permissions
+			premium commands respect plan restrictions
+			usage limits are enforced consistently
+			upgrade prompts are displayed where appropriate
+
+	Pricing Page
+		Update the public pricing page
+
+		Review:
+			feature comparison table
+			feature lists
+			usage limits
+			plan descriptions
+			comparison cards
+
+		Ensure every existing feature appears in the correct plan
+
+	Billing Experience
+		Update Billing pages to reflect the audited pricing model
+
+		Review:
+			current subscription
+			included features
+			feature availability
+			usage indicators
+			upgrade recommendations
+			locked feature states
+
+	Upgrade Prompts
+		Review every gated feature across Pulsify
+
+		Ensure:
+			consistent lock indicators
+			plan badges
+			upgrade dialogs
+			feature unavailable messaging
+			Contextual Help reflects pricing restrictions
+
+	Existing Subscriber Handling
+		Audit current subscriptions
+
+		Determine:
+			users accessing features above their tier
+			grandfathered access where appropriate
+			upgrade messaging
+			migration strategy
+
+	Documentation
+		Update:
+			internal pricing documentation
+			feature-to-plan mapping
+			release notes
+			changelog
+			developer documentation
+
+		Ensure future features require pricing classification before release
+
+Acceptance Criteria
+	Every Pulsify feature has an assigned pricing tier
+	Dashboard, backend, and Discord commands enforce identical feature gating
+	Usage limits are applied consistently across all plans
+	Public pricing page accurately reflects all available functionality
+	Billing settings display correct feature availability
+	Upgrade prompts are consistent throughout the platform
+	Existing subscribers are handled without unexpected feature loss
+	Internal documentation provides a single source of truth for future feature classification

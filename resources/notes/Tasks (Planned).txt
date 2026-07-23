@@ -1,148 +1,275 @@
-PULSIFY-63 — Server Timeline & Change History (v0.63.0)
+PULSIFY-64 — Gaming Activity Analytics & Player Insights (v0.64.0)
 
 Description
-	Implement a Server Timeline that automatically records every significant change made through Pulsify or directly within Discord, providing administrators with a complete chronological history of their server.
-	Instead of searching through Audit Logs or guessing what changed, administrators can open a single timeline and instantly see the evolution of their community.
-	The timeline should become the central history page for the entire server.
+	Implement a comprehensive Gaming Analytics module that tracks gaming activity across the Discord server and provides detailed insights into what members are playing, how long they play, and overall gaming trends.
+
+	Using Discord Presence activities, Pulsify should automatically detect when members start and stop playing supported games, calculate session durations, aggregate playtime statistics, and generate analytics for both individual members and the entire community.
+
+	The module should become the central hub for gaming statistics and player insights, helping communities better understand engagement and identify popular games and active players.
 
 Goals
-	Improve transparency across the server
-	Centralize important historical events
-	Simplify troubleshooting and investigations
-	Improve team collaboration
-	Create a unique feature unavailable in most Discord management platforms
+	Provide detailed gaming analytics for Discord communities
+	Track play sessions and total playtime automatically
+	Identify the most popular games across the server
+	Improve community engagement through gaming statistics
+	Create a unique analytics module designed specifically for gaming communities
 
 Tasks
-	Timeline View
+	Navigation
 		Create a new navigation item:
-			Server > Timeline
+			Analytics > Gaming
 
-		Display a chronological feed of server events
+		This page should serve as the central dashboard for all gaming-related statistics.
 
-	Timeline Categories
-		Support events such as:
+	Gaming Activity Tracking
+		Automatically detect when members:
+			start playing a game
+			stop playing a game
+			switch between games
+			resume a previously played game
 
-		Roles
-			role created
-			role deleted
-			role renamed
-			permissions changed
-
-		Channels
-			channel created
-			channel deleted
-			category changes
-			permission updates
-
-		Members
-			member joined
-			member left
-			member banned
-			member kicked
-			timeout applied
-			nickname changed
-
-		Moderation
-			warnings
-			mutes
-			Pulse Guard detections
-			scam detections
-			toxic message actions
-
-		Economy
-			balance milestones
-			marketplace purchases
-			reputation milestones
-			economy rewards
-
-		Automation
-			automation created
-			automation updated
-			automation triggered
-			automation disabled
-
-		Events
-			giveaway started
-			giveaway ended
-			event created
-			poll published
-			announcement published
-
-		Server Configuration
-			settings changed
-			integrations connected
-			backup restored
-			templates imported
-			verification updated
-
-	Timeline Cards
-		Display for each event:
-			icon
-			title
-			description
-			affected object
-			actor
+		For each session record:
+			member
+			game name
+			session start
+			session end
+			total session duration
+			detection source
 			timestamp
-			category
-			quick actions
+
+		Aggregate sessions automatically.
+
+	Server Overview
+		Display server-wide statistics including:
+			total gaming hours
+			active players today
+			active players this week
+			total tracked sessions
+			unique games played
+			currently active players
+			average session duration
+			longest recorded session
+			most active gaming day
+			most active gaming hour
+
+	Most Played Games
+		Display rankings such as:
+			most played games
+			fastest growing games
+			newly played games
+			most active games today
+			most active games this week
+			total playtime per game
+			unique players per game
+			average session duration per game
+
+		Allow sorting by:
+			playtime
+			players
+			sessions
+			popularity
+			alphabetical order
+
+	Live Gaming Activity
+		Display members currently playing.
+
+		Each card should include:
+			member
+			game
+			current session duration
+			activity status
+			started playing at
+			optional voice channel
+			optional streaming status
+
+		Automatically update in real time.
+
+	Player Profiles
+		Create detailed gaming profiles for each member.
+
+		Display:
+			total playtime
+			favourite game
+			recently played games
+			longest session
+			average session
+			gaming streak
+			games played this month
+			total tracked sessions
+			most active gaming hours
+			gaming history
+
+	Game Details
+		Selecting a game should display:
+			total server playtime
+			total players
+			average session
+			longest session
+			first detected date
+			most active players
+			daily activity trend
+			weekly activity trend
+			monthly activity trend
+
+	Leaderboards
+		Support multiple leaderboards including:
+
+		Playtime
+			today
+			weekly
+			monthly
+			all time
+
+		Sessions
+			total sessions
+			average session length
+			longest session
+
+		Games
+			most different games played
+			favourite games
+			highest activity
+
+	Gaming Trends
+		Display trends such as:
+			games gaining popularity
+			games losing popularity
+			peak gaming hours
+			busiest weekdays
+			busiest weekends
+			seasonal activity
+			average concurrent players
+
+	Community Insights
+		Generate community statistics including:
+			average games per member
+			average daily playtime
+			most social games
+			most competitive games
+			game diversity
+			returning players
+			inactive gamers
+			newly active gamers
+
+	Squad Detection
+		Automatically identify members who frequently play the same games.
+
+		Display:
+			suggested squads
+			common games
+			overlapping play hours
+			shared gaming time
+			most active groups
+
+	Activity Heatmaps
+		Display heatmaps for:
+			gaming by hour
+			gaming by weekday
+			gaming by month
+			game popularity over time
 
 	Filtering
 		Allow filtering by:
-			category
-			administrator
 			member
-			module
+			game
 			date range
-			event type
+			session duration
+			currently active
+			server role
+			voice channel
 
 	Search
 		Support searching by:
+			game name
 			member
-			role
-			channel
-			keyword
-			administrator
-
-	Timeline Details
-		Allow expanding each event to view:
-			previous value
-			new value
-			affected users
-			related modules
-			additional metadata
+			activity
+			leaderboard
 
 	Export
-		Allow exporting:
-			selected events
-			filtered timeline
-			complete history
+		Allow exporting analytics.
 
-		Support:
+		Supported formats:
 			CSV
 			PDF
 			JSON
 
-	Statistics
-		Display:
-			events today
-			events this week
-			most active administrators
-			most modified modules
-			busiest periods
+		Export:
+			player statistics
+			game statistics
+			leaderboards
+			complete gaming history
+
+	Dashboard Widgets
+		Add widgets for:
+			Currently Playing
+			Top Games
+			Top Players
+			Total Gaming Hours
+			Active Sessions
+			Trending Games
+			Weekly Highlights
+
+		Allow administrators to rearrange widgets.
+
+	Discord Commands
+		Add commands such as:
+			/gaming
+			/gaming profile
+			/gaming leaderboard
+			/gaming games
+			/gaming currently-playing
+
+		Return Pulse-styled v2 embeds.
+
+	Notifications
+		Optionally notify when:
+			a new game becomes popular
+			a member reaches a gaming milestone
+			a server gaming record is broken
+			gaming activity significantly increases
+			community gaming events are detected
+
+	Privacy Settings
+		Allow administrators to configure:
+			enable or disable gaming tracking
+			ignored roles
+			ignored members
+			ignored games
+			data retention period
+			anonymized statistics
+			export permissions
+
+		Members should be able to opt out where applicable.
 
 	UX Improvements
-		Add infinite scrolling
-		Add timeline grouping
-		Add color-coded categories
-		Add responsive layouts
-		Add loading/error/empty states
-		Add quick navigation to related pages
+		Include:
+			responsive layouts
+			live updating statistics
+			interactive charts
+			gaming badges
+			loading states
+			empty states
+			error handling
+			dark mode optimization
+
+		Maintain consistency with the Pulsify design system.
+
+	Technical Notes
+		Track gaming activity using Discord Presence events
+		Automatically calculate play sessions
+		Aggregate statistics in the background
+		Exclude custom statuses, Spotify, and non-gaming activities where possible
+		Handle reconnects and bot restarts gracefully
+		Store historical gaming data for trend analysis
 
 Acceptance Criteria
-	Timeline records significant server events automatically
-	Events are grouped chronologically
-	Filters and search function correctly
-	Detailed event history is available
-	Timeline exports work correctly
-	Statistics accurately summarize server activity
-	UI remains responsive and visually polished
+	Gaming sessions are tracked automatically
+	Playtime statistics are calculated accurately
+	Server and member analytics display correctly
+	Leaderboards update automatically
+	Live gaming activity reflects current Discord presence
+	Trends and insights are generated successfully
+	Exports function correctly
+	Dashboard remains responsive with large datasets
+	Privacy settings are respected
+	UI follows Pulsify design standards

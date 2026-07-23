@@ -90,9 +90,15 @@ export type FeatureLimits = {
   maxServersPerWorkspace: number
   /** Days of analytics retained on the dashboard charts. */
   analyticsRetentionDays: number
-  /** AI moderation (Pulse Guard) on at all. Pro+. */
+  /**
+   * Days of moderation/audit-log history surfaced. Display-first: logs are not
+   * actually pruned yet, so this drives the pricing card + billing table today
+   * and gates real pruning when that lands (see PULSIFY-62 audit §7.6).
+   */
+  logRetentionDays: number
+  /** AI moderation (Pulse Guard) on at all. Plus+. */
   aiModeration: boolean
-  /** Extended AI categories + tunable thresholds. Business+. */
+  /** Extended AI categories + tunable thresholds. Pro+. */
   advancedAiModeration: boolean
   /** Active tickets allowed across a guild's panels. */
   maxActiveTicketsPerGuild: number
@@ -100,15 +106,45 @@ export type FeatureLimits = {
   maxAutomationsPerGuild: number
   /** Concurrent giveaways per guild. */
   maxConcurrentGiveaways: number
-  /** Beyond standard ban/kick: bulk moderation, raid shield, etc. Pro+. */
+  /** Concurrent open community polls per guild. */
+  maxActivePolls: number
+  /** Concurrent scheduled events per guild. */
+  maxScheduledEvents: number
+  /** Self-assign role menus a guild can publish. */
+  maxSelfRoleMenus: number
+  /** Live server-statistics counter channels per guild. */
+  maxStatisticChannels: number
+  /** Concurrent live join-to-create private voice channels per guild. */
+  maxPrivateChannelsActive: number
+  /** Concurrent active temporary-role grants per guild. */
+  maxTemporaryRolesActive: number
+  /** Connected integrations per guild. */
+  maxIntegrations: number
+  /** Saved (custom) feature-enablement templates per guild. */
+  maxSavedTemplates: number
+  /** Member-milestone definitions per guild. */
+  maxMilestones: number
+  /** Per-guild economy reward configs (economy itself is global). */
+  maxCustomRewards: number
+  /** Open application forms per guild. */
+  maxApplications: number
+  /** Beyond standard ban/kick: bulk moderation, raid shield, etc. Plus+. */
   advancedModeration: boolean
-  /** Custom bot name + avatar per guild (Pro+). */
+  /** Alt-risk view + `/alt check`. Free (basic). */
+  altDetection: boolean
+  /** Join-time auto-flagging + investigations at scale. Plus+. */
+  advancedAltDetection: boolean
+  /** DDoS detection + auto-mitigation module. Plus+. */
+  ddosProtection: boolean
+  /** Custom DDoS rules/presets beyond defaults. Pro+. */
+  advancedDdosProtection: boolean
+  /** Custom bot name + avatar per guild (Plus+). */
   customBranding: boolean
-  /** Workspaces + multi-server collaboration (Business+). */
+  /** Workspaces + multi-server collaboration (Pro+). */
   multiServerManagement: boolean
-  /** Advanced analytics insights (heatmaps, cohorts). Business+. */
+  /** Advanced analytics insights (heatmaps, cohorts). Pro+. */
   advancedAnalytics: boolean
-  /** Backup/restore of guild config (Business+). */
+  /** Backup/restore of guild config (Pro+). */
   backupRestore: boolean
   /** Public REST API / webhooks (Enterprise). */
   apiAccess: boolean
@@ -121,12 +157,28 @@ export const PLAN_LIMITS: Record<Plan, FeatureLimits> = {
     maxWorkspaces: 1,
     maxServersPerWorkspace: 2,
     analyticsRetentionDays: 7,
+    logRetentionDays: 30,
     aiModeration: false,
     advancedAiModeration: false,
     maxActiveTicketsPerGuild: 5,
     maxAutomationsPerGuild: 3,
     maxConcurrentGiveaways: 1,
+    maxActivePolls: 2,
+    maxScheduledEvents: 3,
+    maxSelfRoleMenus: 2,
+    maxStatisticChannels: 3,
+    maxPrivateChannelsActive: 5,
+    maxTemporaryRolesActive: 5,
+    maxIntegrations: 1,
+    maxSavedTemplates: 2,
+    maxMilestones: 3,
+    maxCustomRewards: 5,
+    maxApplications: 1,
     advancedModeration: false,
+    altDetection: true,
+    advancedAltDetection: false,
+    ddosProtection: false,
+    advancedDdosProtection: false,
     customBranding: false,
     multiServerManagement: false,
     advancedAnalytics: false,
@@ -138,12 +190,28 @@ export const PLAN_LIMITS: Record<Plan, FeatureLimits> = {
     maxWorkspaces: 1,
     maxServersPerWorkspace: 5,
     analyticsRetentionDays: 30,
+    logRetentionDays: 90,
     aiModeration: true,
     advancedAiModeration: false,
     maxActiveTicketsPerGuild: 50,
     maxAutomationsPerGuild: 25,
     maxConcurrentGiveaways: 10,
+    maxActivePolls: 15,
+    maxScheduledEvents: 20,
+    maxSelfRoleMenus: 10,
+    maxStatisticChannels: 10,
+    maxPrivateChannelsActive: 25,
+    maxTemporaryRolesActive: 50,
+    maxIntegrations: 5,
+    maxSavedTemplates: 10,
+    maxMilestones: 15,
+    maxCustomRewards: 25,
+    maxApplications: 5,
     advancedModeration: true,
+    altDetection: true,
+    advancedAltDetection: true,
+    ddosProtection: true,
+    advancedDdosProtection: false,
     customBranding: true,
     multiServerManagement: false,
     advancedAnalytics: false,
@@ -155,12 +223,28 @@ export const PLAN_LIMITS: Record<Plan, FeatureLimits> = {
     maxWorkspaces: 3,
     maxServersPerWorkspace: 25,
     analyticsRetentionDays: 90,
+    logRetentionDays: 180,
     aiModeration: true,
     advancedAiModeration: true,
     maxActiveTicketsPerGuild: 250,
     maxAutomationsPerGuild: 100,
     maxConcurrentGiveaways: 50,
+    maxActivePolls: 75,
+    maxScheduledEvents: 100,
+    maxSelfRoleMenus: 50,
+    maxStatisticChannels: 25,
+    maxPrivateChannelsActive: 100,
+    maxTemporaryRolesActive: 250,
+    maxIntegrations: 15,
+    maxSavedTemplates: 50,
+    maxMilestones: 50,
+    maxCustomRewards: 100,
+    maxApplications: 25,
     advancedModeration: true,
+    altDetection: true,
+    advancedAltDetection: true,
+    ddosProtection: true,
+    advancedDdosProtection: true,
     customBranding: true,
     multiServerManagement: true,
     advancedAnalytics: true,
@@ -172,12 +256,28 @@ export const PLAN_LIMITS: Record<Plan, FeatureLimits> = {
     maxWorkspaces: Infinity,
     maxServersPerWorkspace: Infinity,
     analyticsRetentionDays: 365,
+    logRetentionDays: 365,
     aiModeration: true,
     advancedAiModeration: true,
     maxActiveTicketsPerGuild: Infinity,
     maxAutomationsPerGuild: Infinity,
     maxConcurrentGiveaways: Infinity,
+    maxActivePolls: Infinity,
+    maxScheduledEvents: Infinity,
+    maxSelfRoleMenus: Infinity,
+    maxStatisticChannels: Infinity,
+    maxPrivateChannelsActive: Infinity,
+    maxTemporaryRolesActive: Infinity,
+    maxIntegrations: Infinity,
+    maxSavedTemplates: Infinity,
+    maxMilestones: Infinity,
+    maxCustomRewards: Infinity,
+    maxApplications: Infinity,
     advancedModeration: true,
+    altDetection: true,
+    advancedAltDetection: true,
+    ddosProtection: true,
+    advancedDdosProtection: true,
     customBranding: true,
     multiServerManagement: true,
     advancedAnalytics: true,
@@ -193,33 +293,37 @@ export const PLAN_LIMITS: Record<Plan, FeatureLimits> = {
 // the public landing card show the exact same list.
 export const PLAN_FEATURES: Record<Plan, string[]> = {
   free: [
-    'Basic moderation',
+    'Every core module included',
+    'Moderation, leveling, economy & reputation',
+    'Birthdays, invites, polls, giveaways & events',
+    'Alt-detection risk checks',
     `${PLAN_LIMITS.free.analyticsRetentionDays}-day analytics retention`,
     `Up to ${PLAN_LIMITS.free.maxAutomationsPerGuild} automations`,
-    `${PLAN_LIMITS.free.maxConcurrentGiveaways} concurrent giveaway`,
     'Community support',
   ],
   pro: [
-    'Advanced moderation tools',
-    `${PLAN_LIMITS.pro.analyticsRetentionDays}-day analytics retention`,
+    'Everything in Free, with higher limits',
     'AI moderation (Pulse Guard)',
-    `Up to ${PLAN_LIMITS.pro.maxAutomationsPerGuild} automations per server`,
-    `${PLAN_LIMITS.pro.maxConcurrentGiveaways} concurrent giveaways`,
+    'Advanced & bulk moderation + raid shield',
+    'Alt-detection auto-flagging',
+    'DDoS protection',
     'Custom bot branding',
+    `${PLAN_LIMITS.pro.analyticsRetentionDays}-day analytics retention`,
     'Priority support',
   ],
   business: [
     'Everything in Plus',
-    `Workspaces: up to ${PLAN_LIMITS.business.maxServersPerWorkspace} servers`,
-    'Advanced AI moderation categories',
-    `${PLAN_LIMITS.business.analyticsRetentionDays}-day analytics retention`,
+    `Multi-server workspaces (up to ${PLAN_LIMITS.business.maxServersPerWorkspace} servers)`,
+    'Team & admin collaboration',
     'Advanced analytics insights',
+    'Advanced AI moderation categories',
+    'Custom DDoS rules & presets',
     'Backup & restore system',
-    'Team & admin management',
+    `${PLAN_LIMITS.business.analyticsRetentionDays}-day analytics retention`,
   ],
   enterprise: [
     'Everything in Pro',
-    'Unlimited servers & workspaces',
+    'Unlimited servers, workspaces & usage',
     'REST API + webhook access',
     'Dedicated support',
     'Custom integrations',

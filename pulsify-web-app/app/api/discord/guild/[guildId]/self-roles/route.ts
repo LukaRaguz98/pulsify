@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
+import { requireGuildLimit } from '@/lib/billing-server'
 import { createClient } from '@/lib/supabase-server'
 import { readGuildEmbedInt, readGuildEmbedHex } from '@/lib/embed-color'
 import {
@@ -105,6 +106,16 @@ export async function POST(
 
   const validationError = validateDraft(draft)
   if (validationError) return NextResponse.json({ error: validationError }, { status: 400 })
+
+  // Plan limit (PULSIFY-62): self-assign role menus per guild, gated on the
+  // server owner's plan. Enforced on create only — see audit §6.
+  const supabaseCount = await createClient()
+  const { count: menuCount } = await supabaseCount
+    .from('self_role_menus')
+    .select('id', { count: 'exact', head: true })
+    .eq('guild_id', guildId)
+  const menuLimit = await requireGuildLimit(guildId, 'maxSelfRoleMenus', menuCount ?? 0)
+  if (!menuLimit.ok) return NextResponse.json({ error: menuLimit.error }, { status: 403 })
 
   const publish = body.publish !== false // default: publish on create
   if (publish) {

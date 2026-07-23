@@ -13,9 +13,11 @@ import {
   type ClientSubscription,
   PLAN_RANK,
   PLAN_LIMITS,
+  formatLimit,
   type FeatureLimits,
 } from '@/lib/billing'
 import { getCurrentDiscordUser } from '@/lib/workspace-auth'
+import { fetchGuild } from '@/lib/discord'
 
 /**
  * Server-only billing helpers (PULSIFY-29).
@@ -156,6 +158,114 @@ export async function requireFeature(
     }
   }
   return { ok: true, plan: current, userId: actor.userId, limits }
+}
+
+// ── Guild-scoped gates (parity with the bot) ─────────────────────────────
+// Slash-command gating (pulse-bot/src/feature-gate.js) gates a guild feature on
+// the GUILD OWNER's plan, not the invoker's — subscriptions are per-user and
+// there is no guild→plan link, so "the person paying for this server" is the
+// owner. The dashboard must gate guild-scoped features on the SAME subject or
+// the two surfaces would disagree (an acceptance criterion of PULSIFY-62).
+//
+// User-scoped resources (workspaces) stay on the acting user's plan via
+// requirePlan/requireFeature above — those are genuinely owned by the actor.
+//
+// All of this is dormant under EARLY_ACCESS: getUserPlan short-circuits to the
+// top tier before any owner lookup runs, so no extra Discord call happens in
+// prod today. Flip early access off and the owner's real plan gates.
+
+/** Effective plan for a guild, via its owner's subscription (mirrors the bot). */
+export async function getGuildPlan(guildId: string): Promise<Plan> {
+  if (isEarlyAccess()) return EARLY_ACCESS_PLAN
+  const guild = await fetchGuild(guildId)
+  if (!guild?.owner_id) return 'free'
+  return getUserPlan(guild.owner_id)
+}
+
+/** Feature-limit matrix for a guild's effective (owner's) plan. */
+export async function getGuildLimits(guildId: string): Promise<FeatureLimits> {
+  const plan = await getGuildPlan(guildId)
+  return PLAN_LIMITS[plan]
+}
+
+export type GuildFeatureGateResult =
+  | { ok: true; plan: Plan; limits: FeatureLimits }
+  | { ok: false; error: string; current: Plan; required: Plan }
+
+/**
+ * Boolean-feature gate for a guild-scoped feature (aiModeration, customBranding,
+ * ddosProtection, …). Names the lowest plan that includes the feature so the UI
+ * can point the owner at the right tier.
+ */
+export async function requireGuildFeature(
+  guildId: string,
+  feature: keyof FeatureLimits,
+): Promise<GuildFeatureGateResult> {
+  const plan = await getGuildPlan(guildId)
+  const value = PLAN_LIMITS[plan][feature]
+  const allowed = typeof value === 'boolean' ? value : value > 0
+  if (!allowed) {
+    return {
+      ok: false,
+      error: `This server's plan doesn't include this feature. The server owner can upgrade to unlock it.`,
+      current: plan,
+      required: lowestPlanWith(feature),
+    }
+  }
+  return { ok: true, plan, limits: PLAN_LIMITS[plan] }
+}
+
+export type GuildLimitGateResult =
+  | { ok: true; plan: Plan; limit: number }
+  | { ok: false; error: string; current: Plan; required: Plan; limit: number; count: number }
+
+/**
+ * Numeric-limit gate for a guild-scoped resource. Pass the CURRENT count of the
+ * resource; the gate allows creating one more when `count < limit`. Enforces on
+ * new creates only — never used to prune existing rows, so raising then lowering
+ * a plan can't delete data (grandfathering; see audit §6).
+ */
+export async function requireGuildLimit(
+  guildId: string,
+  limit: keyof FeatureLimits,
+  count: number,
+): Promise<GuildLimitGateResult> {
+  const plan = await getGuildPlan(guildId)
+  const max = PLAN_LIMITS[plan][limit]
+  const ceiling = typeof max === 'number' ? max : max ? Infinity : 0
+  if (count >= ceiling) {
+    return {
+      ok: false,
+      error: `This server has reached its plan limit (${formatLimit(ceiling)}). The server owner can upgrade for more.`,
+      current: plan,
+      required: lowestPlanWithHigherLimit(limit, plan),
+      limit: ceiling,
+      count,
+    }
+  }
+  return { ok: true, plan, limit: ceiling }
+}
+
+/** Lowest plan whose matrix enables `feature` (for the upgrade CTA). */
+function lowestPlanWith(feature: keyof FeatureLimits): Plan {
+  for (const plan of PLANS) {
+    const v = PLAN_LIMITS[plan][feature]
+    if (typeof v === 'boolean' ? v : v > 0) return plan
+  }
+  return 'enterprise'
+}
+
+/** Lowest plan (above `current`) that raises the numeric `limit` (upgrade CTA). */
+function lowestPlanWithHigherLimit(limit: keyof FeatureLimits, current: Plan): Plan {
+  const currentMax = PLAN_LIMITS[current][limit]
+  const currentCeiling = typeof currentMax === 'number' ? currentMax : Infinity
+  for (const plan of PLANS) {
+    if (PLAN_RANK[plan] <= PLAN_RANK[current]) continue
+    const v = PLAN_LIMITS[plan][limit]
+    const ceiling = typeof v === 'number' ? v : Infinity
+    if (ceiling > currentCeiling) return plan
+  }
+  return 'enterprise'
 }
 
 // ── Webhook → DB sync ────────────────────────────────────────────────────

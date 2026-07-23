@@ -22,6 +22,7 @@ const {
   isEarlyAccess,
   EARLY_ACCESS_PLAN,
   PLAN_LABELS,
+  limitFor,
 } = require("./billing");
 
 // ── Module enablement ────────────────────────────────────────────────────────
@@ -300,6 +301,31 @@ function invalidatePlan(guildId) {
   planCache.delete(guildId);
 }
 
+/**
+ * Numeric per-guild limit check for a bot create command, gated on the guild
+ * owner's plan (same subject as `check`). Pass the CURRENT count of the
+ * resource; returns `{ allowed:true }` when creating one more stays within the
+ * cap, or a blocked verdict with a member-facing reason. Mirrors the web app's
+ * requireGuildLimit so /giveaway create and the dashboard enforce the same cap.
+ *
+ * Fails OPEN on a lookup error (like `check`) — a DB blip shouldn't tell a paid
+ * server it's out of room.
+ */
+async function checkLimit(supabase, guild, limitKey, count) {
+  const plan = await getGuildPlan(supabase, guild);
+  const max = limitFor(plan, limitKey);
+  if (count < max) return { allowed: true, plan, limit: max };
+  const label = PLAN_LABELS[plan] ?? plan;
+  const ceiling = Number.isFinite(max) ? max : "unlimited";
+  return {
+    allowed: false,
+    status: "limit_reached",
+    plan,
+    limit: max,
+    reason: `This server has reached its ${label} plan limit (${ceiling}). The server owner can upgrade from the Pulsify dashboard for more.`,
+  };
+}
+
 // ── The gate ─────────────────────────────────────────────────────────────────
 
 /**
@@ -358,6 +384,7 @@ module.exports = {
   getGuildPlan,
   invalidatePlan,
   check,
+  checkLimit,
   upgradeMessage,
   // Re-exported so callers don't need to know whether plan helpers live here or
   // in the billing mirror.

@@ -48,6 +48,26 @@ function isEarlyAccess() {
   return v === "yes" || v === "true" || v === "1" || v === "on";
 }
 
+// Numeric per-guild limits the BOT enforces on its own create commands
+// (/giveaway create, /poll create, /event create). This is a focused MIRROR of
+// the matching keys in pulsify-web-app/lib/billing.ts PLAN_LIMITS — only the
+// caps a slash command can breach are duplicated here; the full matrix (booleans
+// + dashboard-only caps) stays web-side. Keep these three columns in sync with
+// lib/billing.ts. `null` = unlimited (JSON can't hold Infinity; treated as ∞).
+const GUILD_LIMITS = {
+  maxConcurrentGiveaways: { free: 1, pro: 10, business: 50, enterprise: null },
+  maxActivePolls: { free: 2, pro: 15, business: 75, enterprise: null },
+  maxScheduledEvents: { free: 3, pro: 20, business: 100, enterprise: null },
+};
+
+/** The numeric cap for `plan` on `key`; Infinity when unlimited/unknown. */
+function limitFor(plan, key) {
+  const row = GUILD_LIMITS[key];
+  if (!row) return Infinity;
+  const v = row[plan];
+  return v === null || v === undefined ? Infinity : v;
+}
+
 /** True if `current` is at least `required`. */
 function hasPlan(current, required) {
   const a = PLAN_RANK[current] ?? 0;
@@ -76,6 +96,8 @@ module.exports = {
   PLAN_LABELS,
   ACCESS_GRANTING_STATUSES,
   EARLY_ACCESS_PLAN,
+  GUILD_LIMITS,
+  limitFor,
   isEarlyAccess,
   hasPlan,
   isActiveStatus,

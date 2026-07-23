@@ -5,6 +5,7 @@ import path from 'node:path'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
+import { requireGuildLimit } from '@/lib/billing-server'
 import { recordNotification } from '@/lib/notifications-server'
 import { readGuildEmbedInt } from '@/lib/embed-color'
 import {
@@ -184,6 +185,18 @@ export async function createGiveaway(
   if (!auth.ok) return { ok: false, error: auth.error }
 
   const supabase = await createClient()
+
+  // Plan limit (PULSIFY-62): concurrent giveaways per guild, gated on the
+  // server owner's plan. Counts only live ones (active + scheduled) so ended
+  // giveaways never block a new draw. Enforced on create only — see audit §6.
+  const { count: liveGiveaways } = await supabase
+    .from('giveaways')
+    .select('id', { count: 'exact', head: true })
+    .eq('guild_id', guildId)
+    .in('status', ['active', 'scheduled'])
+  const giveawayLimit = await requireGuildLimit(guildId, 'maxConcurrentGiveaways', liveGiveaways ?? 0)
+  if (!giveawayLimit.ok) return { ok: false, error: giveawayLimit.error }
+
   const requirements = normaliseRequirements(draft.requirements)
   const blacklist = draft.blacklist_user_ids
     .filter((id) => /^\d{15,21}$/.test(id))

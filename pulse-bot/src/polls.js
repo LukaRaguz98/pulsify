@@ -29,6 +29,7 @@ const { getGuildAccent } = require("./guild-accent");
 // One duration grammar everywhere — /poll create parses "1h", "2d", "90m" with
 // the same parser /timeout, /role temp and /giveaway create use. Whole minutes.
 const { parseDuration } = require("./moderation");
+const { checkLimit } = require("./feature-gate");
 
 const PV = "pv";
 const TICK_MS = 30 * 1000; // lifecycle scan every 30s
@@ -770,6 +771,16 @@ function createPolls(client, supabase) {
       }
       endsAt = new Date(Date.now() + minutes * 60_000);
     }
+
+    // Plan limit (PULSIFY-62): concurrent open polls, gated on the guild
+    // owner's plan — same cap the dashboard enforces. Live polls only.
+    const { count: livePolls } = await supabase
+      .from("polls")
+      .select("id", { count: "exact", head: true })
+      .eq("guild_id", guild.id)
+      .in("status", ["active", "scheduled"]);
+    const gate = await checkLimit(supabase, guild, "maxActivePolls", livePolls ?? 0);
+    if (!gate.allowed) return replyNotice(interaction, gate.reason);
 
     const hostName =
       interaction.member?.displayName ?? interaction.user.globalName ?? interaction.user.username;

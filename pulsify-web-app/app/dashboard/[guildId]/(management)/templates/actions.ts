@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
 import { recordNotification } from '@/lib/notifications-server'
-import { getCurrentUserPlan } from '@/lib/billing-server'
+import { getCurrentUserPlan, requireGuildLimit } from '@/lib/billing-server'
 import { hasPlan } from '@/lib/billing'
 import {
   FEATURE_META,
@@ -29,6 +29,23 @@ function revalidate(guildId: string) {
 }
 
 type SB = Awaited<ReturnType<typeof createClient>>
+
+/**
+ * Plan limit (PULSIFY-62): saved custom templates per guild, gated on the
+ * server owner's plan. Shared by saveTemplate + importTemplate (both create a
+ * server_templates row). Built-in presets don't count — they aren't stored.
+ */
+async function checkSavedTemplateLimit(
+  supabase: SB,
+  guildId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { count } = await supabase
+    .from('server_templates')
+    .select('id', { count: 'exact', head: true })
+    .eq('guild_id', guildId)
+  const gate = await requireGuildLimit(guildId, 'maxSavedTemplates', count ?? 0)
+  return gate.ok ? { ok: true } : { ok: false, error: gate.error }
+}
 
 // ── Read the server's current feature on/off states ──────────────────────────
 // Shared by the page (to seed the create panel + preview) and capture.
@@ -168,6 +185,10 @@ export async function saveTemplate(
   if (featureKeysDecided(features).length === 0) return { ok: false, error: 'Choose what this template turns on or off.' }
 
   const supabase = await createClient()
+
+  const saveLimit = await checkSavedTemplateLimit(supabase, guildId)
+  if (!saveLimit.ok) return { ok: false, error: saveLimit.error }
+
   const { data, error } = await supabase
     .from('server_templates')
     .insert({
@@ -198,6 +219,10 @@ export async function importTemplate(guildId: string, raw: unknown): Promise<Act
   if (!parsed.ok) return { ok: false, error: parsed.error }
 
   const supabase = await createClient()
+
+  const importLimit = await checkSavedTemplateLimit(supabase, guildId)
+  if (!importLimit.ok) return { ok: false, error: importLimit.error }
+
   const { data, error } = await supabase
     .from('server_templates')
     .insert({

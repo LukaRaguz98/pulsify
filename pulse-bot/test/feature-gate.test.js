@@ -15,9 +15,10 @@ const {
   getGuildPlan,
   invalidatePlan,
   check,
+  checkLimit,
   moduleLabel,
 } = require("../src/feature-gate");
-const { effectivePlan, hasPlan, isEarlyAccess } = require("../src/billing");
+const { effectivePlan, hasPlan, isEarlyAccess, limitFor } = require("../src/billing");
 
 // ── Test doubles ─────────────────────────────────────────────────────────────
 
@@ -104,6 +105,39 @@ test("effectivePlan demotes a lapsed subscription to free", () => {
   assert.equal(effectivePlan(null, "active"), "free");
   // A bogus plan slug from a bad webhook write must not grant anything.
   assert.equal(effectivePlan("wizard", "active"), "free");
+});
+
+test("limitFor mirrors the web caps and treats unlimited as Infinity", () => {
+  assert.equal(limitFor("free", "maxConcurrentGiveaways"), 1);
+  assert.equal(limitFor("pro", "maxActivePolls"), 15);
+  assert.equal(limitFor("business", "maxScheduledEvents"), 100);
+  // enterprise is null in the mirror → unlimited.
+  assert.equal(limitFor("enterprise", "maxConcurrentGiveaways"), Infinity);
+  // An unknown key never blocks a command.
+  assert.equal(limitFor("free", "maxNope"), Infinity);
+});
+
+test("checkLimit blocks at the cap and allows under it, gated on the owner's plan", async () => {
+  invalidatePlan();
+  const freeGuild = { id: "lim-free", ownerId: "owner-1" };
+  const supa = fakeSupabase({ subscriptions: { plan: "free", status: "active" } });
+  // free maxConcurrentGiveaways = 1: 0 live is allowed, 1 live is blocked.
+  const under = await checkLimit(supa, freeGuild, "maxConcurrentGiveaways", 0);
+  assert.equal(under.allowed, true);
+  invalidatePlan();
+  const at = await checkLimit(supa, freeGuild, "maxConcurrentGiveaways", 1);
+  assert.equal(at.allowed, false);
+  assert.equal(at.status, "limit_reached");
+  assert.match(at.reason, /plan limit/i);
+});
+
+test("checkLimit never blocks under early access (top tier is unlimited)", async () => {
+  process.env.EARLY_ACCESS = "yes";
+  invalidatePlan();
+  const guild = { id: "lim-ea", ownerId: "owner-1" };
+  const supa = fakeSupabase({ subscriptions: { plan: "free", status: "active" } });
+  const res = await checkLimit(supa, guild, "maxConcurrentGiveaways", 9999);
+  assert.equal(res.allowed, true);
 });
 
 test("isEarlyAccess reads the truthy spellings and the public mirror", () => {

@@ -5,6 +5,7 @@ import path from 'node:path'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
+import { requireGuildLimit } from '@/lib/billing-server'
 import { recordNotification } from '@/lib/notifications-server'
 import { readGuildEmbedInt } from '@/lib/embed-color'
 import {
@@ -234,6 +235,18 @@ export async function createPoll(guildId: string, draft: PollDraft): Promise<Act
   if (!auth.ok) return { ok: false, error: auth.error }
 
   const supabase = await createClient()
+
+  // Plan limit (PULSIFY-62): concurrent open polls per guild, gated on the
+  // server owner's plan. Only live polls (active + scheduled) count; closed
+  // polls never block a new one. Enforced on create only — see audit §6.
+  const { count: livePolls } = await supabase
+    .from('polls')
+    .select('id', { count: 'exact', head: true })
+    .eq('guild_id', guildId)
+    .in('status', ['active', 'scheduled'])
+  const pollLimit = await requireGuildLimit(guildId, 'maxActivePolls', livePolls ?? 0)
+  if (!pollLimit.ok) return { ok: false, error: pollLimit.error }
+
   const { options, max_choices } = resolveDraftOptions(draft)
   const requirements = normaliseRequirements(draft.requirements)
   const governance = normaliseGovernance(draft.governance)

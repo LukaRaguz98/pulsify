@@ -249,19 +249,42 @@ export function BillingOverview({
             </p>
           </div>
         </div>
+        <p className="mb-3 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>
+          Usage limits
+        </p>
         <div className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
-          <LimitRow label="Workspaces" value={formatLimit(limits.maxWorkspaces)} />
-          <LimitRow label="Servers per workspace" value={formatLimit(limits.maxServersPerWorkspace)} />
           <LimitRow label="Analytics retention" value={`${formatLimit(limits.analyticsRetentionDays)} days`} />
+          <LimitRow label="Moderation log history" value={`${formatLimit(limits.logRetentionDays)} days`} />
           <LimitRow label="Automations per server" value={formatLimit(limits.maxAutomationsPerGuild)} />
           <LimitRow label="Concurrent giveaways" value={formatLimit(limits.maxConcurrentGiveaways)} />
+          <LimitRow label="Concurrent polls" value={formatLimit(limits.maxActivePolls)} />
+          <LimitRow label="Scheduled events" value={formatLimit(limits.maxScheduledEvents)} />
           <LimitRow label="Active tickets per server" value={formatLimit(limits.maxActiveTicketsPerGuild)} />
+          <LimitRow label="Self-assign role menus" value={formatLimit(limits.maxSelfRoleMenus)} />
+          <LimitRow label="Statistics channels" value={formatLimit(limits.maxStatisticChannels)} />
+          <LimitRow label="Private voice channels" value={formatLimit(limits.maxPrivateChannelsActive)} />
+          <LimitRow label="Temporary role grants" value={formatLimit(limits.maxTemporaryRolesActive)} />
+          <LimitRow label="Milestones" value={formatLimit(limits.maxMilestones)} />
+          <LimitRow label="Custom economy rewards" value={formatLimit(limits.maxCustomRewards)} />
+          <LimitRow label="Application forms" value={formatLimit(limits.maxApplications)} />
+          <LimitRow label="Integrations" value={formatLimit(limits.maxIntegrations)} />
+          <LimitRow label="Saved templates" value={formatLimit(limits.maxSavedTemplates)} />
+          <LimitRow label="Workspaces" value={formatLimit(limits.maxWorkspaces)} />
+          <LimitRow label="Servers per workspace" value={formatLimit(limits.maxServersPerWorkspace)} />
+        </div>
+        <p className="mb-3 mt-6 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>
+          Premium features
+        </p>
+        <div className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
           <BoolRow label="AI moderation (Pulse Guard)" value={limits.aiModeration} />
-          <BoolRow label="Advanced AI moderation" value={limits.advancedAiModeration} />
-          <BoolRow label="Advanced moderation tools" value={limits.advancedModeration} />
+          <BoolRow label="Advanced & bulk moderation" value={limits.advancedModeration} />
+          <BoolRow label="Alt-detection auto-flagging" value={limits.advancedAltDetection} />
+          <BoolRow label="DDoS protection" value={limits.ddosProtection} />
           <BoolRow label="Custom bot branding" value={limits.customBranding} />
-          <BoolRow label="Multi-server workspaces" value={limits.multiServerManagement} />
+          <BoolRow label="Advanced AI moderation" value={limits.advancedAiModeration} />
+          <BoolRow label="Custom DDoS rules & presets" value={limits.advancedDdosProtection} />
           <BoolRow label="Advanced analytics insights" value={limits.advancedAnalytics} />
+          <BoolRow label="Multi-server & team collaboration" value={limits.multiServerManagement} />
           <BoolRow label="Backup & restore" value={limits.backupRestore} />
           <BoolRow label="API & webhook access" value={limits.apiAccess} />
           <BoolRow label="Priority support" value={limits.prioritySupport} />
