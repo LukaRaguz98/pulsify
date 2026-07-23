@@ -23,7 +23,7 @@ The biggest command update yet: dozens of new slash commands bring Pulse's moder
 **Server tools & assets**
 - **Configuration** — /serversettings view for a config snapshot, /statchannel refresh for the live counter channels, and /template apply to switch feature profiles on in one go.
 - **Assets** — /emoji, /sticker and /soundboard list and info to browse the server's expressions.
-- **Backups & more** — /backup create and list (Business), /integrations status, /notifications preferences and /feedback submit.
+- **Backups & more** — /backup create and list, /integrations status, /notifications preferences and /feedback submit.
 
 **Renamed — heads up**
 - **/alt-check is now /alt check** and **/invites is now /invite stats** (with /invite leaderboard and /invite rewards). Discord doesn't allow spaces in a command name, so these moved into command groups. Update any pinned messages or guides that referenced the old names.
