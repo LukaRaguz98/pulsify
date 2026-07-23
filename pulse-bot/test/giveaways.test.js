@@ -90,13 +90,16 @@ test("single role: name via resolver, mention by default", () => {
 });
 
 test("multiple roles: 'any' vs 'all' wording and logic", () => {
+  // Inline lists are space-separated, never comma'd — the role list here renders
+  // as mentions, which Discord draws as pills (see the embed conventions on
+  // buildPulseContainer).
   const any = req({ required_role_ids: ["1", "2"], required_role_mode: "any" });
-  assert.deepEqual(describeRequirements(any, (id) => `R${id}`), ["Required roles (any): R1, R2"]);
+  assert.deepEqual(describeRequirements(any, (id) => `R${id}`), ["Required roles (any): R1 R2"]);
   assert.equal(checkEligibility(any, facts({ roleIds: ["2"] })).ok, true);
   assert.equal(checkEligibility(any, facts({ roleIds: ["9"] })).ok, false);
 
   const all = req({ required_role_ids: ["1", "2"], required_role_mode: "all" });
-  assert.deepEqual(describeRequirements(all, (id) => `R${id}`), ["Required roles (all): R1, R2"]);
+  assert.deepEqual(describeRequirements(all, (id) => `R${id}`), ["Required roles (all): R1 R2"]);
   assert.equal(checkEligibility(all, facts({ roleIds: ["1"] })).ok, false);
   assert.equal(checkEligibility(all, facts({ roleIds: ["1", "2"] })).ok, true);
 });

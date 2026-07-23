@@ -24,7 +24,15 @@ const {
 const { readFile } = require("node:fs/promises");
 const path = require("node:path");
 const { recordNotification } = require("./notifications");
-const { replyNotice, editNotice } = require("./commands");
+const {
+  replyNotice,
+  editNotice,
+  // /application status renders a full report rather than a notice, so it uses
+  // the shared container the rest of Pulse's embeds use.
+  buildPulseContainer,
+  getPulseColor,
+  text,
+} = require("./commands");
 const { getGuildAccentHex, DEFAULT_ACCENT_HEX } = require("./guild-accent");
 const {
   APL,
@@ -42,6 +50,16 @@ const {
 
 // ── Shared constants (mirror lib/tickets.ts) ────────────────────────────────
 const TKT = "tkt";
+// Mirrors PRIORITIES + PRIORITY_META in lib/tickets.ts (labels only — the icons
+// and colours are dashboard-side). Order is low → urgent, matching PRIORITY_META's
+// `order`, so /ticket priority's picker reads in escalating order.
+const TICKET_PRIORITIES = ["low", "normal", "high", "urgent"];
+const PRIORITY_LABELS = {
+  low: "Low",
+  normal: "Normal",
+  high: "High",
+  urgent: "Urgent",
+};
 const AUTO_CLOSE_TICK_MS = 5 * 60 * 1000; // scan for inactivity every 5 minutes
 const ACTIVITY_THROTTLE_MS = 60 * 1000; // at most one last_activity write/min/channel
 const TICKET_ICON_FILE = "pulse-ticket.png";
@@ -1293,6 +1311,242 @@ function createTickets(client, supabase, economyRewards = null) {
     await mirrorToLog(guild, config, `Ticket #${ticket.number} auto-closed after inactivity.`);
   }
 
+  // ── Slash commands (PULSIFY-61) ──────────────────────────────────────────────
+  //
+  // /ticket close|claim|add|priority and /application status.
+  //
+  // These are thin: they resolve which ticket is meant and then call the SAME
+  // internals the control-panel buttons call (handleClaim, doClose). Forking a
+  // parallel close path would mean two places to keep the transcript, the
+  // economy reward, the channel lock and the event log in step — and they would
+  // drift the first time one of them changed.
+  //
+  // "Which ticket" is answered by the CHANNEL you're standing in. That's the
+  // whole ergonomic win over the dashboard: no ID to look up, no picker to
+  // scroll. Run it anywhere else and it says so.
+
+  /** The open/claimed ticket whose channel this is, or null. */
+  async function ticketForChannel(guildId, channelId) {
+    if (!channelId) return null;
+    const { data } = await supabase
+      .from("tickets")
+      .select("*")
+      .eq("guild_id", guildId)
+      .eq("channel_id", channelId)
+      .neq("status", "closed")
+      .maybeSingle();
+    return data ?? null;
+  }
+
+  /**
+   * Resolve the ticket for a command, or reply with why we can't. Returns the
+   * ticket or null — callers bail on null, the reply is already sent.
+   */
+  async function requireTicketChannel(interaction, guild) {
+    const config = configCache.get(guild.id);
+    if (!config || !config.enabled) {
+      await replyNotice(interaction, "The ticket system isn't enabled on this server yet.");
+      return null;
+    }
+    const ticket = await ticketForChannel(guild.id, interaction.channelId);
+    if (!ticket) {
+      await replyNotice(
+        interaction,
+        "Run this inside a ticket channel — that's how I know which ticket you mean.",
+      );
+      return null;
+    }
+    return ticket;
+  }
+
+  /** /ticket claim — delegates to the same path the Claim button uses. */
+  async function handleClaimCommand({ interaction, guild }) {
+    const ticket = await requireTicketChannel(interaction, guild);
+    if (!ticket) return;
+    if (ticket.claimed_by) {
+      // handleClaim would happily reassign; from a command that's more likely a
+      // mistake than an intent, so say who has it and stop.
+      if (ticket.claimed_by === interaction.user.id) {
+        return replyNotice(interaction, "You've already claimed this ticket.");
+      }
+      return replyNotice(
+        interaction,
+        `**${ticket.claimed_by_name ?? "Someone"}** already claimed this ticket. They can hand it over from the ticket panel.`,
+      );
+    }
+    await handleClaim(interaction, ticket.id);
+  }
+
+  /**
+   * /ticket close [reason] — delegates to doClose, which owns the transcript,
+   * the economy reward, the channel lock and the closed notice. It defers the
+   * interaction itself, so don't defer before calling it.
+   */
+  async function handleCloseCommand({ interaction, guild }) {
+    const ticket = await requireTicketChannel(interaction, guild);
+    if (!ticket) return;
+    const reason = interaction.options.getString("reason")?.trim() || null;
+    await doClose(interaction, ticket.id, reason);
+  }
+
+  /** /ticket add [user] — give someone access to this ticket's channel. */
+  async function handleAddCommand({ interaction, guild }) {
+    const ticket = await requireTicketChannel(interaction, guild);
+    if (!ticket) return;
+
+    const user = interaction.options.getUser("user", true);
+    if (user.bot) return replyNotice(interaction, "Bots don't need to be added to a ticket.");
+    if (user.id === ticket.opener_id) {
+      return replyNotice(interaction, "They opened this ticket — they're already in it.");
+    }
+
+    const participants = Array.isArray(ticket.participants) ? ticket.participants : [];
+    if (participants.includes(user.id)) {
+      return replyNotice(interaction, `<@${user.id}> is already in this ticket.`);
+    }
+
+    const member = await guild.members.fetch(user.id).catch(() => null);
+    if (!member) return replyNotice(interaction, "That member isn't in this server.");
+
+    const channel = await guild.channels.fetch(ticket.channel_id).catch(() => null);
+    if (!channel) return replyNotice(interaction, "This ticket's channel no longer exists.");
+
+    try {
+      await channel.permissionOverwrites.edit(user.id, {
+        ViewChannel: true,
+        SendMessages: true,
+        ReadMessageHistory: true,
+      });
+    } catch (err) {
+      console.error(`[Pulse] /ticket add failed in ${guild.id}:`, err.message);
+      return replyNotice(interaction, "I couldn't give them access. Check my permissions on this channel.");
+    }
+
+    // `participants` has existed since PULSIFY-22 and the dashboard reads it,
+    // but nothing ever wrote it — this is its first writer.
+    await supabase
+      .from("tickets")
+      .update({ participants: [...participants, user.id], updated_at: new Date().toISOString() })
+      .eq("id", ticket.id);
+
+    await logEvent(
+      ticket.id,
+      guild.id,
+      "user_added",
+      interaction.member ?? interaction.user,
+      member.displayName ?? user.username,
+    );
+
+    await replyTicketNotice(interaction, guild.id, [
+      `**${interaction.member?.displayName ?? interaction.user.username}** added <@${user.id}> to this ticket.`,
+    ]);
+  }
+
+  /** /ticket priority [level] */
+  async function handlePriorityCommand({ interaction, guild }) {
+    const ticket = await requireTicketChannel(interaction, guild);
+    if (!ticket) return;
+
+    const level = interaction.options.getString("level", true);
+    if (!TICKET_PRIORITIES.includes(level)) {
+      return replyNotice(interaction, "Pick a priority from the list.");
+    }
+    if (ticket.priority === level) {
+      return replyNotice(interaction, `This ticket is already **${PRIORITY_LABELS[level]}**.`);
+    }
+
+    const previous = ticket.priority;
+    await supabase
+      .from("tickets")
+      .update({ priority: level, updated_at: new Date().toISOString() })
+      .eq("id", ticket.id);
+
+    await logEvent(
+      ticket.id,
+      guild.id,
+      "priority_changed",
+      interaction.member ?? interaction.user,
+      `${PRIORITY_LABELS[previous] ?? previous} to ${PRIORITY_LABELS[level]}`,
+    );
+
+    await replyTicketNotice(interaction, guild.id, [
+      `**${interaction.member?.displayName ?? interaction.user.username}** set the priority to **${PRIORITY_LABELS[level]}**.`,
+      `-# Was ${PRIORITY_LABELS[previous] ?? previous}.`,
+    ]);
+  }
+
+  /**
+   * /application status — a member checks their own applications.
+   *
+   * Member tier, so it only ever shows the INVOKER's own applications. There is
+   * no user option on purpose: applications carry a decision note written for
+   * the applicant, and letting anyone read anyone else's would leak staff notes
+   * to the whole server.
+   */
+  async function handleApplicationStatusCommand({ interaction, guild, ephemeral }) {
+    await interaction.deferReply({
+      flags: ephemeral === false ? undefined : MessageFlags.Ephemeral,
+    });
+
+    const { data, error } = await supabase
+      .from("ticket_applications")
+      .select("number, type_label, custom_type, status, decision_note, created_at, decided_at")
+      .eq("guild_id", guild.id)
+      .eq("applicant_id", interaction.user.id)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (error) {
+      console.error(`[Pulse] /application status read failed in ${guild.id}:`, error.message);
+      return editNotice(interaction, "I couldn't load your applications. Try again shortly.");
+    }
+
+    const rows = data ?? [];
+    // This module has its own badge loader (the ticket glyph isn't in
+    // commands.js's ICON_FILES) — use it rather than adding a second path.
+    const colorHex = await getPulseColor(supabase, guild.id);
+    const icon = await loadTicketIcon(colorHex);
+
+    const body = [];
+    if (rows.length === 0) {
+      body.push(text("You haven't submitted any applications in this server."));
+    } else {
+      body.push(
+        text(
+          rows
+            .map((a) => {
+              const label = a.type_label ?? a.custom_type ?? "Application";
+              const when = Math.floor(new Date(a.created_at).getTime() / 1000);
+              const decided = a.decided_at
+                ? ` — decided <t:${Math.floor(new Date(a.decided_at).getTime() / 1000)}:R>`
+                : "";
+              const note = a.decision_note ? `\n-# ${a.decision_note}` : "";
+              // APPLICATION_STATUS_META is already the shared mirror of
+              // lib/applications.ts — don't add a third copy of these labels.
+              const status = APPLICATION_STATUS_META[a.status]?.label ?? a.status;
+              return `**#${a.number} ${label}** — ${status}\n-# Submitted <t:${when}:R>${decided}${note}`;
+            })
+            .join("\n\n"),
+        ),
+      );
+    }
+
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        buildPulseContainer({
+          iconUrl: icon ? `attachment://${icon.name}` : null,
+          colorHex,
+          title: "Your applications",
+          subtitle: `Pulse — ${guild.name}`,
+          body,
+          footer: "Pulse — Applications",
+        }),
+      ],
+      files: icon ? [icon] : [],
+    });
+  }
+
   // ── Lifecycle ────────────────────────────────────────────────────────────────
 
   async function start() {
@@ -1308,7 +1562,28 @@ function createTickets(client, supabase, economyRewards = null) {
     console.log("[Pulse] Ticket system started.");
   }
 
-  return { start, reload, handleTicketCommand };
+  return {
+    start,
+    reload,
+    // NOTE: handleTicketCommand is an "open a ticket" picker from PULSIFY-22
+    // that nothing has ever called — it's exported but was never wired to a
+    // catalog entry. It's a MEMBER action, and the /ticket group below is
+    // support-tier (a subcommand can't carry its own tier), so it can't simply
+    // become /ticket open. Left as-is pending a decision rather than deleted.
+    handleTicketCommand,
+    // Slash commands (PULSIFY-61).
+    handleClaimCommand,
+    handleCloseCommand,
+    handleAddCommand,
+    handlePriorityCommand,
+    handleApplicationStatusCommand,
+    ticketForChannel,
+  };
 }
 
-module.exports = { createTickets, formatChannelName };
+module.exports = {
+  createTickets,
+  formatChannelName,
+  TICKET_PRIORITIES,
+  PRIORITY_LABELS,
+};

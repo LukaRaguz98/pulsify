@@ -297,7 +297,9 @@ function createSecurity(client, supabase) {
         `**Severity:** ${SEVERITY_LABEL[result.severity]}`,
         `**Detected:** ${who}${result.count} in ${result.window_seconds}s (limit ${result.threshold})`,
         `**Module:** ${MODULE_LABELS[meta.module]}`,
-        applied.length ? `**Mitigations:** ${applied.join(", ")}` : "**Mitigations:** none configured",
+        applied.length
+          ? `**Mitigations:** ${applied.map((a) => `\`${a}\``).join(" ")}`
+          : "**Mitigations:** none configured",
       ],
     });
 

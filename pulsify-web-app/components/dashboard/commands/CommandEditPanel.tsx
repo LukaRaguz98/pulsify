@@ -25,6 +25,7 @@ import type { DiscordRole, DiscordChannel } from '@/lib/discord'
 import { roleColor } from '@/lib/discord'
 import {
   CATEGORY_META,
+  MODULE_LABELS,
   PERMISSION_META,
   PERMISSION_LEVEL_OPTIONS,
   effectivePermission,
@@ -33,6 +34,7 @@ import {
   type CommandCategory,
   type ConfigPermissionLevel,
 } from '@/lib/commands'
+import { PLAN_LABELS } from '@/lib/billing'
 import { saveCommandConfig } from '@/app/dashboard/[guildId]/(management)/commands/actions'
 import { PermissionBadge } from './badges'
 
@@ -315,6 +317,30 @@ export function CommandEditPanel({
           {/* Preview + quick test */}
           <Section icon={<Sparkles size={13} />} label="Examples & quick test" description="Copy an example to paste straight into Discord.">
             <p className="mb-3 text-xs leading-relaxed text-muted-foreground">{definition.detail}</p>
+            {/* Requirements the Command Center can't override: a command whose
+                module is switched off, or whose plan the server doesn't have,
+                won't run no matter what's configured here. Surfacing them stops
+                "I enabled it and nothing happens". */}
+            {(definition.module || definition.minPlan !== 'free') && (
+              <div className="mb-3 flex flex-wrap items-center gap-1.5 text-[11px]">
+                {definition.module && (
+                  <span
+                    className="rounded-full border px-2 py-0.5 font-medium"
+                    style={{ borderColor: 'var(--line-strong)', color: 'var(--text-3)' }}
+                  >
+                    Needs {MODULE_LABELS[definition.module] ?? definition.module} enabled
+                  </span>
+                )}
+                {definition.minPlan !== 'free' && (
+                  <span
+                    className="rounded-full border px-2 py-0.5 font-medium"
+                    style={{ borderColor: 'rgba(168,85,247,0.35)', color: '#a855f7' }}
+                  >
+                    {PLAN_LABELS[definition.minPlan]} plan
+                  </span>
+                )}
+              </div>
+            )}
             {definition.options && definition.options.length > 0 && (
               <div className="mb-3 space-y-1.5">
                 {definition.options.map((opt) => (

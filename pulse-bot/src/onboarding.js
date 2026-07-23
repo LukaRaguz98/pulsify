@@ -14,8 +14,17 @@
 // the panel was posted to a channel or to the member's DMs.
 
 const { Events, MessageFlags } = require("discord.js");
-const { replyNotice } = require("./commands");
+const {
+  replyNotice,
+  buildPulseContainer,
+  getPulseColor,
+  loadPulseIcon,
+  text,
+  divider,
+} = require("./commands");
 const { getGuildAccentHex } = require("./guild-accent");
+const { isModerator } = require("./permissions");
+const { getDashboardUrl } = require("./version");
 
 const OB = "ob";
 const BRAND = 0x6366f1;
@@ -469,30 +478,33 @@ function createOnboarding(client, supabase, leveling = null, economyRewards = nu
     );
   }
 
-  async function handleVerify(interaction, guildId) {
-    const ctx = await resolveContext(interaction, guildId);
-    if (!ctx)
-      return replyNotice(interaction, "Onboarding is no longer available.");
-    const roleId = ctx.cfg.verification?.role_id;
-    if (!ctx.cfg.verification?.enabled || !roleId)
-      return replyNotice(interaction, "Verification isn't enabled here.");
+  /**
+   * Grant the configured verified role to `member` and record it, exactly once.
+   * Shared by the panel's Verify button (handleVerify) and the /verify command
+   * (handleVerifyCommand) so a manual verification pays the same reward and logs
+   * the same progress as clicking the button. Returns a result rather than
+   * replying, so each caller can phrase its own message.
+   */
+  async function applyVerification(guild, member, cfg) {
+    const roleId = cfg.verification?.role_id;
+    if (!cfg.verification?.enabled || !roleId) return { ok: false, reason: "disabled" };
 
     try {
-      await ctx.member.roles.add(roleId, "Pulse onboarding verification");
+      await member.roles.add(roleId, "Pulse onboarding verification");
     } catch {
-      return replyNotice(interaction, "I couldn't assign the verified role — please ping a moderator.");
+      return { ok: false, reason: "perms" };
     }
 
-    const prev = await readProgress(guildId, interaction.user.id);
+    const prev = await readProgress(guild.id, member.id);
     const wasVerified = !!prev?.verified;
     const prevSkipped = (
       Array.isArray(prev?.skipped_steps) ? prev.skipped_steps : []
     ).filter((s) => s !== "verification");
     await supabase.from("onboarding_member_progress").upsert(
       {
-        guild_id: guildId,
-        user_id: interaction.user.id,
-        user_name: ctx.member.user.username,
+        guild_id: guild.id,
+        user_id: member.id,
+        user_name: member.user.username,
         verified: true,
         skipped_steps: prevSkipped,
         updated_at: new Date().toISOString(),
@@ -502,9 +514,25 @@ function createOnboarding(client, supabase, leveling = null, economyRewards = nu
 
     // First successful verification → the "verification" reward (PULSIFY-47).
     if (economyRewards?.awardOnboarding && !wasVerified) {
-      void economyRewards.awardOnboarding(ctx.member.guild, ctx.member, "verification");
+      void economyRewards.awardOnboarding(guild, member, "verification");
     }
 
+    return { ok: true, wasVerified };
+  }
+
+  async function handleVerify(interaction, guildId) {
+    const ctx = await resolveContext(interaction, guildId);
+    if (!ctx)
+      return replyNotice(interaction, "Onboarding is no longer available.");
+    const res = await applyVerification(ctx.guild, ctx.member, ctx.cfg);
+    if (!res.ok) {
+      return replyNotice(
+        interaction,
+        res.reason === "disabled"
+          ? "Verification isn't enabled here."
+          : "I couldn't assign the verified role — please ping a moderator.",
+      );
+    }
     await replyNotice(
       interaction,
       ctx.cfg.verification.success_message ||
@@ -631,12 +659,229 @@ function createOnboarding(client, supabase, leveling = null, economyRewards = nu
     }
   }
 
+  // ── Slash commands (PULSIFY-61) ─────────────────────────────────────────────
+
+  async function renderEmbed(interaction, guild, iconKey, { title, body, footer, actions, ephemeral }) {
+    const colorHex = await getPulseColor(supabase, guild.id);
+    const icon = iconKey ? await loadPulseIcon(iconKey, colorHex) : null;
+    const payload = {
+      flags: MessageFlags.IsComponentsV2 | (ephemeral ? MessageFlags.Ephemeral : 0),
+      components: [
+        buildPulseContainer({
+          iconUrl: icon ? `attachment://${icon.name}` : null,
+          colorHex,
+          title,
+          subtitle: `Pulse — ${guild.name}`,
+          body,
+          footer,
+          actions: actions ?? [],
+        }),
+      ],
+      files: icon ? [icon] : [],
+    };
+    if (interaction.replied || interaction.deferred) await interaction.editReply(payload);
+    else await interaction.reply(payload);
+  }
+
+  /**
+   * /verify [user] — grant the configured verified role. On its own it verifies
+   * the invoker (same as the panel's Verify button); with a `user` it verifies
+   * that member, which is a MODERATOR action (the in-handler check — the command
+   * itself is everyone-tier so members can self-verify). `module: null`: the
+   * handler gives a precise "not set up" message rather than the generic
+   * module-off one, and self-verification is a core member action.
+   */
+  async function handleVerifyCommand({ interaction, guild, ephemeral }) {
+    const cfg = await getConfig(guild.id);
+    if (!cfg || !cfg.verification?.enabled || !cfg.verification.role_id) {
+      return replyNotice(interaction, "Verification isn't set up in this server.", ephemeral);
+    }
+
+    const target = interaction.options.getUser("user");
+    const verifyingOther = target && target.id !== interaction.user.id;
+
+    let member;
+    if (verifyingOther) {
+      if (!isModerator(interaction.member)) {
+        return replyNotice(
+          interaction,
+          "Only moderators can verify other members. Run `/verify` on its own to verify yourself.",
+          ephemeral,
+        );
+      }
+      member = await guild.members.fetch(target.id).catch(() => null);
+      if (!member) return replyNotice(interaction, "I couldn't find that member.", ephemeral);
+    } else {
+      member = interaction.member;
+    }
+
+    if (member.roles.cache.has(cfg.verification.role_id)) {
+      return replyNotice(
+        interaction,
+        verifyingOther ? `<@${member.id}> is already verified.` : "You're already verified.",
+        ephemeral,
+      );
+    }
+
+    const res = await applyVerification(guild, member, cfg);
+    if (!res.ok) {
+      return replyNotice(
+        interaction,
+        res.reason === "disabled"
+          ? "Verification isn't set up in this server."
+          : "I couldn't assign the verified role — check my role is above it and I have Manage Roles.",
+        ephemeral,
+      );
+    }
+
+    await replyNotice(
+      interaction,
+      verifyingOther
+        ? `Verified <@${member.id}>.`
+        : cfg.verification.success_message || "You're **verified** — welcome aboard!",
+      ephemeral,
+    );
+  }
+
+  /**
+   * /verification status — whether verification is set up here and whether the
+   * invoker is verified. Everyone-tier, module null. The verified role is the
+   * source of truth (it can be granted outside onboarding too).
+   */
+  async function handleVerificationStatus({ interaction, guild, ephemeral }) {
+    const cfg = await getConfig(guild.id);
+    const roleId = cfg?.verification?.enabled ? cfg.verification.role_id : null;
+    if (!roleId) {
+      return replyNotice(interaction, "Verification isn't set up in this server.", ephemeral);
+    }
+
+    const verified = interaction.member.roles.cache.has(roleId);
+    const body = [];
+    if (verified) {
+      body.push(text(`You're **verified** in ${guild.name}.`));
+      body.push(text(`-# Verified role — <@&${roleId}>`));
+    } else {
+      body.push(text(`You're **not verified** yet.`));
+      body.push(
+        text(
+          "-# Click **Verify** on the welcome panel, or run `/verify`, to get the verified role.",
+        ),
+      );
+    }
+    await renderEmbed(interaction, guild, "safety", {
+      title: "Verification",
+      body,
+      footer: "Pulse — Verification",
+      ephemeral,
+    });
+  }
+
+  /**
+   * /onboarding resend [user] — re-post the onboarding panel. Moderator-tier,
+   * module `onboarding` — so the whole group sits at one tier (a subcommand
+   * can't carry its own), and `stats` below is a staff analytics read. Delivered
+   * exactly as on join (the configured channel or DM); progress is not reset
+   * (postForMember inserts only).
+   */
+  async function handleResend({ interaction, guild, ephemeral }) {
+    const cfg = await getConfig(guild.id);
+    if (!cfg) return replyNotice(interaction, "Onboarding isn't set up in this server.", ephemeral);
+
+    const target = interaction.options.getUser("user");
+    const member = target
+      ? await guild.members.fetch(target.id).catch(() => null)
+      : interaction.member;
+    if (!member) return replyNotice(interaction, "I couldn't find that member.", ephemeral);
+
+    await postForMember(member, { member_onboarding: cfg });
+    const where = cfg.delivery === "dm" ? "by DM" : "in the welcome channel";
+    await replyNotice(
+      interaction,
+      target ? `Re-sent the onboarding panel to <@${member.id}> (${where}).` : `Re-sent your onboarding panel (${where}).`,
+      ephemeral,
+    );
+  }
+
+  /**
+   * /onboarding stats — the completion funnel for the whole server. Moderator-
+   * tier analytics read (module `onboarding`). Uses head-only count queries so
+   * it stays cheap on servers with a lot of history.
+   */
+  async function handleOnboardingStats({ interaction, guild, ephemeral }) {
+    await interaction.deferReply({ flags: ephemeral ? MessageFlags.Ephemeral : 0 });
+
+    const base = () => supabase.from("onboarding_member_progress").select("*", { count: "exact", head: true }).eq("guild_id", guild.id);
+    const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
+    const [startedRes, completedRes, verifiedRes, rewardedRes, recentRes] = await Promise.all([
+      base(),
+      base().eq("status", "completed"),
+      base().eq("verified", true),
+      base().eq("rewarded", true),
+      base().gte("started_at", weekAgo),
+    ]);
+
+    if (startedRes.error) {
+      console.error(`[Pulse] /onboarding stats failed in ${guild.id}:`, startedRes.error.message);
+      return renderEmbed(interaction, guild, "info", {
+        title: "Onboarding",
+        body: [text("I couldn't load onboarding stats right now. Try again shortly.")],
+        footer: "Pulse — Onboarding",
+      });
+    }
+
+    const started = startedRes.count ?? 0;
+    const completed = completedRes.count ?? 0;
+    const verified = verifiedRes.count ?? 0;
+    const rewarded = rewardedRes.count ?? 0;
+    const recent = recentRes.count ?? 0;
+    const rate = started > 0 ? Math.round((completed / started) * 100) : 0;
+
+    const body = [];
+    if (started === 0) {
+      body.push(text("No members have started onboarding yet."));
+      body.push(text("-# Members enter onboarding when they join while it's enabled."));
+    } else {
+      body.push(text(`Onboarding funnel for ${guild.name}.`));
+      body.push(divider());
+      body.push(
+        text(
+          [
+            `**Members onboarded** — ${started.toLocaleString()}`,
+            `**Completed** — ${completed.toLocaleString()} (${rate}%)`,
+            `**Verified** — ${verified.toLocaleString()}`,
+            `**Rewards granted** — ${rewarded.toLocaleString()}`,
+          ].join("\n"),
+        ),
+      );
+      body.push(text(`-# ${recent.toLocaleString()} new in the last 7 days`));
+    }
+
+    await renderEmbed(interaction, guild, "info", {
+      title: "Onboarding",
+      body,
+      footer: "Pulse — Onboarding",
+      actions: [
+        {
+          type: 1,
+          components: [{ type: 2, style: 5, label: "Open Onboarding", url: `${getDashboardUrl(guild.id)}/onboarding` }],
+        },
+      ],
+    });
+  }
+
   function start() {
     client.on(Events.InteractionCreate, onInteraction);
     console.log("[Pulse] Onboarding system started.");
   }
 
-  return { start, postForMember };
+  return {
+    start,
+    postForMember,
+    handleVerifyCommand,
+    handleVerificationStatus,
+    handleResend,
+    handleOnboardingStats,
+  };
 }
 
 module.exports = { createOnboarding };

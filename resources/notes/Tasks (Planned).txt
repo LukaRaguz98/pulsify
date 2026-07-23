@@ -1,189 +1,148 @@
-PULSIFY-62 — Pricing Plan Feature Audit & Gating Synchronization (v0.62.0)
+PULSIFY-63 — Server Timeline & Change History (v0.63.0)
 
 Description
-	Since the original Pricing Plans and Stripe integration (PULSIFY-29), Pulsify has expanded significantly with dozens of new modules, automations, Discord commands, analytics, security tools, and economy features. Many of these were introduced without being explicitly assigned to a subscription tier.
-	This task performs a complete audit of every existing Pulsify feature, classifies each one into the appropriate pricing tier, synchronizes backend feature gating, updates the public pricing page, and ensures the billing experience accurately reflects the current product offering.
-	The goal is to establish a single source of truth for feature availability and ensure all future features are pricing-aware by default.
+	Implement a Server Timeline that automatically records every significant change made through Pulsify or directly within Discord, providing administrators with a complete chronological history of their server.
+	Instead of searching through Audit Logs or guessing what changed, administrators can open a single timeline and instantly see the evolution of their community.
+	The timeline should become the central history page for the entire server.
 
 Goals
-	Audit every existing Pulsify feature and module
-	Assign all features to an appropriate pricing tier
-	Synchronize dashboard, backend, Discord commands, and pricing page
-	Enforce feature gating consistently across the platform
-	Prepare the pricing system for future feature releases
-
-Non Goals
-	No changes to pricing amounts
-	No introduction of new subscription plans
-	No implementation of new product features
-	Focus exclusively on auditing, classification, and synchronization
+	Improve transparency across the server
+	Centralize important historical events
+	Simplify troubleshooting and investigations
+	Improve team collaboration
+	Create a unique feature unavailable in most Discord management platforms
 
 Tasks
-	Feature Inventory & Audit
-		Perform a complete audit of every shippable Pulsify feature
+	Timeline View
+		Create a new navigation item:
+			Server > Timeline
 
-		Include:
-			dashboard modules
-			server management
-			automations
-			moderation
-			Pulse Guard
-			analytics
-			economy
-			reputation
-			tickets
-			applications
-			events
-			giveaways
-			onboarding
-			integrations
-			Discord commands
-			safety features
-			templates
-			backup & restore
-			workspaces
-			billing
-			member-facing features
+		Display a chronological feed of server events
 
-		For every feature determine:
-			current gating status
-			intended pricing tier
-			missing gating
-			incorrect gating
-			usage limitations
-			Discord command equivalents
+	Timeline Categories
+		Support events such as:
 
-	Plan Classification
-		Assign every feature to one of the existing plans:
-			Free
-			Pro
-			Business
-			Enterprise
+		Roles
+			role created
+			role deleted
+			role renamed
+			permissions changed
 
-		Review newly introduced systems including:
-			Contextual Help
-			Management Analytics
-			Global Economy
-			Marketplace
-			Invite Tracking & Rewards
-			Birthday System
-			Community Polls
-			Alt Detection
-			Private Channels
-			Temporary Roles
-			Roles Hierarchy
-			Self-Assign Roles
-			Statistics Channels
-			Server Assets
-			DDoS Protection
-			Backup & Restore
-			Integrations
-			Templates
-			Economy Rewards
-			Slash Commands
-			Workspaces
-			Pulse Guard features
-			AI Moderation
-			All remaining modules introduced after PULSIFY-29
+		Channels
+			channel created
+			channel deleted
+			category changes
+			permission updates
 
-	Usage Limits
-		Define limits where applicable, including:
-			maximum servers
-			active automations
-			analytics retention
-			log retention
-			integrations
-			templates
-			statistic channels
-			self-assign role menus
-			private channels
-			economy items
-			marketplace items
-			polls
-			giveaways
-			events
-			storage limits
-			API usage (where applicable)
+		Members
+			member joined
+			member left
+			member banned
+			member kicked
+			timeout applied
+			nickname changed
 
-		Ensure limits are scalable across plans
+		Moderation
+			warnings
+			mutes
+			Pulse Guard detections
+			scam detections
+			toxic message actions
 
-	Backend Feature Gating
-		Review and synchronize backend enforcement
+		Economy
+			balance milestones
+			marketplace purchases
+			reputation milestones
+			economy rewards
 
-		Ensure:
-			every premium feature is validated server-side
-			feature limits are enforced
-			disabled features cannot be bypassed
-			API endpoints respect plan permissions
-			dashboard and backend remain synchronized
+		Automation
+			automation created
+			automation updated
+			automation triggered
+			automation disabled
 
-	Discord Command Synchronization
-		Audit all Pulse slash commands
+		Events
+			giveaway started
+			giveaway ended
+			event created
+			poll published
+			announcement published
 
-		Ensure:
-			command availability matches dashboard permissions
-			premium commands respect plan restrictions
-			usage limits are enforced consistently
-			upgrade prompts are displayed where appropriate
+		Server Configuration
+			settings changed
+			integrations connected
+			backup restored
+			templates imported
+			verification updated
 
-	Pricing Page
-		Update the public pricing page
+	Timeline Cards
+		Display for each event:
+			icon
+			title
+			description
+			affected object
+			actor
+			timestamp
+			category
+			quick actions
 
-		Review:
-			feature comparison table
-			feature lists
-			usage limits
-			plan descriptions
-			comparison cards
+	Filtering
+		Allow filtering by:
+			category
+			administrator
+			member
+			module
+			date range
+			event type
 
-		Ensure every existing feature appears in the correct plan
+	Search
+		Support searching by:
+			member
+			role
+			channel
+			keyword
+			administrator
 
-	Billing Experience
-		Update Billing pages to reflect the audited pricing model
+	Timeline Details
+		Allow expanding each event to view:
+			previous value
+			new value
+			affected users
+			related modules
+			additional metadata
 
-		Review:
-			current subscription
-			included features
-			feature availability
-			usage indicators
-			upgrade recommendations
-			locked feature states
+	Export
+		Allow exporting:
+			selected events
+			filtered timeline
+			complete history
 
-	Upgrade Prompts
-		Review every gated feature across Pulsify
+		Support:
+			CSV
+			PDF
+			JSON
 
-		Ensure:
-			consistent lock indicators
-			plan badges
-			upgrade dialogs
-			feature unavailable messaging
-			Contextual Help reflects pricing restrictions
+	Statistics
+		Display:
+			events today
+			events this week
+			most active administrators
+			most modified modules
+			busiest periods
 
-	Existing Subscriber Handling
-		Audit current subscriptions
-
-		Determine:
-			users accessing features above their tier
-			grandfathered access where appropriate
-			upgrade messaging
-			migration strategy
-
-	Documentation
-		Update:
-			internal pricing documentation
-			feature-to-plan mapping
-			release notes
-			changelog
-			developer documentation
-
-		Ensure future features require pricing classification before release
+	UX Improvements
+		Add infinite scrolling
+		Add timeline grouping
+		Add color-coded categories
+		Add responsive layouts
+		Add loading/error/empty states
+		Add quick navigation to related pages
 
 Acceptance Criteria
-	Every Pulsify feature has an assigned pricing tier
-	Dashboard, backend, and Discord commands enforce identical feature gating
-	Usage limits are applied consistently across all plans
-	Public pricing page accurately reflects all available functionality
-	Billing settings display correct feature availability
-	Upgrade prompts are consistent throughout the platform
-	Existing subscribers are handled without unexpected feature loss
-	Internal documentation provides a single source of truth for future feature classification
+	Timeline records significant server events automatically
+	Events are grouped chronologically
+	Filters and search function correctly
+	Detailed event history is available
+	Timeline exports work correctly
+	Statistics accurately summarize server activity
+	UI remains responsive and visually polished

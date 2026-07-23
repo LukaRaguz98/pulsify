@@ -168,12 +168,15 @@ function createSelfRoles(client, supabase) {
 
   function summarise({ added, removed, failed }) {
     const parts = [];
-    if (added.length) parts.push(`Added ${added.map((n) => `**${n}**`).join(", ")}`);
-    if (removed.length) parts.push(`Removed ${removed.map((n) => `**${n}**`).join(", ")}`);
+    // Role names contain spaces ("Server Booster"), so a bare space between them
+    // would read as one name. Code-style each so the list stays scannable
+    // without a comma or a dash.
+    if (added.length) parts.push(`Added ${added.map((n) => `\`${n}\``).join(" ")}`);
+    if (removed.length) parts.push(`Removed ${removed.map((n) => `\`${n}\``).join(" ")}`);
     if (parts.length === 0 && failed.length === 0) return "No changes — your roles are already up to date.";
     let msg = parts.join(". ");
     if (failed.length) {
-      const note = `I couldn't update ${failed.map((n) => `**${n}**`).join(", ")} — it may sit above my highest role.`;
+      const note = `I couldn't update ${failed.map((n) => `\`${n}\``).join(" ")} — it may sit above my highest role.`;
       msg = msg ? `${msg}. ${note}` : note;
     }
     return msg ? `${msg}.` : "Done.";

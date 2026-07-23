@@ -4,13 +4,17 @@ import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
 import { recordNotification } from '@/lib/notifications-server'
 import {
-  CATALOG_BY_NAME,
+  catalogByName,
   defaultConfig,
   defaultConfigFor,
   normaliseConfig,
   commandStatus,
   type CommandConfig,
 } from '@/lib/commands'
+import {
+  getCommandCatalog,
+  getCommandDefinition,
+} from '@/lib/commands-server'
 
 export type ActionResult<T = undefined> =
   | (T extends undefined ? { ok: true } : { ok: true; data: T })
@@ -22,7 +26,9 @@ export async function saveCommandConfig(
   commandName: string,
   config: CommandConfig,
 ): Promise<ActionResult> {
-  const def = CATALOG_BY_NAME[commandName]
+  // Validate against the catalog the bot actually published, so a config row
+  // can't be written for a command that doesn't exist.
+  const def = await getCommandDefinition(commandName)
   if (!def) return { ok: false, error: 'Unknown command.' }
 
   const auth = await authorizeGuildModerator(guildId)
@@ -74,7 +80,10 @@ export async function bulkSetCommandsEnabled(
   commandNames: string[],
   enabled: boolean,
 ): Promise<ActionResult<{ updated: number }>> {
-  const names = commandNames.filter((n) => CATALOG_BY_NAME[n])
+  // One catalog read serves both the validity filter and the per-command
+  // defaults below.
+  const defs = catalogByName(await getCommandCatalog())
+  const names = commandNames.filter((n) => defs[n])
   if (names.length === 0) return { ok: false, error: 'No valid commands selected.' }
 
   const auth = await authorizeGuildModerator(guildId)
@@ -96,7 +105,7 @@ export async function bulkSetCommandsEnabled(
     guild_id: guildId,
     command_name: name,
     ...normaliseConfig({
-      ...(CATALOG_BY_NAME[name] ? defaultConfigFor(CATALOG_BY_NAME[name]) : defaultConfig()),
+      ...(defs[name] ? defaultConfigFor(defs[name]) : defaultConfig()),
       ...byName.get(name),
       enabled,
     }),

@@ -11,6 +11,19 @@
 // dashboard's captureSections (app/dashboard/[guildId]/backups/actions.ts) — keep
 // the three in sync (same discipline as giveaways.js ↔ lib/giveaways.ts).
 
+const {
+  MessageFlags,
+} = require("discord.js");
+const {
+  buildPulseContainer,
+  getPulseColor,
+  loadPulseIcon,
+  editNotice,
+  text,
+  divider,
+} = require("./commands");
+const { getDashboardUrl } = require("./version");
+
 // Mirror of lib/backups.ts.
 const BACKUP_SECTION_KEYS = [
   "roles",
@@ -319,6 +332,178 @@ function createBackups(client, supabase) {
     }
   }
 
+  // ── Manual backups via /backup (PULSIFY-61) ────────────────────────────────
+
+  /** Trim old backups down to the hard per-guild cap (oldest first). Manual
+   *  backups aren't pruned by retention, but the absolute cap still applies. */
+  async function enforceHardCap(guildId) {
+    const { data: all } = await supabase
+      .from("server_backups")
+      .select("id")
+      .eq("guild_id", guildId)
+      .order("created_at", { ascending: false });
+    const overflow = (all ?? []).slice(LIMITS.maxBackupsPerGuild).map((r) => r.id);
+    if (overflow.length) await supabase.from("server_backups").delete().in("id", overflow);
+  }
+
+  /** Capture + store a MANUAL backup (all sections). Mirrors the dashboard's
+   *  manual-backup path: type 'manual', attributed to the invoker, logged. */
+  async function createManualBackup(guild, { actorId, actorName, name } = {}) {
+    const sections = await captureSections(guild, BACKUP_SECTION_KEYS);
+    const present = sectionKeysPresent(sections);
+    if (present.length === 0) return { ok: false, reason: "empty" };
+
+    const version = await nextVersion(guild.id);
+    const backupName =
+      (name && name.trim().slice(0, 80)) ||
+      `Manual backup — ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    const size = sizeOf(sections);
+
+    const { data: inserted, error } = await supabase
+      .from("server_backups")
+      .insert({
+        guild_id: guild.id,
+        name: backupName,
+        type: "manual",
+        version,
+        format_version: CURRENT_BACKUP_VERSION,
+        sections,
+        section_keys: present,
+        size_bytes: size,
+        created_by: actorId ?? null,
+        created_by_name: actorName ?? "Discord command",
+      })
+      .select("id")
+      .single();
+    if (error || !inserted) return { ok: false, reason: "error", error: error?.message };
+
+    await supabase.from("recovery_logs").insert({
+      guild_id: guild.id,
+      action: "backup_created",
+      status: "success",
+      backup_id: inserted.id,
+      backup_name: backupName,
+      backup_type: "manual",
+      section_keys: present,
+      actor_id: actorId ?? null,
+      actor_name: actorName ?? null,
+      detail: `Manual backup via command — ${present.length} section${present.length === 1 ? "" : "s"}.`,
+    });
+    await enforceHardCap(guild.id);
+
+    return { ok: true, id: inserted.id, name: backupName, version, sections: present, size };
+  }
+
+  async function listBackups(guildId, limit = 10) {
+    const { data, error } = await supabase
+      .from("server_backups")
+      .select("id, name, type, version, section_keys, size_bytes, created_at, created_by_name")
+      .eq("guild_id", guildId)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  }
+
+  function formatBytes(n) {
+    const b = Number(n) || 0;
+    if (b < 1024) return `${b} B`;
+    if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+    return `${(b / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  async function renderBackup(interaction, guild, { title, body, footer }) {
+    const colorHex = await getPulseColor(supabase, guild.id);
+    const icon = await loadPulseIcon("safety", colorHex);
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        buildPulseContainer({
+          iconUrl: icon ? `attachment://${icon.name}` : null,
+          colorHex,
+          title,
+          subtitle: `Pulse — ${guild.name}`,
+          body,
+          footer,
+          actions: [
+            { type: 1, components: [{ type: 2, style: 5, label: "Open Backups", url: `${getDashboardUrl(guild.id)}/backups` }] },
+          ],
+        }),
+      ],
+      files: icon ? [icon] : [],
+    });
+  }
+
+  async function handleBackupCreate({ interaction, guild, ephemeral }) {
+    await interaction.deferReply({ flags: ephemeral ? MessageFlags.Ephemeral : 0 });
+    const name = interaction.options.getString("name");
+    let res;
+    try {
+      res = await createManualBackup(guild, {
+        actorId: interaction.user.id,
+        actorName: interaction.member?.displayName ?? interaction.user.username,
+        name,
+      });
+    } catch (err) {
+      console.error(`[Pulse] /backup create failed in ${guild.id}:`, err.message);
+      return editNotice(interaction, "I couldn't create the backup. Try again shortly.");
+    }
+    if (!res.ok) {
+      return editNotice(
+        interaction,
+        res.reason === "empty"
+          ? "There's nothing to back up yet — configure some features first."
+          : "I couldn't create the backup. Try again shortly.",
+      );
+    }
+    await renderBackup(interaction, guild, {
+      title: "Backup created",
+      body: [
+        text(`**${res.name}**`),
+        divider(),
+        text(
+          [
+            `**Version** — v${res.version}`,
+            `**Sections** — ${res.sections.length}`,
+            `**Size** — ${formatBytes(res.size)}`,
+          ].join("\n"),
+        ),
+        text("-# Restore or download it from the dashboard."),
+      ],
+      footer: "Pulse — Backups",
+    });
+  }
+
+  async function handleBackupList({ interaction, guild, ephemeral }) {
+    await interaction.deferReply({ flags: ephemeral ? MessageFlags.Ephemeral : 0 });
+    let backups;
+    try {
+      backups = await listBackups(guild.id, 10);
+    } catch (err) {
+      console.error(`[Pulse] /backup list failed in ${guild.id}:`, err.message);
+      return editNotice(interaction, "I couldn't load the backups. Try again shortly.");
+    }
+
+    const body = [];
+    if (backups.length === 0) {
+      body.push(text("No backups yet. Create one with `/backup create`, or schedule automatic backups from the dashboard."));
+    } else {
+      body.push(text(`The ${backups.length} most recent backup${backups.length === 1 ? "" : "s"}.`));
+      body.push(divider());
+      const lines = backups.map((b) => {
+        const when = `<t:${Math.floor(new Date(b.created_at).getTime() / 1000)}:D>`;
+        const secs = Array.isArray(b.section_keys) ? b.section_keys.length : 0;
+        return `**${b.name}**\n-# v${b.version} — ${b.type} — ${secs} section${secs === 1 ? "" : "s"} — ${formatBytes(b.size_bytes)} — ${when}`;
+      });
+      body.push(text(lines.join("\n\n")));
+    }
+    await renderBackup(interaction, guild, {
+      title: "Server Backups",
+      body,
+      footer: "Pulse — Backups",
+    });
+  }
+
   async function start() {
     // First check shortly after ready so the guild/channel caches are warm,
     // then hourly. unref so the timer never keeps the process alive on its own.
@@ -330,7 +515,7 @@ function createBackups(client, supabase) {
     console.log("[Pulse] Backup system started.");
   }
 
-  return { start, tick };
+  return { start, tick, createManualBackup, listBackups, handleBackupCreate, handleBackupList };
 }
 
 module.exports = { createBackups };

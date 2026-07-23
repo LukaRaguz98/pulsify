@@ -421,7 +421,25 @@ function createStatisticsChannels(client, supabase) {
     timer = null;
   }
 
-  return { start, stop };
+  /**
+   * Force an immediate refresh of one guild's statistics channels (PULSIFY-61,
+   * /statchannel refresh). Reuses syncGuild with force=true so even manual-mode
+   * rows re-render — the same path the dashboard's "Sync now" nudge takes, but
+   * direct rather than via a realtime round-trip. Returns a small summary for the
+   * command reply. Throws on a load error so the caller can report it.
+   */
+  async function refreshGuild(guild) {
+    const { data: rows, error } = await supabase
+      .from("statistics_channels")
+      .select("*")
+      .eq("guild_id", guild.id);
+    if (error) throw new Error(error.message);
+    const enabled = (rows ?? []).filter((r) => r.enabled);
+    if (enabled.length > 0) await syncGuild(guild, enabled, true);
+    return { total: rows?.length ?? 0, enabled: enabled.length };
+  }
+
+  return { start, stop, refreshGuild };
 }
 
 module.exports = { createStatisticsChannels };

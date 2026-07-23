@@ -20,6 +20,8 @@ const {
   buildPulseContainer,
   getPulseColor,
   loadPulseIcon,
+  loadProfileBars,
+  replyNotice,
   text,
   divider,
 } = require("./commands");
@@ -255,7 +257,7 @@ function createLeveling(client, supabase, rewards = null, shop = null) {
     });
     const body = [text(rendered)];
     if (rewards.length > 0) {
-      body.push(text(`-# Unlocked: ${rewards.map((r) => `<@&${r.role_id}>`).join(", ")}`));
+      body.push(text(`-# Unlocked: ${rewards.map((r) => `<@&${r.role_id}>`).join(" ")}`));
     }
     // No header thumbnail: a level-up is one line, and the avatar beside it took
     // more room than the message (see the embed conventions on
@@ -548,6 +550,85 @@ function createLeveling(client, supabase, rewards = null, shop = null) {
     return { xp, prog, rank, tracked: tracked ?? 0, enabled: cfg.enabled, userName };
   }
 
+  async function handleRankCommand({ interaction, guild, ephemeral }) {
+    const user = interaction.options.getUser("user") ?? interaction.user;
+    if (user.bot) {
+      await replyNotice(interaction, "Bots don't earn XP, so they don't have a rank.");
+      return;
+    }
+
+    // Defer: the accent-tinted level bar is a generated image (a REST fetch),
+    // same as /profile — deferring keeps us inside Discord's window.
+    await interaction.deferReply({ flags: ephemeral ? MessageFlags.Ephemeral : 0 });
+
+    const colorHex = await getPulseColor(supabase, guild.id);
+    const info = await rankInfo(guild, user.id, user.username);
+    const name = user.globalName ?? user.username;
+    const isSelf = user.id === interaction.user.id;
+    const p = info.prog;
+
+    // The level bar is rendered exactly like /profile's (loadProfileBars), just
+    // level-only. Fetch it alongside the header icon.
+    const [icon, bars] = await Promise.all([
+      loadPulseIcon("stats", colorHex),
+      info.xp > 0
+        ? loadProfileBars({
+            colorHex,
+            level: {
+              pct: p.pct,
+              label: `Level ${p.level}`,
+              detail: `${p.intoLevel.toLocaleString()}/${p.span.toLocaleString()} XP`,
+            },
+          })
+        : Promise.resolve(null),
+    ]);
+
+    const body = [];
+    if (info.xp <= 0) {
+      body.push(
+        text(
+          isSelf
+            ? "You haven't earned any XP in this server yet — send a message or hop into voice to get on the board."
+            : `${name} hasn't earned any XP in this server yet.`,
+        ),
+      );
+    } else {
+      const rankLine = info.rank
+        ? `**Rank** — #${info.rank} of ${info.tracked.toLocaleString()}`
+        : "**Rank** — unranked";
+      body.push(
+        text(`${rankLine}\n**Level** — ${p.level}\n**XP** — ${info.xp.toLocaleString()} total`),
+      );
+      body.push(divider());
+      if (bars) {
+        body.push({ type: 12, items: [{ media: { url: "attachment://profile-bars.png" } }] });
+        body.push(text(`-# ${p.toNext.toLocaleString()} XP to go until level ${p.level + 1}`));
+      } else {
+        // Unicode fallback when the image can't be fetched (mirrors /profile).
+        body.push(
+          text(
+            `**Progress to level ${p.level + 1}**\n\`${progressBar(p.pct)}\` ${p.pct}%\n-# ${p.intoLevel.toLocaleString()} / ${p.span.toLocaleString()} XP — ${p.toNext.toLocaleString()} to go`,
+          ),
+        );
+      }
+    }
+
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        buildPulseContainer({
+          iconUrl: icon ? `attachment://${icon.name}` : null,
+          colorHex,
+          title: "Rank",
+          subtitle: `${name} — ${guild.name}`,
+          body,
+          footer: "Pulse — Levels & XP",
+        }),
+      ],
+      files: [icon, bars].filter(Boolean),
+    });
+  }
+
   async function handleLeaderboardCommand({ interaction, guild, ephemeral }) {
     const colorHex = await getPulseColor(supabase, guild.id);
     const cfg = await getConfig(guild.id);
@@ -647,6 +728,7 @@ function createLeveling(client, supabase, rewards = null, shop = null) {
     awardEventInterest,
     awardBonusXp,
     getLevelInfo: rankInfo,
+    handleRankCommand,
     handleLeaderboardCommand,
   };
 }

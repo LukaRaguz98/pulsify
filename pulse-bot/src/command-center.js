@@ -6,8 +6,8 @@
 // level, per-user cooldown, daily usage cap). Every attempt — allowed or
 // blocked — is written to `command_logs` for the dashboard analytics + log.
 
-const { PermissionFlagsBits } = require("discord.js");
 const { COMMANDS, COMMANDS_BY_NAME, defaultMemberPermissionsFor } = require("./commands");
+const { meetsTier, tierDenialReason } = require("./permissions");
 
 const CACHE_TTL_MS = 60_000;
 // guildId -> { configs: Map<commandName, row>, fetchedAt }
@@ -64,23 +64,6 @@ function effectivePermission(def, config) {
   return config.permission_level === "inherit" ? def.defaultPermission : config.permission_level;
 }
 
-/** Whether a member satisfies a baseline access level. Admins always pass. */
-function memberMeetsLevel(member, level) {
-  const perms = member?.permissions;
-  if (!perms) return level === "everyone";
-  if (perms.has(PermissionFlagsBits.Administrator)) return true;
-  if (level === "everyone") return true;
-  if (level === "admin") return perms.has(PermissionFlagsBits.ManageGuild);
-  // moderator
-  return (
-    perms.has(PermissionFlagsBits.ManageGuild) ||
-    perms.has(PermissionFlagsBits.ManageMessages) ||
-    perms.has(PermissionFlagsBits.KickMembers) ||
-    perms.has(PermissionFlagsBits.BanMembers) ||
-    perms.has(PermissionFlagsBits.ModerateMembers)
-  );
-}
-
 function memberRoleIds(member) {
   return member?.roles?.cache ? [...member.roles.cache.keys()] : [];
 }
@@ -91,9 +74,12 @@ function memberRoleIds(member) {
  *   2. Channel allow-list non-empty → must be in it
  *   3. Role deny     → blocked
  *   4. Role allow-list non-empty → must have one (overrides the access level)
- *   5. Baseline access level (everyone/moderator/admin)
+ *   5. Baseline access level (member/support/moderator/admin — src/permissions.js)
+ *
+ * Async because the support tier resolves against the guild's configured
+ * support roles (a cached DB read); every other step is in-memory.
  */
-function checkAccess(def, config, member, channelId) {
+async function checkAccess(supabase, guildId, def, config, member, channelId) {
   if (config.denied_channel_ids?.includes(channelId)) {
     return { allowed: false, status: "denied", reason: "This command is blocked in this channel." };
   }
@@ -111,8 +97,8 @@ function checkAccess(def, config, member, channelId) {
     return { allowed: true };
   }
   const level = effectivePermission(def, config);
-  if (!memberMeetsLevel(member, level)) {
-    return { allowed: false, status: "denied", reason: `This command requires ${level} permissions.` };
+  if (!(await meetsTier(supabase, guildId, member, level))) {
+    return { allowed: false, status: "denied", reason: tierDenialReason(level) };
   }
   return { allowed: true };
 }
@@ -196,7 +182,7 @@ async function getAllowedCommands(supabase, guild, member) {
     if (config.denied_role_ids?.length && roleIds.some((r) => config.denied_role_ids.includes(r))) continue;
     if (config.allowed_role_ids?.length) {
       if (!roleIds.some((r) => config.allowed_role_ids.includes(r))) continue;
-    } else if (!memberMeetsLevel(member, effectivePermission(def, config))) {
+    } else if (!(await meetsTier(supabase, guild.id, member, effectivePermission(def, config)))) {
       continue;
     }
     out.push({ def, config });
@@ -226,7 +212,14 @@ async function evaluate(supabase, interaction) {
     return { kind: "blocked", def, status: "maintenance", reason: "This command is under maintenance. Try again later." };
   }
 
-  const access = checkAccess(def, config, interaction.member, interaction.channelId);
+  const access = await checkAccess(
+    supabase,
+    guildId,
+    def,
+    config,
+    interaction.member,
+    interaction.channelId,
+  );
   if (!access.allowed) {
     return { kind: "blocked", def, status: access.status, reason: access.reason };
   }

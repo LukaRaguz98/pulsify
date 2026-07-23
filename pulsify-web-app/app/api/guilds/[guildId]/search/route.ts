@@ -8,7 +8,7 @@ import {
   fetchGuildEvents,
   avatarUrl,
 } from '@/lib/discord'
-import { COMMAND_CATALOG } from '@/lib/commands'
+import { getCommandCatalog } from '@/lib/commands-server'
 import { ACTION_BY_TYPE, type ActionType } from '@/lib/automations'
 import type { SearchIndex } from '@/lib/command-palette'
 
@@ -41,7 +41,7 @@ export async function GET(
 
   const supabase = await createClient()
 
-  const [members, roles, channels, events, configRes, automationRes, modLogRes, notifRes] =
+  const [members, roles, channels, events, catalog, configRes, automationRes, modLogRes, notifRes] =
     await Promise.all([
       fetchGuildMembers(guildId, MEMBER_LIMIT),
       fetchGuildRoles(guildId),
@@ -49,6 +49,7 @@ export async function GET(
       // Events can throw on a transient Discord blip — never let that sink the
       // whole index; an empty events section is fine.
       fetchGuildEvents(guildId).catch(() => []),
+      getCommandCatalog(),
       supabase.from('command_configs').select('command_name, enabled').eq('guild_id', guildId),
       supabase
         .from('scheduled_automations')
@@ -119,7 +120,7 @@ export async function GET(
       start: e.scheduled_start_time,
       location: e.entity_metadata?.location ?? null,
     })),
-    commands: COMMAND_CATALOG.map((c) => ({
+    commands: catalog.map((c) => ({
       name: c.name,
       description: c.description,
       category: c.category,

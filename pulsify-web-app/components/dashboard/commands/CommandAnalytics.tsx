@@ -11,7 +11,7 @@ import {
   Loader2,
   BarChart3,
 } from 'lucide-react'
-import { COMMAND_CATALOG } from '@/lib/commands'
+import type { CommandDefinition } from '@/lib/commands'
 import { TIMEFRAMES, formatBucketLabel, type Timeframe } from '@/lib/analytics'
 import { ToggleableChart } from '@/components/dashboard/charts/ToggleableChart'
 import { ChartCard } from '@/components/dashboard/charts/ChartCard'
@@ -20,13 +20,15 @@ import { EmptyState } from '@/components/ui/empty-state'
 import type { CommandAnalytics as CommandAnalyticsData } from '@/app/api/guilds/[guildId]/commands/analytics/route'
 
 type Props = {
+  /** The bot-published catalog, so unused commands still rank (value 0). */
+  catalog: CommandDefinition[]
   data: CommandAnalyticsData | null
   loading: boolean
   timeframe: Timeframe
   onTimeframeChange: (tf: Timeframe) => void
 }
 
-export function CommandAnalytics({ data, loading, timeframe, onTimeframeChange }: Props) {
+export function CommandAnalytics({ catalog, data, loading, timeframe, onTimeframeChange }: Props) {
   const stats = useMemo(() => data?.stats ?? [], [data])
 
   const totals = useMemo(() => {
@@ -54,21 +56,21 @@ export function CommandAnalytics({ data, loading, timeframe, onTimeframeChange }
 
   const mostUsed: RankedItem[] = useMemo(
     () =>
-      [...COMMAND_CATALOG]
+      [...catalog]
         .map((c) => ({ id: c.name, label: `/${c.name}`, value: usageByName.get(c.name) ?? 0 }))
         .filter((i) => i.value > 0)
         .sort((a, b) => b.value - a.value)
         .slice(0, 6),
-    [usageByName],
+    [usageByName, catalog],
   )
 
   const leastUsed: RankedItem[] = useMemo(
     () =>
-      [...COMMAND_CATALOG]
+      [...catalog]
         .map((c) => ({ id: c.name, label: `/${c.name}`, value: usageByName.get(c.name) ?? 0 }))
         .sort((a, b) => a.value - b.value)
         .slice(0, 6),
-    [usageByName],
+    [usageByName, catalog],
   )
 
   const failures: RankedItem[] = useMemo(

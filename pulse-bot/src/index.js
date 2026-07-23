@@ -25,7 +25,19 @@ const {
   logCommand,
   evaluate,
 } = require("./command-center");
+const { syncCatalog } = require("./catalog-sync");
+const featureGate = require("./feature-gate");
+const { createModeration } = require("./moderation");
+const { createRoles } = require("./roles");
+const { createChannels } = require("./channels");
+const { createGuard } = require("./guard");
+const { createEvents } = require("./events");
+const { createAnnouncements } = require("./announcements");
 const { createScheduler } = require("./scheduler");
+const { createAnalytics: createServerAnalytics } = require("./analytics-commands");
+const { createSettingsCommands } = require("./settings-commands");
+const { createTemplates } = require("./template-apply");
+const { createCommunityCommands } = require("./community-commands");
 const { createTickets } = require("./tickets");
 const { createGiveaways } = require("./giveaways");
 const { createPolls } = require("./polls");
@@ -209,7 +221,7 @@ const statisticsChannels = createStatisticsChannels(client, supabase);
 // birthday; the dashboard owns the per-guild configuration.
 const birthdays = createBirthdays(client, supabase, economy, leveling);
 
-// Alt Risk Detection (PULSIFY-59): answers /alt-check with an account's risk
+// Alt Risk Detection (PULSIFY-59): answers /alt check with an account's risk
 // score, the factors behind it and its potential linked accounts, and scores
 // every joining account so high/critical ones land in the dashboard's
 // investigation queue before a moderator has to go looking for them.
@@ -221,9 +233,61 @@ const altDetection = createAltDetection(client, supabase);
 // leaves/rejoins. Referral REWARDS are Member Milestones with the `invites`
 // metric — the milestone sweep grants them against the valid-invite count this
 // module maintains. Registers its own InviteCreate/Delete + GuildMember
-// add/remove listeners; /invites, /invite-leaderboard and /invite-rewards route
+// add/remove listeners; /invite stats, /invite leaderboard and /invite rewards route
 // through the command handler below.
 const invites = createInvites(client, supabase);
+
+// Moderation commands (PULSIFY-61): /warn /timeout /untimeout /kick /ban /unban
+// /warnings /purge /modlogs. Pure command handlers — no listeners of its own.
+// Every action it takes is written to `moderation_logs` with
+// source = "Discord Command", so Moderation History, Management Analytics and
+// the activity feed see it exactly as they see a dashboard action.
+const moderation = createModeration({ client, supabase });
+
+// Role commands (PULSIFY-61): /role add|remove|temp|info|hierarchy and the
+// member-facing /selfrole. `temp` writes a `temporary_roles` row and lets the
+// existing 60s sweep in temporary-roles.js expire it — it schedules nothing of
+// its own. /selfrole points members at the menus self-roles.js already serves.
+const roles = createRoles({ client, supabase });
+
+// Channel commands (PULSIFY-61): /channel lock|unlock|slowmode|stats. Pure
+// Discord operations plus a read of analytics_events; no listeners.
+const channels = createChannels({ client, supabase });
+
+// Pulse Guard commands (PULSIFY-61): /guard status|whitelist|review. A thin
+// read/whitelist surface over the ai_moderation_* tables — the detection policy
+// stays web-side (src/ai-moderation.js forwards messages to the analyze API).
+// First plan-gated command (minPlan "pro"). No listeners.
+const guard = createGuard({ client, supabase });
+
+// Event commands (PULSIFY-61): /event list|info|create|cancel. Discord-native
+// scheduled events (guild.scheduledEvents) — no table, module null. No listeners
+// (the GuildScheduledEvent* gateway handlers already run below).
+const events = createEvents({ client, supabase });
+
+// Announcement commands (PULSIFY-61): /announce + /announcements recent. Posts a
+// branded announcement embed and records it in the `announcements` table the
+// dashboard shares. No listeners.
+const announcements = createAnnouncements({ client, supabase });
+// NB: /automation list|toggle|run|logs is served by the SCHEDULER (constructed
+// above) — it owns the scheduled_automations workflows the commands manage.
+
+// Analytics & Insights commands (PULSIFY-61): /stats, /insights, /management.
+// Reads the analytics RPCs + native Discord state and runs the same engines as
+// the dashboard (src/insights-engine.js, src/management-engine.js). No listeners.
+// Named `serverAnalytics` to avoid colliding with the `analytics` event tracker.
+const serverAnalytics = createServerAnalytics({ client, supabase });
+
+// Server Settings & Assets commands (PULSIFY-61): /serversettings, /statchannel,
+// /emoji, /sticker, /soundboard. Read-only config/expression views + a stat-
+// channel refresh nudge (reuses statisticsChannels.refreshGuild). No listeners.
+const settings = createSettingsCommands({ client, supabase, statisticsChannels });
+
+// Templates + community commands (PULSIFY-61): /template apply, /integrations
+// status, /notifications preferences, /feedback submit. No listeners. (/backup
+// create|list is served by the `backups` module, constructed above.)
+const templates = createTemplates({ client, supabase });
+const community = createCommunityCommands({ client, supabase });
 
 /**
  * Shared helper for Discord-side activity → notifications row.
@@ -369,6 +433,13 @@ client.once(Events.ClientReady, async (readyClient) => {
   botAppId = readyClient.user.id;
   await restClient.put(Routes.applicationCommands(botAppId), { body: [] });
   console.log("[Pulse] Cleared global slash commands.");
+
+  // Publish the catalog so the dashboard's Command Center lists exactly what
+  // this build serves. Awaited before registration so the dashboard never lists
+  // a command that isn't registered yet. Best-effort: a failure leaves the
+  // previous sync's rows in place (or, on a first-ever boot, an empty Command
+  // Center) but never blocks startup — commands still register and run.
+  await syncCatalog(supabase);
 
   for (const guild of readyClient.guilds.cache.values()) {
     await registerGuildCommands(restClient, botAppId, guild);
@@ -1130,6 +1201,45 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
+  // Autocomplete — Discord sends these as their own interaction type as the
+  // member types, and expects a response within ~3s. They're deliberately
+  // handled BEFORE the chat-input guard below (which returns early on anything
+  // that isn't a completed command) and kept off the analytics/logging path:
+  // one command invocation can fire dozens of these, and they aren't uses.
+  if (interaction.isAutocomplete?.()) {
+    if (!interaction.guild) return;
+    const def = COMMANDS_BY_NAME.get(interaction.commandName);
+    if (!def?.autocomplete) {
+      // Never leave the picker hanging on a command with no handler.
+      await interaction.respond([]).catch(() => {});
+      return;
+    }
+    try {
+      await def.autocomplete({
+        interaction,
+        guild: interaction.guild,
+        client,
+        supabase,
+        moderation,
+        roles,
+        channels,
+        giveaways,
+        polls,
+        events,
+        scheduler,
+        settings,
+        templates,
+      });
+    } catch (err) {
+      console.error(
+        `[Pulse] /${interaction.commandName} autocomplete failed:`,
+        err.message,
+      );
+      await interaction.respond([]).catch(() => {});
+    }
+    return;
+  }
+
   if (!interaction.isChatInputCommand()) return;
   const guild = interaction.guild;
   if (!guild) return;
@@ -1199,6 +1309,22 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
+  // Module + plan gating. Runs AFTER the Command Center verdict so an explicit
+  // per-server rule (disabled, wrong channel, on cooldown) is reported as
+  // itself — an admin who switched a command off should be told that, not sold
+  // an upgrade. Blocked results are logged like any other block so the
+  // dashboard's command analytics can show what's being gated and why.
+  const gate = await featureGate.check(supabase, guild, verdict.def);
+  if (!gate.allowed) {
+    await replyNotice(interaction, gate.reason).catch(() => {});
+    await logCommand(supabase, {
+      ...logBase,
+      status: gate.status,
+      detail: gate.reason,
+    });
+    return;
+  }
+
   const command = COMMANDS_BY_NAME.get(commandName);
   const startedAt = Date.now();
   try {
@@ -1215,6 +1341,23 @@ client.on(Events.InteractionCreate, async (interaction) => {
       birthdays,
       altDetection,
       invites,
+      moderation,
+      roles,
+      channels,
+      tickets,
+      giveaways,
+      polls,
+      privateChannels,
+      guard,
+      events,
+      announcements,
+      scheduler,
+      serverAnalytics,
+      onboarding,
+      settings,
+      backups,
+      templates,
+      community,
       ephemeral: verdict.ephemeral,
     });
     verdict.commit();

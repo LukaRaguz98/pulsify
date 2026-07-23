@@ -26,9 +26,24 @@ const { recordNotification } = require("./notifications");
 const { replyNotice } = require("./commands");
 const { computeReputation } = require("./reputation");
 const { getGuildAccent } = require("./guild-accent");
+// One duration grammar everywhere — /poll create parses "1h", "2d", "90m" with
+// the same parser /timeout, /role temp and /giveaway create use. Whole minutes.
+const { parseDuration } = require("./moderation");
 
 const PV = "pv";
 const TICK_MS = 30 * 1000; // lifecycle scan every 30s
+
+// Mirror of lib/polls.ts POLL_LIMITS — /poll create validates against the same
+// bounds the dashboard enforces.
+const POLL_LIMITS = {
+  maxTitle: 200,
+  maxDescription: 1500,
+  maxOptions: 10,
+  minOptions: 2,
+  maxOptionLabel: 80,
+  maxDurationMinutes: 60 * 24 * 60, // 60 days
+  minDurationMinutes: 1,
+};
 // Every poll embed — open, archived or closed — wears the guild's accent
 // (guild_settings.embed_color, set in the dashboard's Server Settings). No
 // per-state colours: the state is written in the embed's own text ("This poll
@@ -144,7 +159,7 @@ function describeRequirements(req, resolveRole = (id) => `<@&${id}>`) {
   if (req.required_role_ids.length > 0) {
     const mode = req.required_role_mode === "all" ? "all" : "any";
     const names = req.required_role_ids.map(resolveRole);
-    out.push(names.length === 1 ? `Required role: ${names[0]}` : `Required roles (${mode}): ${names.join(", ")}`);
+    out.push(names.length === 1 ? `Required role: ${names[0]}` : `Required roles (${mode}): ${names.join(" ")}`);
   }
   if (req.min_account_age_days > 0) out.push(`Account age: ${req.min_account_age_days}+ ${req.min_account_age_days === 1 ? "day" : "days"}`);
   if (req.min_level > 0) out.push(`Level: ${req.min_level}+`);
@@ -350,8 +365,8 @@ function createPolls(client, supabase) {
     body.push(td(summary.join("\n")));
 
     if (r.winner_ids.length > 0) {
-      const names = r.options.filter((o) => winnerSet.has(o.id)).map((o) => o.label);
-      body.push(td(`**Result:** ${names.join(", ")}`));
+      const names = r.options.filter((o) => winnerSet.has(o.id)).map((o) => `\`${o.label}\``);
+      body.push(td(`**Result:** ${names.join(" ")}`));
     } else {
       body.push(td("No votes were cast."));
     }
@@ -559,9 +574,9 @@ function createPolls(client, supabase) {
 
     await refreshTallies(p.id, cache.get(p.id) ?? p);
 
-    const chosenLabels = options.filter((o) => picks.includes(o.id)).map((o) => o.label);
+    const chosenLabels = options.filter((o) => picks.includes(o.id)).map((o) => `\`${o.label}\``);
     const weightNote = weight > 1 ? ` (weight ${weight})` : "";
-    return replyNotice(interaction, `Vote recorded${weightNote}: **${chosenLabels.join(", ")}**.`);
+    return replyNotice(interaction, `Vote recorded${weightNote}: ${chosenLabels.join(" ")}`);
   }
 
   async function handleVote(interaction, pollId, chosen) {
@@ -646,11 +661,13 @@ function createPolls(client, supabase) {
       // Announce the result in-channel.
       const channel = await client.channels.fetch(fresh.channel_id).catch(() => null);
       if (channel?.isTextBased?.() && !archived) {
-        const winnerNames = results.options.filter((o) => results.winner_ids.includes(o.id)).map((o) => o.label);
+        const winnerNames = results.options
+          .filter((o) => results.winner_ids.includes(o.id))
+          .map((o) => `\`${o.label}\``);
         const headline =
           results.total_votes === 0
             ? "The poll closed with no votes."
-            : `Winner: **${winnerNames.join(", ")}** (${results.total_voters} voter${results.total_voters === 1 ? "" : "s"}).`;
+            : `Winner: ${winnerNames.join(" ")} (${results.total_voters} voter${results.total_voters === 1 ? "" : "s"}).`;
         const link = fresh.message_id ? `https://discord.com/channels/${fresh.guild_id}/${fresh.channel_id}/${fresh.message_id}` : null;
         await channel
           .send({
@@ -688,6 +705,236 @@ function createPolls(client, supabase) {
     } finally {
       closing.delete(p.id);
     }
+  }
+
+  // ── Slash commands (delegated from commands.js execute) ─────────────────────
+  // Mirror the dashboard's poll actions (app/.../polls/actions.ts): create posts
+  // a new poll, close goes THROUGH `close_requested_at` so the bot stays the
+  // single closer (the tick + realtime watcher run the tally), and results is a
+  // read. Rating/feature types, restrictions, governance and scheduling are
+  // dashboard-only — the command keeps to the common single/multiple/yes-no case.
+
+  async function handleCreateCommand({ interaction, guild, ephemeral }) {
+    const title = interaction.options.getString("question", true).trim();
+    const type = normalisePollType(interaction.options.getString("type", true));
+    const rawOptions = interaction.options.getString("options");
+    const durationRaw = interaction.options.getString("duration");
+    const anonymous = interaction.options.getBoolean("anonymous") ?? false;
+    const description = interaction.options.getString("description")?.trim() || null;
+    const channel = interaction.options.getChannel("channel") ?? interaction.channel;
+
+    if (!title) return replyNotice(interaction, "Give your poll a question.");
+    if (!channel?.isTextBased?.() || channel.isDMBased?.()) {
+      return replyNotice(interaction, "Pick a text channel I can post the poll in.");
+    }
+    if (channel.guildId && channel.guildId !== guild.id) {
+      return replyNotice(interaction, "That channel isn't in this server.");
+    }
+
+    // Yes/No generates its options; single + multiple need 2-10 explicit labels
+    // (comma- or newline-separated), deduped so identical options can't split a
+    // vote. max_choices lets a multiple-choice voter pick any number.
+    let options = [];
+    let maxChoices = 1;
+    if (type === "yes_no") {
+      options = optionsForType("yes_no", []);
+    } else {
+      const labels = (rawOptions ?? "")
+        .split(/[\n,]/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const seen = new Set();
+      for (const label of labels) {
+        const key = label.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        options.push({ id: `opt-${options.length + 1}`, label: label.slice(0, POLL_LIMITS.maxOptionLabel) });
+      }
+      if (options.length < POLL_LIMITS.minOptions) {
+        return replyNotice(interaction, `Add at least ${POLL_LIMITS.minOptions} different options, separated by commas.`);
+      }
+      if (options.length > POLL_LIMITS.maxOptions) {
+        return replyNotice(interaction, `A poll can have at most ${POLL_LIMITS.maxOptions} options.`);
+      }
+      maxChoices = type === "multiple" ? options.length : 1;
+    }
+
+    let endsAt = null;
+    if (durationRaw) {
+      const minutes = parseDuration(durationRaw);
+      if (!minutes || minutes < POLL_LIMITS.minDurationMinutes) {
+        return replyNotice(interaction, "Enter a valid duration — e.g. `1h`, `2d` — or leave it out to close the poll yourself.");
+      }
+      if (minutes > POLL_LIMITS.maxDurationMinutes) {
+        return replyNotice(interaction, "A poll can run for at most 60 days.");
+      }
+      endsAt = new Date(Date.now() + minutes * 60_000);
+    }
+
+    const hostName =
+      interaction.member?.displayName ?? interaction.user.globalName ?? interaction.user.username;
+    const insert = {
+      guild_id: guild.id,
+      title: title.slice(0, POLL_LIMITS.maxTitle),
+      description: description ? description.slice(0, POLL_LIMITS.maxDescription) : null,
+      poll_type: type,
+      options,
+      anonymous,
+      allow_change: true,
+      max_choices: maxChoices,
+      channel_id: channel.id,
+      status: "active",
+      requirements: {},
+      governance: {},
+      starts_at: null,
+      ends_at: endsAt?.toISOString() ?? null,
+      vote_count: 0,
+      voter_count: 0,
+      host_id: interaction.user.id,
+      host_name: hostName,
+      created_by: interaction.user.id,
+    };
+
+    const { data: inserted, error } = await supabase.from("polls").insert(insert).select("id").single();
+    if (error || !inserted) {
+      console.warn("[Pulse] /poll create insert failed:", error?.message);
+      return replyNotice(interaction, "Sorry — I couldn't create the poll. Try again in a moment.");
+    }
+    const p = { ...insert, id: inserted.id };
+
+    const sent = await postPoll(p);
+    if (!sent) {
+      await supabase.from("polls").delete().eq("id", p.id);
+      return replyNotice(
+        interaction,
+        `I couldn't post in <#${channel.id}> — check I can send messages there, then try again.`,
+      );
+    }
+    p.message_id = sent.id;
+    await supabase.from("polls").update({ message_id: sent.id }).eq("id", p.id);
+    cache.set(p.id, p);
+
+    await recordNotification(supabase, {
+      guildId: guild.id,
+      type: "poll_started",
+      title: `Poll opened: ${p.title}`,
+      link: `/dashboard/${guild.id}/polls`,
+      targetId: channel.id,
+      metadata: { poll_id: p.id },
+    });
+
+    const when = endsAt
+      ? `, closing <t:${Math.floor(endsAt.getTime() / 1000)}:R>`
+      : " — close it with `/poll close` when you're ready";
+    await replyNotice(interaction, `Poll posted in <#${channel.id}>${when}.`, ephemeral);
+  }
+
+  async function handleCloseCommand({ interaction, guild, ephemeral }) {
+    const id = interaction.options.getString("poll", true);
+    const row = await loadPoll(id);
+    if (!row || row.guild_id !== guild.id) {
+      return replyNotice(interaction, "I couldn't find that poll in this server.");
+    }
+    if (row.status === "scheduled") {
+      return replyNotice(interaction, "That poll hasn't opened yet — delete it from the dashboard instead.");
+    }
+    if (row.status !== "active") {
+      return replyNotice(interaction, "That poll isn't active.");
+    }
+
+    // Same write the dashboard makes: end the clock and request a close. The
+    // realtime watcher + the tick run the single authoritative tally.
+    const nowIso = new Date().toISOString();
+    const { error } = await supabase
+      .from("polls")
+      .update({ ends_at: nowIso, close_requested_at: nowIso, updated_at: nowIso })
+      .eq("id", id)
+      .eq("guild_id", guild.id);
+    if (error) {
+      return replyNotice(interaction, "Sorry — I couldn't close that poll. Try again in a moment.");
+    }
+    await replyNotice(
+      interaction,
+      `Closing **${row.title}** and posting the results in <#${row.channel_id}>.`,
+      ephemeral,
+    );
+  }
+
+  async function handleResultsCommand({ interaction, guild, ephemeral }) {
+    const id = interaction.options.getString("poll", true);
+    const row = await loadPoll(id);
+    if (!row || row.guild_id !== guild.id) {
+      return replyNotice(interaction, "I couldn't find that poll in this server.");
+    }
+
+    const options = pollOptions(row);
+    const gov = normaliseGovernance(row.governance);
+    // Use the stored snapshot for a settled poll; tally live votes otherwise.
+    let results;
+    if ((row.status === "closed" || row.status === "archived") && row.results) {
+      results = row.results;
+    } else {
+      const { data: votes } = await supabase
+        .from("poll_votes")
+        .select("user_id, option_id, weight")
+        .eq("poll_id", id);
+      results = computeResults(options, gov, votes ?? []);
+    }
+
+    const statusLabel =
+      row.status === "active"
+        ? "Live results"
+        : row.status === "scheduled"
+          ? "Not open yet"
+          : "Final results";
+    const body = [...headerBlocks(row.title, statusLabel)];
+    body.push(divider());
+    if (!results || results.total_votes === 0) {
+      body.push(td("No votes have been cast yet."));
+    } else {
+      const sorted = [...results.options].sort((a, b) => b.votes - a.votes);
+      const lines = sorted.map((o) => {
+        const winMark = results.winner_ids.includes(o.id) ? " — winner" : "";
+        return `**${o.label}**${winMark} — ${o.pct}% (${o.votes})\n\`${bar(o.pct)}\``;
+      });
+      body.push(td(lines.join("\n")));
+      body.push(divider());
+      body.push(
+        td(
+          `-# ${results.total_voters} voter${results.total_voters === 1 ? "" : "s"} — ${results.total_votes} vote${results.total_votes === 1 ? "" : "s"}${gov.weighted ? " (weighted)" : ""}`,
+        ),
+      );
+    }
+    body.push(td("-# Pulse — Poll results"));
+
+    await interaction.reply({
+      flags: MessageFlags.IsComponentsV2 | (ephemeral ? MessageFlags.Ephemeral : 0),
+      components: [{ type: 17, accent_color: await getGuildAccent(supabase, guild.id), components: body }],
+      files: iconFiles(),
+    });
+  }
+
+  // Autocomplete the `poll` option: close offers ACTIVE polls, results offers any
+  // (live + recent). Discord can't picker a DB row, so we surface poll titles.
+  async function autocompletePoll({ interaction, guild }) {
+    const sub = interaction.options.getSubcommand();
+    const statuses = sub === "close" ? ["active"] : ["active", "scheduled", "closed", "archived"];
+    const focused = (interaction.options.getFocused() ?? "").toString().toLowerCase();
+    const { data } = await supabase
+      .from("polls")
+      .select("id, title, status, created_at")
+      .eq("guild_id", guild.id)
+      .in("status", statuses)
+      .order("created_at", { ascending: false })
+      .limit(25);
+    const choices = (data ?? [])
+      .filter((r) => !focused || r.title.toLowerCase().includes(focused))
+      .slice(0, 25)
+      .map((r) => ({
+        name: `${r.title}${r.status !== "active" ? ` (${r.status})` : ""}`.slice(0, 100),
+        value: r.id,
+      }));
+    await interaction.respond(choices);
   }
 
   async function tick() {
@@ -737,7 +984,14 @@ function createPolls(client, supabase) {
     console.log("[Pulse] Poll system started.");
   }
 
-  return { start, reload };
+  return {
+    start,
+    reload,
+    handleCreateCommand,
+    handleCloseCommand,
+    handleResultsCommand,
+    autocompletePoll,
+  };
 }
 
 module.exports = {
