@@ -18,6 +18,29 @@ const {
 } = require("discord.js");
 const { recordNotification } = require("./notifications");
 const { getGuildAccent } = require("./guild-accent");
+const {
+  buildPulseContainer,
+  getPulseColor,
+  loadPulseIcon,
+  replyNotice,
+  text,
+  divider,
+} = require("./commands");
+
+// Human labels for the action types (mirror of the ActionDef labels in
+// pulsify-web-app/lib/automations.ts) — shown by /automation list + logs.
+const ACTION_TYPE_LABELS = {
+  announcement: "Announcement",
+  message: "Scheduled message",
+  welcome_reminder: "Welcome reminder",
+  analytics_summary: "Analytics summary",
+  role_sync: "Role sync",
+  temp_role_removal: "Temporary role cleanup",
+  scheduled_moderation: "Scheduled moderation",
+  recurring_event: "Recurring event",
+  inactivity_cleanup: "Inactivity cleanup",
+};
+const actionTypeLabel = (t) => ACTION_TYPE_LABELS[t] ?? (t ? String(t) : "Automation");
 
 /**
  * Components V2 container for scheduled reports — matches the look of the bot's
@@ -686,6 +709,195 @@ function createScheduler(client, supabase) {
       .subscribe();
   }
 
+  // ── Slash command: /automation list|toggle|run|logs ─────────────────────────
+  // Manages the SAME `scheduled_automations` workflows the dashboard does. toggle
+  // flips `enabled` (recomputing next_run_at when switching on so it starts
+  // firing), run sets `run_requested_at` — the realtime watcher above then does
+  // the single one-off run, exactly like the dashboard's "Run now". No detection
+  // or schedule logic is forked; it all runs through this engine.
+
+  async function loadGuildAutomations(guildId) {
+    const { data } = await supabase
+      .from("scheduled_automations")
+      .select("id, name, action_type, enabled, next_run_at, last_run_at")
+      .eq("guild_id", guildId)
+      .order("created_at", { ascending: true });
+    return data ?? [];
+  }
+
+  async function findAutomation(guildId, id) {
+    const { data } = await supabase
+      .from("scheduled_automations")
+      .select("*")
+      .eq("id", id)
+      .eq("guild_id", guildId)
+      .maybeSingle();
+    return data ?? null;
+  }
+
+  async function automationList({ interaction, guild, ephemeral }) {
+    await interaction.deferReply({ flags: ephemeral ? MessageFlags.Ephemeral : 0 });
+    const colorHex = await getPulseColor(supabase, guild.id);
+    const icon = await loadPulseIcon("automation", colorHex);
+    const rows = await loadGuildAutomations(guild.id);
+
+    const body = [];
+    if (rows.length === 0) {
+      body.push(text("No scheduled automations yet. Create them in the dashboard under Automations."));
+    } else {
+      body.push(text(`${rows.length} automation${rows.length === 1 ? "" : "s"} in ${guild.name}.`));
+      body.push(divider());
+      const lines = rows.map((r) => {
+        const when =
+          r.enabled && r.next_run_at
+            ? `next <t:${Math.floor(new Date(r.next_run_at).getTime() / 1000)}:R>`
+            : r.enabled
+              ? "scheduling…"
+              : "paused";
+        return `**${r.name}** — ${r.enabled ? "On" : "Off"}\n-# ${actionTypeLabel(r.action_type)} — ${when}`;
+      });
+      body.push(text(lines.join("\n\n")));
+    }
+
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        buildPulseContainer({
+          iconUrl: icon ? `attachment://${icon.name}` : null,
+          colorHex,
+          title: "Automations",
+          subtitle: guild.name,
+          body,
+          footer: "Pulse — Scheduled automations",
+        }),
+      ],
+      files: icon ? [icon] : [],
+    });
+  }
+
+  async function automationToggle({ interaction, guild, ephemeral }) {
+    const id = interaction.options.getString("automation", true);
+    const row = await findAutomation(guild.id, id);
+    if (!row) {
+      await replyNotice(interaction, "I couldn't find that automation in this server.");
+      return;
+    }
+    const enabled = !row.enabled;
+    const patch = { enabled };
+    if (enabled) {
+      // Recompute the next run so a re-enabled workflow starts firing again.
+      const next = computeNextRun(row.schedule_type, row.schedule_config, row.timezone);
+      patch.next_run_at = next ? next.toISOString() : null;
+    }
+    const { error } = await supabase
+      .from("scheduled_automations")
+      .update(patch)
+      .eq("id", id)
+      .eq("guild_id", guild.id);
+    if (error) {
+      await replyNotice(interaction, "Sorry — I couldn't update that automation. Try again in a moment.");
+      return;
+    }
+    const cached = cache.get(id);
+    if (cached) Object.assign(cached, patch);
+    const nextLine =
+      enabled && patch.next_run_at
+        ? ` — next run <t:${Math.floor(new Date(patch.next_run_at).getTime() / 1000)}:R>`
+        : "";
+    await replyNotice(interaction, `**${row.name}** is now **${enabled ? "on" : "off"}**${nextLine}.`, ephemeral);
+  }
+
+  async function automationRun({ interaction, guild, ephemeral }) {
+    const id = interaction.options.getString("automation", true);
+    const row = await findAutomation(guild.id, id);
+    if (!row) {
+      await replyNotice(interaction, "I couldn't find that automation in this server.");
+      return;
+    }
+    // Same write the dashboard's "Run now" makes; the realtime watcher does the
+    // single one-off run so nothing runs twice.
+    const { error } = await supabase
+      .from("scheduled_automations")
+      .update({ run_requested_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("guild_id", guild.id);
+    if (error) {
+      await replyNotice(interaction, "Sorry — I couldn't run that automation. Try again in a moment.");
+      return;
+    }
+    await replyNotice(
+      interaction,
+      `Running **${row.name}** now — check \`/automation logs\` in a moment to see how it went.`,
+      ephemeral,
+    );
+  }
+
+  async function automationLogs({ interaction, guild, ephemeral }) {
+    await interaction.deferReply({ flags: ephemeral ? MessageFlags.Ephemeral : 0 });
+    const colorHex = await getPulseColor(supabase, guild.id);
+    const icon = await loadPulseIcon("automation", colorHex);
+    const filterId = interaction.options.getString("automation");
+
+    let query = supabase
+      .from("automation_runs")
+      .select("automation_name, action_type, status, detail, triggered_by, created_at")
+      .eq("guild_id", guild.id)
+      .order("created_at", { ascending: false })
+      .limit(10);
+    if (filterId) query = query.eq("automation_id", filterId);
+    const { data } = await query;
+    const runs = data ?? [];
+
+    const statusMark = { success: "Success", skipped: "Skipped", failed: "Failed", retrying: "Retrying" };
+    const body = [];
+    if (runs.length === 0) {
+      body.push(text(filterId ? "This automation hasn't run yet." : "No automations have run yet."));
+    } else {
+      body.push(text(`The ${runs.length} most recent run${runs.length === 1 ? "" : "s"}.`));
+      body.push(divider());
+      const lines = runs.map((r) => {
+        const when = r.created_at ? `<t:${Math.floor(new Date(r.created_at).getTime() / 1000)}:R>` : "";
+        const via = r.triggered_by === "manual" ? "manual" : "scheduled";
+        const detail = r.detail ? `\n-# ${String(r.detail).slice(0, 160)}` : "";
+        return `**${r.automation_name}** — ${statusMark[r.status] ?? r.status}\n-# ${actionTypeLabel(r.action_type)} — ${via} — ${when}${detail}`;
+      });
+      body.push(text(lines.join("\n\n")));
+    }
+
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        buildPulseContainer({
+          iconUrl: icon ? `attachment://${icon.name}` : null,
+          colorHex,
+          title: "Automation logs",
+          subtitle: guild.name,
+          body,
+          footer: "Pulse — Scheduled automations",
+        }),
+      ],
+      files: icon ? [icon] : [],
+    });
+  }
+
+  async function handleAutomationCommand({ interaction, guild, action, ephemeral }) {
+    if (action === "list") return automationList({ interaction, guild, ephemeral });
+    if (action === "toggle") return automationToggle({ interaction, guild, ephemeral });
+    if (action === "run") return automationRun({ interaction, guild, ephemeral });
+    if (action === "logs") return automationLogs({ interaction, guild, ephemeral });
+    await replyNotice(interaction, "Unknown automation command.");
+  }
+
+  async function autocompleteAutomation({ interaction, guild }) {
+    const focused = String(interaction.options.getFocused() ?? "").toLowerCase();
+    const rows = await loadGuildAutomations(guild.id);
+    const choices = rows
+      .filter((r) => !focused || r.name.toLowerCase().includes(focused))
+      .slice(0, 25)
+      .map((r) => ({ name: `${r.name} (${r.enabled ? "on" : "off"})`.slice(0, 100), value: r.id }));
+    await interaction.respond(choices);
+  }
+
   async function start() {
     await reload();
     subscribe();
@@ -699,7 +911,7 @@ function createScheduler(client, supabase) {
     console.log("[Pulse] Scheduler started.");
   }
 
-  return { start, reload };
+  return { start, reload, handleAutomationCommand, autocompleteAutomation };
 }
 
 module.exports = { createScheduler, computeNextRun, parseCron };

@@ -544,12 +544,12 @@ function OverviewTab({
       </div>
 
       {/* Lookup history — the audit trail: who checked whom, and from where. */}
-      <CategorySection icon={<History size={14} />} title="Recent lookups" description="Who checked whom — here or with /alt-check.">
+      <CategorySection icon={<History size={14} />} title="Recent lookups" description="Who checked whom — here or with /alt check.">
         {lookups.length === 0 ? (
           <EmptyState
             icon={<Search size={20} />}
             title="No lookups yet"
-            description="Every account report a moderator opens — here or with /alt-check — is recorded."
+            description="Every account report a moderator opens — here or with /alt check — is recorded."
             variant="muted"
           />
         ) : (
@@ -565,7 +565,7 @@ function OverviewTab({
                 <AccountChip
                   avatar={avatarFor(l.user_id)}
                   name={l.user_name ?? l.user_id}
-                  subtitle={`${l.actor_name ?? 'A moderator'} · ${l.source === 'command' ? '/alt-check' : 'dashboard'}`}
+                  subtitle={`${l.actor_name ?? 'A moderator'} · ${l.source === 'command' ? '/alt check' : 'dashboard'}`}
                   size={32}
                 />
                 <span className="ml-auto flex shrink-0 items-center gap-2">

@@ -1,0 +1,33 @@
+**Pulsify v0.61.0 — Slash Commands Everywhere**
+The biggest command update yet: dozens of new slash commands bring Pulse's moderation, analytics, engagement, onboarding, server tools and more into Discord itself — so your team can run the server from chat and rarely need to open the dashboard. Every command respects the same permissions, cooldowns and per-server settings you configure in the Command Center.
+
+**Moderation, from Discord**
+- **Full moderator toolkit** — /warn, /timeout, /untimeout, /kick, /ban, /unban, /warnings, /purge and /modlogs, each logged to Moderation History exactly like a dashboard action.
+- **Safe by default** — destructive commands check both the bot's and your own role position, so a junior mod can't action someone above them, and the target is always notified.
+- **Channel control** — /channel lock, unlock, slowmode and stats for quick in-place moderation.
+
+**Roles, tickets & community**
+- **Roles** — /role add, remove, temp, info and hierarchy, plus /selfrole for the self-assign menus.
+- **Support & events** — /ticket claim, close, add and priority; /event list, info, create and cancel; /announce and /automation.
+- **Engagement** — /giveaway and /poll create/manage, /privatechannel controls, and /guard for Pulse Guard.
+
+**Analytics & insights in chat**
+- **Server stats** — /stats overview, channels and members show activity and trends over any time range.
+- **Server health** — /insights gives a health score and the most important things to look at, the same analysis as the dashboard.
+- **Staff performance** — /management stats surfaces moderation, support and community activity per staff member.
+
+**Members & onboarding**
+- **Profiles & progress** — /rank, /reputation, /userinfo, /serverinfo and /milestones.
+- **Onboarding** — /verify and /verification status for members, plus /onboarding resend and stats for staff.
+
+**Server tools & assets**
+- **Configuration** — /serversettings view for a config snapshot, /statchannel refresh for the live counter channels, and /template apply to switch feature profiles on in one go.
+- **Assets** — /emoji, /sticker and /soundboard list and info to browse the server's expressions.
+- **Backups & more** — /backup create and list (Business), /integrations status, /notifications preferences and /feedback submit.
+
+**Renamed — heads up**
+- **/alt-check is now /alt check** and **/invites is now /invite stats** (with /invite leaderboard and /invite rewards). Discord doesn't allow spaces in a command name, so these moved into command groups. Update any pinned messages or guides that referenced the old names.
+
+Run /help in your server to see every command you can use.
+
+July 23, 2026

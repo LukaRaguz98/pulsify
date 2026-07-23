@@ -27,19 +27,31 @@ export async function GET(req: NextRequest) {
   const clamp = (v: string | null) => Math.max(0, Math.min(100, Number(v ?? 0) || 0))
   const cut = (v: string | null) => (v ?? '').slice(0, 40)
 
+  // Both columns are optional so a single bar can be requested on its own:
+  // /rank shows level-only (rep=0), /reputation shows reputation-only (no lvl),
+  // /profile shows both. `rep=0` skips the reputation column.
   type Col = { pct: number; label: string; detail: string }
-  const cols: Col[] = [
-    {
+  const cols: Col[] = []
+  if (searchParams.get('rep') !== '0') {
+    cols.push({
       label: cut(searchParams.get('repLabel')) || 'Reputation',
       detail: cut(searchParams.get('repDetail')),
       pct: clamp(searchParams.get('repPct')),
-    },
-  ]
+    })
+  }
   if (searchParams.get('lvl') === '1') {
     cols.push({
       label: cut(searchParams.get('lvlLabel')) || 'Level',
       detail: cut(searchParams.get('lvlDetail')),
       pct: clamp(searchParams.get('lvlPct')),
+    })
+  }
+  // Never render an empty image — fall back to a reputation column.
+  if (cols.length === 0) {
+    cols.push({
+      label: cut(searchParams.get('repLabel')) || 'Reputation',
+      detail: cut(searchParams.get('repDetail')),
+      pct: clamp(searchParams.get('repPct')),
     })
   }
 
@@ -54,9 +66,9 @@ export async function GET(req: NextRequest) {
 
   const PAD = 12
   const COL_GAP = 36
-  // Fixed width keeps the side-by-side block compact (short) and gives each
-  // column room for its label + detail on their own lines.
-  const W = 700 * S
+  // Two columns sit side by side (compact); a single column uses a narrower
+  // canvas so one bar doesn't stretch absurdly wide.
+  const W = (cols.length === 1 ? 420 : 700) * S
   const H = 92 * S
 
   return new ImageResponse(

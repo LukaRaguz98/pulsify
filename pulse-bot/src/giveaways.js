@@ -23,8 +23,22 @@ const path = require("node:path");
 const { recordNotification } = require("./notifications");
 const { replyNotice } = require("./commands");
 const { getGuildAccent } = require("./guild-accent");
+// One duration grammar everywhere — /giveaway create parses "24h", "2d", "90m"
+// with the same parser /timeout and /role temp use. Returns whole minutes.
+const { parseDuration } = require("./moderation");
 
 const GW = "gw";
+
+// Mirror of lib/giveaways.ts GIVEAWAY_LIMITS — the /giveaway create command
+// validates against the same bounds the dashboard enforces.
+const GIVEAWAY_LIMITS = {
+  maxWinners: 50,
+  maxTitle: 100,
+  maxDescription: 1500,
+  maxPrize: 200,
+  maxDurationMinutes: 60 * 24 * 60, // 60 days
+  minDurationMinutes: 1,
+};
 const TICK_MS = 30 * 1000; // lifecycle scan every 30s
 // Every giveaway embed — live, cancelled or settled — wears the guild's accent
 // (guild_settings.embed_color, set in the dashboard's Server Settings). There
@@ -162,7 +176,7 @@ function describeRequirements(req, resolveRole = (id) => `<@&${id}>`) {
     out.push(
       names.length === 1
         ? `Required role: ${names[0]}`
-        : `Required roles (${mode}): ${names.join(", ")}`,
+        : `Required roles (${mode}): ${names.join(" ")}`,
     );
   }
 
@@ -295,7 +309,7 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
       return { type: 17, accent_color: accent, components: body };
     }
     if (winners && winners.length > 0) {
-      body.push(td(`**Winner${winners.length === 1 ? "" : "s"}:** ${winners.map((w) => `<@${w.id}>`).join(", ")}`));
+      body.push(td(`**Winner${winners.length === 1 ? "" : "s"}:** ${winners.map((w) => `<@${w.id}>`).join(" ")}`));
     } else {
       body.push(td("No eligible entries — no winner could be drawn."));
     }
@@ -615,7 +629,7 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
             ? [
                 ...headerBlocks(
                   `${reroll ? "New winner" : "Giveaway winner"}${winners.length === 1 ? "" : "s"} drawn!`,
-                  `Congratulations ${winners.map((w) => `<@${w.id}>`).join(", ")} — you won **${fresh.prize}**!`,
+                  `Congratulations ${winners.map((w) => `<@${w.id}>`).join(" ")} — you won **${fresh.prize}**!`,
                 ),
                 link ? td(`-# [Jump to the giveaway](${link})`) : null,
                 td("-# Pulse — Giveaway"),
@@ -656,6 +670,218 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
   async function manualDraw(row) {
     if (row.status === "active") await drawWinners(row, { reroll: false });
     else if (row.status === "ended") await drawWinners(row, { reroll: true });
+  }
+
+  // ── Slash commands (delegated from commands.js execute) ─────────────────────
+  // These mirror the dashboard's giveaway actions (app/.../giveaways/actions.ts):
+  // create posts a new giveaway, end + reroll go THROUGH `draw_requested_at` so
+  // the bot stays the single winner-drawer (the tick + realtime watcher above run
+  // the actual draw), and list is a read. Requirements, blacklists and scheduling
+  // are dashboard-only — the command keeps to the common case.
+
+  async function handleCreateCommand({ interaction, guild, ephemeral }) {
+    const prize = interaction.options.getString("prize", true).trim();
+    const durationRaw = interaction.options.getString("duration", true);
+    const winners = interaction.options.getInteger("winners") ?? 1;
+    const title = (interaction.options.getString("title") ?? "Giveaway").trim() || "Giveaway";
+    const description = interaction.options.getString("description")?.trim() || null;
+    const channel = interaction.options.getChannel("channel") ?? interaction.channel;
+
+    const minutes = parseDuration(durationRaw);
+    if (!minutes || minutes < GIVEAWAY_LIMITS.minDurationMinutes) {
+      return replyNotice(interaction, "Enter a valid duration — e.g. `30m`, `2h`, `1d`.");
+    }
+    if (minutes > GIVEAWAY_LIMITS.maxDurationMinutes) {
+      return replyNotice(interaction, "A giveaway can run for at most 60 days.");
+    }
+    if (!prize) return replyNotice(interaction, "Describe the prize.");
+    if (!channel?.isTextBased?.() || channel.isDMBased?.()) {
+      return replyNotice(interaction, "Pick a text channel I can post the giveaway in.");
+    }
+    if (channel.guildId && channel.guildId !== guild.id) {
+      return replyNotice(interaction, "That channel isn't in this server.");
+    }
+
+    const winnerCount = Math.max(1, Math.min(GIVEAWAY_LIMITS.maxWinners, winners));
+    const endsAt = new Date(Date.now() + minutes * 60_000);
+    const hostName =
+      interaction.member?.displayName ?? interaction.user.globalName ?? interaction.user.username;
+
+    const insert = {
+      guild_id: guild.id,
+      title: title.slice(0, GIVEAWAY_LIMITS.maxTitle),
+      description: description ? description.slice(0, GIVEAWAY_LIMITS.maxDescription) : null,
+      prize: prize.slice(0, GIVEAWAY_LIMITS.maxPrize),
+      channel_id: channel.id,
+      winner_count: winnerCount,
+      status: "active",
+      requirements: {},
+      blacklist_user_ids: [],
+      starts_at: null,
+      ends_at: endsAt.toISOString(),
+      entry_count: 0,
+      host_id: interaction.user.id,
+      host_name: hostName,
+      created_by: interaction.user.id,
+    };
+
+    const { data: inserted, error } = await supabase
+      .from("giveaways")
+      .insert(insert)
+      .select("id")
+      .single();
+    if (error || !inserted) {
+      console.warn("[Pulse] /giveaway create insert failed:", error?.message);
+      return replyNotice(interaction, "Sorry — I couldn't create the giveaway. Try again in a moment.");
+    }
+    const g = { ...insert, id: inserted.id };
+
+    // Post the giveaway message now (mirrors the dashboard's immediate branch).
+    // On a post failure, roll back so we never leave a phantom active row.
+    const sent = await postGiveaway(g);
+    if (!sent) {
+      await supabase.from("giveaways").delete().eq("id", g.id);
+      return replyNotice(
+        interaction,
+        `I couldn't post in <#${channel.id}> — check I can send messages there, then try again.`,
+      );
+    }
+    g.message_id = sent.id;
+    await supabase.from("giveaways").update({ message_id: sent.id }).eq("id", g.id);
+    cache.set(g.id, g);
+
+    await recordNotification(supabase, {
+      guildId: guild.id,
+      type: "giveaway_started",
+      title: `Giveaway started: ${g.title}`,
+      body: `Prize: ${g.prize}`,
+      link: `/dashboard/${guild.id}/giveaways`,
+      targetId: channel.id,
+      metadata: { giveaway_id: g.id },
+    });
+
+    const endUnix = Math.floor(endsAt.getTime() / 1000);
+    await replyNotice(
+      interaction,
+      `Giveaway posted in <#${channel.id}> — **${g.prize}** for ${winnerCount} winner${winnerCount === 1 ? "" : "s"}, ending <t:${endUnix}:R>.`,
+      ephemeral,
+    );
+  }
+
+  async function handleEndCommand({ interaction, guild, ephemeral }) {
+    const id = interaction.options.getString("giveaway", true);
+    const row = await loadGiveaway(id);
+    if (!row || row.guild_id !== guild.id) {
+      return replyNotice(interaction, "I couldn't find that giveaway in this server.");
+    }
+    if (row.status === "scheduled") {
+      return replyNotice(interaction, "That giveaway hasn't started yet — cancel it from the dashboard instead.");
+    }
+    if (row.status !== "active") {
+      return replyNotice(interaction, "That giveaway isn't active.");
+    }
+
+    // Same write the dashboard makes: end the clock and request a draw. The
+    // realtime watcher + the tick perform the single authoritative draw, so the
+    // winner-pick never happens in two places.
+    const nowIso = new Date().toISOString();
+    const { error } = await supabase
+      .from("giveaways")
+      .update({ ends_at: nowIso, draw_requested_at: nowIso, updated_at: nowIso })
+      .eq("id", id)
+      .eq("guild_id", guild.id);
+    if (error) {
+      return replyNotice(interaction, "Sorry — I couldn't end that giveaway. Try again in a moment.");
+    }
+    await replyNotice(
+      interaction,
+      `Ending **${row.title}** now and drawing winner${row.winner_count === 1 ? "" : "s"} — watch <#${row.channel_id}>.`,
+      ephemeral,
+    );
+  }
+
+  async function handleRerollCommand({ interaction, guild, ephemeral }) {
+    const id = interaction.options.getString("giveaway", true);
+    const row = await loadGiveaway(id);
+    if (!row || row.guild_id !== guild.id) {
+      return replyNotice(interaction, "I couldn't find that giveaway in this server.");
+    }
+    if (row.status !== "ended") {
+      return replyNotice(interaction, "You can only reroll a giveaway that has already ended.");
+    }
+
+    // Reroll goes through draw_requested_at too — the bot re-draws, excluding the
+    // previous winners (see drawWinners).
+    const { error } = await supabase
+      .from("giveaways")
+      .update({ draw_requested_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("guild_id", guild.id);
+    if (error) {
+      return replyNotice(interaction, "Sorry — I couldn't reroll that giveaway. Try again in a moment.");
+    }
+    await replyNotice(
+      interaction,
+      `Rerolling **${row.title}** — drawing a new winner in <#${row.channel_id}>, excluding the previous one${(row.winners?.length ?? 1) === 1 ? "" : "s"}.`,
+      ephemeral,
+    );
+  }
+
+  async function handleListCommand({ interaction, guild, ephemeral }) {
+    const { data } = await supabase
+      .from("giveaways")
+      .select("id, title, prize, status, ends_at, starts_at, winner_count, entry_count, channel_id")
+      .eq("guild_id", guild.id)
+      .in("status", ["scheduled", "active"])
+      .order("ends_at", { ascending: true })
+      .limit(15);
+    const list = data ?? [];
+
+    const body = [...headerBlocks("Giveaways", `${list.length} live in ${guild.name}`)];
+    body.push(divider());
+    if (list.length === 0) {
+      body.push(td("No giveaways are running right now. Start one with `/giveaway create`."));
+    } else {
+      const lines = list.map((row) => {
+        const when =
+          row.status === "scheduled" && row.starts_at
+            ? `starts <t:${Math.floor(new Date(row.starts_at).getTime() / 1000)}:R>`
+            : `ends <t:${Math.floor(new Date(row.ends_at).getTime() / 1000)}:R>`;
+        const entries = row.entry_count ?? 0;
+        return (
+          `**${row.title}** — ${row.status === "scheduled" ? "Scheduled" : "Active"}\n` +
+          `-# Prize: ${row.prize} — ${row.winner_count} winner${row.winner_count === 1 ? "" : "s"} — ${entries} entr${entries === 1 ? "y" : "ies"} — ${when} — <#${row.channel_id}>`
+        );
+      });
+      body.push(td(lines.join("\n\n")));
+    }
+    body.push(td("-# Pulse — Giveaways"));
+
+    await interaction.reply({
+      flags: MessageFlags.IsComponentsV2 | (ephemeral ? MessageFlags.Ephemeral : 0),
+      components: [{ type: 17, accent_color: await getGuildAccent(supabase, guild.id), components: body }],
+      files: iconFiles(),
+    });
+  }
+
+  // Autocomplete the `giveaway` option: end offers ACTIVE giveaways, reroll
+  // offers ENDED ones — Discord can't picker a DB row, so we surface titles.
+  async function autocompleteGiveaway({ interaction, guild }) {
+    const sub = interaction.options.getSubcommand();
+    const statuses = sub === "reroll" ? ["ended"] : ["active"];
+    const focused = (interaction.options.getFocused() ?? "").toString().toLowerCase();
+    const { data } = await supabase
+      .from("giveaways")
+      .select("id, title, prize, status, ended_at, ends_at")
+      .eq("guild_id", guild.id)
+      .in("status", statuses)
+      .order(sub === "reroll" ? "ended_at" : "ends_at", { ascending: sub !== "reroll" })
+      .limit(25);
+    const choices = (data ?? [])
+      .filter((r) => !focused || `${r.title} ${r.prize}`.toLowerCase().includes(focused))
+      .slice(0, 25)
+      .map((r) => ({ name: `${r.title} — ${r.prize}`.slice(0, 100), value: r.id }));
+    await interaction.respond(choices);
   }
 
   async function tick() {
@@ -701,7 +927,15 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
     console.log("[Pulse] Giveaway system started.");
   }
 
-  return { start, reload };
+  return {
+    start,
+    reload,
+    handleCreateCommand,
+    handleEndCommand,
+    handleRerollCommand,
+    handleListCommand,
+    autocompleteGiveaway,
+  };
 }
 
 module.exports = {

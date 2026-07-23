@@ -545,6 +545,92 @@ function createPrivateChannels(client, supabase) {
     await interaction.message.edit({ flags: MessageFlags.IsComponentsV2, components: [panel] }).catch(() => {});
   }
 
+  // ── Core mutations ─────────────────────────────────────────────────────────
+  // The single implementation of each owner action, shared by BOTH the control
+  // panel (onInteraction below) and the /privatechannel slash command. A parallel
+  // copy in the command would drift on the overwrite/DB pair, so both call here.
+
+  async function setChannelLock(channel, channelId, locked) {
+    await channel.permissionOverwrites
+      .edit(channel.guild.id, { Connect: locked ? false : null })
+      .catch(() => {});
+    await supabase.from("private_channels").update({ locked }).eq("channel_id", channelId);
+  }
+
+  async function setChannelName(channel, channelId, name) {
+    await channel.setName(name).catch(() => {});
+    await supabase.from("private_channels").update({ name }).eq("channel_id", channelId);
+  }
+
+  async function grantAccess(channel, userIds) {
+    for (const uid of userIds) {
+      await channel.permissionOverwrites.edit(uid, { ViewChannel: true, Connect: true }).catch(() => {});
+    }
+  }
+
+  async function revokeAccess(channel, ownerId, userIds) {
+    for (const uid of userIds) {
+      if (uid === ownerId) continue; // never lock the owner out of their own channel
+      await channel.permissionOverwrites.delete(uid).catch(() => {});
+      const m = channel.guild.members.cache.get(uid);
+      if (m?.voice?.channelId === channel.id) await m.voice.disconnect().catch(() => {});
+    }
+  }
+
+  // ── Slash command (delegated from commands.js execute) ──────────────────────
+  // /privatechannel lock|unlock|invite|kick|rename. Acts on the private voice
+  // channel the invoker is currently sitting in — no ID to look up — and runs the
+  // SAME ownership check (ownedEntry) and mutations the control-panel buttons do.
+  async function handlePrivateChannelCommand({ interaction, guild, ephemeral }) {
+    const sub = interaction.options.getSubcommand();
+    const channelId = interaction.member?.voice?.channelId;
+    if (!channelId) {
+      return replyNotice(interaction, "Join your private voice channel first, then run this command.");
+    }
+    const owned = ownedEntry(interaction, channelId);
+    if (!owned) {
+      return replyNotice(interaction, "You're not in a managed private channel — join the voice channel you own.");
+    }
+    if (owned.denied) {
+      return replyNotice(interaction, "Only the channel owner (or server staff) can manage this channel.");
+    }
+    const channel =
+      guild.channels.cache.get(channelId) ?? (await guild.channels.fetch(channelId).catch(() => null));
+    if (!channel) {
+      return replyNotice(interaction, "That channel no longer exists.");
+    }
+
+    if (sub === "lock" || sub === "unlock") {
+      const locked = sub === "lock";
+      await setChannelLock(channel, channelId, locked);
+      return replyNotice(
+        interaction,
+        locked ? "Channel locked — others can't join." : "Channel unlocked — open to join.",
+        ephemeral,
+      );
+    }
+    if (sub === "rename") {
+      const name = (interaction.options.getString("name", true) || "").trim().slice(0, NAME_MAX);
+      if (!name) return replyNotice(interaction, "Enter a channel name.");
+      await setChannelName(channel, channelId, name);
+      return replyNotice(interaction, `Renamed to **${name}**.`, ephemeral);
+    }
+    if (sub === "invite") {
+      const user = interaction.options.getUser("user", true);
+      if (user.bot) return replyNotice(interaction, "You can only invite real members.");
+      await grantAccess(channel, [user.id]);
+      return replyNotice(interaction, `Invited <@${user.id}> — they can now see and join the channel.`, ephemeral);
+    }
+    if (sub === "kick") {
+      const user = interaction.options.getUser("user", true);
+      if (user.id === owned.entry.ownerId) {
+        return replyNotice(interaction, "You can't remove the channel owner.");
+      }
+      await revokeAccess(channel, owned.entry.ownerId, [user.id]);
+      return replyNotice(interaction, `Removed <@${user.id}> from the channel.`, ephemeral);
+    }
+  }
+
   async function onInteraction(interaction) {
     try {
       const id = interaction.customId ?? "";
@@ -560,8 +646,7 @@ function createPrivateChannels(client, supabase) {
         if (action === "rename_modal") {
           const value = (interaction.fields.getTextInputValue("name") || "").trim().slice(0, NAME_MAX);
           if (!value) return replyNotice(interaction, "Enter a channel name.");
-          await channel.setName(value).catch(() => {});
-          await supabase.from("private_channels").update({ name: value }).eq("channel_id", channelId);
+          await setChannelName(channel, channelId, value);
           return replyNotice(interaction, `Renamed to **${value}**.`);
         }
         if (action === "limit_modal") {
@@ -582,21 +667,12 @@ function createPrivateChannels(client, supabase) {
         if (!channel) return replyNotice(interaction, "That channel no longer exists.");
         const ids = interaction.values ?? [];
         if (action === "invite_sel") {
-          for (const uid of ids) {
-            await channel.permissionOverwrites
-              .edit(uid, { ViewChannel: true, Connect: true })
-              .catch(() => {});
-          }
-          return interaction.update({ content: `Invited ${ids.map((u) => `<@${u}>`).join(", ")}.`, components: [] });
+          await grantAccess(channel, ids);
+          return interaction.update({ content: `Invited ${ids.map((u) => `<@${u}>`).join(" ")}.`, components: [] });
         }
         if (action === "remove_sel") {
-          for (const uid of ids) {
-            if (uid === owned.entry.ownerId) continue;
-            await channel.permissionOverwrites.delete(uid).catch(() => {});
-            const m = interaction.guild.members.cache.get(uid);
-            if (m?.voice?.channelId === channelId) await m.voice.disconnect().catch(() => {});
-          }
-          return interaction.update({ content: `Removed ${ids.map((u) => `<@${u}>`).join(", ")}.`, components: [] });
+          await revokeAccess(channel, owned.entry.ownerId, ids);
+          return interaction.update({ content: `Removed ${ids.map((u) => `<@${u}>`).join(" ")}.`, components: [] });
         }
         if (action === "transfer_sel") {
           const newOwner = ids[0];
@@ -658,10 +734,7 @@ function createPrivateChannels(client, supabase) {
         }
         if (action === "lock" || action === "unlock") {
           const locked = action === "lock";
-          await channel.permissionOverwrites
-            .edit(interaction.guild.id, { Connect: locked ? false : null })
-            .catch(() => {});
-          await supabase.from("private_channels").update({ locked }).eq("channel_id", channelId);
+          await setChannelLock(channel, channelId, locked);
           await refreshPanelMessage(interaction, channelId);
           return replyNotice(interaction, locked ? "Channel locked — others can't join." : "Channel unlocked — open to join.");
         }
@@ -704,7 +777,7 @@ function createPrivateChannels(client, supabase) {
     sweepTimer = null;
   }
 
-  return { start, stop, onVoiceStateUpdate, onChannelDelete };
+  return { start, stop, onVoiceStateUpdate, onChannelDelete, handlePrivateChannelCommand };
 }
 
 module.exports = { createPrivateChannels, formatPrivateChannelName, normaliseConfig };

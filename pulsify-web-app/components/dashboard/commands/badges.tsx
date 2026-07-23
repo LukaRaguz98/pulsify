@@ -1,4 +1,4 @@
-import { CheckCircle2, CircleSlash, Wrench, EyeOff, Lock, Users, ShieldCheck } from 'lucide-react'
+import { CheckCircle2, CircleSlash, Wrench, EyeOff, Lock, Users, ShieldCheck, LifeBuoy } from 'lucide-react'
 import {
   CATEGORY_META,
   PERMISSION_META,
@@ -83,6 +83,14 @@ const PERMISSION_STYLE: Record<
     bg: 'var(--bg-2)',
     border: 'var(--line-strong)',
     icon: <Users size={11} />,
+  },
+  // Teal sits between the neutral "everyone" grey and the blue moderator badge,
+  // matching where support sits on the permission ladder.
+  support: {
+    color: '#2dd4bf',
+    bg: 'rgba(45,212,191,0.1)',
+    border: 'rgba(45,212,191,0.35)',
+    icon: <LifeBuoy size={11} />,
   },
   moderator: {
     color: '#60a5fa',

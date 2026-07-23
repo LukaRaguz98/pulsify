@@ -15,16 +15,17 @@ import {
 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { CategorySection } from '@/components/ui/category-section'
+import { EmptyState } from '@/components/ui/empty-state'
 import type { DiscordChannel, DiscordRole } from '@/lib/discord'
 import { createClient as createSupabase } from '@/lib/supabase'
 import {
-  COMMAND_CATALOG,
+  catalogByName,
   defaultConfig,
   defaultConfigFor,
   commandStatus,
   hasRestrictions,
-  CATALOG_BY_NAME,
   type CommandConfig,
+  type CommandDefinition,
 } from '@/lib/commands'
 import type { Timeframe } from '@/lib/analytics'
 import type { CommandAnalytics as CommandAnalyticsData } from '@/app/api/guilds/[guildId]/commands/analytics/route'
@@ -39,12 +40,18 @@ type Tab = 'commands' | 'analytics' | 'logs'
 
 type Props = {
   guildId: string
+  /**
+   * The catalog as published by the running bot (`command_catalog`). Empty when
+   * the bot has never synced — rendered as an empty state rather than an
+   * invented list.
+   */
+  catalog: CommandDefinition[]
   channels: DiscordChannel[]
   roles: DiscordRole[]
   initialConfigs: Record<string, CommandConfig>
 }
 
-export function CommandsContent({ guildId, channels, roles, initialConfigs }: Props) {
+export function CommandsContent({ guildId, catalog, channels, roles, initialConfigs }: Props) {
   const [tab, setTab] = useState<Tab>('commands')
   const [configs, setConfigs] = useState<Record<string, CommandConfig>>(initialConfigs)
   const [selectedName, setSelectedName] = useState<string | null>(null)
@@ -59,17 +66,19 @@ export function CommandsContent({ guildId, channels, roles, initialConfigs }: Pr
   const [logsLoading, setLogsLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
+  const byName = useMemo(() => catalogByName(catalog), [catalog])
+
   const configFor = useCallback(
     (name: string): CommandConfig => {
-      const def = CATALOG_BY_NAME[name]
+      const def = byName[name]
       return configs[name] ?? (def ? defaultConfigFor(def) : defaultConfig())
     },
-    [configs],
+    [configs, byName],
   )
 
   const resolved: ResolvedCommand[] = useMemo(
-    () => COMMAND_CATALOG.map((def) => ({ def, config: configs[def.name] ?? defaultConfigFor(def) })),
-    [configs],
+    () => catalog.map((def) => ({ def, config: configs[def.name] ?? defaultConfigFor(def) })),
+    [configs, catalog],
   )
 
   const counts = useMemo(() => {
@@ -179,7 +188,7 @@ export function CommandsContent({ guildId, channels, roles, initialConfigs }: Pr
   }
 
   async function toggleEnabled(name: string, enabled: boolean) {
-    if (!CATALOG_BY_NAME[name]) return
+    if (!byName[name]) return
     setActionError(null)
     const prev = configFor(name)
     const next = { ...prev, enabled }
@@ -214,7 +223,28 @@ export function CommandsContent({ guildId, channels, roles, initialConfigs }: Pr
     setConfigs((c) => ({ ...c, [name]: config }))
   }
 
-  const selectedDef = selectedName ? CATALOG_BY_NAME[selectedName] : null
+  const selectedDef = selectedName ? byName[selectedName] : null
+
+  // The catalog is published by the bot on startup (PULSIFY-61). An empty one
+  // means Pulse has never booted against this database, so there are no
+  // registered commands to configure — the stats, tabs and analytics would all
+  // be zeroes over an invented list. Say what's actually wrong instead.
+  if (catalog.length === 0) {
+    return (
+      <div className="page-content">
+        <PageHeader
+          title="Command Center"
+          helpId="commands"
+          description="Manage Pulse's slash commands, permissions, limits and usage for this server."
+        />
+        <EmptyState
+          icon={<TerminalSquare size={22} />}
+          title="No commands published yet"
+          description="Pulse publishes its command list when it starts up. Once the bot has connected, every command it offers appears here, ready to configure."
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="page-content">
@@ -300,6 +330,7 @@ export function CommandsContent({ guildId, channels, roles, initialConfigs }: Pr
           )}
           {tab === 'analytics' && (
             <CommandAnalytics
+              catalog={catalog}
               data={analytics}
               loading={analyticsLoading}
               timeframe={timeframe}

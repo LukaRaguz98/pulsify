@@ -1,32 +1,70 @@
-// Command Center — the canonical catalog of Pulse slash commands plus the
-// per-guild config shape, defaults and resolution helpers shared across the
-// dashboard (page, content, edit panel, analytics).
+// Command Center — the shared types, per-guild config shape, defaults and
+// resolution helpers used across the dashboard (page, content, edit panel,
+// analytics).
 //
-// This catalog is the source of truth for *what commands exist* and their
-// out-of-the-box behaviour. The bot mirrors it in `pulse-bot/src/commands.js`
-// for registration + execution — keep the two in sync (same names, categories
-// and default permissions). Per-server overrides live in the `command_configs`
-// table; a missing row means "use the defaults below".
+// ── Where the catalog lives (PULSIFY-61) ─────────────────────────────────────
+// It is NOT in this file any more. The bot (`pulse-bot/src/commands.js`) owns
+// the catalog and syncs it into the `command_catalog` table on startup; the
+// dashboard reads that table via `lib/commands-server.ts`.
+//
+// This file used to carry a hand-mirrored copy of the bot's catalog, and the two
+// drifted — the copy here silently lost /invites, /invite-leaderboard,
+// /invite-rewards, /daily and /weekly, so the Command Center couldn't configure
+// five commands the bot was serving. A duplicated list with no mechanism to keep
+// it honest will always drift, so the duplicate is gone rather than repaired.
+// Adding a command is now a change to the bot's catalog only.
+//
+// Per-server overrides live in `command_configs`; a missing row means "use the
+// synced defaults".
 
 export type CommandCategory = 'utility' | 'information' | 'insights' | 'moderation'
 
-/** Baseline access tier for a command, before role/channel allow+deny lists. */
-export type CommandPermissionLevel = 'everyone' | 'moderator' | 'admin'
+/**
+ * Baseline access tier for a command, before role/channel allow+deny lists.
+ * Mirrors the ladder in `pulse-bot/src/permissions.js`, where 'everyone' is the
+ * stored alias for its `member` tier. 'support' means the guild's configured
+ * ticket support roles.
+ */
+export type CommandPermissionLevel = 'everyone' | 'support' | 'moderator' | 'admin'
 
-export type CommandOptionType = 'user' | 'string' | 'channel' | 'role' | 'boolean' | 'integer'
+export type CommandOptionType =
+  | 'user'
+  | 'string'
+  | 'channel'
+  | 'role'
+  | 'boolean'
+  | 'integer'
+  | 'number'
+  | 'mentionable'
+  | 'attachment'
+  /** A subcommand container, e.g. the `set` in `/birthday set`. */
+  | 'subcommand'
 
 export type CommandOption = {
+  /**
+   * Qualified name. For a subcommand's own options this reads "set month",
+   * matching how the member types it.
+   */
   name: string
   description: string
   type: CommandOptionType
   required?: boolean
 }
 
+/** Plan slugs from lib/billing.ts. */
+export type CommandPlan = 'free' | 'pro' | 'business' | 'enterprise'
+
 export type CommandDefinition = {
   /** Slash name, lowercase, no leading slash. */
   name: string
   description: string
   category: CommandCategory
+  /**
+   * The Pulsify feature this command belongs to (a key of MODULE_SOURCES in
+   * `pulse-bot/src/feature-gate.js`). The command is unavailable in servers that
+   * have the feature switched off. `null` = always available.
+   */
+  module: string | null
   defaultPermission: CommandPermissionLevel
   options?: CommandOption[]
   /**
@@ -35,6 +73,8 @@ export type CommandDefinition = {
    * that should post publicly out of the box (e.g. /changelog).
    */
   defaultEphemeral?: boolean
+  /** Minimum plan. 'free' = ungated. Enforced against the guild owner's plan. */
+  minPlan: CommandPlan
   /** Example invocations rendered in the preview + copyable as quick tests. */
   examples: string[]
   /** Longer help text shown in the command preview. */
@@ -42,133 +82,17 @@ export type CommandDefinition = {
 }
 
 // ── Catalog ──────────────────────────────────────────────────────────────────
-// A small, deliberately useful set. Everything here is OPT-IN per server via
-// the Command Center — admins can disable, restrict or re-permission any of it.
-export const COMMAND_CATALOG: CommandDefinition[] = [
-  {
-    name: 'help',
-    description: 'List the commands available to you in this server',
-    category: 'utility',
-    defaultPermission: 'everyone',
-    examples: ['/help'],
-    detail:
-      'Lists every command the member is allowed to run, grouped by category. Disabled and hidden commands are omitted automatically.',
-  },
-  {
-    name: 'profile',
-    description: "Show a member's profile — reputation, level and standing",
-    category: 'information',
-    defaultPermission: 'everyone',
-    options: [
-      { name: 'user', description: 'The member to look up (defaults to you)', type: 'user' },
-    ],
-    examples: ['/profile', '/profile user:@username'],
-    detail:
-      "A member's reputation and level shown as accent-tinted bars, plus account + join dates, their most significant roles, and quick links to their avatar and banner. Defaults to your own profile.",
-  },
-  {
-    name: 'changelog',
-    description: "Shows detailed release notes for a specific Pulsify version.",
-    category: 'utility',
-    defaultPermission: 'admin',
-    defaultEphemeral: false,
-    options: [
-      {
-        name: 'version',
-        description: 'A version to look up.',
-        type: 'string',
-      },
-    ],
-    examples: ['/changelog', '/changelog version:0.30.0'],
-    detail:
-      'A polished summary of a Pulse release — the headline changes and highlights — with a link to the complete release notes. Defaults to the latest release; pass a version to view any past release. Admins only by default.',
-  },
-  {
-    name: 'milestones',
-    description: "Show a member's recognition milestones — earned and in progress",
-    category: 'information',
-    defaultPermission: 'everyone',
-    options: [
-      { name: 'user', description: 'The member to look up (defaults to you)', type: 'user' },
-    ],
-    examples: ['/milestones', '/milestones user:@username'],
-    detail:
-      'Lists the recognition milestones a member has earned (time in server, messages, voice, events, giveaways, XP/level) and how close they are to the next ones. Milestones are configured in the dashboard under Engagement › Milestones. Defaults to your own.',
-  },
-  {
-    name: 'birthday',
-    description: 'Set and view birthdays in this server',
-    category: 'information',
-    defaultPermission: 'everyone',
-    examples: ['/birthday set month:March day:14', '/birthday view', '/birthday upcoming', '/birthday remove'],
-    detail:
-      'Members set their birthday (day/month, optional year, optional timezone) so Pulse can celebrate them automatically. Subcommands: set (add or update yours, with privacy options to hide your year or opt out of announcements), view (see yours or another member\'s), upcoming (the next birthdays in the server) and remove. Admins configure the announcement channel, time, role and rewards under Engagement › Birthdays.',
-  },
-  {
-    name: 'balance',
-    description: "Show a member's global Pulse balance, reputation and ranking",
-    category: 'information',
-    defaultPermission: 'everyone',
-    options: [
-      { name: 'user', description: 'The member to look up (defaults to you)', type: 'user' },
-    ],
-    examples: ['/balance', '/balance user:@username'],
-    detail:
-      'Shows the global Pulse balance — coin balance, leaderboard position, reputation tier, lifetime earned/spent and recent activity. Balance and reputation are shared across every server running Pulse; levels stay per-server. Defaults to your own.',
-  },
-  {
-    name: 'leaderboard',
-    description: 'View Pulse leaderboards — balance, reputation, levels, XP and activity',
-    category: 'information',
-    defaultPermission: 'everyone',
-    options: [
-      { name: 'type', description: 'Which leaderboard to open first (switchable in the menu)', type: 'string' },
-    ],
-    examples: ['/leaderboard', '/leaderboard type:Server Level'],
-    detail:
-      'An interactive leaderboard with a menu to switch between six boards — Global Balance, Global Reputation, Server Level, Server XP, Messages and Voice Activity — plus pagination. Highlights your own position and shows rank, name and value for each member.',
-  },
-  {
-    name: 'info',
-    description: 'Learn how to earn Pulse Balance, Reputation, XP and Levels',
-    category: 'information',
-    defaultPermission: 'everyone',
-    examples: ['/info'],
-    detail:
-      'A single-embed guide to earning across Pulse: the global economy (Pulse Balance & Reputation — events, giveaways, onboarding, milestones, daily/weekly) and server progression (XP & Levels — messages, voice, participation, level rewards).',
-  },
-  {
-    name: 'pay',
-    description: 'Send Pulse Coins from your global balance to another member',
-    category: 'utility',
-    defaultPermission: 'everyone',
-    defaultEphemeral: false,
-    options: [
-      { name: 'user', description: 'Who receives the coins', type: 'user', required: true },
-      { name: 'amount', description: 'How many coins to send', type: 'integer', required: true },
-      { name: 'note', description: 'Optional note shown with the transfer', type: 'string' },
-    ],
-    examples: ['/pay user:@username amount:100', '/pay user:@username amount:50 note:thanks!'],
-    detail:
-      'Transfers Pulse Coins between global balances — the transfer is atomic, refused if the sender cannot afford it, and recorded in both members’ transaction history. Public by default so the recipient sees it land.',
-  },
-  {
-    name: 'alt-check',
-    description: "Check an account's alt risk — score, factors and potential linked accounts",
-    category: 'moderation',
-    defaultPermission: 'moderator',
-    options: [
-      { name: 'user', description: 'The account to check', type: 'user', required: true },
-    ],
-    examples: ['/alt-check user:@username'],
-    detail:
-      'Scores an account against the alt-account indicators Pulse can see — account age, join recency, default avatar, activity, moderation history, reputation, economy footprint, giveaways, onboarding and prior safety flags — then lists the accounts that may be related, each with a confidence percentage. Nothing here proves an alt: Discord exposes no IP or device data, so treat the score as evidence to review. Every check is recorded in the Alt Detection view. Moderators only.',
-  },
-]
+// The catalog itself is fetched from the `command_catalog` table — see
+// `lib/commands-server.ts`, which the Command Center page calls and passes down
+// as props. There is deliberately NO static copy here: that copy is what drifted
+// out of sync with the bot.
 
-export const CATALOG_BY_NAME: Record<string, CommandDefinition> = Object.fromEntries(
-  COMMAND_CATALOG.map((c) => [c.name, c]),
-)
+/** Index a fetched catalog by name for O(1) lookups in the UI. */
+export function catalogByName(
+  catalog: CommandDefinition[],
+): Record<string, CommandDefinition> {
+  return Object.fromEntries(catalog.map((c) => [c.name, c]))
+}
 
 // ── Per-guild config ──────────────────────────────────────────────────────────
 
@@ -292,6 +216,31 @@ export function commandStatus(config: CommandConfig): CommandStatus {
 
 // ── Display metadata ─────────────────────────────────────────────────────────
 
+/**
+ * Member-facing names for the modules a command can belong to. MIRRORS the
+ * `label` fields of MODULE_SOURCES in `pulse-bot/src/feature-gate.js` — the bot
+ * syncs the module KEY, not its label, so the two must agree. An unknown key
+ * (an older dashboard against a newer bot) falls back to the raw key rather
+ * than rendering blank.
+ *
+ * Note this is a superset of FEATURE_KEYS in lib/templates.ts: templates can
+ * only flip nine features, but Birthdays and Invites also own master switches
+ * that gate their commands.
+ */
+export const MODULE_LABELS: Record<string, string> = {
+  automations: 'Automations',
+  onboarding: 'Onboarding & Welcome',
+  moderation_alerts: 'Moderation Alerts',
+  pulse_guard: 'Pulse Guard',
+  ddos_protection: 'DDoS Protection',
+  tickets: 'Tickets',
+  private_channels: 'Private Channels',
+  leveling: 'Levels & XP',
+  economy: 'Economy',
+  birthdays: 'Birthdays',
+  invites: 'Invite Tracking',
+}
+
 export const CATEGORY_META: Record<CommandCategory, { label: string; description: string }> = {
   utility: { label: 'Utility', description: 'Everyday helpers and the dashboard bridge.' },
   information: { label: 'Information', description: 'Look up servers and members.' },
@@ -302,6 +251,11 @@ export const CATEGORY_META: Record<CommandCategory, { label: string; description
 export const PERMISSION_META: Record<CommandPermissionLevel, { label: string; description: string }> =
   {
     everyone: { label: 'Everyone', description: 'Any member can run this command.' },
+    support: {
+      label: 'Support staff',
+      description:
+        'Requires one of the support roles set under Server › Tickets — plus moderators and admins.',
+    },
     moderator: {
       label: 'Moderators',
       description: 'Requires Manage Messages, Kick, Ban, Timeout, or Manage Server.',
@@ -315,6 +269,7 @@ export const PERMISSION_META: Record<CommandPermissionLevel, { label: string; de
 export const PERMISSION_LEVEL_OPTIONS: { value: ConfigPermissionLevel; label: string }[] = [
   { value: 'inherit', label: 'Default for command' },
   { value: 'everyone', label: 'Everyone' },
+  { value: 'support', label: 'Support staff only' },
   { value: 'moderator', label: 'Moderators only' },
   { value: 'admin', label: 'Admins only' },
 ]

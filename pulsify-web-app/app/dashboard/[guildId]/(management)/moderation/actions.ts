@@ -49,6 +49,13 @@ const ACTION_LABELS: Record<string, string> = {
   remove_role: 'removed a role from',
   delete_message: 'deleted a message from',
   bulk_delete_messages: 'bulk-deleted messages from',
+  // Channel operations, written by the bot's /channel commands (PULSIFY-61).
+  // Listed here so the activity feed renders them properly when it reads a row
+  // this file didn't write — they have no target member, so the phrasing stands
+  // alone. Keep in lock-step with ACTION_LABELS in pulse-bot/src/moderation-log.js.
+  channel_lock: 'locked a channel',
+  channel_unlock: 'unlocked a channel',
+  channel_slowmode: "changed a channel's slowmode",
 }
 
 async function recordLog(

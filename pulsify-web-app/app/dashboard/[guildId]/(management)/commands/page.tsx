@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { fetchGuildChannels, fetchGuildRoles } from '@/lib/discord'
 import { normaliseConfig, type CommandConfig } from '@/lib/commands'
+import { getCommandCatalog } from '@/lib/commands-server'
 import { CommandsContent } from '@/components/dashboard/CommandsContent'
 
 export default async function CommandsPage({
@@ -16,9 +17,14 @@ export default async function CommandsPage({
   } = await supabase.auth.getUser()
   if (!user) redirect('/')
 
-  const [channels, roles, { data: rows }] = await Promise.all([
+  // The catalog is whatever the bot last published to `command_catalog` — the
+  // dashboard never hardcodes the command list (PULSIFY-61). An empty array
+  // means the bot has never booted against this database; CommandsContent
+  // renders an empty state for it.
+  const [channels, roles, catalog, { data: rows }] = await Promise.all([
     fetchGuildChannels(guildId),
     fetchGuildRoles(guildId),
+    getCommandCatalog(),
     supabase
       .from('command_configs')
       .select('*')
@@ -47,6 +53,7 @@ export default async function CommandsPage({
   return (
     <CommandsContent
       guildId={guildId}
+      catalog={catalog}
       channels={textChannels}
       roles={assignableRoles}
       initialConfigs={initialConfigs}

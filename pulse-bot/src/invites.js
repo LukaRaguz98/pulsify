@@ -747,12 +747,13 @@ function createInvites(client, supabase) {
   }
 
   // Referral rewards are Member Milestones with the `invites` metric, so
-  // /invite-rewards lists those milestones + the member's progress.
-  async function handleRewardsCommand({ interaction, guild }) {
+  // /invite rewards shows those milestones with the SAME look as /milestones
+  // (the achievement-card image), delegating to milestones.renderMilestoneCards.
+  async function handleRewardsCommand({ interaction, guild, milestones: milestonesModule }) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral }).catch(() => {});
     const { data: milestones } = await supabase
       .from("milestones")
-      .select("name, threshold, rewards, enabled, metric")
+      .select("name, threshold, enabled, metric")
       .eq("guild_id", guild.id)
       .eq("metric", "invites")
       .eq("enabled", true)
@@ -766,13 +767,33 @@ function createInvites(client, supabase) {
     }
     const s = await statsForInviter(guild.id, interaction.user.id);
     const valid = s.valid + s.bonus;
-    const roleName = (id) => guild.roles.cache.get(id)?.name;
+
+    // Render the invite milestones exactly like /milestones (cards image).
+    if (milestonesModule?.renderMilestoneCards) {
+      const entries = milestones.map((m) => ({
+        name: m.name,
+        metric: "invites",
+        threshold: m.threshold,
+        value: valid,
+        earned: valid >= m.threshold,
+      }));
+      const page = await milestonesModule.renderMilestoneCards({
+        guild,
+        title: "Invite rewards",
+        subtitle: guild.name,
+        leadText: `You have **${valid}** valid invite${valid === 1 ? "" : "s"}.`,
+        entries,
+        footerLabel: "Pulse — Invite rewards",
+      });
+      await interaction.editReply({ flags: MessageFlags.IsComponentsV2, ...page }).catch(() => {});
+      return;
+    }
+
+    // Fallback (milestones module unavailable): a plain progress list.
     const lines = milestones.map((m) => {
-      const roles = Array.isArray(m.rewards) ? m.rewards.map((r) => roleName(r.role_id)).filter(Boolean) : [];
-      const reward = roles.length ? ` — ${roles.join(", ")}` : "";
       const done = valid >= m.threshold;
-      const mark = done ? "✓" : `${valid}/${m.threshold}`;
-      return `**${m.name}** — ${m.threshold} valid${reward} ${done ? `(${mark})` : `— ${mark}`}`;
+      const mark = done ? "reached" : `${valid}/${m.threshold}`;
+      return `**${m.name}** — ${m.threshold} valid — ${mark}`;
     });
     lines.unshift(`-# You have **${valid}** valid invite${valid === 1 ? "" : "s"}`);
     await replyEphemeral(interaction, guild, "Invite rewards", lines, true);

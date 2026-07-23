@@ -2,7 +2,7 @@
 //
 // Two jobs:
 //
-//   1. /alt-check — a moderator asks about an account and gets the same report
+//   1. /alt check — a moderator asks about an account and gets the same report
 //      the dashboard shows: the 0-100 Alt Risk Score, the factors behind it, the
 //      accounts that may be related (with a confidence percentage) and a one-line
 //      recommendation. Every check is recorded in alt_lookups, so the dashboard's
@@ -15,7 +15,7 @@
 //
 // The scoring + correlation maths MIRRORS pulsify-web-app/lib/alt-detection.ts —
 // keep the two in sync (same weights, same thresholds), the way birthdays.js and
-// lib/birthdays.ts are. If they drift, /alt-check and the dashboard will disagree
+// lib/birthdays.ts are. If they drift, /alt check and the dashboard will disagree
 // about the same account, which is worse than either being slightly wrong.
 
 const { Events, MessageFlags } = require("discord.js");
@@ -272,7 +272,7 @@ function minutesApart(a, b) {
 
 /**
  * Correlate the subject against one candidate (mirror of correlateAccount).
- * The bot's /alt-check works from the data it can get cheaply — names, join
+ * The bot's /alt check works from the data it can get cheaply — names, join
  * times, account ages, moderator-asserted links and coin transfers. The hourly
  * activity-pattern indicator is dashboard-only: it costs an extra aggregate per
  * lookup and the embed has no room to explain it.
@@ -639,7 +639,7 @@ function createAltDetection(client, supabase) {
     }
   }
 
-  // ── /alt-check ──────────────────────────────────────────────────────────────
+  // ── /alt check ──────────────────────────────────────────────────────────────
 
   function formatDate(iso) {
     if (!iso) return "Unknown";
@@ -707,7 +707,7 @@ function createAltDetection(client, supabase) {
     }
     const mitigations = risk.signals.filter((s) => s.tone === "mitigating").slice(0, 3);
     if (mitigations.length > 0) {
-      body.push(text(`-# In its favour — ${mitigations.map((s) => s.label).join(", ")}`));
+      body.push(text(`-# In its favour — ${mitigations.map((s) => `\`${s.label}\``).join(" ")}`));
     }
 
     // Potential linked accounts.
@@ -723,8 +723,8 @@ function createAltDetection(client, supabase) {
             .map(
               (l) =>
                 `<@${l.userId}> — **${l.confidence}%**${l.manual ? " (linked by a moderator)" : ""}\n-# ${l.indicators
-                  .map((i) => i.label)
-                  .join(" — ")}`,
+                  .map((i) => `\`${i.label}\``)
+                  .join(" ")}`,
             )
             .join("\n"),
         ),

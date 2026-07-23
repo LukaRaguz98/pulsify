@@ -5347,3 +5347,218 @@ Acceptance Criteria
 	Discord commands return accurate information
 	Manual admin actions are logged
 	UI remains responsive and visually polished
+
+PULSIFY-61 — Slash Commands Expansion & Full Feature Parity (v0.61.0)
+
+Description
+	Expand Pulse's slash command set so that core actions already implemented across Pulsify modules can also be executed directly from Discord, not only through the web dashboard.
+	All commands must follow existing Pulse v2 embed styling and conventions established by /sync, /changelog, /balance, /pay, /leaderboard, /earn, /birthday, /alt-check, and /invites.
+	Sensitive commands are restricted to Admin/Moderator permission levels, while safe read-only and self-service commands are available to all members.
+
+Goals
+	Bring dashboard-only actions to Discord via slash commands
+	Achieve near-full feature parity between the web app and Discord
+	Maintain strict permission separation between admin and member commands
+	Ensure consistent Pulse v2 embed design across all commands
+	Reduce the need to open the web app for common administrative tasks
+	Keep command behavior synchronized with dashboard-configured settings and permissions
+
+Already Implemented (Reference Only)
+	/balance
+	/pay
+	/leaderboard
+	/earn
+	/birthday set
+	/birthday view
+	/birthday upcoming
+	/birthday remove
+	/alt-check
+	/invites
+	/invites user
+	/invite-leaderboard
+	/invite-rewards
+	/changelog [version]
+	/sync
+
+Tasks
+
+	Moderation Commands (Admin/Moderator)
+		Implement:
+			/warn [user] [reason]
+			/timeout [user] [duration] [reason]
+			/untimeout [user]
+			/kick [user] [reason]
+			/ban [user] [reason] [delete_days]
+			/unban [user_id] [reason]
+			/warnings [user]
+			/purge [amount] [user (optional)]
+			/modlogs [user (optional)]
+
+		Ensure moderation actions synchronize with:
+			Moderation History
+			Management Analytics
+			Audit Logs
+
+	Pulse Guard Commands (Admin/Moderator)
+		Implement:
+			/guard status
+			/guard whitelist add
+			/guard whitelist remove
+			/guard review
+
+	Roles Commands (Admin)
+		Implement:
+			/role add [user] [role]
+			/role remove [user] [role]
+			/temprole [user] [role] [duration]
+			/role info [role]
+			/role hierarchy
+
+	Self-Assign Roles (Member)
+		Implement:
+			/roles menu [category]
+
+	Channels Commands (Admin)
+		Implement:
+			/channel lock [channel (optional)]
+			/channel unlock [channel (optional)]
+			/channel slowmode [seconds]
+			/channel stats [channel (optional)]
+
+	Tickets & Applications
+		Implement:
+			/ticket close [reason (optional)]
+			/ticket claim
+			/ticket add [user]
+			/ticket priority [level]
+			/application status
+
+	Events
+		Implement:
+			/event list
+			/event info [event]
+			/event create
+			/event cancel [event]
+
+	Giveaways
+		Implement:
+			/giveaway create
+			/giveaway reroll [giveaway]
+			/giveaway end [giveaway]
+			/giveaway list
+
+	Polls
+		Implement:
+			/poll create
+			/poll results [poll]
+			/poll close [poll]
+
+	Member & Community
+		Implement:
+			/userinfo [user (optional)]
+			/serverinfo
+			/rank [user (optional)]
+			/milestones [user (optional)]
+			/reputation [user (optional)]
+
+	Private Channels
+		Implement:
+			/privatechannel lock
+			/privatechannel unlock
+			/privatechannel invite [user]
+			/privatechannel kick [user]
+			/privatechannel rename [name]
+
+	Announcements
+		Implement:
+			/announce [channel] [message]
+			/announcements recent
+
+	Automations
+		Implement:
+			/automation list
+			/automation toggle [automation]
+			/automation run [automation]
+			/automation logs [automation]
+
+	Analytics & Insights
+		Implement:
+			/stats overview
+			/stats channel [channel]
+			/insights
+			/management stats [staff (optional)]
+
+	Verification & Onboarding
+		Implement:
+			/verify [user]
+			/verification status [user (optional)]
+			/onboarding resend
+			/onboarding stats
+
+	Server Settings & Assets
+		Implement:
+			/serversettings view
+			/presence set [type] [text]
+			/presence reset
+			/emoji list
+			/emoji info [name]
+			/sticker list
+			/sticker info [name]
+			/soundboard list
+			/soundboard play [name]
+			/statchannel refresh
+
+	Backup & Recovery
+		Implement:
+			/backup create
+			/backup list
+
+	Integrations & Templates
+		Implement:
+			/integrations status
+			/template apply [template]
+
+	Notifications & Feedback
+		Implement:
+			/notifications preferences
+			/feedback submit
+
+	Cross-Cutting Improvements
+		Create a shared permission-check helper supporting:
+			Admin
+			Moderator
+			Support Staff
+			Member
+
+		Ensure every command:
+			respects dashboard feature enable/disable settings
+			respects subscription plan feature gating
+			returns clear upgrade prompts where required
+			logs write actions with source "Discord Command"
+			uses the shared Pulse v2 embed builder
+			implements cooldowns where appropriate
+			returns consistent permission and validation errors
+			supports autocomplete where applicable
+
+		Command Center Integration
+			Update Command Center (PULSIFY-15)
+
+			Automatically synchronize:
+				command list
+				command category
+				required permission level
+				module association
+				enabled/disabled state
+
+Acceptance Criteria
+	All listed slash commands are implemented
+	Permission restrictions function correctly
+	Member-facing commands work without elevated permissions
+	Commands respect module enable/disable settings
+	Commands respect subscription feature gating
+	Dashboard and Discord remain fully synchronized
+	Actions executed through Discord are logged identically to dashboard actions
+	All embeds follow Pulse v2 design standards
+	Autocomplete and validation prevent invalid input
+	Command Center automatically lists all implemented commands
+	UI and command experience remain polished, responsive, and consistent

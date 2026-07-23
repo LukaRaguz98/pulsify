@@ -42,10 +42,23 @@ export const PULSE_ICONS = {
   money: 'pulse-money.png',
   /** Cake glyph — the birthday announcement + /birthday embeds. */
   birthday: 'pulse-birthday.png',
-  /** Shield glyph — the account-safety embeds (/alt-check). */
+  /** Shield glyph — the account-safety embeds (/alt check). */
   safety: 'pulse-guard.png',
-  /** Invite / referral glyph — the invite embeds (/invites, boards, rewards). */
-  invite: 'pulse-invite.png',
+  /** Trophy glyph — the invite embeds (/invites, boards, rewards). Shares the
+   *  leaderboard trophy; pulse-invite.png was a byte-identical duplicate, removed. */
+  invite: 'pulse-leaderboard.png',
+  /** Medal glyph — the global trust score (/reputation). */
+  reputation: 'pulse-reputation.png',
+  /** People glyph — role management (/role info, /role hierarchy). */
+  roles: 'pulse-roles.png',
+  /** Hash glyph — channel tools (/channel stats). */
+  channel: 'pulse-channel.png',
+  /** Results-bars glyph — polls (/poll create, results, close). */
+  poll: 'pulse-poll.png',
+  /** Calendar glyph — Discord scheduled events (/event). */
+  event: 'pulse-event.png',
+  /** Workflow glyph — scheduled automations (/automation). */
+  automation: 'pulse-automation.png',
 } as const
 
 export type PulseIconName = keyof typeof PULSE_ICONS

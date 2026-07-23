@@ -23,8 +23,10 @@ const {
   buildPulseContainer,
   getPulseColor,
   loadPulseIcon,
+  loadProfileBars,
   replyContainer,
   replyNotice,
+  editNotice,
   text,
   divider,
 } = require("./commands");
@@ -53,6 +55,12 @@ function levelUpCoins(level) {
 }
 
 const fmt = (n) => Math.max(0, Math.round(Number(n) || 0)).toLocaleString();
+
+/** Monospace 0-100 bar for the /reputation reply (inline code is fixed-width). */
+function repBar(pct, width = 18) {
+  const filled = Math.max(0, Math.min(width, Math.round(((Number(pct) || 0) / 100) * width)));
+  return "█".repeat(filled) + "░".repeat(width - filled);
+}
 
 /** Compact voice duration: "12h 30m", "45m", "8m", "0m". */
 function formatVoice(totalSeconds) {
@@ -358,6 +366,75 @@ function createEconomy(client, supabase) {
       icon,
       ephemeral,
     );
+  }
+
+  async function handleReputationCommand({ interaction, guild, ephemeral }) {
+    const user = interaction.options.getUser("user") ?? interaction.user;
+    const isSelf = user.id === interaction.user.id;
+    const name = user.globalName ?? user.username;
+
+    if (user.bot) {
+      await replyNotice(interaction, "Bots don't have a Pulse reputation.");
+      return;
+    }
+
+    // Defer: the accent-tinted reputation bar is a generated image (a REST
+    // fetch), same as /profile — deferring keeps us inside Discord's window.
+    await interaction.deferReply({ flags: ephemeral ? MessageFlags.Ephemeral : 0 });
+
+    const colorHex = await getPulseColor(supabase, guild.id);
+    const [icon, rep] = await Promise.all([
+      loadPulseIcon("reputation", colorHex),
+      getGlobalReputation(user.id, user.createdTimestamp),
+    ]);
+
+    if (!rep) {
+      await editNotice(interaction, "Reputation isn't available right now — try again shortly.", colorHex);
+      return;
+    }
+
+    // The reputation bar is rendered exactly like /profile's (loadProfileBars),
+    // just reputation-only, so it looks identical wherever it appears.
+    const bars = await loadProfileBars({
+      colorHex,
+      rep: { pct: rep.score, label: "Reputation", detail: `${rep.score}/100 — ${rep.tier}` },
+    });
+
+    const body = [
+      text(
+        isSelf
+          ? "Your Pulse reputation — a global trust score from your activity and standing across every server running Pulse."
+          : `${name}'s Pulse reputation — a global trust score from activity and standing across every server running Pulse.`,
+      ),
+      divider(),
+    ];
+    if (bars) {
+      body.push({ type: 12, items: [{ media: { url: "attachment://profile-bars.png" } }] });
+    } else {
+      // Unicode fallback when the image can't be fetched (mirrors /profile).
+      body.push(text(`**${rep.tier}**\n## ${rep.score}/100\n\`${repBar(rep.score)}\``));
+    }
+    body.push(divider());
+    body.push(
+      text(
+        "-# Reputation grows with account age, time in servers, messages and voice — and is lowered by moderation history. It's computed live, never stored.",
+      ),
+    );
+
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        buildPulseContainer({
+          iconUrl: icon ? `attachment://${icon.name}` : null,
+          colorHex,
+          title: "Reputation",
+          subtitle: name,
+          body,
+          footer: "Pulse — Global reputation",
+        }),
+      ],
+      files: [icon, bars].filter(Boolean),
+    });
   }
 
   async function handlePayCommand({ interaction, guild, ephemeral }) {
@@ -833,6 +910,7 @@ function createEconomy(client, supabase) {
     getWallet,
     getGlobalReputation,
     handleBalanceCommand,
+    handleReputationCommand,
     handlePayCommand,
     handleLeaderboardCommand,
     handleInfoCommand,

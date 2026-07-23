@@ -404,7 +404,7 @@ function createMilestones(client, supabase, rewards = null) {
     });
     const body = [text(rendered)];
     if (milestone.rewards.length > 0) {
-      body.push(text(`-# Unlocked: ${milestone.rewards.map((r) => `<@&${r.role_id}>`).join(", ")}`));
+      body.push(text(`-# Unlocked: ${milestone.rewards.map((r) => `<@&${r.role_id}>`).join(" ")}`));
     }
     // No header badge: the unlock message is a sentence (plus the reward roles),
     // so a thumbnail would dominate it — see the embed conventions on
@@ -599,6 +599,85 @@ function createMilestones(client, supabase, rewards = null) {
   // Build the milestones achievement page for a member: which they've earned and
   // which they still need to earn. Paginates at 9 per page (3×3 board).
   // Returns { components, files } ready to reply.
+  /**
+   * Render an ARBITRARY set of milestone-like entries with the exact /milestones
+   * look — the accent-tinted achievement-card image (loadMilestoneCards) plus the
+   * banner and the milestone badge — so any surface that shows milestones (e.g.
+   * /invite rewards, whose invite milestones are `invites`-metric Member
+   * Milestones) renders identically instead of a bespoke text list.
+   *
+   * `entries` is an array of `{ name, metric, threshold, value, earned }`.
+   * Returns `{ files, components }` ready to pass to reply/editReply.
+   */
+  async function renderMilestoneCards({
+    guild,
+    title,
+    subtitle,
+    leadText,
+    entries,
+    footerLabel = "Pulse — Milestones",
+  }) {
+    const colorHex = await getPulseColor(supabase, guild.id);
+    const icon = await loadPulseIcon("milestone", colorHex);
+    const iconUrl = icon ? `attachment://${icon.name}` : null;
+    const files = icon ? [icon] : [];
+
+    // One 3×3 board, like buildMilestonesPage's per-page slice.
+    const shown = (entries ?? []).slice(0, 9);
+    const cardData = shown.map((e) => ({
+      n: e.name,
+      t: describeThresholdLong(e.metric, e.threshold),
+      e: e.earned ? 1 : 0,
+      p: milestoneProgress(e.value, e.threshold).pct,
+      v: formatMetricValueLong(e.metric, e.value),
+    }));
+    const [cardsImg, bannerImg] = await Promise.all([
+      loadMilestoneCards(colorHex, cardData),
+      loadMilestoneBanner(colorHex, guild.name),
+    ]);
+
+    const body = [];
+    if (leadText) body.push(text(leadText));
+    if (cardsImg) {
+      body.push({ type: 12, items: [{ media: { url: "attachment://milestone-cards.png" } }] });
+      files.push(cardsImg);
+    } else {
+      // Text fallback (same shape as buildMilestonesPage's) when the image fails.
+      body.push(divider());
+      body.push(
+        text(
+          shown
+            .map((e) =>
+              e.earned
+                ? `**${e.name}** — ${describeThresholdLong(e.metric, e.threshold)} *(earned)*`
+                : `**${e.name}** — ${formatMetricValueLong(e.metric, e.value)} / ` +
+                  `${describeThresholdLong(e.metric, e.threshold)} (${milestoneProgress(e.value, e.threshold).pct}%)`,
+            )
+            .join("\n"),
+        ),
+      );
+    }
+    if (bannerImg) {
+      body.push({ type: 12, items: [{ media: { url: "attachment://milestone-banner.png" } }] });
+      files.push(bannerImg);
+    }
+
+    return {
+      files,
+      components: [
+        buildPulseContainer({
+          iconUrl,
+          colorHex,
+          title,
+          subtitle,
+          body,
+          footer: footerLabel,
+          noSpacer: !!(cardsImg || bannerImg),
+        }),
+      ],
+    };
+  }
+
   async function buildMilestonesPage(guild, member, isSelf, page = 0) {
     const colorHex = await getPulseColor(supabase, guild.id);
     const icon = await loadPulseIcon("milestone", colorHex);
@@ -853,6 +932,8 @@ function createMilestones(client, supabase, rewards = null) {
     recordEventParticipation,
     handleMilestonesCommand,
     hasEnabledMilestones,
+    // Reusable /milestones-look renderer for other surfaces (e.g. /invite rewards).
+    renderMilestoneCards,
   };
 }
 
