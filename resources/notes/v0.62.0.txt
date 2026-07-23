@@ -15,3 +15,5 @@ Pulsify has grown a lot — dozens of new modules, commands and tools. This rele
 
 **Still free in early access**
 - Nothing is locked today. When early access ends, these are the plans you'll see — and you'll have plenty of notice first.
+
+July 23, 2026
