@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
+import { requireGuildFeature } from '@/lib/billing-server'
 import { recordNotification } from '@/lib/notifications-server'
 import { readGuildEmbedInt } from '@/lib/embed-color'
 import { postChannelComponents, type V2TopLevelComponent } from '@/lib/discord'
@@ -83,6 +84,14 @@ export async function saveSecurityConfig(
 ): Promise<ActionResult> {
   const auth = await authorizeGuildModerator(guildId)
   if (!auth.ok) return { ok: false, error: auth.error }
+
+  // Plan gate (PULSIFY-62): DDoS Protection is a Plus+ feature, gated on the
+  // server owner's plan. Only enabling is gated — disabling is always allowed
+  // so a downgraded server can always turn it back off.
+  if (input.enabled) {
+    const gate = await requireGuildFeature(guildId, 'ddosProtection')
+    if (!gate.ok) return { ok: false, error: gate.error }
+  }
 
   const supabase = await createClient()
   const rules = normaliseRules(input.rules)

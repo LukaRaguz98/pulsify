@@ -30,6 +30,7 @@ const {
 } = require("./commands");
 const { recordNotification } = require("./notifications");
 const { parseDuration } = require("./moderation");
+const { checkLimit } = require("./feature-gate");
 
 const STATUS_LABELS = {
   [GuildScheduledEventStatus.Scheduled]: "Scheduled",
@@ -180,6 +181,21 @@ function createEvents({ client, supabase }) {
     const durMin = durationRaw ? parseDuration(durationRaw) : DEFAULT_DURATION_MINUTES;
     if (!durMin || durMin < 1 || durMin > MAX_DURATION_MINUTES) {
       await replyNotice(interaction, "Enter how long it lasts — e.g. `1h`, `2h`, `1d` (up to 30 days).");
+      return;
+    }
+
+    // Plan limit (PULSIFY-62): concurrent scheduled events, gated on the guild
+    // owner's plan — same cap the dashboard shows. Counts upcoming/active events
+    // (Discord-native, so we count the live collection, not a table).
+    const existing = await fetchEvents(guild);
+    const liveEvents = existing.filter(
+      (e) =>
+        e.status === GuildScheduledEventStatus.Scheduled ||
+        e.status === GuildScheduledEventStatus.Active,
+    ).length;
+    const gate = await checkLimit(supabase, guild, "maxScheduledEvents", liveEvents);
+    if (!gate.allowed) {
+      await replyNotice(interaction, gate.reason);
       return;
     }
 

@@ -5,6 +5,7 @@ import path from 'node:path'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
+import { requireGuildLimit } from '@/lib/billing-server'
 import { readGuildEmbedInt } from '@/lib/embed-color'
 import { recordNotification } from '@/lib/notifications-server'
 import {
@@ -231,6 +232,15 @@ export async function connectIntegration(
 
   const supabase = await createClient()
   const fields = buildFields(provider, draft)
+
+  // Plan limit (PULSIFY-62): connected integrations per guild, gated on the
+  // server owner's plan. Enforced on connect only — see audit §6.
+  const { count: connectedCount } = await supabase
+    .from('integrations')
+    .select('id', { count: 'exact', head: true })
+    .eq('guild_id', guildId)
+  const integrationLimit = await requireGuildLimit(guildId, 'maxIntegrations', connectedCount ?? 0)
+  if (!integrationLimit.ok) return { ok: false, error: integrationLimit.error }
 
   // Guard against connecting the exact same resource twice.
   if (fields.external_ref) {

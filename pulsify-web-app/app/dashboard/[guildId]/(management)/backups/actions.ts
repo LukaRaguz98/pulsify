@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
-import { requireFeature } from '@/lib/billing-server'
+import { requireGuildFeature } from '@/lib/billing-server'
 import { recordNotification } from '@/lib/notifications-server'
 import {
   fetchGuildChannels,
@@ -58,7 +58,7 @@ function revalidate(guildId: string) {
 async function authorize(guildId: string) {
   const auth = await authorizeGuildModerator(guildId)
   if (!auth.ok) return { ok: false as const, error: auth.error }
-  const gate = await requireFeature('backupRestore')
+  const gate = await requireGuildFeature(guildId, 'backupRestore')
   if (!gate.ok) return { ok: false as const, error: gate.error }
   return { ok: true as const, moderator: auth.moderator }
 }

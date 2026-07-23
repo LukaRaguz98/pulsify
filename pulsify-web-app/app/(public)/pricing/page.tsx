@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Eyebrow } from '@/components/landing/landing-ui'
 import { PricingCards } from '@/components/billing/PricingCards'
+import { PricingComparison } from '@/components/billing/PricingComparison'
 import { getCurrentClientSubscription } from '@/lib/billing-server'
 import { effectivePlan, isEarlyAccess } from '@/lib/billing'
 
@@ -29,6 +30,7 @@ export default async function PricingPage() {
       </header>
 
       <PricingCards currentPlan={currentPlan} earlyAccess={earlyAccess} />
+      <PricingComparison />
     </div>
   )
 }

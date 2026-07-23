@@ -1,0 +1,17 @@
+**Pulsify v0.62.0 — Plans, Clarified**
+Pulsify has grown a lot — dozens of new modules, commands and tools. This release maps every one of them to a plan, so it's finally crystal clear what's included where. No prices changed, no plans were added, and Pulsify is still completely free during early access — every feature stays unlocked at no cost.
+
+**A full feature comparison**
+- **New comparison table** on the pricing page — every module, every usage limit and every premium feature, side by side across Free, Plus, Pro and Enterprise.
+- **Clearer plan cards** — the feature lists now reflect everything Pulsify actually does.
+
+**Generous Free**
+- **Every core module is included on Free** — moderation, levels, economy, reputation, birthdays, invites, polls, giveaways, events, tickets, onboarding, self-assign roles, statistics channels, private channels, alt-detection checks and more.
+- Paid plans lift the usage limits and unlock AI moderation (Pulse Guard), advanced & bulk moderation, custom branding, DDoS protection, advanced analytics, multi-server workspaces and backup & restore.
+
+**Consistent everywhere**
+- **Your dashboard, the API and Discord slash commands now agree** on exactly what each server can do — gated on the server's plan, so members always get what the server owner is paying for.
+- **Clearer limits** — the Billing page shows every usage limit for your plan at a glance.
+
+**Still free in early access**
+- Nothing is locked today. When early access ends, these are the plans you'll see — and you'll have plenty of notice first.

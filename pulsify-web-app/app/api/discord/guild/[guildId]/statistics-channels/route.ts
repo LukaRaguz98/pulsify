@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
+import { requireGuildLimit } from '@/lib/billing-server'
 import { createClient } from '@/lib/supabase-server'
 import { computeStatValues } from '@/lib/statistics-values'
 import {
@@ -74,6 +75,10 @@ export async function POST(
       { status: 400 },
     )
   }
+  // Plan limit (PULSIFY-62): stat channels per guild, gated on the server
+  // owner's plan (tighter than the technical STAT_LIMITS ceiling above).
+  const statLimit = await requireGuildLimit(guildId, 'maxStatisticChannels', rows.length)
+  if (!statLimit.ok) return NextResponse.json({ error: statLimit.error }, { status: 403 })
   // Soft duplicate guard — one channel per statistic unless explicitly allowed.
   if (!body.allowDuplicate && rows.some((r) => r.stat_type === draft.stat_type)) {
     return NextResponse.json(

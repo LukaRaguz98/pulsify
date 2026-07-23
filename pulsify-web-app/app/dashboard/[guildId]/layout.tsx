@@ -16,8 +16,9 @@ import { PlanProvider } from '@/components/billing/PlanProvider'
 import {
   getSubscriptionRow,
   toClientSubscription,
+  getGuildPlan,
 } from '@/lib/billing-server'
-import { effectivePlan, isEarlyAccess, EARLY_ACCESS_PLAN } from '@/lib/billing'
+import { isEarlyAccess } from '@/lib/billing'
 import { getGuildAccess } from '@/lib/guild-access'
 import { MemberViewBanner } from '@/components/dashboard/MemberViewBanner'
 import { ViewSwitcher } from '@/components/dashboard/ViewSwitcher'
@@ -54,10 +55,16 @@ export default async function GuildLayout({
   const discordId = session.user.user_metadata?.provider_id ?? session.user.id
   const bannerUrl = selfUser?.banner ? userBannerUrl(selfUser.id ?? discordId, selfUser.banner) : undefined
 
-  // Resolve the user's effective plan once at layout level so every client
-  // component below can render plan-aware UI without a network round-trip.
-  // Server routes still re-verify (lib/billing-server.requirePlan) — this
-  // provider is a UX hint, not a security boundary.
+  // Resolve the plan once at layout level so every client component below can
+  // render plan-aware UI without a network round-trip. Server routes still
+  // re-verify (lib/billing-server.requireGuildFeature/…) — this provider is a
+  // UX hint, not a security boundary.
+  //
+  // Feature gating uses the GUILD's plan (its owner's subscription), matching
+  // the /slash-command gate (pulse-bot feature-gate.js) and the guild-scoped
+  // server actions — so the dashboard, the API and Discord all agree on what
+  // this server may do. The `subscription` we pass on is still the viewer's OWN
+  // (for their billing badge/renewal), which is a separate concern.
   const subscriptionRow = await getSubscriptionRow(discordId)
   const subscription = toClientSubscription(subscriptionRow)
   // Bot-wide surfaces (e.g. Presence) are operator-only, so the nav item is
@@ -70,7 +77,7 @@ export default async function GuildLayout({
   // unlocked; the `earlyAccess` flag lets client components soften plan-specific
   // copy (no upsells, "free during early access").
   const earlyAccess = isEarlyAccess()
-  const plan = earlyAccess ? EARLY_ACCESS_PLAN : effectivePlan(subscriptionRow?.plan, subscriptionRow?.status)
+  const plan = await getGuildPlan(guildId)
 
   const shell = (
     <PlanProvider plan={plan} subscription={subscription} earlyAccess={earlyAccess}>

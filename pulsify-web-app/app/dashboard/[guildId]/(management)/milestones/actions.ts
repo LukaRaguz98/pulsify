@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
+import { requireGuildLimit } from '@/lib/billing-server'
 import { recordNotification } from '@/lib/notifications-server'
 import { readGuildEmbedInt } from '@/lib/embed-color'
 import { fetchGuild, postChannelComponents, type V2TopLevelComponent } from '@/lib/discord'
@@ -88,14 +89,14 @@ export async function createMilestone(
   const inviteGuard = await ensureInviteTracking(supabase, guildId, draft.metric)
   if (inviteGuard) return inviteGuard
 
-  // Guard against unbounded milestone counts per guild.
+  // Plan limit (PULSIFY-62): milestone definitions per guild, gated on the
+  // server owner's plan (replaces the old flat cap of 100).
   const { count } = await supabase
     .from('milestones')
     .select('id', { count: 'exact', head: true })
     .eq('guild_id', guildId)
-  if ((count ?? 0) >= 100) {
-    return { ok: false, error: 'You\'ve reached the milestone limit (100) for this server.' }
-  }
+  const milestoneLimit = await requireGuildLimit(guildId, 'maxMilestones', count ?? 0)
+  if (!milestoneLimit.ok) return { ok: false, error: milestoneLimit.error }
 
   const row = draftToRow(draft)
   const { data: inserted, error } = await supabase

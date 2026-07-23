@@ -26,6 +26,7 @@ const { getGuildAccent } = require("./guild-accent");
 // One duration grammar everywhere — /giveaway create parses "24h", "2d", "90m"
 // with the same parser /timeout and /role temp use. Returns whole minutes.
 const { parseDuration } = require("./moderation");
+const { checkLimit } = require("./feature-gate");
 
 const GW = "gw";
 
@@ -701,6 +702,16 @@ function createGiveaways(client, supabase, leveling = null, rewards = null) {
     if (channel.guildId && channel.guildId !== guild.id) {
       return replyNotice(interaction, "That channel isn't in this server.");
     }
+
+    // Plan limit (PULSIFY-62): concurrent giveaways, gated on the guild owner's
+    // plan — same cap the dashboard enforces. Counts live ones only.
+    const { count: liveGiveaways } = await supabase
+      .from("giveaways")
+      .select("id", { count: "exact", head: true })
+      .eq("guild_id", guild.id)
+      .in("status", ["active", "scheduled"]);
+    const gate = await checkLimit(supabase, guild, "maxConcurrentGiveaways", liveGiveaways ?? 0);
+    if (!gate.allowed) return replyNotice(interaction, gate.reason);
 
     const winnerCount = Math.max(1, Math.min(GIVEAWAY_LIMITS.maxWinners, winners));
     const endsAt = new Date(Date.now() + minutes * 60_000);
