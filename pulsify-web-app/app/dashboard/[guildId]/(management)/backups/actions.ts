@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
 import { requireGuildFeature } from '@/lib/billing-server'
 import { recordNotification } from '@/lib/notifications-server'
+import { recordTimelineEvent } from '@/lib/timeline-server'
 import {
   fetchGuildChannels,
   fetchGuildRoles,
@@ -999,6 +1000,32 @@ export async function restoreBackup(
     actorId: auth.moderator.userId,
     actorName: auth.moderator.username,
     actorUsername: auth.moderator.handle,
+    // A restore is a rewrite of the server's configuration — the timeline
+    // records it as its own event (which sections, which backup) rather than
+    // a generic "settings changed".
+    timeline: false,
+  })
+
+  await recordTimelineEvent({
+    guildId,
+    type: 'backup_restored',
+    title: `Configuration restored from backup "${backup.name}"`,
+    description: `${applied.map((a) => a.label).join(', ')} restored${warnings.length ? ` — ${warnings.length} warning${warnings.length === 1 ? '' : 's'}` : ''}.`,
+    severity: warnings.length ? 'critical' : 'warning',
+    source: 'dashboard',
+    actorId: auth.moderator.userId,
+    actorName: auth.moderator.username,
+    actorUsername: auth.moderator.handle,
+    targetId: backup.id,
+    targetName: backup.name,
+    newValue: { sections: applied.map((a) => a.label) },
+    metadata: {
+      backup_type: backup.type,
+      section_keys: keys,
+      details: applied.map((a) => `${a.label}: ${a.detail}`),
+      warnings,
+    },
+    link: `/dashboard/${guildId}/backups`,
   })
 
   revalidate(guildId)

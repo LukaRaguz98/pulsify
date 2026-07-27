@@ -1,0 +1,36 @@
+**Pulsify v0.63.0 — Server History**
+Something changed and nobody remembers changing it. Until now that meant digging through Discord's Audit Log, guessing at dates, and cross-referencing half a dozen dashboard pages. Pulsify now keeps the whole story in one place: every significant change to your server, in order, whether it was made in the dashboard, through a slash command, or directly in Discord.
+
+**Analytics History**
+- **One chronological record** of roles, channels, members, moderation, economy, automations, events and server configuration.
+- **Grouped by day** and colour-coded by category, so a month of history is something you can actually skim.
+- **Every card tells you who** made the change — and, uniquely, **where from**: the dashboard, the Discord client, a slash command, or Pulse acting on its own.
+
+**See exactly what changed**
+- Expand any event for the **previous value and the new value**, field by field — a role rename, a permission grant, a verification level, a settings edit.
+- Affected members, related modules and the raw metadata are all there too, with one click through to the page the change belongs to.
+
+**Find the one you're looking for**
+- **Filter** by category, administrator, member, module, event type or date range.
+- **Search** across members, roles, channels, keywords and administrators.
+- Click an administrator or an affected member inside an event to instantly narrow the whole history around them.
+
+**Export it**
+- **CSV** for spreadsheets, **JSON** for tooling, and a formatted **PDF report** for sharing.
+- Export your current selection, the filtered view, or the complete history.
+
+**Know your server's rhythm**
+- Events today and this week, your **busiest periods** and busiest day, your **most active administrators** and the **most modified modules** — all at the top of the page.
+
+**In Discord too**
+- **`/timeline`** shows the most recent changes without leaving Discord, filterable by category or member.
+
+**A tidier sidebar**
+- The dashboard navigation has been regrouped around what you're actually working on: **Members**, **Content**, **Economy**, **Safety**, **Server**, **Pulse Bot** and **Analytics**.
+- People-shaped pages now sit together under Members — the directory, roles, onboarding, invites, milestones and birthdays — while everything you publish into the server lives under Content.
+- Nothing moved out of reach and no links broke. The staff performance page is now called **Staff**.
+
+**Plans**
+- History is included on **every plan, Free included**. How far back it reaches follows your plan's history retention — 30 days on Free, up to a year on Enterprise. Nothing is ever deleted, so upgrading brings older history straight back.
+
+July 27, 2026

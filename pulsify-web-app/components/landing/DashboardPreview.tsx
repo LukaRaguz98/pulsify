@@ -15,6 +15,9 @@ import {
   TerminalSquare,
   ShieldCheck,
   ChevronRight,
+  UsersRound,
+  Coins,
+  History,
 } from 'lucide-react'
 import { MockWindow } from './landing-ui'
 
@@ -25,6 +28,12 @@ import { MockWindow } from './landing-ui'
 const NAV_OVERVIEW = { label: 'Overview', icon: BarChart2 }
 
 const NAV_GROUPS = [
+  { title: 'Members', icon: UsersRound, expanded: false, items: [] },
+  { title: 'Content', icon: Sparkles, expanded: false, items: [] },
+  { title: 'Economy', icon: Coins, expanded: false, items: [] },
+  { title: 'Safety', icon: ShieldCheck, expanded: false, items: [] },
+  { title: 'Server', icon: Server, expanded: false, items: [] },
+  { title: 'Pulse Bot', icon: TerminalSquare, expanded: false, items: [] },
   {
     title: 'Analytics',
     icon: LineChart,
@@ -32,13 +41,10 @@ const NAV_GROUPS = [
     items: [
       { label: 'Statistics', icon: Activity },
       { label: 'Insights', icon: Lightbulb },
-      { label: 'Management', icon: UserCog },
+      { label: 'Staff', icon: UserCog },
+      { label: 'History', icon: History },
     ],
   },
-  { title: 'Server', icon: Server, expanded: false, items: [] },
-  { title: 'Pulse Bot', icon: TerminalSquare, expanded: false, items: [] },
-  { title: 'Engagement', icon: Sparkles, expanded: false, items: [] },
-  { title: 'Safety', icon: ShieldCheck, expanded: false, items: [] },
 ]
 
 // Mirrors the real "At a Glance" StatsCards on the Overview page.

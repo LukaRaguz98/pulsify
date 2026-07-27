@@ -215,7 +215,7 @@ export function SelfRoleMenuBuilder({ guildId, roles, channels, menu, embedColor
         aria-modal="true"
         aria-label={menu ? 'Edit role menu' : 'Create role menu'}
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border shadow-2xl"
+        className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border shadow-2xl"
         style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
       >
         <div className="flex shrink-0 items-center justify-between border-b px-5 py-4" style={{ borderColor: 'var(--line-strong)' }}>
@@ -224,8 +224,11 @@ export function SelfRoleMenuBuilder({ guildId, roles, channels, menu, embedColor
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_440px]">
-            {/* ── Form column ─────────────────────────────────────────── */}
+          {/* Single column: the form, then the embed preview full-width below.
+              A 50/50 split cropped the preview and read badly — a full-width
+              row underneath gives it room, matching the other builders. */}
+          <div className="space-y-6">
+            {/* ── Form ────────────────────────────────────────────────── */}
             <div className="space-y-5">
               {/* Presets (create only) */}
               {!menu && (
@@ -402,9 +405,8 @@ export function SelfRoleMenuBuilder({ guildId, roles, channels, menu, embedColor
               )}
             </div>
 
-            {/* ── Preview column ──────────────────────────────────────── */}
-            <div className="lg:sticky lg:top-0 lg:self-start">
-              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Preview</label>
+            {/* ── Preview (full-width, below the form) ─────────────────── */}
+            <div>
               <MenuPreview draft={draft} bounds={bounds} accent={embedColor} />
             </div>
           </div>

@@ -1,8 +1,10 @@
 'use client'
 
 import { useMemo, useState, useTransition } from 'react'
+import Image from 'next/image'
 import { useDialogDismiss } from '@/components/ui/use-dialog-dismiss'
 import { useRouter } from 'next/navigation'
+import { PreviewStage } from '@/components/dashboard/onboarding/PreviewStage'
 import {
   X,
   Gift,
@@ -613,10 +615,13 @@ export function GiveawayCreatePanel({ guildId, channels, roles, editing, onClose
   )
 }
 
-// ── Live preview (a Discord-style mock of the giveaway message) ───────────────
-// Kept in lock-step with the embed built in actions.ts / giveaways.js: badge +
-// title, description, Prize / Winners / Ends block, a single compact
-// requirements line, the Join button, and the Pulse footer.
+// ── Live preview ──────────────────────────────────────────────────────────────
+// Renders the giveaway on the shared Pulse embed stage — the same bot-avatar
+// row + translucent glass V2 container the onboarding, self-roles and message
+// previews use — so the giveaway preview reads identically to every other embed
+// preview in the app. Kept in lock-step with the embed built in actions.ts /
+// giveaways.js: title, description, Prize / Winners / Ends fields, a compact
+// requirements line, the Join button, and the `Pulse — Giveaway` footer.
 
 function GiveawayPreview({
   draft,
@@ -628,60 +633,126 @@ function GiveawayPreview({
   roleNameById: Map<string, string>
 }) {
   const req = draft.requirements
+  const accent = 'var(--p-1)'
   const endLabel = useMemo(() => formatDuration(durationMinutes * 60_000), [durationMinutes])
   const reqText = useMemo(
     () => describeRequirements(req, (id) => roleNameById.get(id) ?? 'a role').join(' · '),
     [req, roleNameById],
   )
+  // Client-only clock — computed once at mount (this preview only ever renders
+  // inside the create modal, never on the server), the same way the self-roles
+  // preview does it, so there's no SSR/CSR drift and no effect.
+  const [timeStr] = useState(() => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+
+  const fields: { name: string; value: string }[] = [
+    { name: 'Prize', value: draft.prize || '—' },
+    { name: 'Winners', value: String(draft.winner_count) },
+    { name: 'Ends', value: `in ${endLabel}` },
+  ]
 
   return (
-    <div className="rounded-xl border-l-4 p-4" style={{ borderColor: 'var(--p-1)', background: 'var(--bg-2)' }}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="break-words font-bold text-foreground">{draft.title || 'Giveaway'}</p>
-          {/* Subtitle sits beside the badge — description, or a fallback blurb
-              when empty — matching the posted embed so the header isn't bare. */}
-          <p className="mt-1 whitespace-pre-wrap text-sm" style={{ color: 'var(--text-2)' }}>
-            {draft.description || 'Click Join Giveaway below for your chance to win!'}
-          </p>
+    <PreviewStage>
+      <div style={{ fontFamily: "'gg sans', 'Noto Sans', Arial, sans-serif" }}>
+        <div className="flex items-start gap-2.5 sm:gap-4">
+          {/* Bot avatar */}
+          <Image
+            src="/logo.png"
+            alt="Pulse"
+            width={40}
+            height={40}
+            className="h-9 w-9 sm:h-10 sm:w-10"
+            style={{ flexShrink: 0, borderRadius: '50%', marginTop: '2px', objectFit: 'cover' }}
+          />
+
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {/* Username row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
+              <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: '14px' }}>Pulse</span>
+              <span style={{
+                background: '#5865f2', color: '#ffffff',
+                borderRadius: '3px', padding: '1px 5px',
+                fontSize: '9px', fontWeight: 700,
+                letterSpacing: '0.4px', textTransform: 'uppercase', lineHeight: '1.4',
+              }}>APP</span>
+              <span style={{ color: 'var(--text-3)', fontSize: '12px' }}>Today at {timeStr}</span>
+            </div>
+
+            {/* Translucent glass V2 container with the left accent stripe */}
+            <div style={{
+              background: 'color-mix(in srgb, var(--panel-2) 55%, transparent)',
+              border: '1px solid var(--line)',
+              borderLeftWidth: '3px',
+              borderLeftColor: accent,
+              borderRadius: '8px',
+              overflow: 'hidden',
+              maxWidth: '432px',
+              padding: '12px 16px',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              boxShadow: '0 20px 55px -26px color-mix(in srgb, var(--text) 30%, transparent)',
+              overflowWrap: 'break-word',
+              wordBreak: 'break-word',
+            }}>
+              {/* Pulse label — matches the `**Pulse**` line the bot opens with. */}
+              <div style={{ color: 'var(--text-2)', fontWeight: 700, fontSize: '12px', marginBottom: '2px' }}>Pulse</div>
+
+              {/* Title — H1 heading */}
+              <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: '20px', margin: '0 0 6px', lineHeight: '1.3' }}>
+                {draft.title || 'Giveaway'}
+              </div>
+
+              {/* Description — falls back to the posted embed's default blurb */}
+              <div style={{ color: 'var(--text-2)', fontSize: '14px', margin: '0 0 10px', lineHeight: '1.45', whiteSpace: 'pre-wrap' }}>
+                {draft.description || 'Click Join Giveaway below for your chance to win!'}
+              </div>
+
+              {/* Prize / Winners / Ends — stacked bold-label blocks, matching
+                  the DiscordEmbedPreview field layout used elsewhere. */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '10px' }}>
+                {fields.map((f) => (
+                  <div key={f.name}>
+                    <div style={{ color: 'var(--text)', fontSize: '14px', fontWeight: 700, margin: '0 0 2px' }}>{f.name}</div>
+                    <div style={{ color: 'var(--text-2)', fontSize: '14px', lineHeight: '1.45' }}>{f.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Requirements — one compact subtext line (no emoji, per the
+                  embed house style). */}
+              {hasRequirements(req) && (
+                <div style={{ color: 'var(--text-3)', fontSize: '12px', lineHeight: '1.4', marginBottom: '10px' }}>
+                  <strong style={{ color: 'var(--text-2)' }}>Requirements:</strong> {reqText}
+                </div>
+              )}
+
+              {/* Join button + entries counter — the message's action row,
+                  rendered as pills the same way self-roles renders its role
+                  buttons inside the container. */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  borderRadius: '4px', padding: '8px 14px',
+                  fontSize: '13px', fontWeight: 600, color: '#ffffff',
+                  background: '#5865f2',
+                }}>
+                  <Gift size={14} /> Join Giveaway
+                </span>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '5px',
+                  fontSize: '12px', color: 'var(--text-3)',
+                }}>
+                  <Users size={12} /> 0 entries
+                </span>
+              </div>
+
+              {/* Divider + footer — the standardized Pulse v2 close. */}
+              <div style={{ borderTop: '1px solid var(--line-strong)', margin: '12px 0 8px' }} />
+              <div style={{ color: 'var(--text-3)', fontSize: '12px', lineHeight: '1.3' }}>Pulse — Giveaway</div>
+            </div>
+          </div>
         </div>
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: 'var(--p-soft)', color: 'var(--p-1)' }}>
-          <Gift size={16} />
-        </span>
       </div>
-
-      <div className="mt-2.5 space-y-0.5 text-sm" style={{ color: 'var(--text-2)' }}>
-        <p>
-          <span className="font-semibold text-foreground">Prize:</span> {draft.prize || '—'}
-        </p>
-        <p>
-          <span className="font-semibold text-foreground">Winners:</span> {draft.winner_count}
-        </p>
-        <p>
-          <span className="font-semibold text-foreground">Ends:</span> in {endLabel}
-        </p>
-      </div>
-
-      {hasRequirements(req) && (
-        <p className="mt-2 text-[11px] leading-relaxed" style={{ color: 'var(--text-3)' }}>
-          🔒 <span className="font-semibold">Requirements:</span> {reqText}
-        </p>
-      )}
-
-      <div className="mt-3 flex items-center gap-2">
-        <span
-          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white"
-          style={{ background: '#5865f2' }}
-        >
-          🎉 Join Giveaway
-        </span>
-        <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs" style={{ background: 'var(--panel)', color: 'var(--text-3)' }}>
-          <Users size={12} /> 0 entries
-        </span>
-      </div>
-
-      <p className="mt-2.5 text-[10px]" style={{ color: 'var(--text-3)' }}>Pulse · Giveaway</p>
-    </div>
+    </PreviewStage>
   )
 }
 

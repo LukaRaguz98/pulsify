@@ -2,9 +2,15 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
 import { recordNotification } from '@/lib/notifications-server'
+import { recordTimelineEvent } from '@/lib/timeline-server'
 import { fetchGuild, fetchGuildFresh, modifyGuild, type GuildMutation } from '@/lib/discord'
 
 const VERIFICATION_LEVELS = new Set([0, 1, 2, 3, 4])
+// Verification level is the one server setting with real safety consequences,
+// so the timeline records it as its own event rather than a generic settings
+// change — an admin investigating a raid wants to find it without scanning
+// every "settings changed" row.
+const VERIFICATION_LABELS = ['None', 'Low', 'Medium', 'High', 'Highest']
 const NOTIFICATIONS = new Set([0, 1])
 const EXPLICIT_FILTERS = new Set([0, 1, 2])
 // Discord only accepts these specific values for AFK timeout.
@@ -107,6 +113,16 @@ export async function PATCH(
     return NextResponse.json({ error: 'No changes provided.' }, { status: 400 })
   }
 
+  // Snapshot the settings we're about to change so the timeline can show a
+  // real before/after. Read from the cached guild — this is a record of what
+  // the admin saw when they hit save, not a fresh consistency check.
+  const before = await fetchGuild(guildId)
+  const changedKeys = Object.keys(mutation) as (keyof GuildMutation)[]
+  const previousValue: Record<string, unknown> = {}
+  for (const key of changedKeys) {
+    previousValue[key] = (before as Record<string, unknown> | null)?.[key] ?? null
+  }
+
   const result = await modifyGuild(guildId, mutation, body.reason)
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 })
 
@@ -114,7 +130,13 @@ export async function PATCH(
   // (PATCH /guilds/:id never returns them).
   const fresh = await fetchGuildFresh(guildId)
 
-  const changedKeys = Object.keys(mutation)
+  const guildName = fresh?.name ?? result.guild.name
+  const actor = {
+    actorId: auth.moderator.userId,
+    actorName: auth.moderator.username,
+    actorUsername: auth.moderator.handle,
+  }
+
   await recordNotification({
     guildId,
     type: 'server_settings_changed',
@@ -123,12 +145,33 @@ export async function PATCH(
       ? `Changed ${changedKeys[0].replace(/_/g, ' ')}`
       : `Changed ${changedKeys.length} settings`,
     link: `/dashboard/${guildId}/server-settings`,
-    actorId: auth.moderator.userId,
-    actorName: auth.moderator.username,
-    actorUsername: auth.moderator.handle,
+    ...actor,
     targetId: guildId,
-    targetName: fresh?.name ?? result.guild.name,
+    targetName: guildName,
+    metadata: { changed_keys: changedKeys },
+    // The timeline gets its own richer row below, carrying the before/after.
+    timeline: false,
+  })
+
+  const verificationChanged = mutation.verification_level !== undefined
+  await recordTimelineEvent({
+    guildId,
+    type: verificationChanged ? 'verification_updated' : 'server_profile_updated',
+    title: verificationChanged
+      ? `Verification level set to ${VERIFICATION_LABELS[mutation.verification_level as number] ?? mutation.verification_level}`
+      : changedKeys.length === 1
+        ? `Server ${String(changedKeys[0]).replace(/_/g, ' ')} was updated`
+        : `${changedKeys.length} server settings were updated`,
+    description: changedKeys.map((k) => String(k).replace(/_/g, ' ')).join(', '),
+    source: 'dashboard',
+    ...actor,
+    targetId: guildId,
+    targetName: guildName,
+    previousValue,
+    newValue: mutation as Record<string, unknown>,
+    link: `/dashboard/${guildId}/server-settings`,
     metadata: { changed_keys: changedKeys },
   })
+
   return NextResponse.json(fresh ?? result.guild)
 }

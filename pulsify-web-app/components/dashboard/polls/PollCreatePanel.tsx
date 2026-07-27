@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { X, Plus, Trash2, AlertCircle, Loader2, GripVertical } from 'lucide-react'
 import {
@@ -16,6 +17,7 @@ import {
   type Poll,
 } from '@/lib/polls'
 import { createPoll, updatePoll } from '@/app/dashboard/[guildId]/polls/actions'
+import { PreviewStage } from '@/components/dashboard/onboarding/PreviewStage'
 import { PollIcon } from './icons'
 
 type Channel = { id: string; name: string }
@@ -157,8 +159,8 @@ export function PollCreatePanel({
       <div
         role="dialog"
         aria-modal="true"
-        className="relative flex w-full max-w-2xl max-h-[92vh] flex-col overflow-hidden rounded-2xl border shadow-2xl"
-        style={{ background: 'var(--bg)', borderColor: 'var(--line-strong)' }}
+        className="relative flex w-full max-w-2xl max-h-[92vh] flex-col overflow-hidden rounded-xl border shadow-2xl"
+        style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: 'var(--line-strong)' }}>
@@ -180,7 +182,7 @@ export function PollCreatePanel({
                     type="button"
                     onClick={() => applyPreset(p.id)}
                     className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors hover:border-[var(--p-1)]"
-                    style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)', color: 'var(--text-2)' }}
+                    style={{ borderColor: 'var(--line-strong)', background: 'var(--bg-2)', color: 'var(--text-2)' }}
                   >
                     <PollIcon name={p.icon} size={13} />
                     {p.label}
@@ -364,7 +366,7 @@ export function PollCreatePanel({
           )}
 
           {/* Behaviour toggles */}
-          <div className="space-y-3 rounded-xl border p-4" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
+          <div className="space-y-3 rounded-xl border p-4" style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)' }}>
             <ToggleRow
               label="Anonymous"
               hint="Votes are tracked by Pulse but voter names aren't shown."
@@ -461,6 +463,12 @@ export function PollCreatePanel({
             </div>
           </Section>
 
+          {/* Live embed preview — the same animated stage + floating glass V2
+              embed the self-roles, onboarding and giveaway previews use, so
+              every embed preview in the app reads identically. No "Preview"
+              heading — the stage speaks for itself. */}
+          <PollPreview draft={draft} />
+
           {error && (
             <div className="flex items-start gap-2 rounded-lg border px-3 py-2 text-sm" style={{ borderColor: 'rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.08)', color: '#f87171' }}>
               <AlertCircle size={15} className="mt-0.5 shrink-0" />
@@ -485,6 +493,121 @@ export function PollCreatePanel({
         </div>
       </div>
     </div>
+  )
+}
+
+// ── Live preview ──────────────────────────────────────────────────────────────
+// Renders the poll on the shared Pulse embed stage — the same bot-avatar row +
+// translucent glass V2 container the self-roles, onboarding and giveaway
+// previews use — so the poll preview reads identically to every other embed
+// preview in the app. Options render as the vote rows (0% before anyone votes),
+// with the indicator shape (circle vs square) reflecting single vs multi choice.
+
+function PollPreview({ draft }: { draft: PollDraft }) {
+  const accent = 'var(--p-1)'
+  // Computed once at mount — this preview only ever renders inside the modal,
+  // never on the server, so there's no SSR/CSR clock drift.
+  const [timeStr] = useState(() => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+  const meta = POLL_TYPE_META[draft.poll_type]
+
+  // The rows the voter would see: Yes/No for a yes-no poll, 1…N for a rating,
+  // otherwise the entered options (with a placeholder for any left blank).
+  const rows = useMemo(() => {
+    if (draft.poll_type === 'yes_no') return [{ id: 'yes', label: 'Yes' }, { id: 'no', label: 'No' }]
+    if (draft.poll_type === 'rating') {
+      return Array.from({ length: draft.rating_scale }, (_, i) => ({ id: String(i + 1), label: String(i + 1) }))
+    }
+    return draft.options.map((o, i) => ({ id: o.id, label: o.label.trim() || `Option ${i + 1}` }))
+  }, [draft.poll_type, draft.rating_scale, draft.options])
+
+  return (
+    <PreviewStage>
+      <div style={{ fontFamily: "'gg sans', 'Noto Sans', Arial, sans-serif" }}>
+        <div className="flex items-start gap-2.5 sm:gap-4">
+          {/* Bot avatar */}
+          <Image
+            src="/logo.png"
+            alt="Pulse"
+            width={40}
+            height={40}
+            className="h-9 w-9 sm:h-10 sm:w-10"
+            style={{ flexShrink: 0, borderRadius: '50%', marginTop: '2px', objectFit: 'cover' }}
+          />
+
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {/* Username row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
+              <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: '14px' }}>Pulse</span>
+              <span style={{
+                background: '#5865f2', color: '#ffffff',
+                borderRadius: '3px', padding: '1px 5px',
+                fontSize: '9px', fontWeight: 700,
+                letterSpacing: '0.4px', textTransform: 'uppercase', lineHeight: '1.4',
+              }}>APP</span>
+              <span style={{ color: 'var(--text-3)', fontSize: '12px' }}>Today at {timeStr}</span>
+            </div>
+
+            {/* Translucent glass V2 container with the left accent stripe */}
+            <div style={{
+              background: 'color-mix(in srgb, var(--panel-2) 55%, transparent)',
+              border: '1px solid var(--line)',
+              borderLeftWidth: '3px',
+              borderLeftColor: accent,
+              borderRadius: '8px',
+              overflow: 'hidden',
+              maxWidth: '432px',
+              padding: '12px 16px',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              boxShadow: '0 20px 55px -26px color-mix(in srgb, var(--text) 30%, transparent)',
+              overflowWrap: 'break-word',
+              wordBreak: 'break-word',
+            }}>
+              {/* Pulse label — matches the `**Pulse**` line the bot opens with. */}
+              <div style={{ color: 'var(--text-2)', fontWeight: 700, fontSize: '12px', marginBottom: '2px' }}>Pulse</div>
+
+              {/* Question — H1 heading */}
+              <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: '20px', margin: '0 0 6px', lineHeight: '1.3' }}>
+                {draft.title.trim() || 'Poll question'}
+              </div>
+
+              {/* Description */}
+              {draft.description.trim() && (
+                <div style={{ color: 'var(--text-2)', fontSize: '14px', margin: '0 0 10px', lineHeight: '1.45', whiteSpace: 'pre-wrap' }}>
+                  {draft.description}
+                </div>
+              )}
+
+              {/* Vote rows — indicator + label + 0% bar, the pre-vote state */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '10px', marginTop: '4px' }}>
+                {rows.map((r) => (
+                  <div key={r.id}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                        <span style={{
+                          width: '13px', height: '13px', flexShrink: 0,
+                          border: '2px solid var(--text-3)',
+                          borderRadius: meta.multi ? '3px' : '50%',
+                        }} />
+                        <span style={{ color: 'var(--text)', fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.label}</span>
+                      </span>
+                      <span style={{ color: 'var(--text-3)', fontSize: '12px', flexShrink: 0 }}>0%</span>
+                    </div>
+                    <div style={{ height: '6px', borderRadius: '3px', background: 'color-mix(in srgb, var(--text) 10%, transparent)' }} />
+                  </div>
+                ))}
+              </div>
+
+              {/* Divider + footer — the standardized Pulse v2 close. */}
+              <div style={{ borderTop: '1px solid var(--line-strong)', margin: '12px 0 8px' }} />
+              <div style={{ color: 'var(--text-3)', fontSize: '12px', lineHeight: '1.3' }}>
+                Pulse — Poll{meta.multi ? ' · Pick one or more' : ''}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </PreviewStage>
   )
 }
 

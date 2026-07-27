@@ -30,6 +30,7 @@ const {
   text,
   divider,
 } = require("./commands");
+const { recordTimelineEvent } = require("./timeline");
 
 // ── Rates (mirror of lib/economy.ts) ─────────────────────────────────────────
 
@@ -44,6 +45,13 @@ const ECONOMY_RATES = {
   onboardingCoins: 50,
   maxTransfer: 1_000_000,
 };
+
+// Balance thresholds the Server Timeline records as a milestone. Sparse on
+// purpose — one entry per member per order-of-magnitude-ish step keeps the
+// history readable in an active economy.
+const BALANCE_MILESTONES = [
+  1_000, 5_000, 10_000, 25_000, 50_000, 100_000, 250_000, 500_000, 1_000_000,
+];
 
 function coinsForXp(xp) {
   if (!Number.isFinite(xp) || xp <= 0) return 0;
@@ -115,10 +123,11 @@ function createEconomy(client, supabase) {
   async function adjust(userId, userName, amount, kind, reason, opts = {}) {
     if (!Number.isFinite(amount) || amount === 0) return null;
     try {
+      const delta = Math.round(amount);
       const { data, error } = await supabase.rpc("economy_adjust", {
         p_user_id: userId,
         p_user_name: userName ?? null,
-        p_amount: Math.round(amount),
+        p_amount: delta,
         p_kind: kind,
         p_reason: reason,
         p_note: opts.note ?? null,
@@ -131,11 +140,48 @@ function createEconomy(client, supabase) {
         console.warn("[Pulse] economy_adjust failed:", error.message);
         return null;
       }
-      return data === null ? null : Number(data);
+      const balance = data === null ? null : Number(data);
+      // Server Timeline: a member crossing a headline balance is one of the
+      // few economy events worth remembering per-server. The RPC returns the
+      // post-adjust balance, so the pre-adjust one is a subtraction away.
+      if (balance !== null && delta > 0 && opts.guildId) {
+        void recordBalanceMilestone({
+          guildId: opts.guildId,
+          userId,
+          userName,
+          previous: balance - delta,
+          balance,
+        });
+      }
+      return balance;
     } catch (err) {
       console.warn("[Pulse] economy_adjust threw:", err.message);
       return null;
     }
+  }
+
+  /**
+   * Emit a timeline event when a balance crosses one of the headline
+   * thresholds. Only the highest threshold crossed is recorded, so a single
+   * large payout writes one row rather than one per tier.
+   */
+  async function recordBalanceMilestone({ guildId, userId, userName, previous, balance }) {
+    const crossed = BALANCE_MILESTONES.filter((t) => previous < t && balance >= t);
+    if (crossed.length === 0) return;
+    const milestone = crossed[crossed.length - 1];
+    await recordTimelineEvent(supabase, {
+      guildId,
+      type: "economy_balance_milestone",
+      source: "bot",
+      title: `${userName ?? "A member"} passed ${milestone.toLocaleString()} Pulse Coins`,
+      description: `Balance is now ${balance.toLocaleString()}.`,
+      targetId: userId,
+      targetName: userName ?? null,
+      previousValue: { balance: previous },
+      newValue: { balance },
+      metadata: { milestone },
+      link: `/dashboard/${guildId}/economy`,
+    });
   }
 
   // ── Coin award hooks (called from leveling.js / giveaways.js / milestones.js

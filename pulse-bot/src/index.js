@@ -14,6 +14,7 @@ const {
 const { createClient } = require("@supabase/supabase-js");
 const { createAnalytics } = require("./analytics");
 const { recordNotification, fetchActor } = require("./notifications");
+const { recordTimelineEvent, createTimelineCommands } = require("./timeline");
 const { forwardMessageToPulseGuard } = require("./ai-moderation");
 const { COMMANDS_BY_NAME, replyNotice, renderHelp } = require("./commands");
 const { getCurrentVersion } = require("./version");
@@ -289,13 +290,26 @@ const settings = createSettingsCommands({ client, supabase, statisticsChannels }
 const templates = createTemplates({ client, supabase });
 const community = createCommunityCommands({ client, supabase });
 
+// Server Timeline (PULSIFY-63): the writer is stateless (recordTimelineEvent
+// takes supabase directly, so gateway handlers can call it without plumbing);
+// this only serves the /timeline read command.
+const timeline = createTimelineCommands(supabase);
+
 /**
- * Shared helper for Discord-side activity → notifications row.
+ * Shared helper for Discord-side activity → notifications row (+ Server
+ * Timeline entry).
  *
  * Fetches the audit log to attribute the action and dedupes against
  * dashboard-initiated activity: when the audit-log executor is the Pulsify
  * bot itself, the dashboard already wrote a notification when it called
  * Discord, so we skip the gateway-side write to avoid duplicates.
+ *
+ * The notification mirrors into the timeline automatically. Pass
+ * `opts.timeline` to emit a RICHER timeline event instead — a precise event
+ * type ('role_renamed' rather than 'role_updated') plus the before/after
+ * values, which a notification has nowhere to put. The actor resolved from
+ * the audit log is carried over either way, so a change made in the Discord
+ * client is still attributed to the human who made it.
  */
 async function notifyIfNotBot(opts) {
   const actor = await fetchActor(
@@ -318,6 +332,100 @@ async function notifyIfNotBot(opts) {
     targetId: opts.targetId,
     targetName: opts.targetName,
     metadata: opts.metadata,
+    timeline: opts.timeline ? false : undefined,
+  });
+  if (opts.timeline) {
+    await recordTimelineEvent(supabase, {
+      guildId: opts.guild.id,
+      source: "discord",
+      title: opts.title,
+      description: opts.body ?? actor?.reason ?? null,
+      actorId: actor?.actorId ?? null,
+      actorName: actor?.actorName ?? null,
+      actorUsername: actor?.actorUsername ?? null,
+      targetId: opts.targetId,
+      targetName: opts.targetName,
+      metadata: opts.metadata,
+      link: opts.link,
+      ...opts.timeline,
+    });
+  }
+}
+
+// ── Server Timeline: member removals ────────────────────────────────────────
+// A ban, a kick and a voluntary leave all arrive as the same GuildMemberRemove
+// event, and the timeline has to tell them apart — "did they leave or were
+// they removed" is the first question of most investigations.
+//
+// Bans are already recorded by GuildBanAdd, which stamps the pair here so the
+// accompanying removal doesn't also get logged as a plain leave. Entries are
+// short-lived: the two events arrive within moments of each other, and either
+// ordering works (the ban handler stamps; the removal handler checks and, if
+// it ran first, the stamp simply expires unused).
+const RECENT_REMOVALS = new Map(); // `${guildId}:${userId}` -> timestamp
+const REMOVAL_CLAIM_TTL_MS = 30_000;
+
+function markRemovalHandled(guildId, userId) {
+  RECENT_REMOVALS.set(`${guildId}:${userId}`, Date.now());
+  // Opportunistic sweep — this map only ever holds a handful of live keys.
+  const cutoff = Date.now() - REMOVAL_CLAIM_TTL_MS;
+  for (const [key, at] of RECENT_REMOVALS) {
+    if (at < cutoff) RECENT_REMOVALS.delete(key);
+  }
+}
+
+function removalWasHandled(guildId, userId) {
+  const at = RECENT_REMOVALS.get(`${guildId}:${userId}`);
+  return at != null && Date.now() - at < REMOVAL_CLAIM_TTL_MS;
+}
+
+/**
+ * Record a member's departure as either a kick or a leave.
+ *
+ * Discord writes the audit-log entry slightly after the gateway event, so we
+ * wait a beat before looking. Fails open: if the audit log is unreadable (the
+ * bot lacks View Audit Log) the departure is recorded as a plain leave rather
+ * than not at all.
+ */
+async function recordMemberRemoval(member) {
+  await new Promise((resolve) => setTimeout(resolve, 1_500));
+  // A ban claims the removal — GuildBanAdd already wrote member_banned.
+  if (removalWasHandled(member.guild.id, member.id)) return;
+
+  const kick = await fetchActor(
+    member.guild,
+    AuditLogEvent.MemberKick,
+    member.id,
+    client.user?.id,
+  );
+
+  if (kick) {
+    markRemovalHandled(member.guild.id, member.id);
+    await recordTimelineEvent(supabase, {
+      guildId: member.guild.id,
+      type: "member_kicked",
+      title: `${kick.actorName ?? "A moderator"} kicked ${member.user.tag}`,
+      description: kick.reason ?? null,
+      source: kick.isBot ? "dashboard" : "discord",
+      actorId: kick.actorId,
+      actorName: kick.actorName,
+      actorUsername: kick.actorUsername,
+      targetId: member.id,
+      targetName: member.user.tag,
+      metadata: { action: "kick" },
+      link: `/dashboard/${member.guild.id}/moderation`,
+    });
+    return;
+  }
+
+  await recordTimelineEvent(supabase, {
+    guildId: member.guild.id,
+    type: "member_left",
+    title: `${member.user.tag} left the server`,
+    targetId: member.id,
+    targetName: member.user.tag,
+    metadata: { joined_at: member.joinedAt?.toISOString() ?? null },
+    link: `/dashboard/${member.guild.id}/members`,
   });
 }
 
@@ -619,6 +727,19 @@ client.on(Events.GuildMemberAdd, async (member) => {
     immediate: true,
   });
 
+  // Server Timeline: joins and leaves get their notification from the
+  // analytics_events DB trigger, not from recordNotification — so the mirror
+  // never sees them and the timeline has to record them itself.
+  void recordTimelineEvent(supabase, {
+    guildId: member.guild.id,
+    type: "member_joined",
+    title: `${member.user.tag} joined the server`,
+    targetId: member.id,
+    targetName: member.user.tag,
+    metadata: { account_created_at: member.user.createdAt?.toISOString() ?? null },
+    link: `/dashboard/${member.guild.id}/members/${member.id}`,
+  });
+
   // Feed DDoS Protection's member-join-burst detector (raid signal).
   security.onMemberJoin(member.guild.id, member.id);
 
@@ -739,6 +860,11 @@ client.on(Events.GuildMemberRemove, async (member) => {
     immediate: true,
   });
 
+  // Server Timeline: "left" and "was kicked" are the same gateway event, and
+  // an admin investigating a departure needs to know which. Resolved from the
+  // audit log; a ban already claimed this removal via markRemovalHandled.
+  void recordMemberRemoval(member);
+
   const settings = await getGuildSettings(member.guild.id);
 
   if (settings?.goodbye?.enabled && settings.goodbye.channel_id) {
@@ -796,6 +922,12 @@ client.on(Events.GuildMemberRemove, async (member) => {
 });
 
 client.on(Events.GuildBanAdd, async (ban) => {
+  // Claim the removal FIRST, before any await: a ban also fires
+  // GuildMemberRemove, and the timeline should record it as a ban, not as the
+  // member wandering off. Staking the claim up front means the audit-log
+  // lookup below can take as long as it likes without losing the race.
+  markRemovalHandled(ban.guild.id, ban.user.id);
+
   analytics.track({
     type: "mod_action",
     guildId: ban.guild.id,
@@ -814,14 +946,16 @@ client.on(Events.GuildBanAdd, async (ban) => {
     client.user?.id,
   );
   if (!actor?.isBot) {
+    const title = actor
+      ? `${actor.actorName ?? "A moderator"} banned ${ban.user.tag}`
+      : `${ban.user.tag} was banned`;
+    const reason = actor?.reason ?? ban.reason ?? null;
     await recordNotification(supabase, {
       guildId: ban.guild.id,
       type: "mod_action",
       severity: "error",
-      title: actor
-        ? `${actor.actorName ?? "A moderator"} banned ${ban.user.tag}`
-        : `${ban.user.tag} was banned`,
-      body: actor?.reason ?? ban.reason ?? null,
+      title,
+      body: reason,
       link: `/dashboard/${ban.guild.id}/moderation`,
       actorId: actor?.actorId ?? null,
       actorName: actor?.actorName ?? null,
@@ -829,6 +963,22 @@ client.on(Events.GuildBanAdd, async (ban) => {
       targetId: ban.user.id,
       targetName: ban.user.tag,
       metadata: { action: "ban" },
+      // The timeline records a typed `member_banned` instead of the generic
+      // moderation_action the mirror would produce.
+      timeline: false,
+    });
+    await recordTimelineEvent(supabase, {
+      guildId: ban.guild.id,
+      type: "member_banned",
+      title,
+      description: reason,
+      actorId: actor?.actorId ?? null,
+      actorName: actor?.actorName ?? null,
+      actorUsername: actor?.actorUsername ?? null,
+      targetId: ban.user.id,
+      targetName: ban.user.tag,
+      metadata: { action: "ban" },
+      link: `/dashboard/${ban.guild.id}/moderation`,
     });
   }
 });
@@ -849,13 +999,14 @@ client.on(Events.GuildBanRemove, async (ban) => {
     client.user?.id,
   );
   if (!actor?.isBot) {
+    const title = actor
+      ? `${actor.actorName ?? "A moderator"} unbanned ${ban.user.tag}`
+      : `${ban.user.tag} was unbanned`;
     await recordNotification(supabase, {
       guildId: ban.guild.id,
       type: "mod_action",
       severity: "info",
-      title: actor
-        ? `${actor.actorName ?? "A moderator"} unbanned ${ban.user.tag}`
-        : `${ban.user.tag} was unbanned`,
+      title,
       body: actor?.reason ?? null,
       link: `/dashboard/${ban.guild.id}/moderation`,
       actorId: actor?.actorId ?? null,
@@ -864,6 +1015,97 @@ client.on(Events.GuildBanRemove, async (ban) => {
       targetId: ban.user.id,
       targetName: ban.user.tag,
       metadata: { action: "unban" },
+      timeline: false,
+    });
+    await recordTimelineEvent(supabase, {
+      guildId: ban.guild.id,
+      type: "member_unbanned",
+      title,
+      description: actor?.reason ?? null,
+      actorId: actor?.actorId ?? null,
+      actorName: actor?.actorName ?? null,
+      actorUsername: actor?.actorUsername ?? null,
+      targetId: ban.user.id,
+      targetName: ban.user.tag,
+      metadata: { action: "unban" },
+      link: `/dashboard/${ban.guild.id}/moderation`,
+    });
+  }
+});
+
+// ── Member updates (nicknames + timeouts) ───────────────────────────────────
+// Server Timeline only (PULSIFY-63) — neither of these has a notification
+// type, and both are exactly the kind of change an admin later needs to look
+// up: "who timed them out, and when did it lift?", "what were they called
+// before?". Role changes are deliberately NOT tracked here: they fire
+// constantly (auto-role, level rewards, self-assign menus, temporary roles)
+// and each of those systems already records its own grant.
+client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {
+  const nicknameChanged = oldMember.nickname !== newMember.nickname;
+  const oldTimeout = oldMember.communicationDisabledUntilTimestamp ?? null;
+  const newTimeout = newMember.communicationDisabledUntilTimestamp ?? null;
+  // An expired timeout leaves a stale past timestamp on the member until
+  // Discord clears it; treat "in the past" as no timeout so a natural expiry
+  // doesn't read as a moderator lifting it.
+  const now = Date.now();
+  const wasTimedOut = oldTimeout != null && oldTimeout > now;
+  const isTimedOut = newTimeout != null && newTimeout > now;
+  const timeoutChanged = wasTimedOut !== isTimedOut || (isTimedOut && oldTimeout !== newTimeout);
+
+  if (!nicknameChanged && !timeoutChanged) return;
+
+  // One audit lookup covers both — Discord logs nickname edits and timeouts
+  // under the same MemberUpdate action.
+  const actor = await fetchActor(
+    newMember.guild,
+    AuditLogEvent.MemberUpdate,
+    newMember.id,
+    client.user?.id,
+  );
+  // Dashboard-initiated changes already wrote their own timeline event.
+  if (actor?.isBot) return;
+
+  const attribution = {
+    source: "discord",
+    actorId: actor?.actorId ?? null,
+    actorName: actor?.actorName ?? null,
+    actorUsername: actor?.actorUsername ?? null,
+    targetId: newMember.id,
+    targetName: newMember.user.tag,
+    link: `/dashboard/${newMember.guild.id}/members/${newMember.id}`,
+  };
+
+  if (timeoutChanged) {
+    await recordTimelineEvent(supabase, {
+      ...attribution,
+      guildId: newMember.guild.id,
+      type: isTimedOut ? "member_timeout" : "member_timeout_removed",
+      title: isTimedOut
+        ? `${actor?.actorName ?? "A moderator"} timed out ${newMember.user.tag}`
+        : `${actor?.actorName ?? "A moderator"} lifted the timeout on ${newMember.user.tag}`,
+      description: actor?.reason ?? null,
+      previousValue: { timed_out_until: oldTimeout ? new Date(oldTimeout).toISOString() : null },
+      newValue: { timed_out_until: newTimeout && isTimedOut ? new Date(newTimeout).toISOString() : null },
+      metadata: { action: isTimedOut ? "timeout" : "remove_timeout" },
+    });
+  }
+
+  if (nicknameChanged) {
+    // Self-changes are common and unremarkable; still recorded, but phrased so
+    // the feed doesn't imply a moderator acted.
+    const selfChange = actor?.actorId === newMember.id;
+    await recordTimelineEvent(supabase, {
+      ...attribution,
+      guildId: newMember.guild.id,
+      type: "member_nickname_changed",
+      title: selfChange || !actor
+        ? `${newMember.user.tag} changed their nickname`
+        : `${actor.actorName ?? "A moderator"} changed the nickname of ${newMember.user.tag}`,
+      description: oldMember.nickname
+        ? `${oldMember.nickname} — ${newMember.nickname ?? "cleared"}`
+        : `Set to ${newMember.nickname}`,
+      previousValue: { nickname: oldMember.nickname ?? null },
+      newValue: { nickname: newMember.nickname ?? null },
     });
   }
 });
@@ -990,10 +1232,33 @@ client.on(Events.ChannelUpdate, async (oldChannel, newChannel) => {
     oldChannel.userLimit !== newChannel.userLimit;
   if (!meaningful) return;
 
-  const title =
-    oldChannel.name !== newChannel.name
-      ? `#${oldChannel.name} was renamed to #${newChannel.name}`
+  const renamed = oldChannel.name !== newChannel.name;
+  const moved = oldChannel.parentId !== newChannel.parentId;
+  const title = renamed
+    ? `#${oldChannel.name} was renamed to #${newChannel.name}`
+    : moved
+      ? `#${newChannel.name} was moved to another category`
       : `#${newChannel.name} was updated`;
+
+  // Timeline: capture only the fields that actually differ, so the history
+  // shows "topic: old → new" instead of a wall of unchanged channel state.
+  const previousValue = {};
+  const newValue = {};
+  for (const [key, oldVal, newVal] of [
+    ["name", oldChannel.name, newChannel.name],
+    ["topic", oldChannel.topic, newChannel.topic],
+    ["nsfw", oldChannel.nsfw, newChannel.nsfw],
+    ["parent_id", oldChannel.parentId, newChannel.parentId],
+    ["rate_limit_per_user", oldChannel.rateLimitPerUser, newChannel.rateLimitPerUser],
+    ["bitrate", oldChannel.bitrate, newChannel.bitrate],
+    ["user_limit", oldChannel.userLimit, newChannel.userLimit],
+  ]) {
+    if (oldVal !== newVal) {
+      previousValue[key] = oldVal ?? null;
+      newValue[key] = newVal ?? null;
+    }
+  }
+
   await notifyIfNotBot({
     guild: newChannel.guild,
     auditType: AuditLogEvent.ChannelUpdate,
@@ -1002,6 +1267,12 @@ client.on(Events.ChannelUpdate, async (oldChannel, newChannel) => {
     title,
     link: `/dashboard/${newChannel.guild.id}/channels`,
     targetName: newChannel.name,
+    timeline: {
+      type: renamed ? "channel_renamed" : moved ? "category_changed" : "channel_updated",
+      previousValue,
+      newValue,
+      metadata: { channel_type: newChannel.type },
+    },
   });
 });
 
@@ -1042,10 +1313,33 @@ client.on(Events.GuildRoleUpdate, async (oldRole, newRole) => {
     oldRole.hoist !== newRole.hoist;
   if (!meaningful) return;
 
-  const title =
-    oldRole.name !== newRole.name
-      ? `Role @${oldRole.name} was renamed to @${newRole.name}`
+  const renamed = oldRole.name !== newRole.name;
+  const permissionsChanged =
+    oldRole.permissions.bitfield !== newRole.permissions.bitfield;
+  const title = renamed
+    ? `Role @${oldRole.name} was renamed to @${newRole.name}`
+    : permissionsChanged
+      ? `Permissions changed on @${newRole.name}`
       : `Role @${newRole.name} was updated`;
+
+  // Permission bitfields are BigInt — store them as strings so the jsonb
+  // round-trip stays lossless (a 64-bit bitfield doesn't survive as a JS
+  // number). The dashboard renders them back into permission names.
+  const previousValue = {};
+  const newValue = {};
+  for (const [key, oldVal, newVal] of [
+    ["name", oldRole.name, newRole.name],
+    ["color", oldRole.color, newRole.color],
+    ["permissions", String(oldRole.permissions.bitfield), String(newRole.permissions.bitfield)],
+    ["mentionable", oldRole.mentionable, newRole.mentionable],
+    ["hoist", oldRole.hoist, newRole.hoist],
+  ]) {
+    if (oldVal !== newVal) {
+      previousValue[key] = oldVal ?? null;
+      newValue[key] = newVal ?? null;
+    }
+  }
+
   await notifyIfNotBot({
     guild: newRole.guild,
     auditType: AuditLogEvent.RoleUpdate,
@@ -1054,6 +1348,15 @@ client.on(Events.GuildRoleUpdate, async (oldRole, newRole) => {
     title,
     link: `/dashboard/${newRole.guild.id}/roles`,
     targetName: newRole.name,
+    timeline: {
+      type: renamed
+        ? "role_renamed"
+        : permissionsChanged
+          ? "role_permissions_changed"
+          : "role_updated",
+      previousValue,
+      newValue,
+    },
   });
 });
 
@@ -1358,6 +1661,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       backups,
       templates,
       community,
+      timeline,
       ephemeral: verdict.ephemeral,
     });
     verdict.commit();

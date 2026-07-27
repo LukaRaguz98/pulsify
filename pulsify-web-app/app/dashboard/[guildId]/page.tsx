@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { getGuildAccess } from '@/lib/guild-access'
@@ -7,7 +6,7 @@ import { StatsCard } from '@/components/dashboard/StatsCard'
 import { PageHeader } from '@/components/ui/page-header'
 import { CategorySection } from '@/components/ui/category-section'
 import { QuickSetupBanner } from '@/components/dashboard/quick-setup/QuickSetupBanner'
-import { Users, Wifi, Hash, Crown, Activity, LayoutGrid, FolderTree, Sparkles, ShieldCheck, CalendarDays } from 'lucide-react'
+import { Users, Wifi, Hash, Crown, LayoutGrid, FolderTree, Sparkles, ShieldCheck, CalendarDays } from 'lucide-react'
 
 const VERIFICATION_LABELS = ['None', 'Low', 'Medium', 'High', 'Very High'] as const
 
@@ -134,16 +133,6 @@ export default async function GuildOverviewPage({
             Current snapshot of{' '}
             <span className="font-medium text-foreground">{guild.name}</span>
           </>
-        }
-        action={
-          <Link
-            href={`/dashboard/${guildId}/statistics`}
-            className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors"
-            style={{ borderColor: 'var(--line-strong)', color: 'var(--text-3)' }}
-          >
-            <Activity size={12} />
-            View Statistics
-          </Link>
         }
       />
 

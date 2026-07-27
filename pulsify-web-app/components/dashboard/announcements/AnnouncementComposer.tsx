@@ -3,8 +3,9 @@
 import { useMemo, useState } from 'react'
 import { useDialogDismiss } from '@/components/ui/use-dialog-dismiss'
 import { useRouter } from 'next/navigation'
-import { X, Megaphone, AlertCircle, Loader2, Send, Save, Eye, Hash, CalendarClock } from 'lucide-react'
-import Image from 'next/image'
+import { X, Megaphone, AlertCircle, Loader2, Send, Save, Hash, CalendarClock } from 'lucide-react'
+import { AppEmbedPreview } from '@/components/dashboard/AppEmbedPreview'
+import { PreviewStage } from '@/components/dashboard/onboarding/PreviewStage'
 import {
   validateDraft,
   ANNOUNCEMENT_LIMITS,
@@ -78,6 +79,14 @@ export function AnnouncementComposer({ guildId, channels, editing, onClose, onFe
 
   const channelName = channels.find((c) => c.id === channelId)?.name
 
+  // Date shown in the preview's `-# Announcement — <date>` subtitle. A live
+  // publish stamps the real date; here it's just "today", stable for the
+  // modal's lifetime so the preview doesn't re-render on every keystroke.
+  const previewDate = useMemo(
+    () => new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+    [],
+  )
+
   // Accepts either result shape (create returns `{ data: { id } }`, the others
   // return bare `{ ok }`) — we only branch on ok/error here, so widen the data.
   type AnyResult = { ok: true; data?: unknown } | { ok: false; error: string }
@@ -135,8 +144,8 @@ export function AnnouncementComposer({ guildId, channels, editing, onClose, onFe
       <aside
         role="dialog"
         aria-modal="true"
-        className="relative flex w-full max-w-3xl max-h-[92vh] flex-col overflow-hidden rounded-2xl border shadow-2xl"
-        style={{ background: 'var(--bg)', borderColor: 'var(--line-strong)' }}
+        className="relative flex w-full max-w-2xl max-h-[92vh] flex-col overflow-hidden rounded-xl border shadow-2xl"
+        style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -157,9 +166,10 @@ export function AnnouncementComposer({ guildId, channels, editing, onClose, onFe
           </button>
         </div>
 
-        <div className="grid flex-1 gap-0 overflow-hidden md:grid-cols-2">
-          {/* Form */}
-          <div className="flex flex-col gap-4 overflow-y-auto p-5">
+        {/* Single scrolling column: the form, then the embed preview full-width
+            below it. A 50/50 split cropped the embed and read badly — giving it
+            a full-width row (like the polls dialog) lets it render properly. */}
+        <div className="flex-1 space-y-4 overflow-y-auto p-5">
             <div>
               <label className="mb-1.5 block text-xs font-semibold" style={{ color: 'var(--text-2)' }}>
                 Title
@@ -245,6 +255,27 @@ export function AnnouncementComposer({ guildId, channels, editing, onClose, onFe
               )}
             </div>
 
+            {/* Live embed preview, full width below the form. The AppEmbedPreview
+                floats as translucent glass on the animated PreviewStage field —
+                identical to the polls / self-roles / onboarding previews. The
+                `-# Announcement — <date>` subtitle is folded into the content as
+                a subtext line, exactly as the bot renders it. No "Preview"
+                heading — the stage is self-evidently a preview. */}
+            <div>
+              <PreviewStage>
+                <AppEmbedPreview
+                  title={title.trim() || 'Announcement title'}
+                  content={`-# Announcement — ${previewDate}\n\n${content.trim() || 'Your message will appear here…'}`}
+                  icon="/pulse-annoucement.png"
+                  footer="Pulse — Announcement"
+                  floating
+                />
+              </PreviewStage>
+              <p className="mt-3 flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--text-3)' }}>
+                <Hash size={11} /> Posts to <span style={{ color: 'var(--text-2)' }}>#{channelName ?? '—'}</span>
+              </p>
+            </div>
+
             {error && (
               <div
                 className="flex items-start gap-2 rounded-lg border px-3 py-2 text-sm"
@@ -254,18 +285,6 @@ export function AnnouncementComposer({ guildId, channels, editing, onClose, onFe
                 <span>{error}</span>
               </div>
             )}
-          </div>
-
-          {/* Live preview */}
-          <div className="flex flex-col overflow-y-auto border-t p-5 md:border-l md:border-t-0" style={{ borderColor: 'var(--line-strong)', background: 'var(--bg-2)' }}>
-            <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
-              <Eye size={13} /> Preview
-            </p>
-            <EmbedPreview title={title} content={content} />
-            <p className="mt-3 flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--text-3)' }}>
-              <Hash size={11} /> Posts to <span style={{ color: 'var(--text-2)' }}>#{channelName ?? '—'}</span>
-            </p>
-          </div>
         </div>
 
         {/* Actions */}
@@ -305,38 +324,3 @@ export function AnnouncementComposer({ guildId, channels, editing, onClose, onFe
   )
 }
 
-/**
- * A faithful-enough preview of the Pulse announcement embed: the violet accent
- * bar, the `Pulse` label + title beside the announcement badge, the message
- * body, and the footer — mirroring announcementContainer() in actions.ts.
- */
-function EmbedPreview({ title, content }: { title: string; content: string }) {
-  const dateLabel = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-  return (
-    <div
-      className="overflow-hidden rounded-lg"
-      style={{ background: 'var(--panel)', borderLeft: '4px solid #8b5cf6', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
-    >
-      <div className="flex items-start gap-3 p-3.5">
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-bold" style={{ color: 'var(--text-2)' }}>
-            Pulse
-          </p>
-          <p className="mt-0.5 break-words text-lg font-bold leading-snug text-foreground">
-            {title.trim() || 'Announcement title'}
-          </p>
-          <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>
-            Announcement · {dateLabel}
-          </p>
-          <div className="mt-2.5 whitespace-pre-wrap break-words text-sm leading-relaxed" style={{ color: 'var(--text-2)' }}>
-            {content.trim() || 'Your message will appear here…'}
-          </div>
-          <div className="mt-3 border-t pt-2 text-[11px]" style={{ borderColor: 'var(--line-strong)', color: 'var(--text-3)' }}>
-            Pulse · Announcement
-          </div>
-        </div>
-        <Image src="/pulse-annoucement.png" alt="" width={40} height={40} className="shrink-0 rounded-md" />
-      </div>
-    </div>
-  )
-}

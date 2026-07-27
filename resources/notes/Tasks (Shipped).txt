@@ -5752,3 +5752,152 @@ Acceptance Criteria
 	Upgrade prompts are consistent throughout the platform
 	Existing subscribers are handled without unexpected feature loss
 	Internal documentation provides a single source of truth for future feature classification
+
+PULSIFY-63 — Server Timeline & Change History (v0.63.0)
+
+Description
+	Implement a Server Timeline that automatically records every significant change made through Pulsify or directly within Discord, providing administrators with a complete chronological history of their server.
+	Instead of searching through Audit Logs or guessing what changed, administrators can open a single timeline and instantly see the evolution of their community.
+	The timeline should become the central history page for the entire server.
+
+Goals
+	Improve transparency across the server
+	Centralize important historical events
+	Simplify troubleshooting and investigations
+	Improve team collaboration
+	Create a unique feature unavailable in most Discord management platforms
+
+Tasks
+	Timeline View
+		Create a new navigation item:
+			Analytics > History
+
+		Display a chronological feed of server events
+
+	Timeline Categories
+		Support events such as:
+
+		Roles
+			role created
+			role deleted
+			role renamed
+			permissions changed
+
+		Channels
+			channel created
+			channel deleted
+			category changes
+			permission updates
+
+		Members
+			member joined
+			member left
+			member banned
+			member kicked
+			timeout applied
+			nickname changed
+
+		Moderation
+			warnings
+			mutes
+			Pulse Guard detections
+			scam detections
+			toxic message actions
+
+		Economy
+			balance milestones
+			marketplace purchases
+			reputation milestones
+			economy rewards
+
+		Automation
+			automation created
+			automation updated
+			automation triggered
+			automation disabled
+
+		Events
+			giveaway started
+			giveaway ended
+			event created
+			poll published
+			announcement published
+
+		Server Configuration
+			settings changed
+			integrations connected
+			backup restored
+			templates imported
+			verification updated
+
+	Timeline Cards
+		Display for each event:
+			icon
+			title
+			description
+			affected object
+			actor
+			timestamp
+			category
+			quick actions
+
+	Filtering
+		Allow filtering by:
+			category
+			administrator
+			member
+			module
+			date range
+			event type
+
+	Search
+		Support searching by:
+			member
+			role
+			channel
+			keyword
+			administrator
+
+	Timeline Details
+		Allow expanding each event to view:
+			previous value
+			new value
+			affected users
+			related modules
+			additional metadata
+
+	Export
+		Allow exporting:
+			selected events
+			filtered timeline
+			complete history
+
+		Support:
+			CSV
+			PDF
+			JSON
+
+	Statistics
+		Display:
+			events today
+			events this week
+			most active administrators
+			most modified modules
+			busiest periods
+
+	UX Improvements
+		Add infinite scrolling
+		Add timeline grouping
+		Add color-coded categories
+		Add responsive layouts
+		Add loading/error/empty states
+		Add quick navigation to related pages
+
+Acceptance Criteria
+	Timeline records significant server events automatically
+	Events are grouped chronologically
+	Filters and search function correctly
+	Detailed event history is available
+	Timeline exports work correctly
+	Statistics accurately summarize server activity
+	UI remains responsive and visually polished

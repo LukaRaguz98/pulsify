@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
 import { recordNotification } from '@/lib/notifications-server'
+import { recordTimelineEvent } from '@/lib/timeline-server'
 import { getCurrentUserPlan, requireGuildLimit } from '@/lib/billing-server'
 import { hasPlan } from '@/lib/billing'
 import {
@@ -360,6 +361,31 @@ export async function applyTemplate(guildId: string, input: ApplyInput): Promise
     actorId: auth.moderator.userId,
     actorName: auth.moderator.username,
     actorUsername: auth.moderator.handle,
+    // Superseded by the timeline event below, which names every feature the
+    // template flipped instead of just counting them.
+    timeline: false,
+  })
+
+  // Applying a template flips several modules in one action — record which,
+  // so a later "why is Tickets suddenly on?" has an answer.
+  await recordTimelineEvent({
+    guildId,
+    type: 'template_imported',
+    title: `Template "${template.name}" was applied`,
+    description: `${onCount} feature${onCount === 1 ? '' : 's'} switched on, ${offCount} off.`,
+    source: 'dashboard',
+    actorId: auth.moderator.userId,
+    actorName: auth.moderator.username,
+    actorUsername: auth.moderator.handle,
+    targetId: template.id,
+    targetName: template.name,
+    newValue: Object.fromEntries(summary.applied.map((a) => [a.key, a.enabled])),
+    metadata: {
+      builtin: template.builtin,
+      category: template.category,
+      warnings: summary.warnings,
+    },
+    link: `/dashboard/${guildId}/templates`,
   })
 
   revalidate(guildId)

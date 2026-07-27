@@ -51,6 +51,8 @@ import {
   Cake,
   Fingerprint,
   UserPlus,
+  History,
+  UsersRound,
 } from 'lucide-react'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
 import { SearchTrigger } from '@/components/dashboard/search/SearchTrigger'
@@ -224,24 +226,69 @@ export function GuildSidebar({
     economyGroup,
   ]
 
+  // Admin nav. Two rules hold this shape together, and new modules should keep
+  // them: (1) a group is named after its *domain*, an item after the *screen*
+  // it opens — so no item ever repeats its group's name (that would mean the
+  // group was named after its loudest item, and the group should be widened
+  // instead); (2) groups are ordered by the server's life cycle — the people
+  // in it, what you publish to them, what they earn, how you protect them,
+  // the structure underneath, the bot driving it, and finally what it all
+  // measured out to.
   const adminGroups: NavGroup[] = [
     {
-      title: 'Analytics',
-      icon: <LineChart size={16} />,
+      // Everything about a person, in the order they experience it: who they
+      // are (Directory, Roles), how they arrived (Onboarding, Invites), and
+      // how they get recognised for staying (Milestones, Birthdays).
+      title: 'Members',
+      icon: <UsersRound size={16} />,
       items: [
-        { label: 'Statistics', href: `${base}/statistics`, icon: <Activity size={16} /> },
-        { label: 'Insights', href: `${base}/insights`, icon: <Lightbulb size={16} /> },
-        { label: 'Management', href: `${base}/management`, icon: <UserCog size={16} /> },
+        // The /members page's own first tab is "Directory" — so this label is
+        // both free of the group's name and literally where the click lands.
+        // Levels, profiles and reputation are reached from inside it.
+        { label: 'Directory', href: `${base}/members`, icon: <UserRound size={16} />, matchPrefixes: ['/leveling-settings', '/leaderboard', '/profile', '/reputation'] },
+        { label: 'Roles', href: `${base}/roles`, icon: <Users size={16} /> },
+        { label: 'Onboarding', href: `${base}/onboarding`, icon: <Rocket size={16} /> },
+        { label: 'Invites', href: `${base}/invites`, icon: <UserPlus size={16} />, matchPrefixes: ['/invite-settings'] },
+        { label: 'Milestones', href: `${base}/milestones`, icon: <Award size={16} /> },
+        { label: 'Birthdays', href: `${base}/birthdays`, icon: <Cake size={16} />, matchPrefixes: ['/birthday-settings'] },
       ],
     },
     {
+      // Everything you publish *into* the server: one-way broadcasts first,
+      // then the two interactive formats.
+      title: 'Content',
+      icon: <Sparkles size={16} />,
+      items: [
+        { label: 'Announcements', href: `${base}/announcements`, icon: <Megaphone size={16} /> },
+        { label: 'Scheduled', href: `${base}/scheduled`, icon: <CalendarClock size={16} /> },
+        { label: 'Events', href: `${base}/events`, icon: <CalendarDays size={16} /> },
+        { label: 'Giveaways', href: `${base}/giveaways`, icon: <Gift size={16} /> },
+        { label: 'Polls', href: `${base}/polls`, icon: <Vote size={16} /> },
+      ],
+    },
+    economyGroup,
+    {
+      title: 'Safety',
+      icon: <ShieldCheck size={16} />,
+      items: [
+        { label: 'Moderation', href: `${base}/moderation`, icon: <Shield size={16} /> },
+        { label: 'Pulse Guard', href: `${base}/ai-moderation`, icon: <ShieldAlert size={16} /> },
+        { label: 'Alt Detection', href: `${base}/alt-detection`, icon: <Fingerprint size={16} /> },
+        // Tickets are a support queue rather than a defence, but the same team
+        // works them alongside the tools above, so they stay here.
+        // Configuration lives at /ticket-settings (reached from the module's
+        // own "Settings" button) — match it so the nav stays on Tickets there.
+        { label: 'Tickets', href: `${base}/tickets`, icon: <LifeBuoy size={16} />, matchPrefixes: ['/ticket-settings'] },
+        { label: 'DDoS Protection', href: `${base}/security`, icon: <Siren size={16} />, matchPrefixes: ['/security-settings'] },
+      ],
+    },
+    {
+      // Structure only — the shell the members live in. People moved out to
+      // the Members group, so what's left is what you'd rebuild from a backup.
       title: 'Server',
       icon: <Server size={16} />,
       items: [
-        { label: 'Onboarding', href: `${base}/onboarding`, icon: <Rocket size={16} /> },
         { label: 'Channels', href: `${base}/channels`, icon: <Hash size={16} />, matchPrefixes: ['/private-channels', '/private-channels-settings'] },
-        { label: 'Members', href: `${base}/members`, icon: <UserRound size={16} />, matchPrefixes: ['/leveling-settings', '/leaderboard', '/profile', '/reputation'] },
-        { label: 'Roles', href: `${base}/roles`, icon: <Users size={16} /> },
         { label: 'Assets', href: `${base}/assets`, icon: <Smile size={16} /> },
         { label: 'Templates', href: `${base}/templates`, icon: <LayoutTemplate size={16} /> },
         { label: 'Backups', href: `${base}/backups`, icon: <DatabaseBackup size={16} /> },
@@ -261,32 +308,19 @@ export function GuildSidebar({
       ],
     },
     {
-      title: 'Engagement',
-      icon: <Sparkles size={16} />,
+      // The read-only end of the dashboard — you look here, you don't change
+      // anything. History belongs with them: it's the server's record book, a
+      // log rather than a tool, even though investigations usually start there
+      // and continue in Safety. Its route and tables stay named `timeline`.
+      title: 'Analytics',
+      icon: <LineChart size={16} />,
       items: [
-        { label: 'Events', href: `${base}/events`, icon: <CalendarDays size={16} /> },
-        { label: 'Announcements', href: `${base}/announcements`, icon: <Megaphone size={16} /> },
-        { label: 'Scheduled', href: `${base}/scheduled`, icon: <CalendarClock size={16} /> },
-        { label: 'Giveaways', href: `${base}/giveaways`, icon: <Gift size={16} /> },
-        { label: 'Polls', href: `${base}/polls`, icon: <Vote size={16} /> },
-        { label: 'Milestones', href: `${base}/milestones`, icon: <Award size={16} /> },
-        { label: 'Birthdays', href: `${base}/birthdays`, icon: <Cake size={16} />, matchPrefixes: ['/birthday-settings'] },
-        { label: 'Invites', href: `${base}/invites`, icon: <UserPlus size={16} />, matchPrefixes: ['/invite-settings'] },
-      ],
-    },
-    economyGroup,
-    {
-      title: 'Safety',
-      icon: <ShieldCheck size={16} />,
-      items: [
-        { label: 'Moderation', href: `${base}/moderation`, icon: <Shield size={16} /> },
-        { label: 'Pulse Guard', href: `${base}/ai-moderation`, icon: <ShieldAlert size={16} /> },
-        // Ticket configuration lives at /ticket-settings (reached from the
-        // Tickets module's own "Settings" button) — match it here so the nav
-        // stays on Tickets while you're editing its config.
-        { label: 'Tickets', href: `${base}/tickets`, icon: <LifeBuoy size={16} />, matchPrefixes: ['/ticket-settings'] },
-        { label: 'DDoS Protection', href: `${base}/security`, icon: <Siren size={16} />, matchPrefixes: ['/security-settings'] },
-        { label: 'Alt Detection', href: `${base}/alt-detection`, icon: <Fingerprint size={16} /> },
+        { label: 'Statistics', href: `${base}/statistics`, icon: <Activity size={16} /> },
+        { label: 'Insights', href: `${base}/insights`, icon: <Lightbulb size={16} /> },
+        // Named for what it shows (staff performance) rather than /management,
+        // which read like the whole administrative half of the dashboard.
+        { label: 'Staff', href: `${base}/management`, icon: <UserCog size={16} /> },
+        { label: 'History', href: `${base}/timeline`, icon: <History size={16} /> },
       ],
     },
     // Dashboard-level Preferences moved to the global /preferences route

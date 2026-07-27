@@ -1,275 +1,252 @@
-PULSIFY-64 — Gaming Activity Analytics & Player Insights (v0.64.0)
+PULSIFY-65 — Economy Games & Interactive Activities (v0.65.0)
 
 Description
-	Implement a comprehensive Gaming Analytics module that tracks gaming activity across the Discord server and provides detailed insights into what members are playing, how long they play, and overall gaming trends.
+	Expand the existing Economy module by introducing a collection of interactive economy-based games that provide additional ways for members to earn and spend currency while increasing overall community engagement.
 
-	Using Discord Presence activities, Pulsify should automatically detect when members start and stop playing supported games, calculate session durations, aggregate playtime statistics, and generate analytics for both individual members and the entire community.
+	This feature is not intended to be a standalone game system. Every new game must be fully integrated into Pulsify's existing Economy ecosystem, including commands, member profiles, achievements, milestones, leaderboards, statistics, analytics, permissions, notifications, logging, and the web dashboard.
 
-	The module should become the central hub for gaming statistics and player insights, helping communities better understand engagement and identify popular games and active players.
+	The goal is to make the Economy module feel like one complete ecosystem where every activity contributes to the same progression system.
 
 Goals
-	Provide detailed gaming analytics for Discord communities
-	Track play sessions and total playtime automatically
-	Identify the most popular games across the server
-	Improve community engagement through gaming statistics
-	Create a unique analytics module designed specifically for gaming communities
+	Increase daily member engagement
+	Introduce fun and interactive economy activities
+	Create additional ways to earn and spend currency
+	Integrate games into every existing Economy feature
+	Allow complete configuration through the Pulsify Dashboard
 
 Tasks
-	Navigation
-		Create a new navigation item:
-			Analytics > Gaming
+	Economy Games
+		Introduce a collection of new economy commands.
 
-		This page should serve as the central dashboard for all gaming-related statistics.
+		Supported games should include:
+			Coin Flip
+			Slots
+			Blackjack
+			Roulette
+			Dice
+			High / Low
+			Fishing
+			Mining
+			Woodcutting
+			Treasure Hunt
+			Adventure
+			Lottery
+			Jackpot
 
-	Gaming Activity Tracking
-		Automatically detect when members:
-			start playing a game
-			stop playing a game
-			switch between games
-			resume a previously played game
+		Each game should support:
+			configurable rewards
+			configurable penalties
+			betting
+			cooldowns
+			randomized outcomes
+			rich embeds
+			localization
+			permissions
+			logging
 
-		For each session record:
-			member
-			game name
-			session start
-			session end
-			total session duration
-			detection source
-			timestamp
+	Command Integration
+		All new games must be implemented using Pulsify's existing command architecture.
 
-		Aggregate sessions automatically.
-
-	Server Overview
-		Display server-wide statistics including:
-			total gaming hours
-			active players today
-			active players this week
-			total tracked sessions
-			unique games played
-			currently active players
-			average session duration
-			longest recorded session
-			most active gaming day
-			most active gaming hour
-
-	Most Played Games
-		Display rankings such as:
-			most played games
-			fastest growing games
-			newly played games
-			most active games today
-			most active games this week
-			total playtime per game
-			unique players per game
-			average session duration per game
-
-		Allow sorting by:
-			playtime
-			players
-			sessions
-			popularity
-			alphabetical order
-
-	Live Gaming Activity
-		Display members currently playing.
-
-		Each card should include:
-			member
-			game
-			current session duration
-			activity status
-			started playing at
-			optional voice channel
-			optional streaming status
-
-		Automatically update in real time.
-
-	Player Profiles
-		Create detailed gaming profiles for each member.
-
-		Display:
-			total playtime
-			favourite game
-			recently played games
-			longest session
-			average session
-			gaming streak
-			games played this month
-			total tracked sessions
-			most active gaming hours
-			gaming history
-
-	Game Details
-		Selecting a game should display:
-			total server playtime
-			total players
-			average session
-			longest session
-			first detected date
-			most active players
-			daily activity trend
-			weekly activity trend
-			monthly activity trend
-
-	Leaderboards
-		Support multiple leaderboards including:
-
-		Playtime
-			today
-			weekly
-			monthly
-			all time
-
-		Sessions
-			total sessions
-			average session length
-			longest session
-
-		Games
-			most different games played
-			favourite games
-			highest activity
-
-	Gaming Trends
-		Display trends such as:
-			games gaining popularity
-			games losing popularity
-			peak gaming hours
-			busiest weekdays
-			busiest weekends
-			seasonal activity
-			average concurrent players
-
-	Community Insights
-		Generate community statistics including:
-			average games per member
-			average daily playtime
-			most social games
-			most competitive games
-			game diversity
-			returning players
-			inactive gamers
-			newly active gamers
-
-	Squad Detection
-		Automatically identify members who frequently play the same games.
-
-		Display:
-			suggested squads
-			common games
-			overlapping play hours
-			shared gaming time
-			most active groups
-
-	Activity Heatmaps
-		Display heatmaps for:
-			gaming by hour
-			gaming by weekday
-			gaming by month
-			game popularity over time
-
-	Filtering
-		Allow filtering by:
-			member
-			game
-			date range
-			session duration
-			currently active
-			server role
-			voice channel
-
-	Search
-		Support searching by:
-			game name
-			member
-			activity
-			leaderboard
-
-	Export
-		Allow exporting analytics.
-
-		Supported formats:
-			CSV
-			PDF
-			JSON
-
-		Export:
-			player statistics
-			game statistics
-			leaderboards
-			complete gaming history
-
-	Dashboard Widgets
-		Add widgets for:
-			Currently Playing
-			Top Games
-			Top Players
-			Total Gaming Hours
-			Active Sessions
-			Trending Games
-			Weekly Highlights
-
-		Allow administrators to rearrange widgets.
-
-	Discord Commands
-		Add commands such as:
-			/gaming
-			/gaming profile
-			/gaming leaderboard
-			/gaming games
-			/gaming currently-playing
-
-		Return Pulse-styled v2 embeds.
-
-	Notifications
-		Optionally notify when:
-			a new game becomes popular
-			a member reaches a gaming milestone
-			a server gaming record is broken
-			gaming activity significantly increases
-			community gaming events are detected
-
-	Privacy Settings
-		Allow administrators to configure:
-			enable or disable gaming tracking
-			ignored roles
-			ignored members
-			ignored games
-			data retention period
-			anonymized statistics
-			export permissions
-
-		Members should be able to opt out where applicable.
-
-	UX Improvements
-		Include:
-			responsive layouts
-			live updating statistics
-			interactive charts
-			gaming badges
-			loading states
-			empty states
+		Every command should automatically support:
+			slash commands
+			autocomplete
+			localized responses
+			permission system
+			cooldown system
+			command analytics
+			logging
 			error handling
-			dark mode optimization
+			command statistics
 
-		Maintain consistency with the Pulsify design system.
+		The new commands should feel identical to every other Pulsify command.
 
-	Technical Notes
-		Track gaming activity using Discord Presence events
-		Automatically calculate play sessions
-		Aggregate statistics in the background
-		Exclude custom statuses, Spotify, and non-gaming activities where possible
-		Handle reconnects and bot restarts gracefully
-		Store historical gaming data for trend analysis
+	Economy Integration
+		Games must become part of the existing Economy system.
+
+		Every reward and transaction should use the existing economy infrastructure.
+
+		Games should automatically interact with:
+			Wallet
+			Bank
+			Economy Transactions
+			Daily Rewards
+			Activity Rewards
+			Reputation
+			Economy Logs
+			Economy Statistics
+
+		No separate currency system should exist.
+
+	Member Profiles
+		Extend the existing Member Profile with game statistics.
+
+		Examples:
+			games played
+			games won
+			games lost
+			win rate
+			favorite game
+			total coins earned
+			total coins lost
+			biggest win
+			biggest loss
+			jackpot wins
+			lottery wins
+			rare discoveries
+
+	Milestones Integration
+		Extend the existing Milestones system.
+
+		Administrators should be able to create milestones based on game activity.
+
+		Examples:
+			Play 100 games
+			Win 50 games
+			Earn 100,000 coins from games
+			Catch 500 fish
+			Mine 1,000 ores
+			Win your first jackpot
+			Reach a 25-game win streak
+			Complete 100 adventures
+
+		Game-based milestones should behave exactly like existing milestones.
+
+	Achievements Integration
+		Extend the Achievement System.
+
+		Introduce new achievement categories for games.
+
+		Examples:
+			First Win
+			Lucky Player
+			High Roller
+			Treasure Hunter
+			Master Fisher
+			Master Miner
+			Blackjack Champion
+			Jackpot Winner
+			Adventure Explorer
+
+		Achievements should integrate with:
+			notifications
+			member profiles
+			statistics
+			rewards
+			leaderboards
+
+	Leaderboards Integration
+		Extend the existing Leaderboards.
+
+		Introduce additional rankings such as:
+			Most Games Played
+			Most Games Won
+			Highest Win Rate
+			Biggest Winner
+			Biggest Jackpot
+			Most Lottery Wins
+			Best Blackjack Player
+			Best Fisher
+			Best Miner
+			Best Adventurer
+
+		These should appear alongside the existing Economy leaderboards rather than replacing them.
+
+	Statistics Integration
+		Extend the current Economy Analytics.
+
+		Track statistics for:
+			every game
+			total plays
+			wins
+			losses
+			average payouts
+			house profit
+			total currency generated
+			total currency removed
+			jackpot history
+			lottery history
+			player trends
+
+		All statistics should become part of the existing Analytics module.
+
+	Dashboard
+		Create a new section:
+			Economy > Games
+
+		The page should include:
+			overview
+			enabled games
+			recent activity
+			top players
+			most played games
+			economy impact
+			jackpots
+			lotteries
+			reward distribution
+			game statistics
+
+		The design should follow the existing Economy pages.
+
+	Game Configuration
+		Administrators should be able to configure every game individually.
+
+		Configuration options should include:
+			enable / disable
+			minimum bet
+			maximum bet
+			cooldown
+			daily limits
+			reward multipliers
+			win chances
+			house edge
+			maximum payout
+			minimum payout
+			allowed roles
+			blocked roles
+			allowed channels
+			logging
+			notifications
+			embed customization
+
+	Community Events
+		Support server-wide game events.
+
+		Examples:
+			Double Rewards Weekend
+			Fishing Frenzy
+			Mining Rush
+			Lucky Hour
+			Treasure Week
+			Casino Night
+
+		During an active event, rewards and probabilities should automatically adjust according to the configured event settings.
+
+	Anti-Abuse
+		Protect the Economy system from exploitation.
+
+		Support:
+			cooldown enforcement
+			maximum daily earnings
+			maximum daily plays
+			account age requirements
+			anti-spam protection
+			suspicious activity detection
+			automatic logging
+
+	UI & UX
+		Ensure all new functionality follows Pulsify's existing design language.
+
+		The games should integrate naturally into existing navigation, dashboards, member profiles, analytics, and economy pages without feeling like a separate module.
 
 Acceptance Criteria
-	Gaming sessions are tracked automatically
-	Playtime statistics are calculated accurately
-	Server and member analytics display correctly
-	Leaderboards update automatically
-	Live gaming activity reflects current Discord presence
-	Trends and insights are generated successfully
-	Exports function correctly
-	Dashboard remains responsive with large datasets
-	Privacy settings are respected
-	UI follows Pulsify design standards
+	All economy games are fully integrated into the existing Economy system.
+	Games use the existing currency, wallet, bank, and transaction infrastructure.
+	Member Profiles display complete game statistics.
+	Milestones support game-based objectives.
+	Achievements support game progression.
+	Existing Leaderboards are extended with game leaderboards.
+	Economy Analytics includes game statistics.
+	Every game is configurable through the dashboard.
+	Commands follow the existing Pulsify command architecture.
+	Anti-abuse protections prevent economy exploitation.
+	The entire feature is fully responsive and consistent with the existing Pulsify UI.

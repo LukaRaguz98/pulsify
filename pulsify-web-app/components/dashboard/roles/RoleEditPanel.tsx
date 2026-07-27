@@ -624,28 +624,41 @@ function Toggle({
   onChange: (v: boolean) => void
 }) {
   return (
-    <label
-      className="mb-2 flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2 last:mb-0"
+    <div
+      className="mb-2 flex items-start gap-3 rounded-lg border px-3 py-2 last:mb-0"
       style={{
         borderColor: 'var(--line-strong)',
         background: 'var(--bg-2)',
         opacity: disabled ? 0.6 : 1,
       }}
     >
-      <input
-        type="checkbox"
-        checked={checked}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 h-3.5 w-3.5 cursor-pointer accent-[var(--p-1)]"
-      />
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="text-xs font-medium text-foreground">{label}</p>
         {description && (
           <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{description}</p>
         )}
       </div>
-    </label>
+      {/* Sliding toggle — the same switch the Permissions list and every other
+          bool control uses (and what Discord's own role settings show for
+          hoist / mentionable), so all the toggles in this dialog match. */}
+      <button
+        type="button"
+        onClick={() => { if (!disabled) onChange(!checked) }}
+        disabled={disabled}
+        aria-checked={checked}
+        role="switch"
+        className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors duration-200 disabled:cursor-not-allowed"
+        style={{
+          background: checked ? 'var(--p-1)' : 'var(--line-strong)',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+        }}
+      >
+        <span
+          className="absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200"
+          style={{ transform: checked ? 'translateX(16px)' : 'translateX(0)' }}
+        />
+      </button>
+    </div>
   )
 }
 

@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase-server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
 import { recordNotification } from '@/lib/notifications-server'
+import { recordTimelineEvent } from '@/lib/timeline-server'
+import type { TimelineEventType } from '@/lib/timeline'
 import {
   unbanUser,
   banGuildMember,
@@ -58,6 +60,29 @@ const ACTION_LABELS: Record<string, string> = {
   channel_slowmode: "changed a channel's slowmode",
 }
 
+/**
+ * Moderation action → Server Timeline event type (PULSIFY-63).
+ *
+ * The notification for every one of these is a single `mod_action`, which is
+ * fine for a bell but useless as history — "show me every ban" and "show me
+ * every nickname change" have to be different queries. Actions missing from
+ * this map fall back to the generic `moderation_action`.
+ */
+const ACTION_TO_TIMELINE: Record<string, TimelineEventType> = {
+  ban: 'member_banned',
+  unban: 'member_unbanned',
+  kick: 'member_kicked',
+  timeout: 'member_timeout',
+  remove_timeout: 'member_timeout_removed',
+  warn: 'moderation_warning',
+  nickname: 'member_nickname_changed',
+  add_role: 'role_assigned',
+  remove_role: 'role_unassigned',
+  channel_lock: 'channel_permissions_changed',
+  channel_unlock: 'channel_permissions_changed',
+  channel_slowmode: 'channel_updated',
+}
+
 async function recordLog(
   moderatorId: string,
   moderatorUsername: string | null,
@@ -98,6 +123,23 @@ async function recordLog(
     targetId: params.target?.id ?? null,
     targetName: targetLabel,
     metadata: { action: params.action, ...(params.metadata ?? {}) },
+    // The timeline gets a typed event (ban vs warn vs nickname) instead.
+    timeline: false,
+  })
+
+  await recordTimelineEvent({
+    guildId: params.guildId,
+    type: ACTION_TO_TIMELINE[params.action] ?? 'moderation_action',
+    title,
+    description: params.reason ?? null,
+    source: 'dashboard',
+    actorId: moderatorId,
+    actorName: moderatorUsername,
+    actorUsername: moderatorHandle,
+    targetId: params.target?.id ?? null,
+    targetName: targetLabel,
+    metadata: { action: params.action, ...(params.metadata ?? {}) },
+    link: `/dashboard/${params.guildId}/moderation`,
   })
 }
 
