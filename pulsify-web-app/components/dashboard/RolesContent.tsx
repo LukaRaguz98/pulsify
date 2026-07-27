@@ -34,6 +34,7 @@ import {
   Clock,
   Network,
   MousePointerClick,
+  Search,
 } from 'lucide-react'
 import { roleColor, snowflakeToDate, type DiscordRole } from '@/lib/discord'
 import { permissionKeysFromBits, dangerousKeysIn } from '@/lib/discord-permissions'
@@ -84,6 +85,8 @@ export function RolesContent({ guildId }: Props) {
   // Sub-view: classic role management, Self-Assign Roles, the Hierarchy
   // overview, or Temporary Roles.
   const [tab, setTab] = useState<'roles' | 'self' | 'hierarchy' | 'temporary'>('roles')
+  // Free-text filter for the Roles list, by role name.
+  const [roleSearch, setRoleSearch] = useState('')
 
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -183,6 +186,15 @@ export function RolesContent({ guildId }: Props) {
     () => roles.filter((r) => r.name !== '@everyone').sort((a, b) => b.position - a.position),
     [roles],
   )
+
+  // The rows actually shown, after the name filter. Dragging still resolves
+  // ids against the full sortedRoles, so reordering stays correct even while a
+  // filter is applied.
+  const visibleRoles = useMemo(() => {
+    const q = roleSearch.trim().toLowerCase()
+    if (!q) return sortedRoles
+    return sortedRoles.filter((r) => r.name.toLowerCase().includes(q))
+  }, [sortedRoles, roleSearch])
 
   async function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e
@@ -380,6 +392,17 @@ export function RolesContent({ guildId }: Props) {
           description="Drag rows to reorder roles top-down. Click any row to edit name, color, and permissions."
         >
           <div className="flex flex-wrap items-center gap-3">
+            <div className="relative w-full sm:w-[340px]">
+              <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
+              <input
+                type="text"
+                value={roleSearch}
+                onChange={(e) => setRoleSearch(e.target.value)}
+                placeholder="Search roles by name…"
+                className="w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1"
+                style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
+              />
+            </div>
             {reordering && (
               <span className="inline-flex items-center gap-1.5 text-xs text-subtle">
                 <Loader2 size={11} className="animate-spin" /> Saving order…
@@ -402,6 +425,13 @@ export function RolesContent({ guildId }: Props) {
               title="No custom roles"
               description="This server only has the @everyone role. Use Create role to add one."
             />
+          ) : visibleRoles.length === 0 ? (
+            <EmptyState
+              variant="muted"
+              icon={<Search size={32} />}
+              title="No roles match your search"
+              description="Try a different name, or clear the search to see every role."
+            />
           ) : (
             <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--line-strong)' }}>
               <div
@@ -416,9 +446,9 @@ export function RolesContent({ guildId }: Props) {
                 <span className="text-center">Position</span>
               </div>
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={sortedRoles.map((r) => r.id)} strategy={verticalListSortingStrategy}>
+                <SortableContext items={visibleRoles.map((r) => r.id)} strategy={verticalListSortingStrategy}>
                   <div>
-                    {sortedRoles.map((role) => (
+                    {visibleRoles.map((role) => (
                       <SortableRoleRow
                         key={role.id}
                         role={role}

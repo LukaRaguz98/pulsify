@@ -74,12 +74,13 @@ const NAV_CATALOG: NavDef[] = [
   { id: 'nav-overview', label: 'Overview', icon: 'BarChart2', path: '', keywords: 'home analytics dashboard summary' },
   { id: 'nav-statistics', label: 'Statistics', icon: 'Activity', path: '/statistics', keywords: 'stats analytics charts trends' },
   { id: 'nav-insights', label: 'Insights', icon: 'Lightbulb', path: '/insights', keywords: 'recommendations health suggestions trends growth analysis' },
-  { id: 'nav-management', label: 'Management', icon: 'UserCog', path: '/management', keywords: 'staff team moderators support performance leaderboard rankings accountability workload contributions admins analytics' },
+  { id: 'nav-management', label: 'Staff', icon: 'UserCog', path: '/management', keywords: 'staff team moderators support performance leaderboard rankings accountability workload contributions admins analytics management' },
   { id: 'nav-channels', label: 'Channels', icon: 'Hash', path: '/channels', keywords: 'text voice category' },
   { id: 'nav-members', label: 'Members', icon: 'UserRound', path: '/members', keywords: 'users people directory' },
   { id: 'nav-roles', label: 'Roles', icon: 'Users', path: '/roles', keywords: 'permissions ranks self-assign auto-role auto role join on join hierarchy temporary' },
   { id: 'nav-assets', label: 'Assets', icon: 'Smile', path: '/assets', keywords: 'emoji emojis sticker stickers soundboard sounds expressions upload import export branding animated' },
   { id: 'nav-templates', label: 'Templates', icon: 'LayoutTemplate', path: '/templates', keywords: 'server templates presets reuse export import config setup deploy clone copy backup configuration blueprint' },
+  { id: 'nav-timeline', label: 'History', icon: 'History', path: '/timeline', keywords: 'timeline history audit log activity changes who changed what when trail record chronology investigate troubleshoot export csv pdf json' },
   { id: 'nav-events', label: 'Events', icon: 'CalendarDays', path: '/events', keywords: 'scheduled events calendar' },
   { id: 'nav-commands', label: 'Commands', icon: 'Command', path: '/commands', keywords: 'slash bot command center' },
   { id: 'nav-presence', label: 'Presence', icon: 'Radio', path: '/presence', keywords: 'status activity rotation playing watching listening streaming maintenance bot presence' },
@@ -144,6 +145,10 @@ const ACTION_CATALOG: ActionDef[] = [
   { id: 'act-open-economy', label: 'Open economy', subtitle: 'Global balance, reputation & transactions', icon: 'Coins', keywords: 'economy coins balance wallet reputation transactions leaderboard grant remove adjust', action: { kind: 'navigate', href: '/economy' } },
   { id: 'act-trigger-sync', label: 'Trigger server sync', subtitle: 'Refresh dashboard data from Discord', icon: 'RefreshCw', keywords: 'sync refresh resync update reload', action: { kind: 'command', commandId: 'sync' } },
   { id: 'act-open-integrations', label: 'Connect an integration', subtitle: 'Wire up GitHub, YouTube, RSS, Notion & more', icon: 'Plug', keywords: 'integrations connect external services notifications sync hub github youtube twitch reddit rss', action: { kind: 'navigate', href: '/integrations' } },
+  { id: 'act-open-timeline', label: 'Open the server timeline', subtitle: 'Everything that changed, in order', icon: 'History', keywords: 'timeline history audit log what changed who changed when trail record investigate troubleshoot chronology', action: { kind: 'navigate', href: '/timeline' } },
+  { id: 'act-timeline-moderation', label: 'Review moderation history', subtitle: 'Bans, kicks, timeouts & warnings over time', icon: 'Shield', keywords: 'timeline moderation history bans kicks timeouts warnings audit review investigate who banned', action: { kind: 'navigate', href: '/timeline?category=moderation' } },
+  { id: 'act-timeline-config', label: 'Review configuration changes', subtitle: 'Settings, integrations, backups & templates', icon: 'SlidersHorizontal', keywords: 'timeline configuration settings changed history who changed setting integration backup restore template verification audit', action: { kind: 'navigate', href: '/timeline?category=configuration' } },
+  { id: 'act-export-timeline', label: 'Export the timeline', subtitle: 'CSV, JSON or a PDF report', icon: 'Download', keywords: 'export timeline history csv json pdf report download audit compliance record', action: { kind: 'navigate', href: '/timeline' } },
 ]
 
 function withGuild(guildId: string, path: string): string {

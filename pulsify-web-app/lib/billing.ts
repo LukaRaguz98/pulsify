@@ -91,9 +91,13 @@ export type FeatureLimits = {
   /** Days of analytics retained on the dashboard charts. */
   analyticsRetentionDays: number
   /**
-   * Days of moderation/audit-log history surfaced. Display-first: logs are not
-   * actually pruned yet, so this drives the pricing card + billing table today
-   * and gates real pruning when that lands (see PULSIFY-62 audit §7.6).
+   * Days of moderation / server-history surfaced.
+   *
+   * ENFORCED since PULSIFY-63: it's the query window the Server Timeline (feed,
+   * statistics and exports) reads through. Rows are never deleted, so this
+   * hides history rather than destroying it — a downgrade narrows the view and
+   * an upgrade brings the older events straight back. Still display-only for
+   * the moderation log itself (see PULSIFY-62 audit §7.6).
    */
   logRetentionDays: number
   /** AI moderation (Pulse Guard) on at all. Plus+. */
@@ -297,6 +301,7 @@ export const PLAN_FEATURES: Record<Plan, string[]> = {
     'Moderation, leveling, economy & reputation',
     'Birthdays, invites, polls, giveaways & events',
     'Alt-detection risk checks',
+    `Server timeline with ${PLAN_LIMITS.free.logRetentionDays} days of history`,
     `${PLAN_LIMITS.free.analyticsRetentionDays}-day analytics retention`,
     `Up to ${PLAN_LIMITS.free.maxAutomationsPerGuild} automations`,
     'Community support',
@@ -308,6 +313,7 @@ export const PLAN_FEATURES: Record<Plan, string[]> = {
     'Alt-detection auto-flagging',
     'DDoS protection',
     'Custom bot branding',
+    `${PLAN_LIMITS.pro.logRetentionDays}-day server timeline history`,
     `${PLAN_LIMITS.pro.analyticsRetentionDays}-day analytics retention`,
     'Priority support',
   ],
@@ -319,6 +325,7 @@ export const PLAN_FEATURES: Record<Plan, string[]> = {
     'Advanced AI moderation categories',
     'Custom DDoS rules & presets',
     'Backup & restore system',
+    `${PLAN_LIMITS.business.logRetentionDays}-day server timeline history`,
     `${PLAN_LIMITS.business.analyticsRetentionDays}-day analytics retention`,
   ],
   enterprise: [

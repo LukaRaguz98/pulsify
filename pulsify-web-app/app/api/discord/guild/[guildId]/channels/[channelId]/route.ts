@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { authorizeGuildModerator } from '@/lib/moderation-auth'
 import { recordNotification } from '@/lib/notifications-server'
+import { recordTimelineEvent } from '@/lib/timeline-server'
 import {
   fetchChannel,
   modifyChannel,
@@ -51,8 +52,49 @@ export async function PATCH(
     actorUsername: auth.moderator.handle,
     targetId: result.channel.id,
     targetName: result.channel.name,
+    timeline: false,
   })
+
+  // We already hold the pre-edit channel (fetched above for name sanitising),
+  // so a precise event type + before/after costs nothing extra here.
+  const renamed = body.name !== undefined && result.channel.name !== current.name
+  const moved = body.parent_id !== undefined && body.parent_id !== current.parent_id
+
+  await recordTimelineEvent({
+    guildId,
+    type: renamed ? 'channel_renamed' : moved ? 'category_changed' : 'channel_updated',
+    title: renamed
+      ? `#${current.name} was renamed to #${result.channel.name}`
+      : moved
+        ? `#${result.channel.name} was moved to another category`
+        : `#${result.channel.name} was updated`,
+    description: body.reason ?? null,
+    source: 'dashboard',
+    actorId: auth.moderator.userId,
+    actorName: auth.moderator.username,
+    actorUsername: auth.moderator.handle,
+    targetId: result.channel.id,
+    targetName: result.channel.name,
+    previousValue: pickChannelFields(current as unknown as Record<string, unknown>, body),
+    newValue: body as Record<string, unknown>,
+    metadata: { channel_type: current.type },
+    link: `/dashboard/${guildId}/channels`,
+  })
+
   return NextResponse.json(result.channel)
+}
+
+/** The "before" side of a channel diff: only the fields the edit touched. */
+function pickChannelFields(
+  channel: Record<string, unknown>,
+  mutation: ChannelMutation & { reason?: string },
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const key of Object.keys(mutation)) {
+    if (key === 'reason') continue
+    out[key] = channel[key] ?? null
+  }
+  return out
 }
 
 export async function DELETE(

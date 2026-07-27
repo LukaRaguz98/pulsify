@@ -254,7 +254,7 @@ export function BillingOverview({
         </p>
         <div className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
           <LimitRow label="Analytics retention" value={`${formatLimit(limits.analyticsRetentionDays)} days`} />
-          <LimitRow label="Moderation log history" value={`${formatLimit(limits.logRetentionDays)} days`} />
+          <LimitRow label="History & log retention" value={`${formatLimit(limits.logRetentionDays)} days`} />
           <LimitRow label="Automations per server" value={formatLimit(limits.maxAutomationsPerGuild)} />
           <LimitRow label="Concurrent giveaways" value={formatLimit(limits.maxConcurrentGiveaways)} />
           <LimitRow label="Concurrent polls" value={formatLimit(limits.maxActivePolls)} />

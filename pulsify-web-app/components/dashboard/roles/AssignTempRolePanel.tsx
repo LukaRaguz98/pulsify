@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
-import { X, Loader2, Search, Check, AlertTriangle, Clock, Calendar } from 'lucide-react'
+import { X, Loader2, Search, AlertTriangle, Clock, Calendar } from 'lucide-react'
 import { useDialogDismiss } from '@/components/ui/use-dialog-dismiss'
 import { avatarUrl, type DiscordRole } from '@/lib/discord'
 import {
@@ -220,12 +220,27 @@ export function AssignTempRolePanel({ guildId, roles, members, onClose, onAssign
           {/* Notifications */}
           <div className="flex flex-wrap gap-4">
             {([['notifyUser', notifyUser, setNotifyUser, 'Notify member (DM)'], ['notifyAdmin', notifyAdmin, setNotifyAdmin, 'Notify admins']] as const).map(([key, val, set, label]) => (
-              <label key={key} className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
-                <button type="button" onClick={() => set(!val)} className="flex h-4 w-4 items-center justify-center rounded border" style={{ background: val ? 'var(--p-1)' : 'transparent', borderColor: val ? 'var(--p-1)' : 'var(--line-strong)', color: '#fff' }}>
-                  {val && <Check size={11} />}
-                </button>
+              <button
+                key={key}
+                type="button"
+                role="switch"
+                aria-checked={val}
+                onClick={() => set(!val)}
+                className="flex cursor-pointer items-center gap-2 text-sm text-foreground"
+              >
+                {/* Sliding toggle — the same switch the Permissions list and the
+                    role editor use, so every bool control feels consistent. */}
+                <span
+                  className="relative h-5 w-9 shrink-0 rounded-full transition-colors duration-200"
+                  style={{ background: val ? 'var(--p-1)' : 'var(--line-strong)' }}
+                >
+                  <span
+                    className="absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200"
+                    style={{ transform: val ? 'translateX(16px)' : 'translateX(0)' }}
+                  />
+                </span>
                 {label}
-              </label>
+              </button>
             ))}
           </div>
 

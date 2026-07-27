@@ -50,7 +50,7 @@ const SECTIONS: Section[] = [
     title: 'Usage limits',
     rows: [
       { kind: 'num', label: 'Analytics retention', key: 'analyticsRetentionDays', suffix: ' days' },
-      { kind: 'num', label: 'Moderation log history', key: 'logRetentionDays', suffix: ' days' },
+      { kind: 'num', label: 'Server history & log retention', key: 'logRetentionDays', suffix: ' days' },
       { kind: 'num', label: 'Automations', key: 'maxAutomationsPerGuild' },
       { kind: 'num', label: 'Concurrent giveaways', key: 'maxConcurrentGiveaways' },
       { kind: 'num', label: 'Concurrent polls', key: 'maxActivePolls' },

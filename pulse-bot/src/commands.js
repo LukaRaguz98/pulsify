@@ -2133,6 +2133,54 @@ const COMMANDS = [
       await moderation.handleModlogs({ interaction, guild, ephemeral });
     },
   },
+  {
+    // Server Timeline (PULSIFY-63). Sits in `insights` rather than `moderation`
+    // because it spans the whole server, not just enforcement — /modlogs is the
+    // moderation-only view, this is everything.
+    name: "timeline",
+    category: "insights",
+    module: null,
+    defaultPermission: PERMISSION.ADMIN,
+    examples: [
+      "/timeline",
+      "/timeline category:Roles",
+      "/timeline user:@username",
+    ],
+    detail:
+      "The most recent significant changes to the server — roles, channels, members, moderation, economy, automations, events and configuration — whether they were made in the dashboard or directly in Discord. Each entry says what changed, who changed it and where from. Narrow it to one category or one member, or open Analytics › History in the dashboard for the full history with search, before/after values and CSV/JSON/PDF exports. Admins only.",
+    data: new SlashCommandBuilder()
+      .setName("timeline")
+      .setDescription("Show what recently changed in this server")
+      .addStringOption((o) =>
+        o
+          .setName("category")
+          .setDescription("Only show one kind of change")
+          .setRequired(false)
+          .addChoices(
+            { name: "Roles", value: "roles" },
+            { name: "Channels", value: "channels" },
+            { name: "Members", value: "members" },
+            { name: "Moderation", value: "moderation" },
+            { name: "Economy", value: "economy" },
+            { name: "Automation", value: "automation" },
+            { name: "Events", value: "events" },
+            { name: "Configuration", value: "configuration" },
+          ),
+      )
+      .addUserOption((o) =>
+        o
+          .setName("user")
+          .setDescription("Only show changes involving this member")
+          .setRequired(false),
+      ),
+    async execute({ interaction, guild, timeline, ephemeral }) {
+      if (!timeline?.handleTimeline) {
+        await replyNotice(interaction, "The timeline isn't available right now.");
+        return;
+      }
+      await timeline.handleTimeline({ interaction, guild, ephemeral });
+    },
+  },
 
   // ── Roles & Channels (PULSIFY-61) ──────────────────────────────────────────
   {

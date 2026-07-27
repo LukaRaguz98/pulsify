@@ -19,6 +19,7 @@ import {
 } from '@/lib/discord'
 import type { V2Attachment } from '@/lib/discord'
 import { recordNotification } from '@/lib/notifications-server'
+import { recordTimelineEvent } from '@/lib/timeline-server'
 import { readGuildEmbedHex } from '@/lib/embed-color'
 import { getTintedPulseIcon, pulseIconFilename } from '@/lib/pulse-icon'
 import { sendPulseGuardWarningDM } from '@/lib/pulse-guard-dm'
@@ -267,12 +268,14 @@ export async function POST(req: Request) {
       )
     }
 
+    const detectionTitle = `Pulse Guard flagged ${verdict.topCategory ? CATEGORY_LABELS[verdict.topCategory] : 'content'} in ${body.channel_name ? `#${body.channel_name}` : 'a channel'}`
+
     if (settings.realtime_alerts) {
       await recordNotification({
         guildId,
         type: 'automation_triggered',
         severity: verdict.severity === 'high' ? 'error' : verdict.severity === 'medium' ? 'warning' : 'info',
-        title: `Pulse Guard flagged ${verdict.topCategory ? CATEGORY_LABELS[verdict.topCategory] : 'content'} in ${body.channel_name ? `#${body.channel_name}` : 'a channel'}`,
+        title: detectionTitle,
         body: verdict.reasoning.slice(0, 240),
         link: `/dashboard/${guildId}/ai-moderation`,
         actorId: body.author_id ?? null,
@@ -286,8 +289,43 @@ export async function POST(req: Request) {
           top_category: verdict.topCategory,
           action: executedAction,
         },
+        // The timeline records every detection below, alerts on or off.
+        timeline: false,
       })
     }
+
+    // Detections belong in the history regardless of whether realtime alerts
+    // are switched on — "alerts were noisy so we turned them off" must not mean
+    // "we lost the record of what Pulse Guard caught".
+    await recordTimelineEvent({
+      guildId,
+      type:
+        verdict.topCategory === 'scam' || verdict.topCategory === 'phishing'
+          ? 'guard_scam'
+          : verdict.topCategory === 'toxicity' || verdict.topCategory === 'harassment'
+            ? 'guard_toxic'
+            : 'guard_detection',
+      title: detectionTitle,
+      description: verdict.reasoning.slice(0, 500),
+      severity: verdict.severity === 'high' ? 'critical' : verdict.severity === 'medium' ? 'warning' : 'info',
+      // The message author is the subject here, not an administrator — but
+      // they are who performed the flagged action, so they read as the actor.
+      source: 'bot',
+      actorId: body.author_id ?? null,
+      actorName: body.author_name ?? null,
+      actorUsername: body.author_username ?? null,
+      targetId: body.message_id ?? null,
+      targetName: body.channel_name ? `#${body.channel_name}` : null,
+      newValue: { action: executedAction ?? 'none' },
+      metadata: {
+        event_id: inserted.id,
+        confidence: verdict.confidence,
+        top_category: verdict.topCategory,
+        severity: verdict.severity,
+        channel_id: body.channel_id ?? null,
+      },
+      link: `/dashboard/${guildId}/ai-moderation`,
+    })
 
     // Courtesy DM to the warned member — DM only. The moderator-facing
     // "… detected" alert (posted above to the alert channel) is what mods see;

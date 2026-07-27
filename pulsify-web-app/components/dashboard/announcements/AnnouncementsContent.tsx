@@ -160,45 +160,27 @@ export function AnnouncementsContent({ guildId, guildName, initialAnnouncements,
           title="Manage"
           description="Browse previous announcements, draft a new one, and publish to a channel."
         >
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            <button
-              onClick={() => setCreating(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white"
-              style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}
-            >
-              <Plus size={15} />
-              New announcement
-            </button>
-          </div>
-
-          {initialAnnouncements.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-xl border py-16 text-center" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: 'var(--p-soft)', color: 'var(--p-1)' }}>
-                <Megaphone size={26} />
+          {/* Search sits to the left of the create action, with the status
+              filter beside it — same row layout as Self-Assign Roles and the
+              other list views. */}
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            {initialAnnouncements.length > 0 ? (
+              <div className="relative w-full lg:max-w-xs">
+                <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search announcements…"
+                  className="w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1"
+                  style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
+                />
               </div>
-              <p className="font-semibold text-foreground">No announcements yet</p>
-              <p className="mt-2 max-w-sm text-sm" style={{ color: 'var(--text-3)' }}>
-                Write your first announcement — Pulse posts a polished embed to the channel you choose, and keeps a history here.
-              </p>
-              <button onClick={() => setCreating(true)} className="mt-4 inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white" style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))', boxShadow: '0 4px 14px -4px var(--p-glow)' }}>
-                <Plus size={15} /> Create an announcement
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-5">
-              {/* Search + status filter */}
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="relative flex-1 sm:max-w-xs">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search announcements…"
-                    className="w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1"
-                    style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
-                  />
-                </div>
+            ) : (
+              <div className="hidden lg:block" />
+            )}
+            <div className="flex flex-wrap items-center gap-3">
+              {initialAnnouncements.length > 0 && (
                 <div className="inline-flex flex-wrap rounded-lg border p-0.5" style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}>
                   {(['all', ...SECTIONS] as const).map((f) => {
                     const active = statusFilter === f
@@ -216,8 +198,33 @@ export function AnnouncementsContent({ guildId, guildName, initialAnnouncements,
                     )
                   })}
                 </div>
-              </div>
+              )}
+              <button
+                onClick={() => setCreating(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white"
+                style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}
+              >
+                <Plus size={15} />
+                New announcement
+              </button>
+            </div>
+          </div>
 
+          {initialAnnouncements.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-xl border py-16 text-center" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: 'var(--p-soft)', color: 'var(--p-1)' }}>
+                <Megaphone size={26} />
+              </div>
+              <p className="font-semibold text-foreground">No announcements yet</p>
+              <p className="mt-2 max-w-sm text-sm" style={{ color: 'var(--text-3)' }}>
+                Write your first announcement — Pulse posts a polished embed to the channel you choose, and keeps a history here.
+              </p>
+              <button onClick={() => setCreating(true)} className="mt-4 inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white" style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))', boxShadow: '0 4px 14px -4px var(--p-glow)' }}>
+                <Plus size={15} /> Create an announcement
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-5">
               {filtered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center rounded-xl border py-14 text-center" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
                   <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl" style={{ background: 'var(--bg-2)', color: 'var(--text-3)' }}>

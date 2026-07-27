@@ -569,6 +569,27 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
       </>
     ),
   },
+  timeline: {
+    title: 'Server History',
+    plan: 'free',
+    body: (
+      <>
+        <p>The complete history of your server, in order — roles, channels, members, moderation, economy, automations, events and configuration — whether the change was made in Pulsify or directly in Discord.</p>
+        <p><strong>When to use:</strong> Reach for it when something looks different and nobody remembers changing it. Filter by administrator or member, search a name, then expand an event to see the exact before and after.</p>
+        <p><strong>Heads up:</strong> How far back the history reaches depends on your plan&apos;s log retention. Nothing is deleted when a plan changes — an upgrade brings the older history straight back.</p>
+      </>
+    ),
+  },
+  'timeline-stats': {
+    title: 'History statistics',
+    plan: 'free',
+    body: (
+      <>
+        <p>A summary of everything in the retained history: how much is happening, when your server actually changes, who is changing it, and which modules they touch most.</p>
+        <p><strong>Tip:</strong> These numbers cover the whole window, not your current filters — they&apos;re the baseline you read a filtered feed against.</p>
+      </>
+    ),
+  },
   feedback: {
     title: 'Community Feedback',
     plan: 'free',

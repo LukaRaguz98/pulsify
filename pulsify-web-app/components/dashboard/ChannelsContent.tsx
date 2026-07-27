@@ -304,9 +304,13 @@ export function ChannelsContent({
               <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
               Refresh
             </button>
-          ) : (
+          ) : tab === 'private' ? (
+            // Only the Private Channels tab owns this toolbar. `privateAction`
+            // persists after you leave the tab, so it must be gated on `private`
+            // explicitly — otherwise it leaks onto the Statistics tab, which
+            // renders its own controls inside its content.
             privateAction ?? undefined
-          )
+          ) : undefined
         }
       />
 
@@ -405,14 +409,14 @@ export function ChannelsContent({
           description="Drag rows to reorder. Click any channel to edit name, topic, permissions, and more."
         >
           <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px] max-w-sm">
-              <Search size={12} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <div className="relative w-full sm:w-[340px]">
+              <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search channels…"
-                className="w-full rounded-lg border py-1.5 pl-7 pr-2 text-xs focus:outline-none focus:ring-1"
+                className="w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1"
                 style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
               />
             </div>

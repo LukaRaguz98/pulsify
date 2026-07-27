@@ -6,6 +6,8 @@ import {
   type NotificationSeverity,
   type NotificationType,
 } from '@/lib/notifications'
+import { mirrorNotificationToTimeline } from '@/lib/timeline-server'
+import type { TimelineSource } from '@/lib/timeline'
 
 export type RecordNotificationInput = {
   guildId: string
@@ -26,6 +28,18 @@ export type RecordNotificationInput = {
   targetId?: string | null
   targetName?: string | null
   metadata?: Record<string, unknown>
+  /**
+   * Server Timeline mirroring (PULSIFY-63). Notifications double as the
+   * timeline's widest source of events — every type in the mirror map also
+   * writes a `timeline_events` row.
+   *
+   * Pass `timeline: false` when the caller emits its own richer timeline event
+   * (one carrying a before/after diff) so the history doesn't get two rows for
+   * one change. `timelineSource` overrides where the change came from —
+   * default 'dashboard', since that's who calls this from the web app.
+   */
+  timeline?: false
+  timelineSource?: TimelineSource
 }
 
 /**
@@ -36,6 +50,31 @@ export type RecordNotificationInput = {
  * come from the analytics_events trigger so the bot can stay agnostic.
  */
 export async function recordNotification(input: RecordNotificationInput): Promise<void> {
+  // The notification and its Server Timeline mirror are independent writes —
+  // run them concurrently and await both, so neither is left dangling when the
+  // request finishes. Both helpers swallow their own errors.
+  await Promise.all([
+    insertNotification(input),
+    input.timeline === false
+      ? Promise.resolve()
+      : mirrorNotificationToTimeline({
+          guildId: input.guildId,
+          type: input.type,
+          title: input.title,
+          body: input.body,
+          link: input.link,
+          actorId: input.actorId,
+          actorName: input.actorName,
+          actorUsername: input.actorUsername,
+          targetId: input.targetId,
+          targetName: input.targetName,
+          metadata: input.metadata,
+          source: input.timelineSource,
+        }),
+  ])
+}
+
+async function insertNotification(input: RecordNotificationInput): Promise<void> {
   try {
     const supabase = await createClient()
     const { error } = await supabase.from('notifications').insert({

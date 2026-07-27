@@ -204,6 +204,59 @@ export function PollsContent({
           </CategorySection>
 
           <CategorySection icon={<ListChecks size={14} />} title="Manage" description="Browse polls and launch a new one.">
+            {/* Search on the left, status filter and the create action on the
+                right — matching Giveaways, Scheduled and Announcements so the
+                controls sit in the same place across every Engagement view. */}
+            {(initialPolls.length > 0 || !readOnly) && (
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                {initialPolls.length > 0 ? (
+                  <div className="relative w-full lg:max-w-xs">
+                    <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search polls…"
+                      className="w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1"
+                      style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
+                    />
+                  </div>
+                ) : (
+                  <div className="hidden lg:block" />
+                )}
+                <div className="flex flex-wrap items-center gap-3">
+                  {initialPolls.length > 0 && (
+                    <div className="inline-flex flex-wrap rounded-lg border p-0.5" style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}>
+                      {(['all', ...SECTIONS] as const).map((f) => {
+                        const active = statusFilter === f
+                        const label = f === 'all' ? 'All' : STATUS_META[f].label
+                        return (
+                          <button
+                            key={f}
+                            type="button"
+                            onClick={() => setStatusFilter(f)}
+                            className="rounded-md px-3 py-1 text-xs font-medium transition"
+                            style={{ background: active ? 'var(--p-soft)' : 'transparent', color: active ? 'var(--p-1)' : 'var(--text-3)' }}
+                          >
+                            {label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                  {!readOnly && (
+                    <button
+                      onClick={() => setCreating(true)}
+                      className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white"
+                      style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}
+                    >
+                      <Plus size={15} />
+                      New poll
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
             {initialPolls.length === 0 ? (
               <EmptyState
                 icon={<BarChart3 size={26} />}
@@ -227,49 +280,6 @@ export function PollsContent({
               />
             ) : (
               <div className="space-y-5">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="relative flex-1 sm:max-w-xs">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
-                    <input
-                      type="text"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Search polls…"
-                      className="w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1"
-                      style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)', color: 'var(--text)' }}
-                    />
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="inline-flex flex-wrap rounded-lg border p-0.5" style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}>
-                      {(['all', ...SECTIONS] as const).map((f) => {
-                        const active = statusFilter === f
-                        const label = f === 'all' ? 'All' : STATUS_META[f].label
-                        return (
-                          <button
-                            key={f}
-                            type="button"
-                            onClick={() => setStatusFilter(f)}
-                            className="rounded-md px-3 py-1 text-xs font-medium transition"
-                            style={{ background: active ? 'var(--p-soft)' : 'transparent', color: active ? 'var(--p-1)' : 'var(--text-3)' }}
-                          >
-                            {label}
-                          </button>
-                        )
-                      })}
-                    </div>
-                    {!readOnly && (
-                      <button
-                        onClick={() => setCreating(true)}
-                        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white"
-                        style={{ background: 'linear-gradient(135deg, var(--p-1), var(--p-2))' }}
-                      >
-                        <Plus size={15} />
-                        New poll
-                      </button>
-                    )}
-                  </div>
-                </div>
-
                 {filtered.length === 0 ? (
                   <EmptyState variant="muted" icon={<Search size={24} />} title="No matching polls" description="Try a different search or filter." />
                 ) : (

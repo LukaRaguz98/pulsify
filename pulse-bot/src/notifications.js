@@ -3,6 +3,8 @@
 // severity maps from pulsify-web-app/lib/notifications.ts — keep these in
 // sync when adding new types.
 
+const { mirrorNotificationToTimeline } = require("./timeline");
+
 // Match pulsify-web-app/lib/notifications.ts. Keep these maps in lock-step
 // so a `type` written from the bot is grouped + colored the same way the
 // dashboard already groups + colors its own writes.
@@ -102,7 +104,17 @@ const TYPE_TO_SEVERITY = {
 // `actorName` holds the server display name (nickname → global name → username),
 // `actorUsername` holds the raw @handle. The dashboard renders them as
 // "Display (username)" in detail views, so always pass both when you have them.
+//
+// Server Timeline (PULSIFY-63): every notification whose type maps to a
+// timeline event also writes a `timeline_events` row, so the bot's existing
+// call sites feed the history automatically. Pass `timeline: false` when the
+// caller emits its own richer timeline event (one carrying a before/after) so
+// history doesn't get two rows for one change; `timelineSource` overrides
+// where the change came from (default 'discord').
 async function recordNotification(supabase, input) {
+  if (input.timeline !== false) {
+    await mirrorNotificationToTimeline(supabase, input);
+  }
   try {
     const { error } = await supabase.from('notifications').insert({
       guild_id: input.guildId,
