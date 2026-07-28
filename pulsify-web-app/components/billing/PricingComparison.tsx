@@ -44,6 +44,8 @@ const SECTIONS: Section[] = [
       { kind: 'all', label: 'Alt-detection risk checks' },
       { kind: 'all', label: 'Server insights & analytics' },
       { kind: 'all', label: 'Feature-enablement templates' },
+      { kind: 'bool', label: 'Gaming analytics', key: 'gamingAnalytics' },
+      { kind: 'bool', label: 'Gaming trends, heatmaps & squads', key: 'advancedGamingAnalytics' },
     ],
   },
   {

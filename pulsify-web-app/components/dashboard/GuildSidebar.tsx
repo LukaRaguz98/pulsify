@@ -53,6 +53,7 @@ import {
   UserPlus,
   History,
   UsersRound,
+  Gamepad2,
 } from 'lucide-react'
 import { UserProfileButton } from '@/components/dashboard/UserProfileButton'
 import { SearchTrigger } from '@/components/dashboard/search/SearchTrigger'
@@ -214,6 +215,10 @@ export function GuildSidebar({
       items: [
         { label: 'Leaderboards', href: `${base}/leaderboard`, icon: <Trophy size={16} /> },
         { label: 'Statistics', href: `${base}/statistics`, icon: <Activity size={16} /> },
+        // Read-only for members: what the server plays, who's playing right
+        // now, and who to team up with. The analytics module itself, its
+        // settings and its exports stay with the admin nav.
+        { label: 'Gaming', href: `${base}/gaming`, icon: <Gamepad2 size={16} /> },
         { label: 'Events', href: `${base}/events`, icon: <CalendarDays size={16} /> },
         { label: 'Giveaways', href: `${base}/giveaways`, icon: <Gift size={16} /> },
         { label: 'Polls', href: `${base}/polls`, icon: <Vote size={16} /> },
@@ -317,6 +322,9 @@ export function GuildSidebar({
       items: [
         { label: 'Statistics', href: `${base}/statistics`, icon: <Activity size={16} /> },
         { label: 'Insights', href: `${base}/insights`, icon: <Lightbulb size={16} /> },
+        // Its own settings page (what gets recorded from presence) is reached
+        // from the module's "Settings" button — match it so the nav stays here.
+        { label: 'Gaming', href: `${base}/gaming`, icon: <Gamepad2 size={16} />, matchPrefixes: ['/gaming-settings'] },
         // Named for what it shows (staff performance) rather than /management,
         // which read like the whole administrative half of the dashboard.
         { label: 'Staff', href: `${base}/management`, icon: <UserCog size={16} /> },

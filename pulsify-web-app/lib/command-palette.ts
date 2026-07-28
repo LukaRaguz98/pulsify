@@ -81,6 +81,8 @@ const NAV_CATALOG: NavDef[] = [
   { id: 'nav-assets', label: 'Assets', icon: 'Smile', path: '/assets', keywords: 'emoji emojis sticker stickers soundboard sounds expressions upload import export branding animated' },
   { id: 'nav-templates', label: 'Templates', icon: 'LayoutTemplate', path: '/templates', keywords: 'server templates presets reuse export import config setup deploy clone copy backup configuration blueprint' },
   { id: 'nav-timeline', label: 'History', icon: 'History', path: '/timeline', keywords: 'timeline history audit log activity changes who changed what when trail record chronology investigate troubleshoot export csv pdf json' },
+  { id: 'nav-gaming', label: 'Gaming', icon: 'Gamepad2', path: '/gaming', keywords: 'gaming games play playtime sessions presence players leaderboard squads heatmap trends currently playing live activity most played hours streaming' },
+  { id: 'nav-gaming-settings', label: 'Gaming settings', icon: 'Gamepad2', path: '/gaming-settings', keywords: 'gaming settings privacy tracking presence opt out opt-out ignored roles members games retention anonymise anonymize consent config' },
   { id: 'nav-events', label: 'Events', icon: 'CalendarDays', path: '/events', keywords: 'scheduled events calendar' },
   { id: 'nav-commands', label: 'Commands', icon: 'Command', path: '/commands', keywords: 'slash bot command center' },
   { id: 'nav-presence', label: 'Presence', icon: 'Radio', path: '/presence', keywords: 'status activity rotation playing watching listening streaming maintenance bot presence' },

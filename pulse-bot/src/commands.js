@@ -1361,6 +1361,124 @@ const COMMANDS = [
     // are now configured as ONE command. An admin can no longer disable the
     // leaderboard while keeping rewards — exactly as they can't disable only
     // /birthday upcoming today. 20260627 migrates the old rows.
+    // Gaming Analytics (PULSIFY-64). EVERYONE-tier: the whole point of the
+    // module is that the community can see what it plays. The privacy
+    // subcommands are member-facing by definition — an admin cannot opt a
+    // member back in on their behalf, which is why opt-in/opt-out live here
+    // rather than on the dashboard.
+    name: "gaming",
+    category: "information",
+    module: "gaming",
+    defaultPermission: PERMISSION.EVERYONE,
+    examples: [
+      "/gaming overview",
+      "/gaming profile user:@username",
+      "/gaming leaderboard board:playtime period:week",
+      "/gaming games sort:players",
+      "/gaming currently-playing",
+    ],
+    detail:
+      "What this server plays. `overview` is the server's totals — hours played, active players, most played games. `profile` shows one member's playtime, favourite game, longest session and rank (defaults to you). `leaderboard` ranks members by playtime, sessions, longest session or number of different games, over a time range. `games` ranks the games themselves. `currently-playing` lists who is in a game right now, live. `opt-out` removes you from tracking entirely (optionally deleting your recorded sessions) and `opt-in` puts you back. Requires Gaming Analytics to be switched on under Analytics › Gaming; playtime is measured from Discord presence, so members who hide their activity are never recorded.",
+    data: new SlashCommandBuilder()
+      .setName("gaming")
+      .setDescription("Gaming stats, leaderboards and live activity")
+      .addSubcommand((sc) =>
+        sc.setName("overview").setDescription("This server's gaming statistics"),
+      )
+      .addSubcommand((sc) =>
+        sc
+          .setName("profile")
+          .setDescription("Show a member's gaming profile (defaults to you)")
+          .addUserOption((o) =>
+            o.setName("user").setDescription("The member to look up (defaults to you)").setRequired(false),
+          ),
+      )
+      .addSubcommand((sc) =>
+        sc
+          .setName("leaderboard")
+          .setDescription("Rank this server's players")
+          .addStringOption((o) =>
+            o
+              .setName("board")
+              .setDescription("What to rank by")
+              .setRequired(false)
+              .addChoices(
+                { name: "Playtime", value: "playtime" },
+                { name: "Sessions", value: "sessions" },
+                { name: "Longest session", value: "longest" },
+                { name: "Most games played", value: "variety" },
+              ),
+          )
+          .addStringOption((o) =>
+            o
+              .setName("period")
+              .setDescription("Time range for the leaderboard")
+              .setRequired(false)
+              .addChoices(
+                { name: "Today", value: "day" },
+                { name: "This week", value: "week" },
+                { name: "This month", value: "month" },
+                { name: "All time", value: "all" },
+              ),
+          ),
+      )
+      .addSubcommand((sc) =>
+        sc
+          .setName("games")
+          .setDescription("Rank the games played in this server")
+          .addStringOption((o) =>
+            o
+              .setName("sort")
+              .setDescription("How to order the games")
+              .setRequired(false)
+              .addChoices(
+                { name: "Playtime", value: "playtime" },
+                { name: "Players", value: "players" },
+                { name: "Sessions", value: "sessions" },
+                { name: "Alphabetical", value: "alphabetical" },
+              ),
+          ),
+      )
+      .addSubcommand((sc) =>
+        sc.setName("currently-playing").setDescription("See who's in a game right now"),
+      )
+      .addSubcommand((sc) =>
+        sc
+          .setName("opt-out")
+          .setDescription("Stop recording your gaming activity")
+          .addBooleanOption((o) =>
+            o
+              .setName("delete-history")
+              .setDescription("Also delete the sessions already recorded for you")
+              .setRequired(false),
+          ),
+      )
+      .addSubcommand((sc) =>
+        sc.setName("opt-in").setDescription("Start recording your gaming activity again"),
+      ),
+    async execute({ interaction, guild, gaming, ephemeral }) {
+      if (!gaming) {
+        await replyNotice(interaction, "Gaming analytics isn't available right now.");
+        return;
+      }
+      const sub = interaction.options.getSubcommand();
+      const handler = {
+        overview: gaming.handleOverview,
+        profile: gaming.handleProfile,
+        leaderboard: gaming.handleLeaderboard,
+        games: gaming.handleGames,
+        "currently-playing": gaming.handleCurrentlyPlaying,
+        "opt-out": gaming.handleOptOut,
+        "opt-in": gaming.handleOptIn,
+      }[sub];
+      if (!handler) {
+        await replyNotice(interaction, "Gaming analytics isn't available right now.");
+        return;
+      }
+      await handler({ interaction, guild, ephemeral });
+    },
+  },
+  {
     name: "invite",
     category: "information",
     module: "invites",

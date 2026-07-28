@@ -18,11 +18,74 @@ const path = require("node:path");
 // Current Pulse version. Used for the startup banner and as the displayed
 // version when no release files are reachable. Keep this in step with the
 // newest resources/notes/vX.Y.Z.txt on each release.
-const PULSE_VERSION = "0.63.0";
+const PULSE_VERSION = "0.64.0";
 
 // Manual/static fallback used only when the release-notes files can't be read.
 // Mirrors the shape produced by the parser so callers don't special-case it.
 const STATIC_RELEASES = [
+  {
+    version: "0.64.0",
+    title: "Gaming Analytics",
+    date: "Jul 28, 2026",
+    description:
+      "A Gaming view in Analytics that turns Discord presence into real play sessions — with a start, an end and a duration — and builds the whole picture on top: what the server plays, who plays it, when it's busiest, and who keeps playing together.",
+    highlights: [
+      "**Six views in one** — overview, games, player profiles, live activity, trends and squads, all computed against the same window so every number on screen agrees.",
+      "**Sessions, not samples** — Pulse records presence transitions, so a session has a real duration; restarts and reconnects are handled without inventing week-long sessions, and Spotify, custom statuses and videos are never counted as games.",
+      "**Squads & trends** — the members who keep ending up in the same games at the same time, grouped automatically, plus rising and falling games, peak hours and a weekly activity heatmap.",
+      "**Privacy enforced at write time** — ignored roles, members and games leave no record at all, statistics can be anonymised (exports included), and members can opt out themselves with /gaming opt-out and delete what was recorded.",
+      "**/gaming** — server overview, your profile, leaderboards, top games and who is currently playing, plus CSV, JSON and PDF exports from the dashboard.",
+    ],
+    outro:
+      "Find out what your community is actually into — without asking a single member to report it.",
+  },
+  {
+    version: "0.63.0",
+    title: "Server History",
+    date: "Jul 27, 2026",
+    description:
+      "A History view in Analytics that keeps one chronological record of every significant change to your server — roles, channels, members, moderation, economy, automations, events and configuration — whether it was made in the dashboard, through a slash command or directly in Discord.",
+    highlights: [
+      "**Who, what and where from** — every event names the administrator, and uniquely also the origin: the dashboard, the Discord client, a slash command, or Pulse acting on its own.",
+      "**Before and after** — expand any event for the previous and new value, field by field, plus affected members, related modules and the raw metadata.",
+      "**Find it fast** — filter by category, administrator, member, module, event type or date range, search across everything, and click any name inside an event to narrow the whole history around them.",
+      "**Export** — CSV for spreadsheets, JSON for tooling and a formatted PDF report, for your selection, the filtered view or the complete history.",
+      "**A tidier sidebar** — the dashboard navigation was regrouped around what you're working on: Members, Content, Economy, Safety, Server, Pulse Bot and Analytics. Nothing moved out of reach.",
+    ],
+    outro:
+      "Included on every plan; how far back it reaches follows your plan's history retention, and nothing is ever deleted.",
+  },
+  {
+    version: "0.62.0",
+    title: "Plans, Clarified",
+    date: "Jul 23, 2026",
+    description:
+      "Every module, limit and premium feature is now mapped to a plan and shown side by side across Free, Plus, Pro and Enterprise. No prices changed, no plans were added, and Pulsify stays completely free during early access.",
+    highlights: [
+      "**Full comparison table** on the pricing page — every module, every usage limit, every premium feature, across all four plans.",
+      "**Generous Free** — every core module is included on Free: moderation, levels, economy, reputation, birthdays, invites, polls, giveaways, events, tickets, onboarding, self-assign roles, statistics and private channels, and more.",
+      "**Paid plans lift the limits** and unlock Pulse Guard, advanced & bulk moderation, custom branding, DDoS protection, advanced analytics, workspaces and backup & restore.",
+      "**Consistent everywhere** — the dashboard, the API and the slash commands now agree on exactly what a server can do, gated on the server owner's plan.",
+      "**Clearer limits** — the Billing page lists every usage limit for your plan at a glance.",
+    ],
+    outro:
+      "Nothing is locked today. When early access ends, these are the plans you'll see — with plenty of notice first.",
+  },
+  {
+    version: "0.61.0",
+    title: "Slash Commands Everywhere",
+    date: "Jul 23, 2026",
+    description:
+      "The biggest command update yet: dozens of new slash commands bring Pulse's moderation, analytics, engagement, onboarding and server tools into Discord itself, each respecting the same permissions, cooldowns and per-server settings as the dashboard.",
+    highlights: [
+      "**Full moderator toolkit** — /warn, /timeout, /untimeout, /kick, /ban, /unban, /warnings, /purge and /modlogs, logged to Moderation History exactly like a dashboard action, with role-position checks both ways.",
+      "**Roles, tickets & community** — /role add, remove, temp, info and hierarchy, /selfrole, /ticket, /event, /announce, /automation, /giveaway, /poll, /privatechannel and /guard.",
+      "**Analytics in chat** — /stats overview, channels and members; /insights for the server health score; /management stats for staff performance.",
+      "**Members & server tools** — /rank, /reputation, /userinfo, /serverinfo, /milestones, /verify, /onboarding, /serversettings, /statchannel, /template, /emoji, /sticker, /soundboard, /backup, /integrations, /notifications and /feedback.",
+      "**Renamed** — /alt-check is now /alt check, and /invites is now /invite stats (with /invite leaderboard and /invite rewards). Discord doesn't allow spaces in a command name.",
+    ],
+    outro: "Run /help in your server to see every command you can use.",
+  },
   {
     version: "0.60.0",
     title: "Invite Tracking & Referrals",

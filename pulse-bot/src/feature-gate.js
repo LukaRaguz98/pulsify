@@ -107,6 +107,16 @@ const MODULE_SOURCES = {
     label: "Invite Tracking",
     settingsPath: "invite-settings",
   },
+  // Gaming Analytics (PULSIFY-64) records member presence, so it defaults OFF
+  // like every other module that collects personal data — a server opts in
+  // deliberately rather than discovering after the fact that it was tracking.
+  gaming: {
+    table: "gaming_settings",
+    column: "enabled",
+    defaultEnabled: false,
+    label: "Gaming Analytics",
+    settingsPath: "gaming-settings",
+  },
   // These three live inside the guild_settings.settings JSON blob rather than
   // their own table, so they're resolved by `settingsPath` into that object.
   onboarding: {

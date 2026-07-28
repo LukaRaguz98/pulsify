@@ -60,6 +60,7 @@ const { createAltDetection } = require("./alt-detection");
 const { getGuildAccent } = require("./guild-accent");
 const { createStatisticsChannels } = require("./statistics-channels");
 const { createInvites } = require("./invites");
+const { createGaming } = require("./gaming");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -84,6 +85,12 @@ const client = new Client({
     GatewayIntentBits.GuildScheduledEvents,
     // Reactions-received rewards (PULSIFY-47) need the reaction gateway events.
     GatewayIntentBits.GuildMessageReactions,
+    // Gaming Analytics (PULSIFY-64) turns presence transitions into play
+    // sessions. PRIVILEGED: this one must also be enabled for the application
+    // in the Discord Developer Portal (Bot → Privileged Gateway Intents →
+    // Presence Intent), and past 100 guilds it requires Discord's approval.
+    // Without it presenceUpdate never fires and the module records nothing.
+    GatewayIntentBits.GuildPresences,
   ],
   // Partials so MessageReactionAdd fires for reactions on messages that aren't
   // in the cache (e.g. older messages) — without these the reward never pays.
@@ -237,6 +244,15 @@ const altDetection = createAltDetection(client, supabase);
 // add/remove listeners; /invite stats, /invite leaderboard and /invite rewards route
 // through the command handler below.
 const invites = createInvites(client, supabase);
+
+// Gaming Analytics (PULSIFY-64): turns Discord presence transitions into play
+// sessions — open on start, close on stop, close-and-reopen on a switch — and
+// reconciles orphaned sessions after a restart. Owns the only writer for
+// `gaming_sessions`; the dashboard reads it through aggregate RPCs. Registers
+// its own PresenceUpdate listener and enforces privacy (ignored roles/members/
+// games, member opt-out) BEFORE inserting, so excluded members leave no rows.
+// Requires the privileged GuildPresences intent — see the client above.
+const gaming = createGaming(client, supabase);
 
 // Moderation commands (PULSIFY-61): /warn /timeout /untimeout /kick /ban /unban
 // /warnings /purge /modlogs. Pure command handlers — no listeners of its own.
@@ -691,6 +707,11 @@ client.once(Events.ClientReady, async (readyClient) => {
   // Invite tracking: prime the invite cache, attribute joins, grant referral
   // rewards. Registers its own invite + member listeners.
   await invites.start();
+
+  // Gaming analytics: load config + opt-outs, listen to presence, then (after a
+  // delay, once the presence cache has populated) reconcile any sessions left
+  // open by the previous run and start the stale-session sweep.
+  await gaming.start();
 
   // Startup banner — a clear, scannable success summary so an operator can
   // confirm at a glance which version is live, how many servers it serves, and
@@ -1644,6 +1665,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       birthdays,
       altDetection,
       invites,
+      gaming,
       moderation,
       roles,
       channels,

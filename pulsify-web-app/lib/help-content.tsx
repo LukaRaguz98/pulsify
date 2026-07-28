@@ -580,6 +580,59 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
       </>
     ),
   },
+  gaming: {
+    title: 'Gaming',
+    plan: 'free',
+    body: (
+      <>
+        <p>What your server plays, measured from Discord presence: play sessions with a real start, end and duration, aggregated into games, players, leaderboards, trends and squads.</p>
+        <p><strong>When to use:</strong> Reach for it when you want to know what your community is actually into — which games to build events around, who your most active players are, and when the server is busiest.</p>
+        <p><strong>Heads up:</strong> Pulse can only see members whose Discord activity status is visible. Anyone who hides their activity, or opts out with <code>/gaming opt-out</code>, is never recorded at all.</p>
+      </>
+    ),
+  },
+  'gaming-settings': {
+    title: 'Gaming settings',
+    plan: 'free',
+    body: (
+      <>
+        <p>Controls what Pulse records from presence and who is excluded. Changes take effect on the next presence update — there is no restart to wait for.</p>
+        <p><strong>Tip:</strong> Exclusions are applied before anything is written, so an excluded member leaves no rows behind rather than being filtered out on the way to the screen.</p>
+        <p><strong>Looking for gaming alerts?</strong> Which gaming events notify you lives with every other module’s alerts on Notification settings, under “Gaming”.</p>
+      </>
+    ),
+  },
+  'gaming-tracking': {
+    title: 'Gaming tracking',
+    plan: 'free',
+    body: (
+      <>
+        <p>The master switch, plus the two settings that decide what counts as a session at all.</p>
+        <p><strong>Heads up:</strong> Turning tracking off stops collection but deletes nothing — existing history returns the moment you switch it back on. Retention works the same way: it is the window the analytics read, not a delete schedule. Gaming is bound by your plan’s analytics retention, the same limit Statistics and Insights use; the setting here can only shorten it further.</p>
+      </>
+    ),
+  },
+  'gaming-exclusions': {
+    title: 'Gaming exclusions',
+    plan: 'free',
+    body: (
+      <>
+        <p>Roles, members and games Pulse should never record. Useful for staff accounts, bots that report a game, and launchers that Discord reports as if they were games.</p>
+        <p><strong>Tip:</strong> Ignored games are matched case-insensitively against the name Discord reports, so entering it once covers every spelling variation across clients.</p>
+      </>
+    ),
+  },
+  'gaming-privacy': {
+    title: 'Gaming privacy',
+    plan: 'free',
+    body: (
+      <>
+        <p>How much of what is collected is shown, and what members can decide for themselves.</p>
+        <p><strong>Members see Gaming too</strong> — a read-only view under Community with what the server plays, who is playing right now and who to team up with. It honours these settings: anonymised statistics anonymise it, excluded members and games never appear in it, and it never shows voice channels, session history or exports.</p>
+        <p><strong>Heads up:</strong> Anonymised statistics apply to exports too — an export is the easiest way to leak exactly what that setting exists to hide. Member opt-outs are the member’s own decision and can only be reversed by them.</p>
+      </>
+    ),
+  },
   'timeline-stats': {
     title: 'History statistics',
     plan: 'free',

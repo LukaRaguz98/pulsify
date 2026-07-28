@@ -148,6 +148,22 @@ export type FeatureLimits = {
   multiServerManagement: boolean
   /** Advanced analytics insights (heatmaps, cohorts). Pro+. */
   advancedAnalytics: boolean
+  /**
+   * Gaming Analytics (PULSIFY-64) — presence-based play tracking, per-game and
+   * per-member statistics, leaderboards, live activity.
+   *
+   * FREE on every plan, deliberately. It is the module a gaming community
+   * evaluates Pulsify on, and gating the whole thing would mean a server never
+   * sees the data that would make it upgrade. Depth is what costs: history
+   * length rides `logRetentionDays`, and the derived views below are Plus+.
+   */
+  gamingAnalytics: boolean
+  /**
+   * The derived half of Gaming: squad detection, activity heatmaps, popularity
+   * trends and exports. These are the expensive queries and the ones a server
+   * only wants once it has months of history to look at. Plus+.
+   */
+  advancedGamingAnalytics: boolean
   /** Backup/restore of guild config (Pro+). */
   backupRestore: boolean
   /** Public REST API / webhooks (Enterprise). */
@@ -186,6 +202,8 @@ export const PLAN_LIMITS: Record<Plan, FeatureLimits> = {
     customBranding: false,
     multiServerManagement: false,
     advancedAnalytics: false,
+    gamingAnalytics: true,
+    advancedGamingAnalytics: false,
     backupRestore: false,
     apiAccess: false,
     prioritySupport: false,
@@ -219,6 +237,12 @@ export const PLAN_LIMITS: Record<Plan, FeatureLimits> = {
     customBranding: true,
     multiServerManagement: false,
     advancedAnalytics: false,
+    gamingAnalytics: true,
+    // Plus is where the derived gaming views unlock — one tier below
+    // `advancedAnalytics`, because squads and heatmaps are the reason a gaming
+    // community upgrades at all, and holding them to Pro would put the module's
+    // whole point behind the wrong door.
+    advancedGamingAnalytics: true,
     backupRestore: false,
     apiAccess: false,
     prioritySupport: true,
@@ -252,6 +276,8 @@ export const PLAN_LIMITS: Record<Plan, FeatureLimits> = {
     customBranding: true,
     multiServerManagement: true,
     advancedAnalytics: true,
+    gamingAnalytics: true,
+    advancedGamingAnalytics: true,
     backupRestore: true,
     apiAccess: false,
     prioritySupport: true,
@@ -285,6 +311,8 @@ export const PLAN_LIMITS: Record<Plan, FeatureLimits> = {
     customBranding: true,
     multiServerManagement: true,
     advancedAnalytics: true,
+    gamingAnalytics: true,
+    advancedGamingAnalytics: true,
     backupRestore: true,
     apiAccess: true,
     prioritySupport: true,
