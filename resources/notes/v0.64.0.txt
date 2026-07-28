@@ -1,0 +1,36 @@
+**Pulsify v0.64.0 — Gaming Analytics**
+Your server already knows what it plays. Now it can prove it. Pulsify reads Discord presence and turns it into real play sessions — with a start, an end and a duration — then builds the whole picture on top: which games your community is actually into, who plays them, when the server is busiest, and who keeps showing up together.
+
+**Analytics Gaming**
+- **Overview** — total gaming hours, active players today and this week, unique games, average and longest session, your busiest gaming day and hour, and who is playing right now.
+- **Games** — most played, fastest growing and newly detected games, with playtime, players, sessions and average session length. Sort by playtime, players, sessions, popularity or name, and open any game for its own trend.
+- **Players** — a gaming profile per member: total playtime, favourite game, recently played, longest and average session, gaming streak and their most active hours.
+- **Live** — who is in a game this second, what they are playing and how long they have been at it, refreshed as it happens.
+
+**The parts you can't get by watching**
+- **Trends** — games gaining and losing ground, peak gaming hours, busiest weekdays, and an activity heatmap of the whole week.
+- **Squads** — the members who keep ending up in the same games at the same time, grouped automatically, with their shared games and hours together.
+- **Community insights** — game diversity, returning and newly active gamers, average daily playtime, your most social game and your most committed one.
+- **Leaderboards** — playtime for today, this week, this month or all time, plus sessions, longest session and most different games played.
+
+**Sessions, not guesses**
+- Pulse records the transitions — start, stop, switch — so a session has a real duration instead of being sampled and estimated. Restarts and reconnects are handled without inventing a week-long session.
+- Spotify, custom statuses and videos are never counted as games. Sessions shorter than your minimum (two minutes by default) are discarded, not stored.
+
+**Privacy is the default, not a setting you find later**
+- Ignore roles, members or specific games — anything excluded leaves **no record at all**, because the rules are applied before anything is written.
+- **Anonymised statistics** show members as Player 1, 2, 3 — leaderboards still work, identities stay in the server. Exports respect it too.
+- Members can opt out themselves with **`/gaming opt-out`**, and delete what was already recorded. Only they can reverse it.
+- Pulse can only ever see members whose Discord activity status is visible. Anyone hiding it was never visible to begin with.
+
+**In Discord too**
+- **`/gaming`** — server overview, your profile, leaderboards, top games and who is currently playing, in Pulse-styled embeds.
+
+**Export it**
+- **CSV**, **JSON** and a formatted **PDF** for player statistics, game statistics, leaderboards and the full gaming history.
+
+**Plans**
+- Gaming is included on **every plan, Free included** — it's what a gaming community should be able to judge Pulsify on. Trends, heatmaps, squads and exports are **Plus and up**.
+- How far back it reaches follows your plan's analytics retention, the same window Statistics uses. Nothing is ever deleted, so upgrading brings the older sessions straight back.
+
+July 28, 2026

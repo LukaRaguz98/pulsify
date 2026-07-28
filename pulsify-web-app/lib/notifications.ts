@@ -78,6 +78,12 @@ export const NOTIFICATION_TYPES = [
   'invite_invalid',
   'invite_reward',
   'invite_spike',
+  // gaming
+  'gaming_tracking_toggled',
+  'gaming_popular_game',
+  'gaming_member_milestone',
+  'gaming_server_record',
+  'gaming_activity_spike',
   // bot
   'bot_warning',
   'bot_error',
@@ -104,6 +110,7 @@ export type NotificationCategory =
   | 'economy'
   | 'security'
   | 'invites'
+  | 'gaming'
   | 'bot'
 
 export type NotificationSeverity = 'info' | 'success' | 'warning' | 'error'
@@ -157,6 +164,11 @@ export const TYPE_TO_CATEGORY: Record<NotificationType, NotificationCategory> = 
   invite_invalid: 'invites',
   invite_reward: 'invites',
   invite_spike: 'invites',
+  gaming_tracking_toggled: 'gaming',
+  gaming_popular_game: 'gaming',
+  gaming_member_milestone: 'gaming',
+  gaming_server_record: 'gaming',
+  gaming_activity_spike: 'gaming',
   bot_warning: 'bot',
   bot_error: 'bot',
 }
@@ -210,6 +222,11 @@ export const TYPE_TO_SEVERITY: Record<NotificationType, NotificationSeverity> = 
   invite_invalid: 'info',
   invite_reward: 'success',
   invite_spike: 'warning',
+  gaming_tracking_toggled: 'info',
+  gaming_popular_game: 'info',
+  gaming_member_milestone: 'success',
+  gaming_server_record: 'success',
+  gaming_activity_spike: 'info',
   bot_warning: 'warning',
   bot_error: 'error',
 }
@@ -233,6 +250,7 @@ export const CATEGORY_LABELS: Record<NotificationCategory, string> = {
   economy: 'Economy',
   security: 'Security',
   invites: 'Invites',
+  gaming: 'Gaming',
   bot: 'Bot Status',
 }
 
@@ -284,6 +302,11 @@ export const TYPE_LABELS: Record<NotificationType, string> = {
   invite_invalid: 'Invite marked invalid',
   invite_reward: 'Invite reward earned',
   invite_spike: 'Suspicious invite spike',
+  gaming_tracking_toggled: 'Gaming tracking switched',
+  gaming_popular_game: 'A game takes off',
+  gaming_member_milestone: 'Gaming milestone reached',
+  gaming_server_record: 'Server gaming record broken',
+  gaming_activity_spike: 'Gaming activity spike',
   bot_warning: 'Bot warnings',
   bot_error: 'Bot errors',
 }
@@ -337,6 +360,11 @@ export const TYPE_DESCRIPTIONS: Record<NotificationType, string> = {
   invite_invalid: 'An invite is marked invalid or fake by the rules or an admin.',
   invite_reward: 'An inviter reaches a milestone and earns a referral reward.',
   invite_spike: 'One inviter drives an unusual burst of joins — possible farming.',
+  gaming_tracking_toggled: 'An admin turns presence-based gaming tracking on or off.',
+  gaming_popular_game: 'A game climbs into the server’s most played.',
+  gaming_member_milestone: 'A member passes a playtime or session milestone.',
+  gaming_server_record: 'A new longest session or busiest gaming day is set.',
+  gaming_activity_spike: 'Far more people are playing than usual.',
   bot_warning: 'Recoverable issues like failed welcome messages.',
   bot_error: 'Critical bot failures that need attention.',
 }

@@ -11,7 +11,7 @@ import {
   Bot, Volume2, Folder, Megaphone, Radio, MessagesSquare, Image as ImageIcon,
   Lightbulb, LifeBuoy, Gift, Trophy, Plug, Award, LayoutTemplate, Upload, UserCog,
   Coins, Store, Crown, ShoppingBag, Backpack, Smile, Cake, Fingerprint, UserPlus,
-  Download,
+  Download, Gamepad2,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -34,7 +34,7 @@ const ICONS: Record<string, LucideIcon> = {
   Bot, Volume2, Folder, Megaphone, Radio, MessagesSquare, Image: ImageIcon,
   Lightbulb, LifeBuoy, Gift, Trophy, Plug, Award, LayoutTemplate, Upload, UserCog,
   Coins, Store, Crown, ShoppingBag, Backpack, Smile, Cake, Fingerprint, UserPlus,
-  Download,
+  Download, Gamepad2,
 }
 
 function Icon({ name, size = 16 }: { name: string; size?: number }) {

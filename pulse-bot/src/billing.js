@@ -58,6 +58,11 @@ const GUILD_LIMITS = {
   maxConcurrentGiveaways: { free: 1, pro: 10, business: 50, enterprise: null },
   maxActivePolls: { free: 2, pro: 15, business: 75, enterprise: null },
   maxScheduledEvents: { free: 3, pro: 20, business: 100, enterprise: null },
+  // Days of analytics history a guild may read. Not a create-cap like the three
+  // above — it's the QUERY WINDOW, mirrored here so /gaming reads exactly as far
+  // back as Analytics › Gaming does. A number quoted in Discord that didn't
+  // match the dashboard would be worse than no number at all.
+  analyticsRetentionDays: { free: 7, pro: 30, business: 90, enterprise: 365 },
 };
 
 /** The numeric cap for `plan` on `key`; Infinity when unlimited/unknown. */
