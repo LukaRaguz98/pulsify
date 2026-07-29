@@ -568,8 +568,10 @@ function NotificationPreview({
             Pulse · Integrations
           </div>
         </div>
-        {/* No badge thumbnail — the posted notification doesn't carry one either
-            (PULSE_BADGES_ENABLED in lib/pulse-icon.ts). */}
+        {/* The real embed carries the Pulse integrations badge as its thumbnail
+            (see actions.ts notificationContainer), so the preview shows it too. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/pulse-integrations.png" alt="Pulse" width={36} height={36} className="h-9 w-9 shrink-0 rounded-md" />
       </div>
     </div>
   )

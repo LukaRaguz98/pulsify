@@ -87,9 +87,8 @@ function hexToInt(hex) {
  * Resolve the ticket badge as a Discord attachment: the web app's tint endpoint
  * (recoloured to the panel accent, same pipeline as the /sync icon), falling
  * back to the bundled PNG so the opening embed always has its glyph. Mirrors
- * loadPulseIcon in commands.js — including the PULSE_BADGES_ENABLED switch,
- * which is off, so this currently returns null and the ticket header renders as
- * plain text.
+ * loadPulseIcon in commands.js — including the PULSE_BADGES_ENABLED switch: with
+ * badges off this returns null and the ticket header renders as plain text.
  */
 async function loadTicketIcon(colorHex) {
   if (!PULSE_BADGES_ENABLED) return null;

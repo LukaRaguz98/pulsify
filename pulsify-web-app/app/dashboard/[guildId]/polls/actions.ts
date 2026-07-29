@@ -46,7 +46,7 @@ export type ActionResult<T = undefined> =
 // plain heading. MUST match the bytes the bot ships so a poll looks identical
 // whoever posted it.
 function loadIcon(): { name: string; buffer: Buffer } | null {
-  // Off while the Pulse badges are switched off globally (see lib/pulse-icon.ts).
+  // Gated on the global Pulse badge switch (see lib/pulse-icon.ts).
   if (!PULSE_BADGES_ENABLED) return null
   for (const name of ['pulse-poll.png', 'pulse-giveaway.png']) {
     try {

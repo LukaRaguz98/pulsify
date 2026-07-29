@@ -123,7 +123,7 @@ const CONTENT_META: Record<ContentKind, { icon: string; footer: string }> = {
 // renders without a badge rather than failing the post).
 const iconCache: Record<string, Buffer | null> = {}
 function loadIcon(name: string): Buffer | null {
-  // Off while the Pulse badges are switched off globally (see lib/pulse-icon.ts).
+  // Gated on the global Pulse badge switch (see lib/pulse-icon.ts).
   if (!PULSE_BADGES_ENABLED) return null
   if (!(name in iconCache)) {
     try {
@@ -137,8 +137,11 @@ function loadIcon(name: string): Buffer | null {
 
 // Discord auto-sizes a container to its widest line; this run of Braille-blank
 // chars (U+2800 — occupies width, isn't trimmed) pins the block to a comfortable
-// width, matching the bot's WIDTH_SPACER and the /changelog + announcement embeds.
-const WIDTH_SPACER: V2TextDisplay = { type: 10, content: `-# ${'⠀'.repeat(44)}` }
+// width. It pads the FOOTER rather than sitting on a line of its own — a
+// TextDisplay is a block, so a standalone spacer costs a full empty line between
+// the title and the body. Mirrors padToWidth in the bot's commands.js.
+const WIDTH_TARGET = 44
+const padToWidth = (s: string) => s + '⠀'.repeat(Math.max(0, WIDTH_TARGET - [...s].length))
 
 /**
  * Build a Components V2 container for a posted content block (rules,
@@ -171,10 +174,9 @@ function buildContentMessage(
   } else {
     components.push(...headerLines)
   }
-  components.push(WIDTH_SPACER)
   components.push({ type: 10, content: content.slice(0, 3900) })
   components.push({ type: 14, divider: true, spacing: 1 })
-  components.push({ type: 10, content: `-# ${footer}` })
+  components.push({ type: 10, content: `-# ${padToWidth(footer)}` })
 
   return {
     container: { type: 17, accent_color: hexToInt(accentHex), components },

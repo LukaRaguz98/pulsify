@@ -6,17 +6,22 @@ import Image from 'next/image'
 type Props = {
   title: string
   content: string
+  /** The `-# …` line under the title. It belongs to the HEADER — with a badge
+   *  present the bot renders it inside the type-9 Section, beside the
+   *  thumbnail, not down in the body. Pass it here rather than folding it into
+   *  `content`, or the preview puts it in the wrong place. */
+  subtitle?: string
   color?: string
   /** Public path to the branded badge shown top-right inside the container
-   *  (e.g. '/pulse-info.png'). Omit for no badge.
-   *
-   *  Nothing passes this today: the posted embeds no longer carry a Pulse
-   *  badge (PULSE_BADGES_ENABLED in lib/pulse-icon.ts), and a preview must
-   *  match what Discord actually renders. Kept wired so the callers can pass it
-   *  again the day the badges come back. */
+   *  (e.g. '/pulse-info.png'). Omit for no badge — pass it only when the posted
+   *  embed carries one, so the preview matches what Discord renders. */
   icon?: string
-  /** Footer line rendered under a divider (e.g. 'Pulse — Server Rules'). */
+  /** Footer line (e.g. 'Pulse — Server Rules'). */
   footer?: string
+  /** Whether a divider sits above the footer. Not every builder pushes one —
+   *  the rules/onboarding, announcement and changelog containers do, the
+   *  birthday announcement doesn't — so it has to be per-caller to stay 1:1. */
+  footerDivider?: boolean
   /** When true, render for the animated PreviewStage field: transparent outer
    *  card + translucent glass container so the field glows through. */
   floating?: boolean
@@ -66,7 +71,9 @@ function renderContent(text: string) {
   })
 }
 
-export function AppEmbedPreview({ title, content, color, icon, footer, floating }: Props) {
+export function AppEmbedPreview({
+  title, content, subtitle, color, icon, footer, footerDivider = true, floating,
+}: Props) {
   // Render an empty placeholder on the server, then fill in the actual
   // current time on the client. Avoids hydration mismatch when the SSR's
   // "Today at HH:MM" differs from the client's clock by a minute (and from
@@ -158,6 +165,11 @@ export function AppEmbedPreview({ title, content, color, icon, footer, floating 
                 }}>
                   {title || <span style={{ color: 'var(--text-3)', fontWeight: 600, fontSize: '15px' }}>No title…</span>}
                 </div>
+                {subtitle && (
+                  <div style={{ color: 'var(--text-3)', fontSize: '12px', margin: '0 0 6px', lineHeight: 1.3 }}>
+                    {subtitle}
+                  </div>
+                )}
                 <div style={{
                   color: 'var(--text-2)',
                   fontSize: '14px',
@@ -171,7 +183,15 @@ export function AppEmbedPreview({ title, content, color, icon, footer, floating 
               )}
             </div>
             {footer && (
-              <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px solid var(--line-strong)', color: 'var(--text-3)', fontSize: '12px' }}>
+              <div
+                style={{
+                  marginTop: footerDivider ? '12px' : '8px',
+                  paddingTop: footerDivider ? '8px' : 0,
+                  borderTop: footerDivider ? '1px solid var(--line-strong)' : undefined,
+                  color: 'var(--text-3)',
+                  fontSize: '12px',
+                }}
+              >
                 {footer}
               </div>
             )}

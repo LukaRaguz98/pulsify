@@ -18,17 +18,16 @@ import path from 'node:path'
 /**
  * Master switch for the Pulse BADGE thumbnails on Discord embeds.
  *
- * Off: every embed the dashboard posts renders its header as plain text lines
- * instead of a type-9 Section with a badge accessory. Thumbnails that show a
- * real Discord asset (a server icon, a member avatar) are unaffected — they are
- * URLs, not badges.
+ * On: every embed the dashboard posts carries its badge as a type-9 Section
+ * accessory. Off: those headers render as plain text lines instead. Thumbnails
+ * that show a real Discord asset (a server icon, a member avatar) are
+ * unaffected either way — they are URLs, not badges.
  *
  * Only the CONSUMERS check this; `getTintedPulseIcon` and `/api/pulse-icon`
- * stay live, and the registry + assets below are untouched, so flipping this
- * back to `true` restores the badges. The bot has the matching switch in
+ * stay live regardless. The bot has the matching switch in
  * pulse-bot/src/commands.js (PULSE_BADGES_ENABLED) — flip both together.
  */
-export const PULSE_BADGES_ENABLED = false
+export const PULSE_BADGES_ENABLED = true
 
 export const PULSE_ICONS = {
   /** Help glyph — the bot's /help reply. */

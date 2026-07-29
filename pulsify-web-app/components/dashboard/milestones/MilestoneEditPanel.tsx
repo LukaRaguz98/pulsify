@@ -571,12 +571,13 @@ function MilestonePreview({
 
   return (
     <div className="rounded-xl border-l-4 p-4" style={{ borderColor: 'var(--p-1)', background: 'var(--bg-2)' }}>
-      {/* No thumbnail — the posted announcement carries none either (it's a
-          sentence plus the reward roles; see milestoneContainer in
-          milestones.js), so the preview must not invent one. */}
+      {/* No thumbnail: milestoneContainer (milestones.js) deliberately passes
+          none — the unlock message is a sentence plus the reward roles, and a
+          badge would outweigh it. The member's name is the `-#` subtitle. */}
       <div className="min-w-0">
         <p className="text-[11px] font-bold" style={{ color: 'var(--text-3)' }}>Pulse</p>
         <p className="break-words font-bold text-foreground">{draft.name || 'Milestone'}</p>
+        <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>Member</p>
       </div>
 
       <p className="mt-2 whitespace-pre-wrap text-sm" style={{ color: 'var(--text-2)' }}>{rendered}</p>

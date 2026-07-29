@@ -52,7 +52,7 @@ try {
 } catch {
   ICON_BUFFER = null
 }
-// Off while the Pulse badges are switched off globally (see lib/pulse-icon.ts).
+// Gated on the global Pulse badge switch (see lib/pulse-icon.ts).
 const HAS_ICON = PULSE_BADGES_ENABLED && ICON_BUFFER !== null
 const iconAttachments = (): V2Attachment[] | undefined =>
   HAS_ICON ? [{ filename: ICON_NAME, data: ICON_BUFFER!, contentType: 'image/png' }] : undefined
@@ -66,8 +66,10 @@ function revalidate(guildId: string) {
 const td = (content: string) => ({ type: 10, content })
 const divider = () => ({ type: 14, divider: true, spacing: 1 })
 // Braille-blank run pins the embed to a comfortable width (same trick as the
-// announcements container) so short notifications don't render cramped.
-const WIDTH_SPACER = td(`-# ${'⠀'.repeat(40)}`)
+// announcements container) so short notifications don't render cramped. It
+// rides on the timestamp chip below rather than a line of its own — a
+// TextDisplay is a block, so a standalone spacer costs a full empty line.
+const WIDTH_PIN = '⠀'.repeat(40)
 
 /**
  * Build the integration notification container — the rich Pulse v2 layout shared
@@ -100,12 +102,11 @@ function notificationContainer(
   } else {
     components.push(...headerLines)
   }
-  components.push(WIDTH_SPACER)
-
   // Timestamp chip — a native Discord relative time so the post reads "just now"
-  // and ages on its own. Marked as a test when sent from the dashboard.
+  // and ages on its own. Marked as a test when sent from the dashboard. Carries
+  // the width pin.
   const now = Math.floor(Date.now() / 1000)
-  components.push(td(`-# ${opts.isTest ? 'Test notification — ' : ''}<t:${now}:R>`))
+  components.push(td(`-# ${opts.isTest ? 'Test notification — ' : ''}<t:${now}:R>${WIDTH_PIN}`))
 
   const link = notificationLink(provider.id, ctx)
   const cleanBody = stripStandaloneUrl(body, link?.url).trim()

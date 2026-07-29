@@ -39,7 +39,7 @@ try {
 } catch {
   ICON_BUFFER = null
 }
-// Off while the Pulse badges are switched off globally (see lib/pulse-icon.ts).
+// Gated on the global Pulse badge switch (see lib/pulse-icon.ts).
 const HAS_ICON = PULSE_BADGES_ENABLED && ICON_BUFFER !== null
 const iconAttachments = (): V2Attachment[] | undefined =>
   HAS_ICON ? [{ filename: ICON_NAME, data: ICON_BUFFER!, contentType: 'image/png' }] : undefined
@@ -55,9 +55,12 @@ const divider = () => ({ type: 14, divider: true, spacing: 1 })
 
 // Discord auto-sizes a container to its widest line; this run of Braille-blank
 // chars (U+2800 — occupies width, isn't trimmed) pins the embed to a comfortable
-// width like the bot's WIDTH_SPACER does, so short announcements don't render
-// cramped. Rendered as subtext so it adds almost no height.
-const WIDTH_SPACER = td(`-# ${'⠀'.repeat(44)}`)
+// width, so short announcements don't render cramped. It pads the FOOTER rather
+// than sitting on a line of its own — a TextDisplay is a block, so a standalone
+// spacer costs a full empty line between the title and the body. Mirrors
+// padToWidth in the bot's commands.js.
+const WIDTH_TARGET = 44
+const padToWidth = (s: string) => s + '⠀'.repeat(Math.max(0, WIDTH_TARGET - [...s].length))
 
 function formatLongDate(d: Date): string {
   return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
@@ -88,13 +91,12 @@ function announcementContainer(accent: number, a: {
   } else {
     body.push(...headerLines)
   }
-  body.push(WIDTH_SPACER)
   // The message body. Split on blank lines into separate text displays so the
   // paragraph spacing survives (a single text display collapses blank lines).
   const paragraphs = a.content.trim().slice(0, ANNOUNCEMENT_LIMITS.maxContent).split(/\n{2,}/)
   for (const p of paragraphs) body.push(td(p.trim()))
   body.push(divider())
-  body.push(td('-# Pulse — Announcement'))
+  body.push(td(`-# ${padToWidth('Pulse — Announcement')}`))
 
   return { type: 17, accent_color: accent, components: body } as unknown as V2TopLevelComponent
 }

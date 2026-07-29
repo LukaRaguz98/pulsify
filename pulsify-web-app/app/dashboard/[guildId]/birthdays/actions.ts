@@ -44,11 +44,14 @@ function birthdayContainer(opts: {
     td('# Happy Birthday'),
     td(`-# ${opts.subtitle}`),
   ]
-  if (!opts.imageUrl) body.push(td(`-# ${'⠀'.repeat(44)}`)) // width spacer (skipped when an image defines width)
   body.push(td(opts.rendered))
   if (opts.ageLine) body.push(td(`-# ${opts.ageLine}`))
   if (opts.imageUrl) body.push({ type: 12, items: [{ media: { url: opts.imageUrl } }] })
-  body.push(td('-# Pulse — Birthday'))
+  // The footer carries the width pin (a run of U+2800 blanks) — skipped when an
+  // image already defines the width. A spacer of its own would cost a full
+  // empty line right under the title.
+  const birthdayFooter = 'Pulse — Birthday'
+  body.push(td(`-# ${opts.imageUrl ? birthdayFooter : birthdayFooter + '⠀'.repeat(44 - birthdayFooter.length)}`))
   if (opts.buttonLabel && opts.buttonUrl) {
     body.push({ type: 1, components: [{ type: 2, style: 5, label: opts.buttonLabel, url: opts.buttonUrl }] })
   }

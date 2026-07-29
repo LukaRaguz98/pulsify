@@ -172,8 +172,11 @@ const DEFAULT_PULSE_COLOR = '#8b5cf6'
 const td = (content: string) => ({ type: 10, content })
 const sep = () => ({ type: 14, divider: true, spacing: 1 })
 // Same invisible Braille-blank run the bot uses to pin the embed to a
-// comfortable width regardless of how short the content is.
-const WIDTH_SPACER = td(`-# ${'⠀'.repeat(44)}`)
+// comfortable width regardless of how short the content is. It pads the FOOTER
+// rather than sitting on a line of its own — a TextDisplay is a block, so a
+// standalone spacer costs a full empty line between the title and the body.
+const WIDTH_TARGET = 44
+const padToWidth = (s: string) => s + '⠀'.repeat(Math.max(0, WIDTH_TARGET - [...s].length))
 // Lead paragraph a notch larger than body text (a Discord `###` subheading),
 // matching the bot's lead().
 const lead = (content: string) => td(`### ${content}`)
@@ -244,7 +247,6 @@ function changelogContainer(
   } else {
     body.push(...headerLines)
   }
-  body.push(WIDTH_SPACER)
 
   if (release.description) body.push(lead(release.description))
 
@@ -264,7 +266,7 @@ function changelogContainer(
   }
 
   body.push(linkButtonRow(opts.baseUrl, opts.guildId))
-  body.push(td('-# Pulse — Change Log'))
+  body.push(td(`-# ${padToWidth('Pulse — Change Log')}`))
 
   return {
     type: 17,

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { Hash, Loader2, Send, AlertCircle, CheckCircle2, Lock } from 'lucide-react'
 import type { ChangelogRelease } from '@/lib/release-notes-types'
 import { publishChangelog } from '@/app/dashboard/[guildId]/(management)/presence/actions'
@@ -224,8 +225,7 @@ function ChangelogPreview({ release }: { release: ChangelogRelease }) {
             Pulse · Change Log
           </div>
         </div>
-        {/* No badge thumbnail — the posted changelog doesn't carry one either
-            (PULSE_BADGES_ENABLED in lib/pulse-icon.ts). */}
+        <Image src="/pulse-annoucement.png" alt="" width={40} height={40} className="shrink-0 rounded-md" />
       </div>
     </div>
   )

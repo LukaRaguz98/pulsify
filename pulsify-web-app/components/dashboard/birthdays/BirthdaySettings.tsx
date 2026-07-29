@@ -259,10 +259,16 @@ export function BirthdaySettings({ guildId, guildName, initialConfig, channels, 
           <div>
             {/* No "Preview" heading — the Discord-style mock speaks for itself,
                 the same way the polls / announcements previews read. */}
+            {/* 1:1 with birthdayContainer (birthdays/actions.ts + the bot's
+                birthdays.js): the member's name is the `-#` subtitle, there is
+                NO badge (the announcement is one warm sentence — a thumbnail
+                would outweigh it) and no divider above the footer. */}
             <AppEmbedPreview
               title="Happy Birthday"
+              subtitle="Member"
               content={`${messagePreview}\n-# Turning 21 today`}
               footer="Pulse — Birthday"
+              footerDivider={false}
             />
           </div>
         </div>

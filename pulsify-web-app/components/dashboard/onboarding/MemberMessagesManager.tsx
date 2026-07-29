@@ -701,7 +701,7 @@ function PulseContentExtra({
         <div>
           {/* No "Preview" heading — the stage speaks for itself. */}
           <PreviewStage>
-            <AppEmbedPreview title={title} content={content} color={accentHex} footer="Pulse · Server Rules" floating />
+            <AppEmbedPreview title={title} content={content} color={accentHex} icon="/pulse-info.png" footer="Pulse · Server Rules" floating />
           </PreviewStage>
         </div>
       </div>

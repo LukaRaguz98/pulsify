@@ -258,14 +258,17 @@ export function AnnouncementComposer({ guildId, channels, editing, onClose, onFe
             {/* Live embed preview, full width below the form. The AppEmbedPreview
                 floats as translucent glass on the animated PreviewStage field —
                 identical to the polls / self-roles / onboarding previews. The
-                `-# Announcement — <date>` subtitle is folded into the content as
-                a subtext line, exactly as the bot renders it. No "Preview"
+                `-# Announcement — <date>` subtitle is a header line, not body
+                text — announcementContainer puts it inside the type-9 Section
+                beside the badge, so it goes through `subtitle`. No "Preview"
                 heading — the stage is self-evidently a preview. */}
             <div>
               <PreviewStage>
                 <AppEmbedPreview
                   title={title.trim() || 'Announcement title'}
-                  content={`-# Announcement — ${previewDate}\n\n${content.trim() || 'Your message will appear here…'}`}
+                  subtitle={`Announcement — ${previewDate}`}
+                  content={content.trim() || 'Your message will appear here…'}
+                  icon="/pulse-annoucement.png"
                   footer="Pulse — Announcement"
                   floating
                 />

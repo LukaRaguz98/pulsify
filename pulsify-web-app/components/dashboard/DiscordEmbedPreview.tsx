@@ -176,6 +176,12 @@ export function DiscordEmbedPreview({ embed, serverName, footerFallback, floatin
               </div>
             )}
 
+            {/* Divider between the description and the cards — buildMemberV2Container
+                pushes one whenever both are present. */}
+            {embed.fields.length > 0 && resolve(embed.description) && (
+              <div style={{ borderTop: '1px solid var(--line-strong)', margin: '4px 0 10px' }} />
+            )}
+
             {/* Fields — stacked bold-label blocks, one per row */}
             {embed.fields.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '10px' }}>

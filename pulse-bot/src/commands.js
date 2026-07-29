@@ -75,16 +75,18 @@ const DEFAULT_PULSE_COLOR = "#8b5cf6";
 // emoji out — the accent bar + glyph carry the branding.
 
 // Master switch for the Pulse BADGE thumbnails (the violet glyph plates below).
-// Turned off: embeds render their header as plain text instead of a type-9
-// Section, which is what the "no thumbnail" branch every call site already has
-// was written for. This does NOT touch the thumbnails that show a real Discord
-// asset — the server icon on /serverinfo, the member avatar on /profile,
-// /userinfo, /alt check and milestone announcements — those are URLs, not
-// badges, and keep rendering. Everything below (the registry, the assets, the
-// tint pipeline, the loaders) is left intact so flipping this back to `true`
-// restores the badges everywhere; see also PULSE_BADGES_ENABLED in the web
+//
+// ON: embeds render their header as a type-9 Section carrying the badge, per
+// the placement rules on buildPulseContainer (content-rich embeds get one,
+// short confirmations don't). OFF: every header falls back to plain text lines
+// and no badge is fetched or attached — the switch lands in loadPulseIcon so
+// the ~30 call sites need no changes either way.
+//
+// It never touches thumbnails that show a real Discord asset — the server icon
+// on /serverinfo, the member avatar on /profile, /userinfo, /alt check — those
+// are URLs, not badges. Keep it in sync with PULSE_BADGES_ENABLED in the web
 // app's lib/pulse-icon.ts, which gates the dashboard-posted embeds.
-const PULSE_BADGES_ENABLED = false;
+const PULSE_BADGES_ENABLED = true;
 
 const ICON_FILES = {
   help: "pulse-help.png",
@@ -154,12 +156,19 @@ const text = (content) => ({ type: 10, content });
 const divider = () => ({ type: 14, divider: true, spacing: 1 });
 
 // Discord auto-sizes a container to its widest line, so short replies (e.g.
-// /help with a single category) end up narrower than the data-heavy ones. This
-// invisible run of Braille-blank chars (U+2800 — unlike a normal space it
-// occupies width and isn't trimmed) pins every embed to the same comfortable
-// width. Rendered as small subtext so it adds almost no height.
-const WIDTH_SPACER = "⠀".repeat(44);
-const widthSpacer = () => text(`-# ${WIDTH_SPACER}`);
+// /help with a single category) end up narrower than the data-heavy ones. A run
+// of Braille-blank chars (U+2800 — unlike a normal space it occupies width and
+// isn't trimmed) pins every embed to the same comfortable width.
+//
+// It rides on the FOOTER line rather than sitting on its own. A TextDisplay is
+// a block: a spacer component costs a full line of height no matter how small
+// its text renders, and on a one-sentence embed that empty line between the
+// title and the body was the most visible thing in the embed. Padding a line
+// that already exists buys the same minimum width for free.
+const WIDTH_TARGET = 44;
+const padToWidth = (s) => s + "⠀".repeat(Math.max(0, WIDTH_TARGET - [...s].length));
+/** Standalone spacer — only for containers with no footer to pad. */
+const widthSpacer = () => text(`-# ${"⠀".repeat(WIDTH_TARGET)}`);
 
 /** Compact human-readable duration: "3h 12m", "45m", "30s", "0m". */
 function formatDuration(totalSeconds) {
@@ -237,16 +246,20 @@ async function loadPulseIcon(iconKey, colorHex) {
  * ── Embed conventions (apply these to EVERY Pulse embed) ─────────────────────
  *
  * 1. HEADER THUMBNAIL (`iconUrl`) — an `attachment://<name>` badge or an https
- *    URL (server icon / member avatar). It is OPTIONAL. CURRENT RULE: the Pulse
- *    BADGES are switched off (PULSE_BADGES_ENABLED = false), so the only
- *    thumbnails an embed shows are real Discord assets — the server icon
- *    (/serverinfo) and the member avatar (/profile, /userinfo, /alt check,
- *    milestone announcements). Everything else renders its header as plain text
- *    lines (no Section), which is what the no-thumbnail branch does.
- *    If the badges are ever switched back on, the old balance rule applies:
- *    keep a badge on content-rich embeds (multi-section bodies where it sits
- *    beside real text) and drop it on short confirmations and notices, where a
- *    fixed-size thumbnail outweighs the message and looks lopsided.
+ *    URL (server icon / member avatar). It is OPTIONAL, and the rule is about
+ *    balance: a thumbnail is a fixed-size block, so on a one- or two-line reply
+ *    it takes up more room than the message itself and the embed looks
+ *    lopsided. So:
+ *      • KEEP it on content-rich embeds — /help, /profile, /changelog,
+ *        /leaderboard, /balance, /info, /milestones, /alt check, /birthday
+ *        upcoming: multi-section bodies where the badge sits beside real text.
+ *      • DROP it on short confirmations and notices — /pay, /daily, /weekly,
+ *        /birthday set|view|remove, shop purchases, level-ups, milestone and
+ *        birthday announcements, temporary-role DMs. The accent bar + the title
+ *        already brand them.
+ *    When omitted, the header renders as plain text lines (no Section), which
+ *    is exactly what a short embed wants. PULSE_BADGES_ENABLED can switch every
+ *    badge off globally without touching any of this.
  *
  * 2. NO DASH BULLETS — body lists are plain lines, never `- item` / `• item`.
  *    Most Pulse embeds already read as `**Label** — value` lines or bare
@@ -303,11 +316,14 @@ function buildPulseContainer({
 
   // Pin most embeds to a consistent, comfortable width. Skipped for embeds that
   // carry a full-width image (e.g. /profile's banner) so the image alone defines
-  // the width instead of an artificial minimum.
-  if (!noSpacer) components.push(widthSpacer());
+  // the width instead of an artificial minimum. The pin rides on the footer when
+  // there is one — see padToWidth — and only falls back to a line of its own for
+  // the rare footerless container.
+  const pinWidth = !noSpacer;
+  if (pinWidth && !footer) components.push(widthSpacer());
 
   for (const c of body) components.push(c);
-  if (footer) components.push(text(`-# ${footer}`));
+  if (footer) components.push(text(`-# ${pinWidth ? padToWidth(footer) : footer}`));
   for (const row of actions) if (row) components.push(row);
 
   return {

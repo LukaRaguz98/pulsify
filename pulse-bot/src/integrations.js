@@ -42,7 +42,7 @@ try {
 } catch {
   ICON_BUFFER = null;
 }
-// Off while the Pulse badges are switched off globally (see commands.js).
+// Gated on the global Pulse badge switch (see commands.js).
 const HAS_ICON = PULSE_BADGES_ENABLED && ICON_BUFFER !== null;
 const iconFiles = () =>
   HAS_ICON ? [{ attachment: ICON_BUFFER, name: ICON_NAME }] : [];
@@ -203,10 +203,12 @@ function buildContainer(provider, label, body, mentionLine, ctx = {}, accent = B
   } else {
     components.push(...headerLines);
   }
-  components.push(text(`-# ${"⠀".repeat(40)}`));
-
   // Relative-time chip — Discord renders <t:…:R> as "just now" and ages it.
-  components.push(text(`-# <t:${Math.floor(Date.now() / 1000)}:R>`));
+  // It carries the width pin (a run of U+2800 blanks) so the notification keeps
+  // its comfortable width without a blank spacer line under the header.
+  components.push(
+    text(`-# <t:${Math.floor(Date.now() / 1000)}:R>${"⠀".repeat(40)}`),
+  );
 
   const link = notificationLink(provider, ctx);
   const cleanBody = stripStandaloneUrl(body, link && link.url);

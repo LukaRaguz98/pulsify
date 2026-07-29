@@ -28,8 +28,11 @@ const { getDashboardUrl } = require("./version");
 
 const OB = "ob";
 const BRAND = 0x6366f1;
-// Braille-blank width spacer — pins a consistent embed width (see embed-style).
-const WIDTH_SPACER = "-# " + "⠀".repeat(44);
+// Braille-blank width pin — keeps a consistent embed width (see embed-style).
+// It rides on the footer line rather than a spacer of its own: a TextDisplay is
+// a block, so a standalone spacer costs a full empty line right under the title.
+const WIDTH_TARGET = 44;
+const padToWidth = (s) => s + "⠀".repeat(Math.max(0, WIDTH_TARGET - [...s].length));
 // Keep within Discord's component limits: cap interactive role menus.
 const MAX_ROLE_MENUS = 4;
 
@@ -120,9 +123,8 @@ function createOnboarding(client, supabase, leveling = null, economyRewards = nu
         },
       ];
     }
-    // No thumbnail — add a width spacer (unless a banner defines the width).
-    if (!w.banner)
-      lines.splice(title ? 2 : 1, 0, { type: 10, content: WIDTH_SPACER });
+    // No thumbnail and no banner — the footer carries the width pin instead
+    // (see the footer block in buildPanel).
     return lines;
   }
 
@@ -300,11 +302,12 @@ function createOnboarding(client, supabase, leveling = null, economyRewards = nu
       }
     }
 
-    // Footer.
+    // Footer — carries the width pin unless a banner already sets the width.
+    const panelFooter = w.footer_text ? resolve(w.footer_text) : "Pulse — Welcome";
     components.push({ type: 14, divider: true, spacing: 1 });
     components.push({
       type: 10,
-      content: `-# ${w.footer_text ? resolve(w.footer_text) : "Pulse — Welcome"}`,
+      content: `-# ${w.banner ? panelFooter : padToWidth(panelFooter)}`,
     });
 
     const container = { type: 17, accent_color: colorInt(accent), components };

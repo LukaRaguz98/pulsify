@@ -62,8 +62,8 @@ try {
 } catch {
   ICON_BUFFER = null;
 }
-// Off while the Pulse badges are switched off globally (see commands.js) — the
-// header then falls back to the plain-text branch below.
+// Gated on the global Pulse badge switch (see commands.js); when that's off the
+// header falls back to the plain-text branch below.
 const HAS_ICON = PULSE_BADGES_ENABLED && ICON_BUFFER !== null;
 /** discord.js `files` array for a fresh post (empty when the asset is absent). */
 const iconFiles = () => (HAS_ICON ? [{ attachment: ICON_BUFFER, name: ICON_NAME }] : []);

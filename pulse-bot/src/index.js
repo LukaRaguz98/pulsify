@@ -446,8 +446,13 @@ async function recordMemberRemoval(member) {
 }
 
 // Pins a consistent, comfortable width across Pulse's v2 embeds (U+2800 blanks
-// occupy width without being trimmed) — same trick as commands.js WIDTH_SPACER.
-const MEMBER_WIDTH_SPACER = `-# ${"⠀".repeat(44)}`;
+// occupy width without being trimmed) — same trick as commands.js. The pin
+// rides on the footer line, which every member embed has: a spacer of its own
+// costs a full line of height, and on a short greeting that empty line between
+// the title and the message was the most visible thing in the embed.
+const MEMBER_WIDTH_TARGET = 44;
+const padMemberWidth = (s) =>
+  s + "⠀".repeat(Math.max(0, MEMBER_WIDTH_TARGET - [...s].length));
 
 /**
  * Build a Components V2 container for a member welcome/goodbye embed, following
@@ -468,10 +473,6 @@ function buildMemberV2Container(cfg, resolve, hasBanner, footerLabel, accentInt)
 
   const title = resolve(cfg.title ?? "");
   if (title) components.push({ type: 10, content: `# ${title}` });
-
-  // Width spacer to pin a consistent width — skipped when a banner is present,
-  // since the full-width image already defines the embed's width.
-  if (!hasBanner) components.push({ type: 10, content: MEMBER_WIDTH_SPACER });
 
   const description = resolve(cfg.description ?? "");
   if (description) components.push({ type: 10, content: description });
@@ -497,11 +498,16 @@ function buildMemberV2Container(cfg, resolve, hasBanner, footerLabel, accentInt)
 
   // Divider + footer — the standardized Pulse v2 close. Honour the user's
   // footer_text; fall back to a branded `Pulse — <label>` when it's blank.
+  // The width pin rides on the footer — skipped when a banner is present, since
+  // the full-width image already defines the embed's width.
   const footer = cfg.footer_text
     ? resolve(cfg.footer_text)
     : `Pulse — ${footerLabel}`;
   components.push({ type: 14, divider: true, spacing: 1 });
-  components.push({ type: 10, content: `-# ${footer}` });
+  components.push({
+    type: 10,
+    content: `-# ${hasBanner ? footer : padMemberWidth(footer)}`,
+  });
 
   return {
     type: 17,
@@ -525,10 +531,9 @@ function buildMemberTextContainer(message, footerLabel, accentInt) {
     accent_color: isNaN(accentInt) ? 0x6366f1 : accentInt,
     components: [
       { type: 10, content: "**Pulse**" },
-      { type: 10, content: MEMBER_WIDTH_SPACER },
       { type: 10, content: message },
       { type: 14, divider: true, spacing: 1 },
-      { type: 10, content: `-# Pulse — ${footerLabel}` },
+      { type: 10, content: `-# ${padMemberWidth(`Pulse — ${footerLabel}`)}` },
     ],
   };
 }
