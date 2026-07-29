@@ -74,6 +74,18 @@ const DEFAULT_PULSE_COLOR = "#8b5cf6";
 // pipeline) and falls back to the bundled PNG so a reply always renders. Keep
 // emoji out — the accent bar + glyph carry the branding.
 
+// Master switch for the Pulse BADGE thumbnails (the violet glyph plates below).
+// Turned off: embeds render their header as plain text instead of a type-9
+// Section, which is what the "no thumbnail" branch every call site already has
+// was written for. This does NOT touch the thumbnails that show a real Discord
+// asset — the server icon on /serverinfo, the member avatar on /profile,
+// /userinfo, /alt check and milestone announcements — those are URLs, not
+// badges, and keep rendering. Everything below (the registry, the assets, the
+// tint pipeline, the loaders) is left intact so flipping this back to `true`
+// restores the badges everywhere; see also PULSE_BADGES_ENABLED in the web
+// app's lib/pulse-icon.ts, which gates the dashboard-posted embeds.
+const PULSE_BADGES_ENABLED = false;
+
 const ICON_FILES = {
   help: "pulse-help.png",
   announcement: "pulse-annoucement.png",
@@ -175,8 +187,13 @@ async function getPulseColor(supabase, guildId) {
  * first (recoloured to the guild accent, bounded by a short timeout so the 3s
  * interaction window is safe), falling back to the bundled PNG. `iconKey` is
  * one of ICON_FILES.
+ *
+ * Returns null while PULSE_BADGES_ENABLED is off — every caller already treats
+ * a null icon as "render the header without a thumbnail", so the switch lands
+ * here rather than in ~30 call sites.
  */
 async function loadPulseIcon(iconKey, colorHex) {
+  if (!PULSE_BADGES_ENABLED) return null;
   const name = ICON_FILES[iconKey];
   if (!name) return null;
   const appUrl = process.env.APP_URL ?? "http://localhost:3000";
@@ -220,19 +237,16 @@ async function loadPulseIcon(iconKey, colorHex) {
  * ── Embed conventions (apply these to EVERY Pulse embed) ─────────────────────
  *
  * 1. HEADER THUMBNAIL (`iconUrl`) — an `attachment://<name>` badge or an https
- *    URL (server icon / member avatar). It is OPTIONAL, and the rule is about
- *    balance: a thumbnail is a fixed-size block, so on a one- or two-line reply
- *    it takes up more room than the message itself and the embed looks
- *    lopsided. So:
- *      • KEEP it on content-rich embeds — /help, /profile, /changelog,
- *        /leaderboard, /balance, /info, /milestones, /alt check, /birthday
- *        upcoming: multi-section bodies where the badge sits beside real text.
- *      • DROP it on short confirmations and notices — /pay, /daily, /weekly,
- *        /birthday set|view|remove, shop purchases, level-ups, milestone and
- *        birthday announcements, temporary-role DMs. The accent bar + the title
- *        already brand them.
- *    When omitted, the header renders as plain text lines (no Section), which
- *    is exactly what a short embed wants.
+ *    URL (server icon / member avatar). It is OPTIONAL. CURRENT RULE: the Pulse
+ *    BADGES are switched off (PULSE_BADGES_ENABLED = false), so the only
+ *    thumbnails an embed shows are real Discord assets — the server icon
+ *    (/serverinfo) and the member avatar (/profile, /userinfo, /alt check,
+ *    milestone announcements). Everything else renders its header as plain text
+ *    lines (no Section), which is what the no-thumbnail branch does.
+ *    If the badges are ever switched back on, the old balance rule applies:
+ *    keep a badge on content-rich embeds (multi-section bodies where it sits
+ *    beside real text) and drop it on short confirmations and notices, where a
+ *    fixed-size thumbnail outweighs the message and looks lopsided.
  *
  * 2. NO DASH BULLETS — body lists are plain lines, never `- item` / `• item`.
  *    Most Pulse embeds already read as `**Label** — value` lines or bare
@@ -3664,6 +3678,10 @@ module.exports = {
   buildPulseContainer,
   getPulseColor,
   loadPulseIcon,
+  // Master switch for the Pulse badge thumbnails — read by the modules that
+  // load their own badge (giveaways, polls, tickets, integrations) instead of
+  // going through loadPulseIcon.
+  PULSE_BADGES_ENABLED,
   replyContainer,
   // The accent-tinted reputation/level bar image + its unicode fallback — shared
   // by /profile, /rank and /reputation so the bar looks identical everywhere.

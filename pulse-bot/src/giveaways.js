@@ -21,7 +21,7 @@ const { Events, MessageFlags } = require("discord.js");
 const fs = require("node:fs");
 const path = require("node:path");
 const { recordNotification } = require("./notifications");
-const { replyNotice } = require("./commands");
+const { replyNotice, PULSE_BADGES_ENABLED } = require("./commands");
 const { getGuildAccent } = require("./guild-accent");
 // One duration grammar everywhere — /giveaway create parses "24h", "2d", "90m"
 // with the same parser /timeout and /role temp use. Returns whole minutes.
@@ -62,7 +62,9 @@ try {
 } catch {
   ICON_BUFFER = null;
 }
-const HAS_ICON = ICON_BUFFER !== null;
+// Off while the Pulse badges are switched off globally (see commands.js) — the
+// header then falls back to the plain-text branch below.
+const HAS_ICON = PULSE_BADGES_ENABLED && ICON_BUFFER !== null;
 /** discord.js `files` array for a fresh post (empty when the asset is absent). */
 const iconFiles = () => (HAS_ICON ? [{ attachment: ICON_BUFFER, name: ICON_NAME }] : []);
 

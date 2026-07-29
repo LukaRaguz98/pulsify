@@ -8,6 +8,7 @@ import { authorizeGuildModerator } from '@/lib/moderation-auth'
 import { requireGuildLimit } from '@/lib/billing-server'
 import { recordNotification } from '@/lib/notifications-server'
 import { readGuildEmbedInt } from '@/lib/embed-color'
+import { PULSE_BADGES_ENABLED } from '@/lib/pulse-icon'
 import {
   postChannelComponentsReturningId,
   editChannelComponents,
@@ -45,7 +46,8 @@ try {
 } catch {
   ICON_BUFFER = null
 }
-const HAS_ICON = ICON_BUFFER !== null
+// Off while the Pulse badges are switched off globally (see lib/pulse-icon.ts).
+const HAS_ICON = PULSE_BADGES_ENABLED && ICON_BUFFER !== null
 const iconAttachments = (): V2Attachment[] | undefined =>
   HAS_ICON ? [{ filename: ICON_NAME, data: ICON_BUFFER!, contentType: 'image/png' }] : undefined
 

@@ -1,6 +1,6 @@
 import 'server-only'
 import { openDMChannel, postChannelComponents, type V2Container, type V2Attachment } from '@/lib/discord'
-import { getTintedPulseIcon, pulseIconFilename } from '@/lib/pulse-icon'
+import { getTintedPulseIcon, pulseIconFilename, PULSE_BADGES_ENABLED } from '@/lib/pulse-icon'
 
 const WARN_ICON_FILENAME = pulseIconFilename('warn')
 
@@ -96,7 +96,9 @@ export function buildWarningDMContainer(
 async function buildWarningPayload(
   opts: Omit<WarningDMOptions, 'userId'>,
 ): Promise<{ container: V2Container; attachments: V2Attachment[] }> {
-  const iconBuffer = await getTintedPulseIcon('warn', opts.embedColor)
+  const iconBuffer = PULSE_BADGES_ENABLED
+    ? await getTintedPulseIcon('warn', opts.embedColor)
+    : null
   const attachments: V2Attachment[] = iconBuffer
     ? [{ filename: WARN_ICON_FILENAME, data: iconBuffer, contentType: 'image/png' }]
     : []

@@ -31,6 +31,7 @@ const {
   // the shared container the rest of Pulse's embeds use.
   buildPulseContainer,
   getPulseColor,
+  PULSE_BADGES_ENABLED,
   text,
 } = require("./commands");
 const { getGuildAccentHex, DEFAULT_ACCENT_HEX } = require("./guild-accent");
@@ -86,9 +87,12 @@ function hexToInt(hex) {
  * Resolve the ticket badge as a Discord attachment: the web app's tint endpoint
  * (recoloured to the panel accent, same pipeline as the /sync icon), falling
  * back to the bundled PNG so the opening embed always has its glyph. Mirrors
- * loadPulseIcon in commands.js.
+ * loadPulseIcon in commands.js — including the PULSE_BADGES_ENABLED switch,
+ * which is off, so this currently returns null and the ticket header renders as
+ * plain text.
  */
 async function loadTicketIcon(colorHex) {
+  if (!PULSE_BADGES_ENABLED) return null;
   const appUrl = process.env.APP_URL ?? "http://localhost:3000";
   const hex = String(colorHex || "#5865f2").replace("#", "");
   const controller = new AbortController();

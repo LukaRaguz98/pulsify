@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { createClient } from '@/lib/supabase-server'
+import { PULSE_BADGES_ENABLED } from '@/lib/pulse-icon'
 import {
   postChannelComponents,
   createGuildChannel,
@@ -122,6 +123,8 @@ const CONTENT_META: Record<ContentKind, { icon: string; footer: string }> = {
 // renders without a badge rather than failing the post).
 const iconCache: Record<string, Buffer | null> = {}
 function loadIcon(name: string): Buffer | null {
+  // Off while the Pulse badges are switched off globally (see lib/pulse-icon.ts).
+  if (!PULSE_BADGES_ENABLED) return null
   if (!(name in iconCache)) {
     try {
       iconCache[name] = readFileSync(path.join(process.cwd(), 'public', name))

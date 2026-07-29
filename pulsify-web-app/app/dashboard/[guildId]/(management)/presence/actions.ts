@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase-server'
 import { requireOperator } from '@/lib/operator'
-import { getTintedPulseIcon } from '@/lib/pulse-icon'
+import { getTintedPulseIcon, PULSE_BADGES_ENABLED } from '@/lib/pulse-icon'
 import { recordNotification } from '@/lib/notifications-server'
 import {
   fetchGuildChannels,
@@ -327,7 +327,9 @@ export async function publishChangelog(
 
   // Tint the announcement badge to the guild accent — the same icon /changelog
   // attaches. Absent ⇒ the header just renders without a badge.
-  const iconBuffer = await getTintedPulseIcon('announcement', colorHex)
+  const iconBuffer = PULSE_BADGES_ENABLED
+    ? await getTintedPulseIcon('announcement', colorHex)
+    : null
   const attachments: V2Attachment[] | undefined = iconBuffer
     ? [{ filename: CHANGELOG_ICON, data: iconBuffer, contentType: 'image/png' }]
     : undefined

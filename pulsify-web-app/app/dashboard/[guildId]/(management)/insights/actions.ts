@@ -8,7 +8,7 @@ import {
   type V2Container,
   type V2Attachment,
 } from '@/lib/discord'
-import { getTintedPulseIcon, pulseIconFilename } from '@/lib/pulse-icon'
+import { getTintedPulseIcon, pulseIconFilename, PULSE_BADGES_ENABLED } from '@/lib/pulse-icon'
 import { readGuildEmbedHex } from '@/lib/embed-color'
 import type { TimeseriesPoint } from '@/lib/analytics'
 import {
@@ -134,7 +134,9 @@ export async function postInsightsRecap(
   // Accent + icon tint follow the guild's embed colour from Server Settings —
   // the single source of truth for every Pulse embed. Falls back to Pulsify violet.
   const embedColor = await readGuildEmbedHex(supabase, guildId)
-  const iconBuffer = await getTintedPulseIcon('recap', embedColor)
+  const iconBuffer = PULSE_BADGES_ENABLED
+    ? await getTintedPulseIcon('recap', embedColor)
+    : null
   const attachments: V2Attachment[] = iconBuffer
     ? [{ filename: RECAP_ICON, data: iconBuffer, contentType: 'image/png' }]
     : []

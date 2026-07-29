@@ -21,7 +21,7 @@ import type { V2Attachment } from '@/lib/discord'
 import { recordNotification } from '@/lib/notifications-server'
 import { recordTimelineEvent } from '@/lib/timeline-server'
 import { readGuildEmbedHex } from '@/lib/embed-color'
-import { getTintedPulseIcon, pulseIconFilename } from '@/lib/pulse-icon'
+import { getTintedPulseIcon, pulseIconFilename, PULSE_BADGES_ENABLED } from '@/lib/pulse-icon'
 import { sendPulseGuardWarningDM } from '@/lib/pulse-guard-dm'
 
 // ─── Alert styling ────────────────────────────────────────────────────────────
@@ -242,7 +242,9 @@ export async function POST(req: Request) {
     if (settings.alert_channel_id) {
       // Tint the icon to match the guild accent so the alert chrome and the icon
       // share one colour. Cached per colour after the first call.
-      const iconBuffer = await getTintedPulseIcon('guard', accentHex)
+      const iconBuffer = PULSE_BADGES_ENABLED
+        ? await getTintedPulseIcon('guard', accentHex)
+        : null
       const attachments: V2Attachment[] = iconBuffer
         ? [{ filename: PULSE_GUARD_ICON_FILENAME, data: iconBuffer, contentType: 'image/png' }]
         : []

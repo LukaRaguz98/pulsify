@@ -8,6 +8,7 @@ import { authorizeGuildModerator } from '@/lib/moderation-auth'
 import { requireGuildLimit } from '@/lib/billing-server'
 import { recordNotification } from '@/lib/notifications-server'
 import { readGuildEmbedInt } from '@/lib/embed-color'
+import { PULSE_BADGES_ENABLED } from '@/lib/pulse-icon'
 import {
   postChannelComponentsReturningId,
   editChannelComponents,
@@ -45,6 +46,8 @@ export type ActionResult<T = undefined> =
 // plain heading. MUST match the bytes the bot ships so a poll looks identical
 // whoever posted it.
 function loadIcon(): { name: string; buffer: Buffer } | null {
+  // Off while the Pulse badges are switched off globally (see lib/pulse-icon.ts).
+  if (!PULSE_BADGES_ENABLED) return null
   for (const name of ['pulse-poll.png', 'pulse-giveaway.png']) {
     try {
       return { name, buffer: readFileSync(path.join(process.cwd(), 'public', name)) }

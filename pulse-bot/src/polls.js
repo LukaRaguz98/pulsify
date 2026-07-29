@@ -23,7 +23,7 @@ const { Events, MessageFlags } = require("discord.js");
 const fs = require("node:fs");
 const path = require("node:path");
 const { recordNotification } = require("./notifications");
-const { replyNotice } = require("./commands");
+const { replyNotice, PULSE_BADGES_ENABLED } = require("./commands");
 const { computeReputation } = require("./reputation");
 const { getGuildAccent } = require("./guild-accent");
 // One duration grammar everywhere — /poll create parses "1h", "2d", "90m" with
@@ -66,7 +66,8 @@ try {
 } catch {
   ICON_BUFFER = null;
 }
-const HAS_ICON = ICON_BUFFER !== null;
+// Off while the Pulse badges are switched off globally (see commands.js).
+const HAS_ICON = PULSE_BADGES_ENABLED && ICON_BUFFER !== null;
 const iconFiles = () => (HAS_ICON ? [{ attachment: ICON_BUFFER, name: ICON_NAME }] : []);
 
 // ── Components V2 shorthands (raw objects — match what the dashboard posts) ───

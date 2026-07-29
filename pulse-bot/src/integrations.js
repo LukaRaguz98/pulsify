@@ -23,6 +23,7 @@ const { MessageFlags } = require("discord.js");
 const { recordNotification } = require("./notifications");
 const { POLLERS, UNSUPPORTED } = require("./integration-providers");
 const { getGuildAccent } = require("./guild-accent");
+const { PULSE_BADGES_ENABLED } = require("./commands");
 
 // Last-resort fallback only — the real colour always comes from the guild accent.
 const BRAND = 0x8b5cf6;
@@ -41,7 +42,8 @@ try {
 } catch {
   ICON_BUFFER = null;
 }
-const HAS_ICON = ICON_BUFFER !== null;
+// Off while the Pulse badges are switched off globally (see commands.js).
+const HAS_ICON = PULSE_BADGES_ENABLED && ICON_BUFFER !== null;
 const iconFiles = () =>
   HAS_ICON ? [{ attachment: ICON_BUFFER, name: ICON_NAME }] : [];
 
