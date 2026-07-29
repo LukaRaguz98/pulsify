@@ -929,10 +929,13 @@ client.on(Events.GuildMemberRemove, async (member) => {
         settings.goodbye.channel_id,
       );
       if (channel?.isTextBased()) {
-        // The member already left, so {user} resolves to their name (a mention would be dead).
+        // {user} is a real mention here too, not the bare username. Discord
+        // resolves <@id> for people who have left — it renders as a clickable
+        // pill that opens their profile — and since they're no longer in the
+        // channel, nobody gets pinged by it.
         const resolve = (text) =>
           text
-            .replace(/\{user\}/g, member.user.username)
+            .replace(/\{user\}/g, `<@${member.id}>`)
             .replace(/\{server\}/g, member.guild.name);
 
         if (settings.goodbye.type === "embed" && settings.goodbye.embed) {

@@ -461,7 +461,9 @@ function MemberEventExtra({
 
   const channelLabel = variant === 'welcome' ? 'Welcome Channel' : 'Goodbye Channel'
   const genLabel     = variant === 'welcome' ? 'Generate welcome embed with Pulse' : 'Generate goodbye embed with Pulse'
-  const userHint     = variant === 'welcome' ? '{user} = mention' : '{user} = name'
+  // {user} is a clickable mention in both — a departing member's <@id> still
+  // renders as a profile pill, it just doesn't ping anyone.
+  const userHint     = '{user} = mention'
 
   return (
     <div className="mt-4 space-y-3 border-t pt-4" style={{ borderColor: 'var(--line-strong)' }}>

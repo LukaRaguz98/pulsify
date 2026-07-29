@@ -26,9 +26,28 @@ type Props = {
   floating?: boolean
 }
 
+/** The blue pill Discord renders for a `<@user>` / `<@&role>` mention. */
+function Mention({ label }: { label: string }) {
+  return (
+    <span
+      style={{
+        background: 'color-mix(in srgb, #5865f2 28%, transparent)',
+        color: 'var(--text)',
+        borderRadius: '3px',
+        padding: '0 2px',
+        fontWeight: 500,
+        cursor: 'pointer',
+      }}
+    >
+      @{label}
+    </span>
+  )
+}
+
 function renderMd(text: string, lineIdx: number) {
   const parts: (string | JSX.Element)[] = []
-  const regex = /(\*\*\*[\s\S]+?\*\*\*|\*\*[\s\S]+?\*\*|__[\s\S]+?__|~~[\s\S]+?~~|\*[\s\S]+?\*|`[^`]+`)/g
+  // `<@…>` / `<@&…>` first so a mention is never eaten by the emphasis rules.
+  const regex = /(<@&?[^>]{1,64}>|\*\*\*[\s\S]+?\*\*\*|\*\*[\s\S]+?\*\*|__[\s\S]+?__|~~[\s\S]+?~~|\*[\s\S]+?\*|`[^`]+`)/g
   let lastIndex = 0
   let key = 0
   let match: RegExpExecArray | null
@@ -36,7 +55,8 @@ function renderMd(text: string, lineIdx: number) {
     if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index))
     const t = match[0]
     const k = `${lineIdx}-${key++}`
-    if (t.startsWith('***'))      parts.push(<strong key={k}><em>{t.slice(3, -3)}</em></strong>)
+    if (t.startsWith('<@'))       parts.push(<Mention key={k} label={t.replace(/^<@&?/, '').replace(/>$/, '')} />)
+    else if (t.startsWith('***')) parts.push(<strong key={k}><em>{t.slice(3, -3)}</em></strong>)
     else if (t.startsWith('**'))  parts.push(<strong key={k}>{t.slice(2, -2)}</strong>)
     else if (t.startsWith('__'))  parts.push(<u key={k}>{t.slice(2, -2)}</u>)
     else if (t.startsWith('~~'))  parts.push(<del key={k}>{t.slice(2, -2)}</del>)
@@ -70,8 +90,10 @@ function renderContent(text: string) {
 }
 
 export function DiscordEmbedPreview({ embed, serverName, footerFallback, floating }: Props) {
+  // {user} becomes a raw Discord mention, exactly what the bot substitutes —
+  // renderMd turns `<@…>` into the blue pill Discord shows.
   const resolve = (text: string) =>
-    text.replace(/\{server\}/g, serverName).replace(/\{user\}/g, '@NewMember')
+    text.replace(/\{server\}/g, serverName).replace(/\{user\}/g, '<@Member>')
 
   // Defer time computation to client mount to avoid SSR/CSR hydration drift.
   const [timeStr, setTimeStr] = useState('')
