@@ -804,7 +804,7 @@ export function AISetupContent({ guildId, guildName }: Props) {
               </button>
             }
           >
-            <AppEmbedPreview title={rulesTitle} content={rulesText} color={embedColor} icon="/pulse-info.png" footer="Pulse · Server Rules" />
+            <AppEmbedPreview title={rulesTitle} content={rulesText} color={embedColor} footer="Pulse · Server Rules" />
             <div className="mt-3 space-y-2">
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Embed Title</label>
@@ -881,7 +881,7 @@ export function AISetupContent({ guildId, guildName }: Props) {
               </button>
             }
           >
-            <AppEmbedPreview title={onboardingTitle} content={onboardingText} color={embedColor} icon="/pulse-onboarding.png" footer="Pulse · Onboarding Guide" />
+            <AppEmbedPreview title={onboardingTitle} content={onboardingText} color={embedColor} footer="Pulse · Onboarding Guide" />
             <div className="mt-3 space-y-2">
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Embed Title</label>

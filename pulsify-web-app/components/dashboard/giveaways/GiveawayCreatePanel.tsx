@@ -10,7 +10,6 @@ import {
   Gift,
   Users,
   AlertCircle,
-  Eye,
   Sparkles,
   Loader2,
   Clock,
@@ -567,10 +566,9 @@ export function GiveawayCreatePanel({ guildId, channels, roles, editing, onClose
             />
           </Section>
 
-          {/* Live preview */}
-          <Section icon={<Eye size={13} />} label="Preview" description="How the giveaway appears in Discord.">
-            <GiveawayPreview draft={draft} durationMinutes={durationMinutes} roleNameById={roleNameById} />
-          </Section>
+          {/* Live preview — no "Preview" heading, the stage speaks for itself
+              (same as the polls / announcements previews). */}
+          <GiveawayPreview draft={draft} durationMinutes={durationMinutes} roleNameById={roleNameById} />
         </div>
 
         {/* Footer */}

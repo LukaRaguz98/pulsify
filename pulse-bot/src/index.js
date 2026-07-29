@@ -510,6 +510,29 @@ function buildMemberV2Container(cfg, resolve, hasBanner, footerLabel, accentInt)
   };
 }
 
+/**
+ * The plain-message flavour of a welcome/goodbye, as a Pulse v2 container.
+ *
+ * "Message" instead of "embed" means the admin wrote one line rather than a
+ * card — it does not mean the greeting should arrive as unbranded chat text.
+ * So it gets the same container the embed does (accent bar, `**Pulse**` label,
+ * width spacer, divider, `Pulse — <label>` footer), just with the message as
+ * the whole body and no title/fields/banner. `message` is already resolved.
+ */
+function buildMemberTextContainer(message, footerLabel, accentInt) {
+  return {
+    type: 17,
+    accent_color: isNaN(accentInt) ? 0x6366f1 : accentInt,
+    components: [
+      { type: 10, content: "**Pulse**" },
+      { type: 10, content: MEMBER_WIDTH_SPACER },
+      { type: 10, content: message },
+      { type: 14, divider: true, spacing: 1 },
+      { type: 10, content: `-# Pulse — ${footerLabel}` },
+    ],
+  };
+}
+
 // Slash commands are defined in ./commands.js (the catalog) and gated per
 // server by the Command Center (./command-center.js). Registration only
 // publishes the commands a guild has enabled; execution enforces permissions,
@@ -790,17 +813,24 @@ client.on(Events.GuildMemberAdd, async (member) => {
             // Bot fetches banner from the web app and sends it as a Discord attachment.
             // This works in both local dev (same machine) and production.
             const appUrl = process.env.APP_URL ?? "http://localhost:3000";
-            const bannerFetchUrl = `${appUrl}/api/banner?name=${encodeURIComponent(member.guild.name)}&color=${cfg.banner_color}`;
+            const bannerFetchUrl = `${appUrl}/api/banner?name=${encodeURIComponent(member.guild.name)}&color=${cfg.banner_color}&variant=welcome`;
             payload.files = [
               { attachment: bannerFetchUrl, name: "banner.png" },
             ];
           }
           await channel.send(payload);
         } else {
-          const msg = resolve(
-            settings.welcome.message ?? "Welcome to {server}, {user}!",
-          );
-          await channel.send(msg);
+          const accentInt = await getGuildAccent(supabase, member.guild.id);
+          await channel.send({
+            flags: MessageFlags.IsComponentsV2,
+            components: [
+              buildMemberTextContainer(
+                resolve(settings.welcome.message ?? "Welcome to {server}, {user}!"),
+                "Welcome",
+                accentInt,
+              ),
+            ],
+          });
         }
       }
     } catch (err) {
@@ -911,17 +941,26 @@ client.on(Events.GuildMemberRemove, async (member) => {
           };
           if (hasBanner) {
             const appUrl = process.env.APP_URL ?? "http://localhost:3000";
-            const bannerFetchUrl = `${appUrl}/api/banner?name=${encodeURIComponent(member.guild.name)}&color=${cfg.banner_color}`;
+            // `variant=goodbye` swaps the banner's kicker to "FAREWELL FROM" —
+            // the shared route defaults to "WELCOME TO".
+            const bannerFetchUrl = `${appUrl}/api/banner?name=${encodeURIComponent(member.guild.name)}&color=${cfg.banner_color}&variant=goodbye`;
             payload.files = [
               { attachment: bannerFetchUrl, name: "banner.png" },
             ];
           }
           await channel.send(payload);
         } else {
-          const msg = resolve(
-            settings.goodbye.message ?? "{user} has left {server}.",
-          );
-          await channel.send(msg);
+          const accentInt = await getGuildAccent(supabase, member.guild.id);
+          await channel.send({
+            flags: MessageFlags.IsComponentsV2,
+            components: [
+              buildMemberTextContainer(
+                resolve(settings.goodbye.message ?? "{user} has left {server}."),
+                "Goodbye",
+                accentInt,
+              ),
+            ],
+          });
         }
       }
     } catch (err) {

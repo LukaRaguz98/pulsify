@@ -8,7 +8,12 @@ type Props = {
   content: string
   color?: string
   /** Public path to the branded badge shown top-right inside the container
-   *  (e.g. '/pulse-info.png'). Omit for no badge. */
+   *  (e.g. '/pulse-info.png'). Omit for no badge.
+   *
+   *  Nothing passes this today: the posted embeds no longer carry a Pulse
+   *  badge (PULSE_BADGES_ENABLED in lib/pulse-icon.ts), and a preview must
+   *  match what Discord actually renders. Kept wired so the callers can pass it
+   *  again the day the badges come back. */
   icon?: string
   /** Footer line rendered under a divider (e.g. 'Pulse — Server Rules'). */
   footer?: string

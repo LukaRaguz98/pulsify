@@ -257,11 +257,11 @@ export function BirthdaySettings({ guildId, guildName, initialConfig, channels, 
             </p>
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Preview</label>
+            {/* No "Preview" heading — the Discord-style mock speaks for itself,
+                the same way the polls / announcements previews read. */}
             <AppEmbedPreview
               title="Happy Birthday"
               content={`${messagePreview}\n-# Turning 21 today`}
-              icon="/pulse-birthday.png"
               footer="Pulse — Birthday"
             />
           </div>

@@ -194,7 +194,9 @@ function createGaming(client, supabase) {
 
   // ── Configuration ──────────────────────────────────────────────────────────
 
-  async function reloadConfigs() {
+  /** `quiet` for the 5-minute sweep's re-read — the same line every 5 minutes
+   *  would bury everything else in the log. */
+  async function reloadConfigs({ quiet = false } = {}) {
     const { data, error } = await supabase.from("gaming_settings").select("*");
     if (error) {
       console.warn("[Pulse] gaming settings load failed:", error.message);
@@ -202,7 +204,7 @@ function createGaming(client, supabase) {
     }
     configs.clear();
     for (const row of data ?? []) configs.set(row.guild_id, normaliseGamingSettings(row));
-    console.log(`[Pulse] Loaded gaming settings for ${configs.size} guild(s).`);
+    if (!quiet) console.log(`[Pulse] Loaded gaming settings for ${configs.size} guild(s).`);
   }
 
   async function reloadOptOuts() {
@@ -446,8 +448,18 @@ function createGaming(client, supabase) {
    * crashes (or a member who goes invisible) never emits the closing presence
    * update, so without this the session stays open forever and every "currently
    * playing" count slowly fills with ghosts.
+   *
+   * The sweep also re-reads the settings + opt-out tables. The realtime
+   * subscription is the fast path, but it is not a guarantee — a dropped
+   * websocket (or a table missing from the publication, which is exactly how
+   * this module shipped) would otherwise leave the bot running on the config it
+   * loaded at boot, ignoring a guild that switched tracking on hours ago. Same
+   * self-healing re-read statistics-channels.js does on its own sweep.
    */
   async function sweep() {
+    await reloadConfigs({ quiet: true });
+    await reloadOptOuts();
+
     const cutoff = Date.now() - MAX_SESSION_HOURS * 3600 * 1000;
     for (const [mapKey, entry] of [...open.entries()]) {
       if (entry.startedAt > cutoff) continue;
@@ -456,6 +468,38 @@ function createGaming(client, supabase) {
         endedAt: new Date(entry.startedAt + MAX_SESSION_HOURS * 3600 * 1000),
         source: "recovered",
       });
+    }
+
+    await syncLivePresences();
+  }
+
+  /**
+   * Open a session for anyone who is *already* playing but has no open row.
+   *
+   * PresenceUpdate is an edge, not a level: a member who was mid-game when
+   * tracking was switched on (or when the bot reconnected) emits nothing until
+   * they change or quit the game, so without this pass a server could enable
+   * gaming analytics and watch it stay empty for hours while people played.
+   * Cheap — it walks the in-memory presence cache and only writes for members
+   * that aren't already counted.
+   */
+  async function syncLivePresences() {
+    for (const guild of client.guilds.cache.values()) {
+      const cfg = configFor(guild.id);
+      if (!cfg.enabled) continue;
+
+      for (const presence of guild.presences.cache.values()) {
+        const member = presence.member;
+        if (!member) continue;
+        // Already counting this member — the presence handler owns switches.
+        if (open.has(keyOf(guild.id, member.id))) continue;
+
+        const game = pickGameActivity(presence, cfg);
+        if (!game) continue;
+        if (exclusionReason(cfg, isOptedOut(guild.id, member.id), member, gameKeyOf(game.name))) continue;
+
+        await openSession(member, game, presence);
+      }
     }
   }
 
@@ -921,10 +965,16 @@ function createGaming(client, supabase) {
     // Presence and member caches need a moment to populate before recovery can
     // tell "still playing" from "stopped while we were down".
     setTimeout(() => {
-      void recoverOpenSessions().then(() => {
-        sweepTimer = setInterval(() => void sweep(), SWEEP_MS);
-        if (sweepTimer.unref) sweepTimer.unref();
-      });
+      void recoverOpenSessions()
+        // Recovery reconciles the rows we left behind; this picks up everyone
+        // who started playing while the bot was down, so a restart doesn't cost
+        // a sweep's worth of playtime.
+        .then(() => syncLivePresences())
+        .catch((e) => console.warn("[Pulse] gaming initial sync failed:", e.message))
+        .then(() => {
+          sweepTimer = setInterval(() => void sweep(), SWEEP_MS);
+          if (sweepTimer.unref) sweepTimer.unref();
+        });
     }, READY_DELAY_MS);
 
     console.log("[Pulse] Gaming analytics started.");
@@ -936,6 +986,7 @@ function createGaming(client, supabase) {
     reloadOptOuts,
     sweep,
     recoverOpenSessions,
+    syncLivePresences,
     optOut,
     optIn,
     configFor,

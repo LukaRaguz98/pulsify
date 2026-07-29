@@ -6,6 +6,7 @@ import {
   ChevronDown, ChevronUp, RefreshCw,
 } from 'lucide-react'
 import { DiscordEmbedPreview, type EmbedData } from '@/components/dashboard/DiscordEmbedPreview'
+import { EmbedFieldsEditor } from '@/components/dashboard/EmbedFieldsEditor'
 import { applyWelcomeEmbed, applyGoodbyeEmbed } from '@/app/dashboard/[guildId]/(management)/ai-setup/actions'
 
 type EmbedResult = {
@@ -72,6 +73,8 @@ export function MemberEmbedSection({
 
   const [editTitle, setEditTitle] = useState('')
   const [editDesc, setEditDesc] = useState('')
+  // The generated cards are editable too — they used to be applied verbatim.
+  const [editFields, setEditFields] = useState<EmbedResult['fields']>([])
 
   const [showApply, setShowApply] = useState(false)
   const [channels, setChannels] = useState<DiscordChannel[]>([])
@@ -100,11 +103,13 @@ export function MemberEmbedSection({
         result?: EmbedResult
         editTitle?: string
         editDesc?: string
+        editFields?: EmbedResult['fields']
       }
       if (data.result) {
         setResult(data.result)
         setEditTitle(data.editTitle ?? data.result.title)
         setEditDesc(data.editDesc ?? data.result.description)
+        setEditFields(data.editFields ?? data.result.fields ?? [])
       }
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -114,20 +119,22 @@ export function MemberEmbedSection({
   useEffect(() => {
     if (!result) return
     try {
-      localStorage.setItem(meta.storageKey(guildId), JSON.stringify({ result, editTitle, editDesc }))
+      localStorage.setItem(meta.storageKey(guildId), JSON.stringify({ result, editTitle, editDesc, editFields }))
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [guildId, variant, result, editTitle, editDesc])
+  }, [guildId, variant, result, editTitle, editDesc, editFields])
 
   const effectiveColor = embedColor ?? result?.color ?? '#6366f1'
   const effectiveBannerColor = effectiveColor.replace('#', '')
 
+  // `variant` drives the banner's kicker — a goodbye banner must not say
+  // "WELCOME TO" (the route defaults to welcome when it's missing).
   const bannerUrl = result
-    ? `/api/banner?name=${encodeURIComponent(guildName)}&color=${effectiveBannerColor}`
+    ? `/api/banner?name=${encodeURIComponent(guildName)}&color=${effectiveBannerColor}&variant=${variant}`
     : ''
 
   const previewEmbed: EmbedData | null = result
-    ? { ...result, color: effectiveColor, title: editTitle, description: editDesc, banner_url: bannerUrl }
+    ? { ...result, color: effectiveColor, title: editTitle, description: editDesc, fields: editFields, banner_url: bannerUrl }
     : null
 
   async function handleGenerate() {
@@ -151,6 +158,7 @@ export function MemberEmbedSection({
       setResult(data.result!)
       setEditTitle(data.result!.title)
       setEditDesc(data.result!.description)
+      setEditFields(data.result!.fields ?? [])
     } catch {
       setError('Network error. Please try again.')
     } finally {
@@ -182,7 +190,7 @@ export function MemberEmbedSection({
       color: result.color,
       title: editTitle,
       description: editDesc,
-      fields: result.fields,
+      fields: editFields,
       footer_text: result.footer_text,
       banner_color: result.banner_color,
     })
@@ -303,6 +311,8 @@ export function MemberEmbedSection({
                   and <code className="rounded px-1" style={{ background: 'var(--bg-2)' }}>{'{server}'}</code> for server name.
                 </p>
               </div>
+              {/* The cards Pulse generated — editable, not take-it-or-leave-it. */}
+              <EmbedFieldsEditor fields={editFields} onChange={setEditFields} />
             </div>
 
             {/* Apply toggle */}

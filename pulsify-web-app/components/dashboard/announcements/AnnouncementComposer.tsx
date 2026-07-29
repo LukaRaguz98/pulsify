@@ -266,7 +266,6 @@ export function AnnouncementComposer({ guildId, channels, editing, onClose, onFe
                 <AppEmbedPreview
                   title={title.trim() || 'Announcement title'}
                   content={`-# Announcement — ${previewDate}\n\n${content.trim() || 'Your message will appear here…'}`}
-                  icon="/pulse-annoucement.png"
                   footer="Pulse — Announcement"
                   floating
                 />

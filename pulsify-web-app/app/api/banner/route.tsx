@@ -3,9 +3,18 @@ import type { NextRequest } from 'next/server'
 
 export const runtime = 'edge'
 
+// The kicker above the server name. A goodbye embed renders the same banner
+// image, so without a variant it greeted departing members with "WELCOME TO".
+// Unknown/absent values fall back to welcome — the original behaviour.
+const KICKERS: Record<string, string> = {
+  welcome: 'WELCOME TO',
+  goodbye: 'FAREWELL FROM',
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const name = (searchParams.get('name') ?? 'Welcome').slice(0, 40)
+  const kicker = KICKERS[searchParams.get('variant') ?? 'welcome'] ?? KICKERS.welcome
   const rawColor = (searchParams.get('color') ?? '6366f1').replace('#', '').slice(0, 6)
   const hex = /^[0-9a-fA-F]{6}$/.test(rawColor) ? rawColor : '6366f1'
 
@@ -56,7 +65,7 @@ export async function GET(req: NextRequest) {
             color: 'rgba(255,255,255,0.60)',
             letterSpacing: '8px', textTransform: 'uppercase',
           }}>
-            WELCOME TO
+            {kicker}
           </div>
           <div style={{
             fontSize: name.length > 22 ? '54px' : '70px',

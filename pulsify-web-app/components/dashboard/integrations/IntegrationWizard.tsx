@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDialogDismiss } from '@/components/ui/use-dialog-dismiss'
 import {
-  X, AlertCircle, Loader2, Plug, Save, Send, Eye, Hash, ChevronLeft, ChevronRight,
+  X, AlertCircle, Loader2, Plug, Save, Send, Hash, ChevronLeft, ChevronRight,
   CheckCircle2, ShieldCheck, Bell, Sparkles, ExternalLink as LinkIcon,
 } from 'lucide-react'
 import {
@@ -417,9 +417,7 @@ export function IntegrationWizard({ guildId, providerId, channels, editing, onCl
 
           {/* Live preview */}
           <div className="flex flex-col overflow-y-auto border-t p-5 md:border-l md:border-t-0" style={{ borderColor: 'var(--line-strong)', background: 'var(--bg-2)' }}>
-            <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
-              <Eye size={13} /> Preview
-            </p>
+            {/* No "Preview" heading — the Discord-style mock speaks for itself. */}
             <NotificationPreview provider={provider} label={previewLabel} body={preview.body} details={preview.details} link={preview.link} />
             <p className="mt-3 flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--text-3)' }}>
               <Hash size={11} /> Posts to <span style={{ color: 'var(--text-2)' }}>#{channelName ?? '—'}</span>
@@ -570,10 +568,8 @@ function NotificationPreview({
             Pulse · Integrations
           </div>
         </div>
-        {/* The real embed carries the Pulse integrations badge as its thumbnail
-            (see actions.ts notificationContainer), so the preview shows it too. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/pulse-integrations.png" alt="Pulse" width={36} height={36} className="h-9 w-9 shrink-0 rounded-md" />
+        {/* No badge thumbnail — the posted notification doesn't carry one either
+            (PULSE_BADGES_ENABLED in lib/pulse-icon.ts). */}
       </div>
     </div>
   )

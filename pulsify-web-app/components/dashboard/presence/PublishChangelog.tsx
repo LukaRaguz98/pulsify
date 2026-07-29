@@ -2,8 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
-import { Hash, Loader2, Send, AlertCircle, CheckCircle2, Eye, Lock } from 'lucide-react'
+import { Hash, Loader2, Send, AlertCircle, CheckCircle2, Lock } from 'lucide-react'
 import type { ChangelogRelease } from '@/lib/release-notes-types'
 import { publishChangelog } from '@/app/dashboard/[guildId]/(management)/presence/actions'
 
@@ -154,9 +153,7 @@ export function PublishChangelog({ guildId, releases, channels, disabled }: Prop
 
       {/* Preview */}
       <div className="flex flex-col overflow-hidden rounded-xl border p-4" style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)' }}>
-        <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
-          <Eye size={13} /> Preview
-        </p>
+        {/* No "Preview" heading — the Discord-style mock speaks for itself. */}
         {release && <ChangelogPreview release={release} />}
       </div>
     </div>
@@ -227,7 +224,8 @@ function ChangelogPreview({ release }: { release: ChangelogRelease }) {
             Pulse · Change Log
           </div>
         </div>
-        <Image src="/pulse-annoucement.png" alt="" width={40} height={40} className="shrink-0 rounded-md" />
+        {/* No badge thumbnail — the posted changelog doesn't carry one either
+            (PULSE_BADGES_ENABLED in lib/pulse-icon.ts). */}
       </div>
     </div>
   )

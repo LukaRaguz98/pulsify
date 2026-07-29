@@ -13,6 +13,7 @@ import {
 import { applyRules } from '@/app/dashboard/[guildId]/(management)/ai-setup/actions'
 import { AppEmbedPreview } from '@/components/dashboard/AppEmbedPreview'
 import { DiscordEmbedPreview, type EmbedData } from '@/components/dashboard/DiscordEmbedPreview'
+import { EmbedFieldsEditor } from '@/components/dashboard/EmbedFieldsEditor'
 import { PreviewStage } from '@/components/dashboard/onboarding/PreviewStage'
 import { CategorySection } from '@/components/ui/category-section'
 import { SaveBar } from '@/components/ui/save-bar'
@@ -441,8 +442,10 @@ function MemberEventExtra({
   const isEmbed = config.type === 'embed'
   const embed = config.embed
 
+  // `variant` drives the banner's kicker — a goodbye banner must not say
+  // "WELCOME TO" (the route defaults to welcome when it's missing).
   const bannerUrl = embed?.banner_color
-    ? `/api/banner?name=${encodeURIComponent(guildName)}&color=${embed.banner_color}`
+    ? `/api/banner?name=${encodeURIComponent(guildName)}&color=${embed.banner_color}&variant=${variant}`
     : ''
   const previewEmbed: EmbedData | null = embed
     ? {
@@ -529,6 +532,22 @@ function MemberEventExtra({
                 className={selectClass + ' resize-none'}
               />
             </div>
+            {/* The cards Pulse generated — editable, not take-it-or-leave-it. */}
+            <EmbedFieldsEditor
+              fields={embed.fields ?? []}
+              onChange={(fields) => onChange({ ...config, embed: { ...embed, fields } })}
+              hint={`${userHint}, {server} = server name — both work in cards too.`}
+            />
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Footer</label>
+              <input
+                type="text"
+                value={embed.footer_text ?? ''}
+                placeholder={variant === 'welcome' ? 'Pulse — Welcome' : 'Pulse — Goodbye'}
+                onChange={(e) => onChange({ ...config, embed: { ...embed, footer_text: e.target.value } })}
+                className={selectClass}
+              />
+            </div>
           </div>
           <button
             type="button"
@@ -543,16 +562,36 @@ function MemberEventExtra({
           </button>
         </div>
       ) : (
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-            Message <span className="text-subtle">({userHint}, {'{server}'} = server name)</span>
-          </label>
-          <textarea
-            value={config.message}
-            onChange={(e) => onChange({ ...config, message: e.target.value })}
-            rows={3}
-            className={selectClass + ' resize-none'}
-          />
+        <div className="space-y-3">
+          {/* A plain message is still posted as a Pulse v2 container (see
+              buildMemberTextContainer in the bot's index.js) — the preview shows
+              exactly that, minus the title/cards/banner an embed would add. */}
+          <PreviewStage>
+            <DiscordEmbedPreview
+              embed={{
+                color: accentHex,
+                title: '',
+                description: config.message,
+                fields: [],
+                footer_text: '',
+                banner_url: '',
+              }}
+              serverName={guildName}
+              footerFallback={variant === 'welcome' ? 'Pulse · Welcome' : 'Pulse · Goodbye'}
+              floating
+            />
+          </PreviewStage>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+              Message <span className="text-subtle">({userHint}, {'{server}'} = server name)</span>
+            </label>
+            <textarea
+              value={config.message}
+              onChange={(e) => onChange({ ...config, message: e.target.value })}
+              rows={3}
+              className={selectClass + ' resize-none'}
+            />
+          </div>
         </div>
       )}
     </div>
@@ -660,9 +699,9 @@ function PulseContentExtra({
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Preview</label>
+          {/* No "Preview" heading — the stage speaks for itself. */}
           <PreviewStage>
-            <AppEmbedPreview title={title} content={content} color={accentHex} icon="/pulse-info.png" footer="Pulse · Server Rules" floating />
+            <AppEmbedPreview title={title} content={content} color={accentHex} footer="Pulse · Server Rules" floating />
           </PreviewStage>
         </div>
       </div>

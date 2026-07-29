@@ -8,7 +8,6 @@ import {
   X,
   Award,
   AlertCircle,
-  Eye,
   Sparkles,
   Loader2,
   Target,
@@ -478,10 +477,9 @@ export function MilestoneEditPanel({ guildId, guildName, channels, roles, editin
             )}
           </Section>
 
-          {/* Preview */}
-          <Section icon={<Eye size={13} />} label="Preview" description="How the milestone appears in Discord.">
-            <MilestonePreview draft={draft} guildName={guildName} roleNameById={roleNameById} />
-          </Section>
+          {/* Live preview — no "Preview" heading, the Discord-style mock speaks
+              for itself (same as the polls / announcements previews). */}
+          <MilestonePreview draft={draft} guildName={guildName} roleNameById={roleNameById} />
         </div>
 
         {/* Footer */}
@@ -573,14 +571,12 @@ function MilestonePreview({
 
   return (
     <div className="rounded-xl border-l-4 p-4" style={{ borderColor: 'var(--p-1)', background: 'var(--bg-2)' }}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[11px] font-bold" style={{ color: 'var(--text-3)' }}>Pulse</p>
-          <p className="break-words font-bold text-foreground">{draft.name || 'Milestone'}</p>
-        </div>
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: 'var(--p-soft)', color: 'var(--p-1)' }}>
-          <MilestoneIcon name={draft.icon} size={16} />
-        </span>
+      {/* No thumbnail — the posted announcement carries none either (it's a
+          sentence plus the reward roles; see milestoneContainer in
+          milestones.js), so the preview must not invent one. */}
+      <div className="min-w-0">
+        <p className="text-[11px] font-bold" style={{ color: 'var(--text-3)' }}>Pulse</p>
+        <p className="break-words font-bold text-foreground">{draft.name || 'Milestone'}</p>
       </div>
 
       <p className="mt-2 whitespace-pre-wrap text-sm" style={{ color: 'var(--text-2)' }}>{rendered}</p>

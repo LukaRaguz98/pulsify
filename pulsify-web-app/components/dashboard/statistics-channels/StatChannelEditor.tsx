@@ -281,7 +281,7 @@ export function StatChannelEditor({
 
             {/* ── Preview ─────────────────────────────────────────── */}
             <div className="lg:sticky lg:top-0 lg:self-start">
-              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Preview</label>
+              {/* No "Preview" heading — the "Channel sidebar" mock below says it. */}
               <div className="rounded-xl border p-3" style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)' }}>
                 <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>Channel sidebar</p>
                 <div className="flex items-center gap-2 rounded px-2 py-1.5" style={{ background: 'color-mix(in srgb, var(--text) 6%, transparent)' }}>

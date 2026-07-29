@@ -9,7 +9,6 @@ import {
   RotateCcw,
   AlertCircle,
   AlertTriangle,
-  Sparkles,
 } from 'lucide-react'
 import { SectionCard } from '@/components/ui/section-card'
 import type { BotBrandingResponse } from '@/lib/bot-branding'
@@ -259,9 +258,7 @@ export function BotBrandingCard({
 
         {/* ── Live preview ───────────────────────────────────────────────── */}
         <div>
-          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--text-3)' }}>
-            <Sparkles size={12} /> Preview
-          </p>
+          {/* No "Preview" heading — the Discord-style mock speaks for itself. */}
           <div
             className="rounded-xl border p-4"
             style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)' }}

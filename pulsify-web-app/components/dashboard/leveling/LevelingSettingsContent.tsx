@@ -267,7 +267,7 @@ export function LevelingSettingsContent({ guildId, guildName, initialConfig, cha
                 </p>
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Preview</label>
+                {/* No "Preview" heading — the Discord-style mock speaks for itself. */}
                 <div className="rounded-xl border p-4" style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)', borderLeft: '3px solid var(--p-1)' }}>
                   <p className="text-xs font-semibold" style={{ color: 'var(--p-1)' }}>Level 5</p>
                   <p className="mt-1 text-sm text-foreground">{messagePreview}</p>
