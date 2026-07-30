@@ -19,26 +19,26 @@ const SERVER_SIZE_HINTS: Record<string, string> = {
 }
 
 const CONTENT_DEPTH_HINTS: Record<string, string> = {
-  brief:    'Keep the description short (1-2 sentences). Fields: 2, brief values.',
-  standard: 'Balanced length. Description: 2-3 sentences. Fields: 2-3.',
-  detailed: 'Rich description (2-3 detailed sentences). Fields: 3, with helpful context.',
+  brief:    'Keep the message short — 1-2 sentences.',
+  standard: 'Balanced length — 2-3 sentences.',
+  detailed: 'Rich but still compact — 2-3 detailed sentences.',
 }
 
+// A greeting is a title and a message, nothing more (see buildMemberV2Container
+// in the bot's index.js) — so there is nothing else to generate here.
 const VARIANTS = {
   welcome: {
-    system:    'Generate a beautiful Discord embed welcome message config.',
-    intro:     'Generate a Discord embed welcome message for a server, shown when a new member JOINS.',
+    system:    'Generate a Discord welcome message config.',
+    intro:     'Generate a Discord welcome message for a server, shown when a new member JOINS.',
     titleHint: 'Welcome title (use {server} placeholder, max 50 chars)',
     descHint:  'Warm welcome body. Use {user} for the member name and {server} for server name.',
-    fieldHint: 'Short helpful tip or pointer for a new member (max 60 chars)',
     note:      'This is a WELCOME message — make it inviting and point new members in the right direction.',
   },
   goodbye: {
-    system:    'Generate a beautiful Discord embed goodbye message config for when a member leaves.',
-    intro:     'Generate a Discord embed goodbye message for a server, shown when a member LEAVES.',
+    system:    'Generate a Discord goodbye message config for when a member leaves.',
+    intro:     'Generate a Discord goodbye message for a server, shown when a member LEAVES.',
     titleHint: 'Goodbye title (use {server} placeholder, max 50 chars)',
     descHint:  'Warm but brief farewell. Use {user} for the member name and {server} for server name.',
-    fieldHint: 'Short gracious line — a thank-you, a good wish, or an open invite to return (max 60 chars)',
     note:      'This is a GOODBYE message — keep it warm, gracious and brief. Do NOT welcome anyone or list onboarding steps.',
   },
 } as const
@@ -79,7 +79,6 @@ export async function POST(req: Request) {
     : (TONE_DESCRIPTIONS[tone] ?? TONE_DESCRIPTIONS.friendly)
 
   const accentColor = embedColor ?? '#6366f1'
-  const bannerColor = accentColor.replace('#', '')
 
   const systemPrompt = `You are a Discord server setup assistant. ${v.system} Respond with a valid JSON object only — no markdown, no code fences, no explanation.`
 
@@ -92,28 +91,20 @@ Language: Write ALL text in ${language}. Use native phrasing.
 Server size: ${SERVER_SIZE_HINTS[serverSize] ?? SERVER_SIZE_HINTS.medium}
 Content depth: ${CONTENT_DEPTH_HINTS[contentDepth] ?? CONTENT_DEPTH_HINTS.standard}
 Emojis: ${includeEmojis ? 'Include relevant emojis naturally.' : 'Do NOT use any emojis — plain text only.'}
-Accent color: ${accentColor} — use this exact hex for both "color" and "banner_color" fields.
+Accent color: ${accentColor} — use this exact hex for the "color" field.
 ${v.note}
 
 Respond with this exact JSON structure and nothing else:
 {
   "color": "${accentColor}",
   "title": "${v.titleHint}",
-  "description": "${v.descHint}",
-  "fields": [
-    { "name": "Section header", "value": "${v.fieldHint}", "inline": true }
-  ],
-  "footer_text": "Short tasteful footer, max 55 chars",
-  "banner_color": "${bannerColor}"
+  "description": "${v.descHint}"
 }
 
 Requirements:
 - color: must be exactly "${accentColor}"
 - title: must include {server}, max 50 characters total
-- description: must use {user} and {server} placeholders
-- fields: exactly 2-3 fields with inline: true, keep values under 60 characters each
-- footer_text: short and tasteful
-- banner_color: must be exactly "${bannerColor}" (no # prefix)`
+- description: must use {user} and {server} placeholders`
 
   const aiRes = await fetch(`${AI_BASE_URL}/chat/completions`, {
     method: 'POST',
@@ -153,9 +144,6 @@ Requirements:
       color: string
       title: string
       description: string
-      fields: { name: string; value: string; inline: boolean }[]
-      footer_text: string
-      banner_color: string
     }
   } catch {
     return NextResponse.json({ error: 'AI returned an invalid response. Please try again.' }, { status: 500 })
@@ -163,7 +151,6 @@ Requirements:
 
   // Enforce user's chosen accent color regardless of what AI returned
   result.color = accentColor
-  result.banner_color = bannerColor
 
   return NextResponse.json({ result })
 }

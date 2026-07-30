@@ -78,12 +78,19 @@ export function LevelingSettingsContent({ guildId, guildName, initialConfig, cha
     [config.curve],
   )
 
-  const messagePreview = renderLevelupMessage(config.levelup_message, {
+  // Mirrors levelupContainer in the bot's leveling.js: the member is always
+  // tagged, so a template that dropped {mention} still gets the mention
+  // prepended rather than posting an untagged celebration.
+  const PREVIEW_MENTION = '@Ada'
+  const rendered = renderLevelupMessage(config.levelup_message, {
     user: 'Ada',
-    mention: '@Ada',
+    mention: PREVIEW_MENTION,
     level: 5,
     server: guildName,
   })
+  const messagePreview = rendered.includes(PREVIEW_MENTION)
+    ? rendered
+    : `${PREVIEW_MENTION} ${rendered}`.trim()
 
   // Count changed top-level keys (JSON-compare handles nested curve/arrays).
   const changedCount = useMemo(() => {
@@ -266,12 +273,33 @@ export function LevelingSettingsContent({ guildId, guildName, initialConfig, cha
                   Placeholders: <code>{'{user}'}</code> <code>{'{mention}'}</code> <code>{'{level}'}</code> <code>{'{server}'}</code>
                 </p>
               </div>
-              <div>
+              {/* Centred in the row so the preview card sits level with the
+                  textarea beside it instead of hugging the top of the cell. */}
+              <div className="flex items-center">
                 {/* No "Preview" heading — the Discord-style mock speaks for itself. */}
-                <div className="rounded-xl border p-4" style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)', borderLeft: '3px solid var(--p-1)' }}>
-                  <p className="text-xs font-semibold" style={{ color: 'var(--p-1)' }}>Level 5</p>
-                  <p className="mt-1 text-sm text-foreground">{messagePreview}</p>
-                  <p className="mt-2 text-[11px] text-subtle">Pulse · Level up</p>
+                {/* The posted container is just the accent stripe and the
+                    message — no heading, no Pulse label, no footer. */}
+                <div className="w-full rounded-xl border p-4" style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)', borderLeft: '3px solid var(--p-1)' }}>
+                  <p className="text-sm" style={{ color: 'var(--text-2)' }}>
+                    {messagePreview.split(PREVIEW_MENTION).map((part, i, all) => (
+                      <span key={i}>
+                        {part}
+                        {i < all.length - 1 && (
+                          <span
+                            style={{
+                              background: 'color-mix(in srgb, #5865f2 28%, transparent)',
+                              color: 'var(--text)',
+                              borderRadius: '3px',
+                              padding: '0 2px',
+                              fontWeight: 500,
+                            }}
+                          >
+                            {PREVIEW_MENTION}
+                          </span>
+                        )}
+                      </span>
+                    ))}
+                  </p>
                 </div>
               </div>
             </div>

@@ -1,6 +1,23 @@
 'use client'
 
-import { Check, Palette, Server, Type } from 'lucide-react'
+import {
+  AlignLeft,
+  BookOpen,
+  Briefcase,
+  Check,
+  Gamepad2,
+  Handshake,
+  Leaf,
+  Palette,
+  Pencil,
+  Server,
+  Smile,
+  Sprout,
+  TreeDeciduous,
+  Type,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react'
 import { THEMES } from '@/lib/themes'
 import { SectionCard } from '@/components/ui/section-card'
 import { CategorySection } from '@/components/ui/category-section'
@@ -37,33 +54,38 @@ export const DEFAULT_PULSE_PREFS: PulsePrefs = {
 
 export const PULSE_PREFS_KEY = (guildId: string) => `pulsify:Pulse-prefs:${guildId}`
 
-const PULSE_TONES = [
-  { id: 'friendly',     label: 'Friendly',     emoji: '😊' },
-  { id: 'professional', label: 'Professional', emoji: '💼' },
-  { id: 'gaming',       label: 'Gaming',       emoji: '🎮' },
-  { id: 'community',    label: 'Community',    emoji: '🤝' },
-  { id: 'other',        label: 'Other…',       emoji: '✏️' },
+// Lucide icons throughout — same family as the CategorySection headers and the
+// rest of the dashboard, so these option groups read as part of the same system.
+const PULSE_TONES: { id: string; label: string; icon: LucideIcon }[] = [
+  { id: 'friendly',     label: 'Friendly',     icon: Smile },
+  { id: 'professional', label: 'Professional', icon: Briefcase },
+  { id: 'gaming',       label: 'Gaming',       icon: Gamepad2 },
+  { id: 'community',    label: 'Community',    icon: Handshake },
+  { id: 'other',        label: 'Other…',       icon: Pencil },
 ]
 
-const PULSE_LANGUAGES = [
-  { id: 'english', label: 'English',  flag: '🇬🇧' },
-  { id: 'spanish', label: 'Español',  flag: '🇪🇸' },
-  { id: 'french',  label: 'Français', flag: '🇫🇷' },
-  { id: 'german',  label: 'Deutsch',  flag: '🇩🇪' },
-  { id: 'italian', label: 'Italiano', flag: '🇮🇹' },
-  { id: 'custom',  label: 'Other…',   flag: '✏️'  },
+// No per-language icon exists in Lucide, and repeating one globe five times is
+// noise — the native labels identify themselves. Only "Other…" needs an
+// affordance hint, matching the tone group.
+const PULSE_LANGUAGES: { id: string; label: string; icon?: LucideIcon }[] = [
+  { id: 'english', label: 'English'  },
+  { id: 'spanish', label: 'Español'  },
+  { id: 'french',  label: 'Français' },
+  { id: 'german',  label: 'Deutsch'  },
+  { id: 'italian', label: 'Italiano' },
+  { id: 'custom',  label: 'Other…', icon: Pencil },
 ]
 
 const PULSE_CONTENT_DEPTHS = [
-  { id: 'brief'    as const, label: 'Brief',    sub: 'Short & punchy',      icon: '⚡' },
-  { id: 'standard' as const, label: 'Standard', sub: 'Balanced',            icon: '✦' },
-  { id: 'detailed' as const, label: 'Detailed', sub: 'Thorough & complete', icon: '📖' },
+  { id: 'brief'    as const, label: 'Brief',    sub: 'Short & punchy',      icon: Zap },
+  { id: 'standard' as const, label: 'Standard', sub: 'Balanced',            icon: AlignLeft },
+  { id: 'detailed' as const, label: 'Detailed', sub: 'Thorough & complete', icon: BookOpen },
 ]
 
 const PULSE_SERVER_SIZES = [
-  { id: 'small'  as const, label: 'Cozy',     sub: '< 100',  icon: '🌱' },
-  { id: 'medium' as const, label: 'Growing',  sub: '100–1k', icon: '🌿' },
-  { id: 'large'  as const, label: 'Thriving', sub: '1k+',    icon: '🌳' },
+  { id: 'small'  as const, label: 'Cozy',     sub: '< 100',  icon: Sprout },
+  { id: 'medium' as const, label: 'Growing',  sub: '100–1k', icon: Leaf },
+  { id: 'large'  as const, label: 'Thriving', sub: '1k+',    icon: TreeDeciduous },
 ]
 
 type SectionsProps = {
@@ -119,7 +141,8 @@ export function PulseAssistantSections({ prefs, updatePref }: SectionsProps) {
                       color:       prefs.tone === t.id ? 'var(--p-1)' : 'var(--text-2)',
                     }}
                   >
-                    <span>{t.emoji}</span>{t.label}
+                    <t.icon size={13} strokeWidth={2} />
+                    {t.label}
                   </button>
                 ))}
               </div>
@@ -154,7 +177,8 @@ export function PulseAssistantSections({ prefs, updatePref }: SectionsProps) {
                       color:       prefs.language === l.id ? 'var(--p-1)' : 'var(--text-2)',
                     }}
                   >
-                    <span>{l.flag}</span>{l.label}
+                    {l.icon && <l.icon size={13} strokeWidth={2} />}
+                    {l.label}
                   </button>
                 ))}
               </div>
@@ -204,7 +228,11 @@ export function PulseAssistantSections({ prefs, updatePref }: SectionsProps) {
                         borderColor: active ? 'var(--p-1)' : 'var(--line-strong)',
                       }}
                     >
-                      <span className="text-lg leading-none">{d.icon}</span>
+                      <d.icon
+                        size={18}
+                        strokeWidth={1.75}
+                        style={{ color: active ? 'var(--p-1)' : 'var(--text-2)' }}
+                      />
                       <span className="text-xs font-semibold text-foreground">{d.label}</span>
                       <span className="text-[10px] text-foreground opacity-60">{d.sub}</span>
                       {active && (
@@ -233,7 +261,11 @@ export function PulseAssistantSections({ prefs, updatePref }: SectionsProps) {
                         borderColor: active ? 'var(--p-1)' : 'var(--line-strong)',
                       }}
                     >
-                      <span className="text-lg leading-none">{s.icon}</span>
+                      <s.icon
+                        size={18}
+                        strokeWidth={1.75}
+                        style={{ color: active ? 'var(--p-1)' : 'var(--text-2)' }}
+                      />
                       <span className="text-xs font-semibold text-foreground">{s.label}</span>
                       <span className="text-[10px] text-foreground opacity-60">{s.sub}</span>
                       {active && (

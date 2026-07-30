@@ -11,6 +11,7 @@ import {
   type MemberOnboardingConfig,
   normalizeMemberOnboarding,
 } from '@/lib/onboarding'
+import type { RuleItem, RulesLayout } from '@/lib/rules-embed'
 
 type Result = { ok: true } | { ok: false; error: string }
 
@@ -290,13 +291,12 @@ export async function saveMemberOnboarding(
 // guild_settings. The Pulse bot reads guild_settings.welcome / .goodbye / .rules
 // exactly as before.
 
+// Title and message only — the bot's buildMemberV2Container posts a bare
+// container with no label, cards, banner or footer.
 type EmbedConfig = {
   color: string
   title: string
   description: string
-  fields: { name: string; value: string; inline: boolean }[]
-  footer_text: string
-  banner_color: string
 }
 
 export type MemberEventConfig = {
@@ -307,7 +307,19 @@ export type MemberEventConfig = {
   embed?:     EmbedConfig
 }
 
-export type PulseRulesConfig = { enabled: boolean; channel_id: string; title: string; content: string }
+export type PulseRulesConfig = {
+  enabled: boolean
+  channel_id: string
+  title: string
+  content: string
+  /** 'single' = one branded embed with every rule; 'per_rule' = a bare
+   *  title-plus-text embed per rule. Absent on rows saved before the option
+   *  existed, which read back as 'single'. */
+  layout?: RulesLayout
+  /** The per-rule list — each rule's own heading and text. Only used by the
+   *  'per_rule' layout; the 'single' layout posts `content` as one body. */
+  rule_items?: RuleItem[]
+}
 
 export type MemberMessages = {
   welcome?: MemberEventConfig

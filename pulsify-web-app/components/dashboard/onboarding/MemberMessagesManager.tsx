@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   MessageSquare, LogOut, ShieldCheck,
   AlertCircle, Sparkles, RotateCcw, Loader2, Check, Send,
+  ScrollText, Rows3,
+  type LucideIcon,
 } from 'lucide-react'
 import {
   saveMemberMessages,
@@ -11,6 +13,13 @@ import {
   type PulseRulesConfig,
 } from '@/app/dashboard/[guildId]/(management)/onboarding/actions'
 import { applyRules } from '@/app/dashboard/[guildId]/(management)/ai-setup/actions'
+import {
+  MAX_RULE_MESSAGES,
+  ruleItemsFromContent,
+  usableRuleItems,
+  type RuleItem,
+  type RulesLayout,
+} from '@/lib/rules-embed'
 import { AppEmbedPreview } from '@/components/dashboard/AppEmbedPreview'
 import { DiscordEmbedPreview, type EmbedData } from '@/components/dashboard/DiscordEmbedPreview'
 import { EmbedFieldsEditor } from '@/components/dashboard/EmbedFieldsEditor'
@@ -123,6 +132,8 @@ export function MemberMessagesManager({
   const [rulesChannel, setRulesChannel] = useState(initialRules?.channel_id ?? (channels[0]?.id ?? ''))
   const [rulesTitle,   setRulesTitle]   = useState(initialRules?.title   ?? '📜 Server Rules')
   const [rulesContent, setRulesContent] = useState(initialRules?.content ?? '')
+  const [rulesLayout,  setRulesLayout]  = useState<RulesLayout>(initialRules?.layout ?? 'single')
+  const [rulesItems,   setRulesItems]   = useState<RuleItem[]>(initialRules?.rule_items ?? [])
   const [applyingRules, setApplyingRules] = useState(false)
   const [rulesResult, setRulesResult] = useState<'success' | 'error' | null>(null)
   const [rulesError, setRulesError] = useState('')
@@ -136,8 +147,11 @@ export function MemberMessagesManager({
     welcome: MemberEventConfig
     goodbye: MemberEventConfig
     rulesVisible: boolean; rulesChannel: string; rulesTitle: string; rulesContent: string
+    rulesLayout: RulesLayout; rulesItems: RuleItem[]
   }
-  const buildSnapshot = (): Snapshot => ({ welcome, goodbye, rulesVisible, rulesChannel, rulesTitle, rulesContent })
+  const buildSnapshot = (): Snapshot => ({
+    welcome, goodbye, rulesVisible, rulesChannel, rulesTitle, rulesContent, rulesLayout, rulesItems,
+  })
   const [snapshot, setSnapshot] = useState<Snapshot>(buildSnapshot)
 
   const current = buildSnapshot()
@@ -148,7 +162,7 @@ export function MemberMessagesManager({
     }
     return n
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshot, welcome, goodbye, rulesVisible, rulesChannel, rulesTitle, rulesContent])
+  }, [snapshot, welcome, goodbye, rulesVisible, rulesChannel, rulesTitle, rulesContent, rulesLayout, rulesItems])
   const dirty = changedCount > 0
 
   function clearFeedback() { setError(null) }
@@ -160,6 +174,8 @@ export function MemberMessagesManager({
     setRulesChannel(snapshot.rulesChannel)
     setRulesTitle(snapshot.rulesTitle)
     setRulesContent(snapshot.rulesContent)
+    setRulesLayout(snapshot.rulesLayout)
+    setRulesItems(snapshot.rulesItems)
     setError(null)
   }
 
@@ -181,7 +197,14 @@ export function MemberMessagesManager({
     const result = await saveMemberMessages(guildId, {
       welcome,
       goodbye,
-      rules: { enabled: rulesVisible, channel_id: rulesChannel, title: rulesTitle, content: rulesContent },
+      rules: {
+        enabled: rulesVisible,
+        channel_id: rulesChannel,
+        title: rulesTitle,
+        content: rulesContent,
+        layout: rulesLayout,
+        rule_items: rulesItems,
+      },
     })
     setSaving(false)
     if (result.ok) {
@@ -195,7 +218,9 @@ export function MemberMessagesManager({
   async function handleRepostRules() {
     setApplyingRules(true)
     setRulesResult(null)
-    const res = await applyRules(guildId, rulesChannel, rulesTitle, rulesContent, accentHex)
+    const res = await applyRules(
+      guildId, rulesChannel, rulesTitle, rulesContent, accentHex, rulesLayout, rulesItems,
+    )
     setRulesResult(res.ok ? 'success' : 'error')
     if (!res.ok) setRulesError(res.error)
     setApplyingRules(false)
@@ -258,9 +283,17 @@ export function MemberMessagesManager({
             includeEmojis: prefs.includeEmojis,
           }),
         })
-        const data = await res.json() as { result?: { rules: string[] }; error?: string }
+        const data = await res.json() as { result?: { rules: string[]; rule_titles?: string[] }; error?: string }
         if (!res.ok) { setPulseGenError(data.error ?? 'Generation failed.'); setPulseGenErrorSection(section); return }
-        setRulesContent(data.result!.rules.map((r, i) => `${i + 1}. ${r}`).join('\n'))
+        const generated = data.result!
+        // Fill both layouts in one go: the numbered body for the single embed,
+        // and the titled list for one-embed-per-rule. A model that skips
+        // rule_titles just leaves those headings blank for you to write.
+        setRulesContent(generated.rules.map((r, i) => `${i + 1}. ${r}`).join('\n'))
+        setRulesItems(generated.rules.map((text, i) => ({
+          title: generated.rule_titles?.[i]?.trim() ?? '',
+          text,
+        })))
         setRulesVisible(true)
       }
     } catch {
@@ -328,7 +361,9 @@ export function MemberMessagesManager({
     iconBg: 'rgba(245,158,11,0.12)',
     iconColor: '#f59e0b',
     title: 'Server Rules',
-    description: 'Post an AI-generated rules embed to a channel.',
+    description: rulesLayout === 'per_rule'
+      ? 'Post each rule as its own bare embed in a channel.'
+      : 'Post an AI-generated rules embed to a channel.',
     enabled: rulesVisible,
     onToggle: (v) => { setRulesVisible(v); clearFeedback() },
     extra: rulesVisible && (
@@ -340,6 +375,17 @@ export function MemberMessagesManager({
         onTitleChange={setRulesTitle}
         content={rulesContent}
         onContentChange={setRulesContent}
+        layout={rulesLayout}
+        onLayoutChange={(v) => {
+          // Flipping to per-rule on existing content shouldn't be a blank
+          // slate — seed the list once, then leave it alone so titles typed
+          // here survive a trip back to the single-embed layout.
+          if (v === 'per_rule' && rulesItems.length === 0) setRulesItems(ruleItemsFromContent(rulesContent))
+          setRulesLayout(v)
+          clearFeedback()
+        }}
+        items={rulesItems}
+        onItemsChange={setRulesItems}
         accentHex={accentHex}
         generatingSection={generatingSection}
         onGenerate={() => generateWithPulse('rules')}
@@ -442,20 +488,12 @@ function MemberEventExtra({
   const isEmbed = config.type === 'embed'
   const embed = config.embed
 
-  // `variant` drives the banner's kicker — a goodbye banner must not say
-  // "WELCOME TO" (the route defaults to welcome when it's missing).
-  const bannerUrl = embed?.banner_color
-    ? `/api/banner?name=${encodeURIComponent(guildName)}&color=${embed.banner_color}&variant=${variant}`
-    : ''
   const previewEmbed: EmbedData | null = embed
     ? {
         // The bot posts every embed in the guild accent, so the preview must too.
         color: accentHex,
         title: embed.title,
         description: embed.description,
-        fields: embed.fields ?? [],
-        footer_text: embed.footer_text ?? '',
-        banner_url: bannerUrl,
       }
     : null
 
@@ -506,16 +544,11 @@ function MemberEventExtra({
       {isEmbed && previewEmbed && embed ? (
         <div className="space-y-3">
           <PreviewStage>
-            <DiscordEmbedPreview
-              embed={previewEmbed}
-              serverName={guildName}
-              footerFallback={variant === 'welcome' ? 'Pulse · Welcome' : 'Pulse · Goodbye'}
-              floating
-            />
+            <DiscordEmbedPreview embed={previewEmbed} serverName={guildName} floating />
           </PreviewStage>
           <div className="space-y-2">
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Embed Title</label>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Title</label>
               <input
                 type="text"
                 value={embed.title}
@@ -525,29 +558,13 @@ function MemberEventExtra({
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                Embed Description <span className="text-subtle">({userHint}, {'{server}'} = server name)</span>
+                Message <span className="text-subtle">({userHint}, {'{server}'} = server name)</span>
               </label>
               <textarea
                 value={embed.description}
                 onChange={(e) => onChange({ ...config, embed: { ...embed, description: e.target.value } })}
                 rows={3}
                 className={selectClass + ' resize-none'}
-              />
-            </div>
-            {/* The cards Pulse generated — editable, not take-it-or-leave-it. */}
-            <EmbedFieldsEditor
-              fields={embed.fields ?? []}
-              onChange={(fields) => onChange({ ...config, embed: { ...embed, fields } })}
-              hint={`${userHint}, {server} = server name — both work in cards too.`}
-            />
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Footer</label>
-              <input
-                type="text"
-                value={embed.footer_text ?? ''}
-                placeholder={variant === 'welcome' ? 'Pulse — Welcome' : 'Pulse — Goodbye'}
-                onChange={(e) => onChange({ ...config, embed: { ...embed, footer_text: e.target.value } })}
-                className={selectClass}
               />
             </div>
           </div>
@@ -567,19 +584,12 @@ function MemberEventExtra({
         <div className="space-y-3">
           {/* A plain message is still posted as a Pulse v2 container (see
               buildMemberTextContainer in the bot's index.js) — the preview shows
-              exactly that, minus the title/cards/banner an embed would add. */}
+              exactly that: the accent stripe and the message, minus the title an
+              embed would add. */}
           <PreviewStage>
             <DiscordEmbedPreview
-              embed={{
-                color: accentHex,
-                title: '',
-                description: config.message,
-                fields: [],
-                footer_text: '',
-                banner_url: '',
-              }}
+              embed={{ color: accentHex, title: '', description: config.message }}
               serverName={guildName}
-              footerFallback={variant === 'welcome' ? 'Pulse · Welcome' : 'Pulse · Goodbye'}
               floating
             />
           </PreviewStage>
@@ -603,9 +613,28 @@ function MemberEventExtra({
 // ─── PulseContentExtra ────────────────────────────────────────────────────────
 // Body for the Server Rules card — Pulse-generated content posted to a channel.
 
+const RULES_LAYOUTS: { id: RulesLayout; label: string; sub: string; icon: LucideIcon }[] = [
+  { id: 'single',   label: 'One embed',    sub: 'All rules together, branded', icon: ScrollText },
+  { id: 'per_rule', label: 'One per rule', sub: 'Bare title + text each',      icon: Rows3 },
+]
+
+/** How many per-rule embeds the preview stacks before it just counts the rest —
+ *  enough to show the pattern without a preview the length of the page. */
+const RULE_PREVIEW_LIMIT = 3
+
+/** Reword the shared row editor for rules (it defaults to embed-card wording). */
+const RULE_EDITOR_LABELS = {
+  list: 'Rules',
+  add: 'Add rule',
+  empty: 'No rules yet. Add one, or generate a set with Pulse.',
+  titlePlaceholder: 'Rule title',
+  textPlaceholder: 'Rule text',
+}
+
 function PulseContentExtra({
   channels, channelId, onChannelChange,
   title, onTitleChange, content, onContentChange,
+  layout, onLayoutChange, items, onItemsChange,
   accentHex, generatingSection, onGenerate,
   pulseGenError, pulseGenErrorSection,
   applying, applyResult, applyError, onRepost,
@@ -617,6 +646,10 @@ function PulseContentExtra({
   onTitleChange: (v: string) => void
   content: string
   onContentChange: (v: string) => void
+  layout: RulesLayout
+  onLayoutChange: (v: RulesLayout) => void
+  items: RuleItem[]
+  onItemsChange: (next: RuleItem[]) => void
   accentHex: string
   generatingSection: string | null
   onGenerate: () => void
@@ -627,6 +660,11 @@ function PulseContentExtra({
   applyError: string
   onRepost: () => void
 }) {
+  // Drives the post button's label/disabled state in per-rule mode — one
+  // message goes out per rule that actually has text.
+  const postable = usableRuleItems(items)
+  const ruleCount = postable.length
+
   return (
     <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--line-strong)' }}>
       <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
@@ -639,6 +677,38 @@ function PulseContentExtra({
                 <option key={c.id} value={c.id}>#{c.name}</option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">How to post</label>
+            <div className="grid grid-cols-2 gap-2">
+              {RULES_LAYOUTS.map((opt) => {
+                const active = layout === opt.id
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => onLayoutChange(opt.id)}
+                    className="relative flex items-start gap-2 rounded-xl border p-2.5 text-left transition-all"
+                    style={{
+                      background:  active ? 'var(--p-soft)' : 'var(--bg-2)',
+                      borderColor: active ? 'var(--p-1)' : 'var(--line-strong)',
+                    }}
+                  >
+                    <opt.icon
+                      size={15}
+                      strokeWidth={1.75}
+                      className="mt-px shrink-0"
+                      style={{ color: active ? 'var(--p-1)' : 'var(--text-2)' }}
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-xs font-semibold text-foreground">{opt.label}</span>
+                      <span className="block text-[10px] leading-tight" style={{ color: 'var(--text-3)' }}>{opt.sub}</span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           <div className="rounded-lg border p-3 flex items-center justify-between gap-3" style={{ background: 'var(--bg-2)', borderColor: 'var(--line-strong)' }}>
@@ -662,18 +732,31 @@ function PulseContentExtra({
             <p className="text-xs" style={{ color: '#f87171' }}>{pulseGenError}</p>
           )}
 
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Embed Title</label>
-            <input type="text" value={title} onChange={(e) => onTitleChange(e.target.value)} className={selectClass} />
-          </div>
-          <div className="flex min-h-0 flex-1 flex-col">
-            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Edit content</label>
-            <textarea
-              value={content}
-              onChange={(e) => onContentChange(e.target.value)}
-              className={selectClass + ' min-h-[20rem] flex-1 resize-none font-mono'}
-            />
-          </div>
+          {layout === 'per_rule' ? (
+            <div className="flex min-h-0 flex-1 flex-col">
+              <EmbedFieldsEditor
+                fields={items.map((r) => ({ name: r.title, value: r.text, inline: false }))}
+                onChange={(next) => onItemsChange(next.map((f) => ({ title: f.name, text: f.value })))}
+                labels={RULE_EDITOR_LABELS}
+                hint="Each rule posts as its own embed — its title and its text, nothing else. Leave a title empty to post that rule as plain text."
+              />
+            </div>
+          ) : (
+            <>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Embed Title</label>
+                <input type="text" value={title} onChange={(e) => onTitleChange(e.target.value)} className={selectClass} />
+              </div>
+              <div className="flex min-h-0 flex-1 flex-col">
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Edit content</label>
+                <textarea
+                  value={content}
+                  onChange={(e) => onContentChange(e.target.value)}
+                  className={selectClass + ' min-h-[20rem] flex-1 resize-none font-mono'}
+                />
+              </div>
+            </>
+          )}
 
           {applyResult === 'success' && (
             <div className="flex items-center gap-2 text-xs" style={{ color: '#22c55e' }}>
@@ -689,13 +772,15 @@ function PulseContentExtra({
             <button
               type="button"
               onClick={onRepost}
-              disabled={applying || !channelId}
+              disabled={applying || !channelId || (layout === 'per_rule' && ruleCount === 0)}
               className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold text-white transition-all disabled:opacity-50"
               style={{ background: 'linear-gradient(180deg, var(--p-1), var(--p-2))' }}
             >
               {applying
                 ? <><Loader2 size={11} className="animate-spin" /> Posting…</>
-                : <><Send size={11} /> Post to Discord</>}
+                : <><Send size={11} /> {layout === 'per_rule' && ruleCount > 0
+                    ? `Post ${ruleCount} ${ruleCount === 1 ? 'embed' : 'embeds'}`
+                    : 'Post to Discord'}</>}
             </button>
           </div>
         </div>
@@ -703,10 +788,60 @@ function PulseContentExtra({
         <div>
           {/* No "Preview" heading — the stage speaks for itself. */}
           <PreviewStage>
-            <AppEmbedPreview title={title} content={content} color={accentHex} icon="/pulse-info.png" footer="Pulse · Server Rules" floating />
+            {layout === 'per_rule'
+              ? <PerRulePreview rules={postable} accentHex={accentHex} />
+              : <AppEmbedPreview title={title} content={content} color={accentHex} icon="/pulse-info.png" footer="Pulse · Server Rules" floating />}
           </PreviewStage>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ─── PerRulePreview ───────────────────────────────────────────────────────────
+// The `per_rule` layout: one message per rule, each a bare container holding
+// only the heading and the rule text — no `Pulse` label, no badge, no divider,
+// no footer. Mirrors buildBareRuleMessage in the ai-setup actions; keep the two
+// in step. Discord collapses the avatar row on consecutive messages from the
+// same author, so only the first preview carries it.
+
+function PerRulePreview({
+  rules, accentHex,
+}: {
+  rules: RuleItem[]
+  accentHex: string
+}) {
+  if (rules.length === 0) {
+    return <AppEmbedPreview title="" content="" color={accentHex} showBrand={false} floating />
+  }
+
+  const shown = rules.slice(0, RULE_PREVIEW_LIMIT)
+  const hidden = rules.length - shown.length
+
+  return (
+    <div className="space-y-2">
+      {shown.map((rule, i) => (
+        <AppEmbedPreview
+          key={i}
+          title={rule.title}
+          content={rule.text}
+          color={accentHex}
+          showBrand={false}
+          grouped={i > 0}
+          floating
+        />
+      ))}
+      {hidden > 0 && (
+        <p className="pl-12 text-[11px]" style={{ color: 'var(--text-3)' }}>
+          + {hidden} more {hidden === 1 ? 'embed' : 'embeds'}, one per remaining rule.
+        </p>
+      )}
+      {rules.length > MAX_RULE_MESSAGES && (
+        <p className="flex items-start gap-1.5 pl-12 text-[11px]" style={{ color: '#f87171' }}>
+          <AlertCircle size={12} className="mt-px shrink-0" />
+          {rules.length} rules is over the {MAX_RULE_MESSAGES}-embed limit — trim the list or post one embed instead.
+        </p>
+      )}
     </div>
   )
 }

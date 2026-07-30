@@ -25,6 +25,14 @@ type Props = {
   /** When true, render for the animated PreviewStage field: transparent outer
    *  card + translucent glass container so the field glows through. */
   floating?: boolean
+  /** The bold `Pulse` label above the title. On by default because every
+   *  branded Pulse block carries it — pass false for a bare container that is
+   *  only a title and its text (the per-rule rules embeds). */
+  showBrand?: boolean
+  /** Hide the avatar + username + timestamp row, the way Discord collapses it
+   *  on consecutive messages from the same author. Use for every message after
+   *  the first when previewing a run of them. */
+  grouped?: boolean
 }
 
 function renderMd(text: string, lineIdx: number) {
@@ -73,6 +81,7 @@ function renderContent(text: string) {
 
 export function AppEmbedPreview({
   title, content, subtitle, color, icon, footer, footerDivider = true, floating,
+  showBrand = true, grouped = false,
 }: Props) {
   // Render an empty placeholder on the server, then fill in the actual
   // current time on the client. Avoids hydration mismatch when the SSR's
@@ -125,28 +134,35 @@ export function AppEmbedPreview({
       }
     >
       <div className="flex items-start gap-2.5 sm:gap-4">
-        {/* Bot avatar */}
-        <Image
-          src="/logo.png"
-          alt="Pulse"
-          width={40}
-          height={40}
-          className="h-9 w-9 sm:h-10 sm:w-10"
-          style={{ flexShrink: 0, borderRadius: '50%', marginTop: '2px', objectFit: 'cover' }}
-        />
+        {/* Bot avatar — a same-size spacer when grouped, so the container still
+            lines up under the first message's body. */}
+        {grouped ? (
+          <div className="h-9 w-9 sm:h-10 sm:w-10" style={{ flexShrink: 0 }} aria-hidden />
+        ) : (
+          <Image
+            src="/logo.png"
+            alt="Pulse"
+            width={40}
+            height={40}
+            className="h-9 w-9 sm:h-10 sm:w-10"
+            style={{ flexShrink: 0, borderRadius: '50%', marginTop: '2px', objectFit: 'cover' }}
+          />
+        )}
 
         <div style={{ flex: 1, minWidth: 0 }}>
           {/* Username row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
-            <span style={{ color: 'var(--text)', fontWeight: '600', fontSize: '14px' }}>Pulse</span>
-            <span style={{
-              background: '#5865f2', color: '#ffffff',
-              borderRadius: '3px', padding: '1px 5px',
-              fontSize: '9px', fontWeight: '700',
-              letterSpacing: '0.4px', textTransform: 'uppercase', lineHeight: '1.4',
-            }}>APP</span>
-            <span style={{ color: 'var(--text-3)', fontSize: '12px' }}>Today at {timeStr}</span>
-          </div>
+          {!grouped && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
+              <span style={{ color: 'var(--text)', fontWeight: '600', fontSize: '14px' }}>Pulse</span>
+              <span style={{
+                background: '#5865f2', color: '#ffffff',
+                borderRadius: '3px', padding: '1px 5px',
+                fontSize: '9px', fontWeight: '700',
+                letterSpacing: '0.4px', textTransform: 'uppercase', lineHeight: '1.4',
+              }}>APP</span>
+              <span style={{ color: 'var(--text-3)', fontSize: '12px' }}>Today at {timeStr}</span>
+            </div>
+          )}
 
           {/* Components V2 container — rounded card with a full-height left
               accent stripe. Mirrors the posted Pulse v2 embed: a `Pulse` label +
@@ -155,16 +171,24 @@ export function AppEmbedPreview({
           <div style={containerStyle}>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ color: 'var(--text-2)', fontWeight: 700, fontSize: '12px', marginBottom: '2px' }}>Pulse</div>
-                <div style={{
-                  color: 'var(--text)',
-                  fontWeight: '700',
-                  fontSize: '20px',
-                  margin: '0 0 6px',
-                  lineHeight: '1.3',
-                }}>
-                  {title || <span style={{ color: 'var(--text-3)', fontWeight: 600, fontSize: '15px' }}>No title…</span>}
-                </div>
+                {showBrand && (
+                  <div style={{ color: 'var(--text-2)', fontWeight: 700, fontSize: '12px', marginBottom: '2px' }}>Pulse</div>
+                )}
+                {/* 20px matches a `# ` heading, 17px a `## ` one — the bare
+                    variant posts the smaller heading, so mirror it here. An
+                    empty title is a legitimate choice there (the rule posts as
+                    plain text), so drop the row rather than nagging for one. */}
+                {(showBrand || title) && (
+                  <div style={{
+                    color: 'var(--text)',
+                    fontWeight: '700',
+                    fontSize: showBrand ? '20px' : '17px',
+                    margin: '0 0 6px',
+                    lineHeight: '1.3',
+                  }}>
+                    {title || <span style={{ color: 'var(--text-3)', fontWeight: 600, fontSize: '15px' }}>No title…</span>}
+                  </div>
+                )}
                 {subtitle && (
                   <div style={{ color: 'var(--text-3)', fontSize: '12px', margin: '0 0 6px', lineHeight: 1.3 }}>
                     {subtitle}

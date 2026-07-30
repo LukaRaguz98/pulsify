@@ -445,31 +445,27 @@ async function recordMemberRemoval(member) {
   });
 }
 
-// Pins a consistent, comfortable width across Pulse's v2 embeds (U+2800 blanks
-// occupy width without being trimmed) — same trick as commands.js. The pin
-// rides on the footer line, which every member embed has: a spacer of its own
-// costs a full line of height, and on a short greeting that empty line between
-// the title and the message was the most visible thing in the embed.
-const MEMBER_WIDTH_TARGET = 44;
-const padMemberWidth = (s) =>
-  s + "⠀".repeat(Math.max(0, MEMBER_WIDTH_TARGET - [...s].length));
-
 /**
- * Build a Components V2 container for a member welcome/goodbye embed, following
- * the standardized Pulse v2 style (same as /changelog, announcements and the
- * rules/onboarding blocks): a `**Pulse**` label + `#` title heading, a width
- * spacer for a consistent width, the description/fields body, then a divider and
- * a `-#` footer. `resolve` runs the {user}/{server} placeholder swap on every
- * text field; `footerLabel` ("Welcome"/"Goodbye") brands the fallback footer
- * when the user left footer_text blank. Returns the raw container object — the
- * caller sends it with the IS_COMPONENTS_V2 flag.
+ * Build a Components V2 container for a member welcome/goodbye embed.
+ *
+ * Deliberately the bare flavour — a `#` title heading and the message, on the
+ * guild's accent stripe, and nothing else. No `**Pulse**` label, no cards, no
+ * banner, no divider, no footer, no width pin: a greeting should be the
+ * smallest thing in the channel, not the biggest. (The branded Pulse v2 layout
+ * with a badge and a `Pulse — …` footer still applies everywhere it earns its
+ * height — /changelog, announcements, the rules/onboarding blocks.)
+ *
+ * `resolve` runs the {user}/{server} placeholder swap on every text field.
+ * Returns the raw container — the caller sends it with the IS_COMPONENTS_V2
+ * flag — or null when the config has neither a title nor a message, since
+ * Discord rejects a container with no components and there is no longer a
+ * `**Pulse**` label guaranteeing one.
  */
-function buildMemberV2Container(cfg, resolve, hasBanner, footerLabel, accentInt) {
+function buildMemberV2Container(cfg, resolve, accentInt) {
   // The colour is the GUILD's accent (guild_settings.embed_color, chosen in the
   // dashboard's Server Settings) — the single source of truth for every Pulse
   // embed. `cfg.color` is no longer read here.
-  const colorInt = accentInt;
-  const components = [{ type: 10, content: "**Pulse**" }];
+  const components = [];
 
   const title = resolve(cfg.title ?? "");
   if (title) components.push({ type: 10, content: `# ${title}` });
@@ -477,41 +473,11 @@ function buildMemberV2Container(cfg, resolve, hasBanner, footerLabel, accentInt)
   const description = resolve(cfg.description ?? "");
   if (description) components.push({ type: 10, content: description });
 
-  if (Array.isArray(cfg.fields) && cfg.fields.length > 0) {
-    const fieldText = cfg.fields
-      .filter((f) => f && (f.name || f.value))
-      .map((f) => `**${resolve(f.name ?? "")}**\n${resolve(f.value ?? "")}`)
-      .join("\n\n");
-    if (fieldText) {
-      if (description) components.push({ type: 14, divider: true, spacing: 1 });
-      components.push({ type: 10, content: fieldText });
-    }
-  }
-
-  // Banner — MediaGallery (type 12) referencing the attached banner.png.
-  if (hasBanner) {
-    components.push({
-      type: 12,
-      items: [{ media: { url: "attachment://banner.png" } }],
-    });
-  }
-
-  // Divider + footer — the standardized Pulse v2 close. Honour the user's
-  // footer_text; fall back to a branded `Pulse — <label>` when it's blank.
-  // The width pin rides on the footer — skipped when a banner is present, since
-  // the full-width image already defines the embed's width.
-  const footer = cfg.footer_text
-    ? resolve(cfg.footer_text)
-    : `Pulse — ${footerLabel}`;
-  components.push({ type: 14, divider: true, spacing: 1 });
-  components.push({
-    type: 10,
-    content: `-# ${hasBanner ? footer : padMemberWidth(footer)}`,
-  });
+  if (components.length === 0) return null;
 
   return {
     type: 17,
-    accent_color: isNaN(colorInt) ? 0x6366f1 : colorInt,
+    accent_color: isNaN(accentInt) ? 0x6366f1 : accentInt,
     components,
   };
 }
@@ -520,21 +486,15 @@ function buildMemberV2Container(cfg, resolve, hasBanner, footerLabel, accentInt)
  * The plain-message flavour of a welcome/goodbye, as a Pulse v2 container.
  *
  * "Message" instead of "embed" means the admin wrote one line rather than a
- * card — it does not mean the greeting should arrive as unbranded chat text.
- * So it gets the same container the embed does (accent bar, `**Pulse**` label,
- * width spacer, divider, `Pulse — <label>` footer), just with the message as
- * the whole body and no title/fields/banner. `message` is already resolved.
+ * titled card — it does not mean the greeting should arrive as unbranded chat
+ * text. So it gets the same bare container the embed does (accent stripe, no
+ * chrome), with the message as the whole body. `message` is already resolved.
  */
-function buildMemberTextContainer(message, footerLabel, accentInt) {
+function buildMemberTextContainer(message, accentInt) {
   return {
     type: 17,
     accent_color: isNaN(accentInt) ? 0x6366f1 : accentInt,
-    components: [
-      { type: 10, content: "**Pulse**" },
-      { type: 10, content: message },
-      { type: 14, divider: true, spacing: 1 },
-      { type: 10, content: `-# ${padMemberWidth(`Pulse — ${footerLabel}`)}` },
-    ],
+    components: [{ type: 10, content: message }],
   };
 }
 
@@ -805,36 +765,19 @@ client.on(Events.GuildMemberAdd, async (member) => {
             .replace(/\{user\}/g, member.toString())
             .replace(/\{server\}/g, member.guild.name);
 
-        if (settings.welcome.type === "embed" && settings.welcome.embed) {
-          const cfg = settings.welcome.embed;
-          const hasBanner = !!cfg.banner_color;
-          const accentInt = await getGuildAccent(supabase, member.guild.id);
-          const container = buildMemberV2Container(cfg, resolve, hasBanner, "Welcome", accentInt);
-          const payload = {
-            flags: MessageFlags.IsComponentsV2,
-            components: [container],
-          };
-          if (hasBanner) {
-            // Bot fetches banner from the web app and sends it as a Discord attachment.
-            // This works in both local dev (same machine) and production.
-            const appUrl = process.env.APP_URL ?? "http://localhost:3000";
-            const bannerFetchUrl = `${appUrl}/api/banner?name=${encodeURIComponent(member.guild.name)}&color=${cfg.banner_color}&variant=welcome`;
-            payload.files = [
-              { attachment: bannerFetchUrl, name: "banner.png" },
-            ];
-          }
-          await channel.send(payload);
-        } else {
-          const accentInt = await getGuildAccent(supabase, member.guild.id);
+        const accentInt = await getGuildAccent(supabase, member.guild.id);
+        const container =
+          settings.welcome.type === "embed" && settings.welcome.embed
+            ? buildMemberV2Container(settings.welcome.embed, resolve, accentInt)
+            : buildMemberTextContainer(
+                resolve(settings.welcome.message ?? "Welcome to {server}, {user}!"),
+                accentInt,
+              );
+        // null ⇒ the greeting is blank; nothing worth posting.
+        if (container) {
           await channel.send({
             flags: MessageFlags.IsComponentsV2,
-            components: [
-              buildMemberTextContainer(
-                resolve(settings.welcome.message ?? "Welcome to {server}, {user}!"),
-                "Welcome",
-                accentInt,
-              ),
-            ],
+            components: [container],
           });
         }
       }
@@ -938,36 +881,19 @@ client.on(Events.GuildMemberRemove, async (member) => {
             .replace(/\{user\}/g, `<@${member.id}>`)
             .replace(/\{server\}/g, member.guild.name);
 
-        if (settings.goodbye.type === "embed" && settings.goodbye.embed) {
-          const cfg = settings.goodbye.embed;
-          const hasBanner = !!cfg.banner_color;
-          const accentInt = await getGuildAccent(supabase, member.guild.id);
-          const container = buildMemberV2Container(cfg, resolve, hasBanner, "Goodbye", accentInt);
-          const payload = {
-            flags: MessageFlags.IsComponentsV2,
-            components: [container],
-          };
-          if (hasBanner) {
-            const appUrl = process.env.APP_URL ?? "http://localhost:3000";
-            // `variant=goodbye` swaps the banner's kicker to "FAREWELL FROM" —
-            // the shared route defaults to "WELCOME TO".
-            const bannerFetchUrl = `${appUrl}/api/banner?name=${encodeURIComponent(member.guild.name)}&color=${cfg.banner_color}&variant=goodbye`;
-            payload.files = [
-              { attachment: bannerFetchUrl, name: "banner.png" },
-            ];
-          }
-          await channel.send(payload);
-        } else {
-          const accentInt = await getGuildAccent(supabase, member.guild.id);
+        const accentInt = await getGuildAccent(supabase, member.guild.id);
+        const container =
+          settings.goodbye.type === "embed" && settings.goodbye.embed
+            ? buildMemberV2Container(settings.goodbye.embed, resolve, accentInt)
+            : buildMemberTextContainer(
+                resolve(settings.goodbye.message ?? "{user} has left {server}."),
+                accentInt,
+              );
+        // null ⇒ the greeting is blank; nothing worth posting.
+        if (container) {
           await channel.send({
             flags: MessageFlags.IsComponentsV2,
-            components: [
-              buildMemberTextContainer(
-                resolve(settings.goodbye.message ?? "{user} has left {server}."),
-                "Goodbye",
-                accentInt,
-              ),
-            ],
+            components: [container],
           });
         }
       }

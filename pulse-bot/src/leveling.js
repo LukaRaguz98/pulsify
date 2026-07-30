@@ -246,29 +246,42 @@ function createLeveling(client, supabase, rewards = null, shop = null) {
 
   // ── Embeds ─────────────────────────────────────────────────────────────────
 
+  /**
+   * The level-up celebration: a v2 container holding the guild accent stripe
+   * and the message, and literally nothing else — no heading, no `**Pulse**`
+   * label, no subtitle, no width pin, no footer. It fires constantly, so it
+   * should be the smallest thing in the channel. The level number rides in the
+   * message itself via the `{level}` placeholder.
+   *
+   * The member is always mentioned. `{mention}` is in the default template, but
+   * a guild that rewrote the message with `{user}` (or dropped the placeholder)
+   * would lose the tag, so the mention is prepended when the rendered text
+   * doesn't already carry one — which also guarantees the container is never
+   * empty.
+   */
   async function levelupContainer(guild, member, newLevel, rewards) {
     const colorHex = await getPulseColor(supabase, guild.id);
     const cfg = await getConfig(guild.id);
+    const mention = `<@${member.id}>`;
     const rendered = renderLevelupMessage(cfg.levelup_message, {
       user: member.displayName,
-      mention: `<@${member.id}>`,
+      mention,
       level: newLevel,
       server: guild.name,
     });
-    const body = [text(rendered)];
+    const message = rendered.includes(mention) ? rendered : `${mention} ${rendered}`.trim();
+
+    const components = [text(message)];
     if (rewards.length > 0) {
-      body.push(text(`-# Unlocked: ${rewards.map((r) => `<@&${r.role_id}>`).join(" ")}`));
+      components.push(text(`-# Unlocked: ${rewards.map((r) => `<@&${r.role_id}>`).join(" ")}`));
     }
-    // No header thumbnail: a level-up is one line, and the avatar beside it took
-    // more room than the message (see the embed conventions on
-    // buildPulseContainer). The level heading is the visual.
-    return buildPulseContainer({
-      colorHex,
-      title: `Level ${newLevel}`,
-      subtitle: member.displayName,
-      body,
-      footer: "Pulse — Level up",
-    });
+
+    const colorInt = parseInt(colorHex.replace("#", ""), 16);
+    return {
+      type: 17,
+      accent_color: Number.isNaN(colorInt) ? 0x6366f1 : colorInt,
+      components,
+    };
   }
 
   async function announceLevelup(guild, member, newLevel, rewards, sourceChannel) {

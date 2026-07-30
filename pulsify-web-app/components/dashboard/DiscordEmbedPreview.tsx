@@ -3,23 +3,15 @@
 import { useEffect, useState, type JSX, type CSSProperties } from 'react'
 import Image from 'next/image'
 
-type EmbedField = { name: string; value: string; inline: boolean }
-
 export type EmbedData = {
   color: string
   title: string
   description: string
-  fields: EmbedField[]
-  footer_text: string
-  banner_url: string
 }
 
 type Props = {
   embed: EmbedData
   serverName: string
-  /** Footer shown when the user left footer_text blank (e.g. 'Pulse — Welcome'),
-   *  mirroring the bot's branded fallback. */
-  footerFallback?: string
   /** When true, render for the animated PreviewStage field: the outer card is
    *  transparent and the V2 container becomes translucent glass so the field
    *  glows through — matching the onboarding live preview. */
@@ -89,7 +81,7 @@ function renderContent(text: string) {
   })
 }
 
-export function DiscordEmbedPreview({ embed, serverName, footerFallback, floating }: Props) {
+export function DiscordEmbedPreview({ embed, serverName, floating }: Props) {
   // {user} becomes a raw Discord mention, exactly what the bot substitutes —
   // renderMd turns `<@…>` into the blue pill Discord shows.
   const resolve = (text: string) =>
@@ -170,14 +162,11 @@ export function DiscordEmbedPreview({ embed, serverName, footerFallback, floatin
           </div>
 
           {/* Components V2 container — rounded card with a full-height left
-              accent stripe. Mirrors the bot's V2 builder: title → `#` heading,
-              fields → stacked bold-label blocks, banner → media gallery,
-              footer → subtext. No inline-field grid (V2 stacks them). */}
+              accent stripe. Mirrors buildMemberV2Container in the bot's
+              index.js, which is deliberately bare: a `#` title heading and the
+              message, nothing else. No `Pulse` label, no cards, no banner, no
+              footer — a greeting should be the smallest thing in the channel. */}
           <div style={containerStyle}>
-            {/* Pulse label — matches the `**Pulse**` line the bot puts at the
-                top of the v2 container. */}
-            <div style={{ color: 'var(--text-2)', fontWeight: 700, fontSize: '12px', marginBottom: '2px' }}>Pulse</div>
-
             {/* Title — H1 heading */}
             {resolve(embed.title) && (
               <div style={{
@@ -192,62 +181,10 @@ export function DiscordEmbedPreview({ embed, serverName, footerFallback, floatin
             {resolve(embed.description) && (
               <div style={{
                 color: 'var(--text-2)', fontSize: '14px',
-                margin: '0 0 10px', lineHeight: '1.45',
+                lineHeight: '1.45',
               }}>
                 {renderContent(resolve(embed.description))}
               </div>
-            )}
-
-            {/* Divider between the description and the cards — buildMemberV2Container
-                pushes one whenever both are present. */}
-            {embed.fields.length > 0 && resolve(embed.description) && (
-              <div style={{ borderTop: '1px solid var(--line-strong)', margin: '4px 0 10px' }} />
-            )}
-
-            {/* Fields — stacked bold-label blocks, one per row */}
-            {embed.fields.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '10px' }}>
-                {embed.fields.map((field, i) => (
-                  <div key={i}>
-                    {/* These must be <div>, not <p>: the value renders
-                        renderContent()'s block <div>s, and <p> can't contain a
-                        <div> (invalid HTML → hydration error). */}
-                    <div style={{ color: 'var(--text)', fontSize: '14px', fontWeight: '700', margin: '0 0 2px' }}>
-                      {resolve(field.name)}
-                    </div>
-                    <div style={{ color: 'var(--text-2)', fontSize: '14px', margin: 0, lineHeight: '1.45' }}>
-                      {renderContent(resolve(field.value))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Banner — media gallery image, full width with rounded corners */}
-            {embed.banner_url && (
-              <div style={{ marginTop: '4px' }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={embed.banner_url}
-                  alt=""
-                  style={{
-                    width: '100%', display: 'block',
-                    aspectRatio: '3 / 1', objectFit: 'cover',
-                    borderRadius: '8px',
-                  }}
-                />
-              </div>
-            )}
-
-            {/* Divider + footer — the standardized Pulse v2 close. Honours the
-                user's footer_text, falling back to the branded label. */}
-            {(embed.footer_text || footerFallback) && (
-              <>
-                <div style={{ borderTop: '1px solid var(--line-strong)', margin: '12px 0 8px' }} />
-                <div style={{ color: 'var(--text-3)', fontSize: '12px', lineHeight: '1.3' }}>
-                  {embed.footer_text ? resolve(embed.footer_text) : footerFallback}
-                </div>
-              </>
             )}
           </div>
         </div>

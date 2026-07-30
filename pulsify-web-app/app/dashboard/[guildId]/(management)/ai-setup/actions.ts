@@ -5,6 +5,12 @@ import path from 'node:path'
 import { createClient } from '@/lib/supabase-server'
 import { PULSE_BADGES_ENABLED } from '@/lib/pulse-icon'
 import {
+  MAX_RULE_MESSAGES,
+  usableRuleItems,
+  type RuleItem,
+  type RulesLayout,
+} from '@/lib/rules-embed'
+import {
   postChannelComponents,
   createGuildChannel,
   type V2Container,
@@ -12,13 +18,12 @@ import {
   type V2Attachment,
 } from '@/lib/discord'
 
+// A welcome/goodbye greeting is a title and a message, nothing more — see
+// buildMemberV2Container in the bot's index.js, which posts exactly that.
 type EmbedConfig = {
   color: string
   title: string
   description: string
-  fields: { name: string; value: string; inline: boolean }[]
-  footer_text: string
-  banner_color: string
 }
 
 export async function applyWelcomeEmbed(
@@ -48,9 +53,6 @@ export async function applyWelcomeEmbed(
         color: embed.color,
         title: embed.title,
         description: embed.description,
-        fields: embed.fields,
-        footer_text: embed.footer_text,
-        banner_color: embed.banner_color,
       },
     },
   }
@@ -90,9 +92,6 @@ export async function applyGoodbyeEmbed(
         color: embed.color,
         title: embed.title,
         description: embed.description,
-        fields: embed.fields,
-        footer_text: embed.footer_text,
-        banner_color: embed.banner_color,
       },
     },
   }
@@ -184,20 +183,66 @@ function buildContentMessage(
   }
 }
 
+/** Discord allows 5 messages per 5s in a channel. Pace the per-rule posts just
+ *  under that so a 6-rule set never trips a 429 (postChannelComponents doesn't
+ *  retry). */
+const RULE_POST_SPACING_MS = 1100
+
+/**
+ * A single rule as its own bare container: the heading and the rule text, and
+ * nothing else — no `Pulse` label, no badge, no divider, no footer. Only the
+ * accent stripe ties it to the rest of Pulse. Contrast with
+ * buildContentMessage, which is the fully branded block.
+ */
+function buildBareRuleMessage(heading: string, text: string, accentHex: string): V2Container {
+  const components: V2Container['components'] = []
+  const trimmedHeading = heading.trim()
+  if (trimmedHeading) components.push({ type: 10, content: `## ${trimmedHeading}` })
+  components.push({ type: 10, content: text.slice(0, 3900) })
+  return { type: 17, accent_color: hexToInt(accentHex), components }
+}
+
 export async function applyRules(
   guildId: string,
   channelId: string,
   title: string,
   content: string,
   accentHex: string,
+  layout: RulesLayout = 'single',
+  ruleItems: RuleItem[] = [],
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, error: 'Unauthorized.' }
 
-  const { container, attachments } = buildContentMessage(title, content, accentHex, 'rules')
-  const postResult = await postChannelComponents(channelId, [container], attachments)
-  if (!postResult.ok) return postResult
+  if (layout === 'per_rule') {
+    const rules = usableRuleItems(ruleItems)
+    if (rules.length === 0) return { ok: false, error: 'Add at least one rule before posting.' }
+    if (rules.length > MAX_RULE_MESSAGES) {
+      return {
+        ok: false,
+        error: `That's ${rules.length} rules — one embed each would flood the channel. Trim to ${MAX_RULE_MESSAGES} or fewer, or switch to a single embed.`,
+      }
+    }
+
+    for (let i = 0; i < rules.length; i += 1) {
+      if (i > 0) await new Promise((resolve) => setTimeout(resolve, RULE_POST_SPACING_MS))
+      const result = await postChannelComponents(
+        channelId,
+        [buildBareRuleMessage(rules[i].title, rules[i].text, accentHex)],
+      )
+      if (!result.ok) {
+        // Partial post — say how far it got so the user knows what to clean up.
+        return i === 0
+          ? result
+          : { ok: false, error: `Posted ${i} of ${rules.length} rules, then failed: ${result.error}` }
+      }
+    }
+  } else {
+    const { container, attachments } = buildContentMessage(title, content, accentHex, 'rules')
+    const postResult = await postChannelComponents(channelId, [container], attachments)
+    if (!postResult.ok) return postResult
+  }
 
   const { data: existing } = await supabase
     .from('guild_settings')
@@ -209,7 +254,14 @@ export async function applyRules(
   const { error } = await supabase
     .from('guild_settings')
     .upsert(
-      { guild_id: guildId, settings: { ...current, rules: { enabled: true, channel_id: channelId, title, content } }, updated_at: new Date().toISOString() },
+      {
+        guild_id: guildId,
+        settings: {
+          ...current,
+          rules: { enabled: true, channel_id: channelId, title, content, layout, rule_items: ruleItems },
+        },
+        updated_at: new Date().toISOString(),
+      },
       { onConflict: 'guild_id' },
     )
 

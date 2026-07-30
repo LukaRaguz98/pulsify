@@ -6,16 +6,14 @@ import {
   ChevronDown, ChevronUp, RefreshCw,
 } from 'lucide-react'
 import { DiscordEmbedPreview, type EmbedData } from '@/components/dashboard/DiscordEmbedPreview'
-import { EmbedFieldsEditor } from '@/components/dashboard/EmbedFieldsEditor'
 import { applyWelcomeEmbed, applyGoodbyeEmbed } from '@/app/dashboard/[guildId]/(management)/ai-setup/actions'
 
+// A greeting is a title and a message — see buildMemberV2Container in the bot's
+// index.js, which posts a bare container with no label, cards, banner or footer.
 type EmbedResult = {
   color: string
   title: string
   description: string
-  fields: { name: string; value: string; inline: boolean }[]
-  footer_text: string
-  banner_color: string
 }
 
 type DiscordChannel = { id: string; name: string; type: number }
@@ -41,7 +39,7 @@ const VARIANT_META = {
   welcome: {
     title:        'Welcome Embed',
     subtitle:     'Pulse generated embed card shown when a member joins',
-    emptyHint:    'create a beautiful Discord embed with a custom banner for welcoming new members.',
+    emptyHint:    'write a short welcome — a title and a message — for new members.',
     crafting:     'Crafting your welcome embed…',
     applyLabel:   'Select channel to post welcome embeds:',
     applySuccess: 'Welcome embed applied and enabled.',
@@ -51,7 +49,7 @@ const VARIANT_META = {
   goodbye: {
     title:        'Goodbye Embed',
     subtitle:     'Pulse generated embed card shown when a member leaves',
-    emptyHint:    'create a graceful Discord embed with a custom banner for members who leave.',
+    emptyHint:    'write a short, graceful farewell — a title and a message — for members who leave.',
     crafting:     'Crafting your goodbye embed…',
     applyLabel:   'Select channel to post goodbye embeds:',
     applySuccess: 'Goodbye embed applied and enabled.',
@@ -73,8 +71,6 @@ export function MemberEmbedSection({
 
   const [editTitle, setEditTitle] = useState('')
   const [editDesc, setEditDesc] = useState('')
-  // The generated cards are editable too — they used to be applied verbatim.
-  const [editFields, setEditFields] = useState<EmbedResult['fields']>([])
 
   const [showApply, setShowApply] = useState(false)
   const [channels, setChannels] = useState<DiscordChannel[]>([])
@@ -103,13 +99,11 @@ export function MemberEmbedSection({
         result?: EmbedResult
         editTitle?: string
         editDesc?: string
-        editFields?: EmbedResult['fields']
       }
       if (data.result) {
         setResult(data.result)
         setEditTitle(data.editTitle ?? data.result.title)
         setEditDesc(data.editDesc ?? data.result.description)
-        setEditFields(data.editFields ?? data.result.fields ?? [])
       }
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -119,22 +113,15 @@ export function MemberEmbedSection({
   useEffect(() => {
     if (!result) return
     try {
-      localStorage.setItem(meta.storageKey(guildId), JSON.stringify({ result, editTitle, editDesc, editFields }))
+      localStorage.setItem(meta.storageKey(guildId), JSON.stringify({ result, editTitle, editDesc }))
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [guildId, variant, result, editTitle, editDesc, editFields])
+  }, [guildId, variant, result, editTitle, editDesc])
 
   const effectiveColor = embedColor ?? result?.color ?? '#6366f1'
-  const effectiveBannerColor = effectiveColor.replace('#', '')
-
-  // `variant` drives the banner's kicker — a goodbye banner must not say
-  // "WELCOME TO" (the route defaults to welcome when it's missing).
-  const bannerUrl = result
-    ? `/api/banner?name=${encodeURIComponent(guildName)}&color=${effectiveBannerColor}&variant=${variant}`
-    : ''
 
   const previewEmbed: EmbedData | null = result
-    ? { ...result, color: effectiveColor, title: editTitle, description: editDesc, fields: editFields, banner_url: bannerUrl }
+    ? { color: effectiveColor, title: editTitle, description: editDesc }
     : null
 
   async function handleGenerate() {
@@ -158,7 +145,6 @@ export function MemberEmbedSection({
       setResult(data.result!)
       setEditTitle(data.result!.title)
       setEditDesc(data.result!.description)
-      setEditFields(data.result!.fields ?? [])
     } catch {
       setError('Network error. Please try again.')
     } finally {
@@ -190,9 +176,6 @@ export function MemberEmbedSection({
       color: result.color,
       title: editTitle,
       description: editDesc,
-      fields: editFields,
-      footer_text: result.footer_text,
-      banner_color: result.banner_color,
     })
 
     if (res.ok) {
@@ -275,16 +258,12 @@ export function MemberEmbedSection({
         {previewEmbed && !loading && (
           <div className="space-y-4">
             {/* Discord preview mockup */}
-            <DiscordEmbedPreview
-              embed={previewEmbed}
-              serverName={guildName}
-              footerFallback={variant === 'welcome' ? 'Pulse — Welcome' : 'Pulse — Goodbye'}
-            />
+            <DiscordEmbedPreview embed={previewEmbed} serverName={guildName} />
 
             {/* Editable fields */}
             <div className="space-y-3 pt-1">
               <div>
-                <label className="block text-xs font-semibold text-foreground mb-1.5">Embed Title</label>
+                <label className="block text-xs font-semibold text-foreground mb-1.5">Title</label>
                 <input
                   type="text"
                   value={editTitle}
@@ -296,7 +275,7 @@ export function MemberEmbedSection({
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-foreground mb-1.5">Embed Description</label>
+                <label className="block text-xs font-semibold text-foreground mb-1.5">Message</label>
                 <textarea
                   value={editDesc}
                   onChange={(e) => setEditDesc(e.target.value)}
@@ -311,8 +290,6 @@ export function MemberEmbedSection({
                   and <code className="rounded px-1" style={{ background: 'var(--bg-2)' }}>{'{server}'}</code> for server name.
                 </p>
               </div>
-              {/* The cards Pulse generated — editable, not take-it-or-leave-it. */}
-              <EmbedFieldsEditor fields={editFields} onChange={setEditFields} />
             </div>
 
             {/* Apply toggle */}

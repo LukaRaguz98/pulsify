@@ -283,7 +283,8 @@ export function BotBrandingCard({
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="truncate text-sm font-semibold" style={{ color: 'var(--p-1)' }}>
+                  {/* Plain text colour, not the accent — the accent is theme-dependent. */}
+                  <span className="truncate text-sm font-semibold" style={{ color: 'var(--text)' }}>
                     {previewName}
                   </span>
                   <span

@@ -115,6 +115,7 @@ Respond with this exact JSON structure and nothing else:
 {
   "welcome_message": "2-3 sentence welcome. Use {user} for the member name and {server} for the server name.",
   "rules": ["Rule text", "Rule text", "Rule text", "Rule text", "Rule text", "Rule text"],
+  "rule_titles": ["Short title", "Short title", "Short title", "Short title", "Short title", "Short title"],
   "onboarding": "Structured onboarding guide with 3-4 sections. Each section starts with a **bold header** (Discord markdown), followed by 1-2 sentences. Separate sections with a blank line.",
   "channels": [
     { "category": "CATEGORY NAME", "channels": ["channel-name", "channel-name"] }
@@ -124,6 +125,7 @@ Respond with this exact JSON structure and nothing else:
 Requirements:
 - welcome_message: 2-3 sentences, must include {user} and {server} placeholders
 - rules: exactly 6 rules, each starting with a verb, no numbering prefix
+- rule_titles: exactly 6 entries, one per rule in the same order — a 1-3 word heading naming what the rule is about (e.g. "Be respectful", "No spam"). Never "Rule 1"
 - onboarding: 3-4 sections with **bold headers** (Discord markdown), blank line between sections, 150-250 words total
 - channels: 3-5 categories, 2-5 channels each, lowercase hyphenated names, no # prefix`
 
@@ -164,6 +166,10 @@ Requirements:
     result = JSON.parse(rawText) as {
       welcome_message: string
       rules: string[]
+      /** Parallel to `rules` — the per-rule headings the Server Rules editor
+       *  uses in its one-embed-per-rule layout. Optional: a model that skips
+       *  it just leaves those headings blank. */
+      rule_titles?: string[]
       onboarding: string
       channels: { category: string; channels: string[] }[]
     }
