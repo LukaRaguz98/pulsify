@@ -192,7 +192,10 @@ export function LevelingSettingsContent({ guildId, guildName, initialConfig, cha
                 {curvePreview.map((p) => (
                   <div key={p.lvl} className="flex items-center justify-between text-sm">
                     <span className="text-subtle">Level {p.lvl}</span>
-                    <span className="font-mono text-foreground">{p.xp.toLocaleString()} XP</span>
+                    {/* Explicit locale — a bare toLocaleString() formats with
+                        the runtime default, so Node's grouping ("1.150") and
+                        the browser's ("1,150") disagreed and hydration failed. */}
+                    <span className="font-mono text-foreground">{p.xp.toLocaleString('en-US')} XP</span>
                   </div>
                 ))}
               </div>
