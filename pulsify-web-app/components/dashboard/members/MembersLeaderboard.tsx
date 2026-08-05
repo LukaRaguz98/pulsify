@@ -7,8 +7,21 @@ import { Trophy, Sparkles, Zap, Activity, AlertCircle, Users, BarChart3, Globe, 
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CategorySection } from '@/components/ui/category-section'
-import { Pagination } from '@/components/ui/pagination'
-import { SortableHeader, nextSort, type SortDirection } from '@/components/ui/sortable-header'
+import {
+  DataRow,
+  DataTable,
+  DataTableHead,
+  RankHeader,
+  SortHeader,
+  RANK_CELL_STYLE,
+  RANK_SORT,
+  nextRankedSort,
+  rankAndSort,
+  type Pager,
+  type Ranked,
+  type SortProps,
+  type SortState,
+} from '@/components/ui/data-table'
 import { StatsCard } from '@/components/dashboard/StatsCard'
 import { RefreshButton } from '@/components/dashboard/RefreshButton'
 import { createClient as createSupabase } from '@/lib/supabase'
@@ -59,76 +72,11 @@ const WINDOWS: { key: string; label: string }[] = [
   { key: 'all', label: 'All time' },
 ]
 
-// ── Sorting ────────────────────────────────────────────────────────────────
 // Every board table sorts in the browser, the same way the Members directory
 // does: the server sends the ranked list, `rank` (the "#" column) is the
-// default, and any other header re-orders the rows without another request.
-// "#" ascending is therefore always "the board's own ranking".
-
-type SortState = { key: string; dir: SortDirection }
-
-const RANK_SORT: SortState = { key: 'rank', dir: 'asc' }
-
-/** Columns where the useful first click is A→Z / smallest-first. */
-const ASCENDING_FIRST = new Set(['rank', 'name'])
-
-function nextBoardSort(current: SortState, key: string): SortState {
-  return nextSort(current, key, ASCENDING_FIRST.has(key) ? 'asc' : 'desc')
-}
-
-/** A row with the place it holds on the board, fixed before any sorting. */
-type Ranked<T> = { rank: number; row: T }
-
-/**
- * Number the board (the server's ranking IS the rank), then order the rows for
- * the current sort. `rank` sorts by that number; any other key reads a value out
- * of the row — strings compare by locale, everything else numerically.
- *
- * The rank travels with the row rather than being derived from its position, so
- * sorting by another column re-orders the table without ever renumbering anyone:
- * "#" always means "place on this board".
- */
-function rankAndSort<T>(
-  rows: T[],
-  sort: SortState,
-  values: Record<string, (row: T) => number | string>,
-): Ranked<T>[] {
-  const ranked = rows.map((row, i) => ({ rank: i + 1, row }))
-  const mul = sort.dir === 'asc' ? 1 : -1
-  if (sort.key === 'rank' || !values[sort.key]) {
-    return sort.dir === 'asc' ? ranked : ranked.reverse()
-  }
-  const read = values[sort.key]
-  return ranked.sort((a, b) => {
-    const av = read(a.row)
-    const bv = read(b.row)
-    const cmp =
-      typeof av === 'string' || typeof bv === 'string'
-        ? String(av).localeCompare(String(bv))
-        : av - bv
-    // Ties keep the board's own order, so equal values never shuffle randomly.
-    return (cmp || a.rank - b.rank) * mul
-  })
-}
-
-type SortProps = { sort: SortState; onSort: (key: string) => void }
-
-/** Rank ("#") header — sortable in every board, and the default order. */
-function RankHeader({ sort, onSort }: SortProps) {
-  return (
-    <th className="text-left" style={{ width: RANK_COL_WIDTH }}>
-      <SortableHeader label="#" columnKey="rank" activeKey={sort.key} direction={sort.dir} onSort={onSort} />
-    </th>
-  )
-}
-
-function Header({ label, columnKey, sort, onSort }: SortProps & { label: string; columnKey: string }) {
-  return (
-    <th className="text-left">
-      <SortableHeader label={label} columnKey={columnKey} activeKey={sort.key} direction={sort.dir} onSort={onSort} />
-    </th>
-  )
-}
+// default, and any other header re-orders the rows without another request. The
+// chrome and the ordering live in components/ui/data-table so the game list and
+// the closest-pairs table stay the same object as these.
 
 // Member-board columns — the same dimensions the Members directory surfaces, so
 // the two tables read identically.
@@ -174,23 +122,6 @@ const GAMING_VALUES: Record<string, (e: GamingBoardEntry) => number | string> = 
   lastPlayed: (e) => (e.lastPlayedAt ? Date.parse(e.lastPlayedAt) : 0),
 }
 
-// Fixed width for the leading rank ("#") column. Pinning it to the same value in
-// every board table means the Member column always starts at the same x-position
-// — so it never shifts when you switch between boards.
-const RANK_COL_WIDTH = 72
-const RANK_CELL_STYLE: React.CSSProperties = { width: RANK_COL_WIDTH }
-
-// Client-side pagination wired exactly like the Members directory: the parent
-// slices the rows for the current page and passes the offset (so ranks keep
-// counting across pages) plus the footer controls.
-type Pager = {
-  page: number
-  pageSize: number
-  total: number
-  onPageChange: (page: number) => void
-  onPageSizeChange: (size: number) => void
-}
-
 /**
  * Member boards (level / reputation / most-active) rendered in the same table
  * chrome as the Members directory: bordered container, stacked header, hover
@@ -210,29 +141,17 @@ function MemberBoardTable({
   pager: Pager
 } & SortProps) {
   return (
-    <div className="rounded-xl border overflow-x-auto" style={{ borderColor: 'var(--line-strong)' }}>
-      <table className="w-full min-w-[760px] text-sm table-stack">
-        <thead>
-          <tr className="border-b" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
-            <RankHeader sort={sort} onSort={onSort} />
-            <Header label="Member" columnKey="name" sort={sort} onSort={onSort} />
-            {MEMBER_COLS.map((c) => (
-              <Header key={c.key} label={c.label} columnKey={c.key} sort={sort} onSort={onSort} />
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map(({ rank, row: e }) => {
-            const interactive = linkToProfiles
-            return (
-              <tr
-                key={e.userId}
-                onClick={interactive ? () => onOpen(e.userId) : undefined}
-                className={`border-b transition-colors${interactive ? ' cursor-pointer' : ''}`}
-                style={{ borderColor: 'var(--line-strong)', background: 'color-mix(in srgb, var(--panel) 50%, transparent)' }}
-                onMouseEnter={interactive ? (ev) => { ev.currentTarget.style.background = 'var(--bg-2)' } : undefined}
-                onMouseLeave={interactive ? (ev) => { ev.currentTarget.style.background = 'color-mix(in srgb, var(--panel) 50%, transparent)' } : undefined}
-              >
+    <DataTable minWidth={760} pager={pager}>
+      <DataTableHead>
+        <RankHeader sort={sort} onSort={onSort} />
+        <SortHeader label="Member" columnKey="name" sort={sort} onSort={onSort} />
+        {MEMBER_COLS.map((c) => (
+          <SortHeader key={c.key} label={c.label} columnKey={c.key} sort={sort} onSort={onSort} />
+        ))}
+      </DataTableHead>
+      <tbody>
+        {entries.map(({ rank, row: e }) => (
+          <DataRow key={e.userId} interactive={linkToProfiles} onClick={() => onOpen(e.userId)}>
                 <td className="px-4 py-3" data-label="" style={RANK_CELL_STYLE}><RankBadge rank={rank} /></td>
                 <td className="px-4 py-3" data-label="">
                   <div className="flex items-center gap-3">
@@ -245,13 +164,10 @@ function MemberBoardTable({
                 <td className="px-4 py-3" data-label="Reputation"><ReputationBadge reputation={reputationFromScore(e.reputation)} size="sm" /></td>
                 <td className="px-4 py-3 font-mono text-xs text-foreground" data-label="Messages">{e.messages.toLocaleString()}</td>
                 <td className="px-4 py-3 font-mono text-xs text-muted-foreground" data-label="Voice">{e.voiceSeconds > 0 ? formatDuration(e.voiceSeconds) : '—'}</td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-      <Pagination {...pager} />
-    </div>
+          </DataRow>
+        ))}
+      </tbody>
+    </DataTable>
   )
 }
 
@@ -277,29 +193,21 @@ function RichestTable({
   pager: Pager
 } & SortProps) {
   return (
-    <div className="rounded-xl border overflow-x-auto" style={{ borderColor: 'var(--line-strong)' }}>
-      <table className="w-full min-w-[520px] text-sm table-stack">
-        <thead>
-          <tr className="border-b" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
-            <RankHeader sort={sort} onSort={onSort} />
-            <Header label="Member" columnKey="name" sort={sort} onSort={onSort} />
-            <Header label="Earned all-time" columnKey="lifetime" sort={sort} onSort={onSort} />
-            <Header label="Balance" columnKey="balance" sort={sort} onSort={onSort} />
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(({ rank, row: u }) => {
-            const interactive = linkToProfiles
-            return (
-              <tr
-                key={u.user_id}
-                onClick={interactive ? () => onOpen(u.user_id) : undefined}
-                title={!u.inGuild ? 'On another Pulse server — opens their global profile' : undefined}
-                className={`border-b transition-colors${interactive ? ' cursor-pointer' : ''}`}
-                style={{ borderColor: 'var(--line-strong)', background: 'color-mix(in srgb, var(--panel) 50%, transparent)' }}
-                onMouseEnter={interactive ? (ev) => { ev.currentTarget.style.background = 'var(--bg-2)' } : undefined}
-                onMouseLeave={interactive ? (ev) => { ev.currentTarget.style.background = 'color-mix(in srgb, var(--panel) 50%, transparent)' } : undefined}
-              >
+    <DataTable minWidth={520} pager={pager}>
+      <DataTableHead>
+        <RankHeader sort={sort} onSort={onSort} />
+        <SortHeader label="Member" columnKey="name" sort={sort} onSort={onSort} />
+        <SortHeader label="Earned all-time" columnKey="lifetime" sort={sort} onSort={onSort} />
+        <SortHeader label="Balance" columnKey="balance" sort={sort} onSort={onSort} />
+      </DataTableHead>
+      <tbody>
+        {rows.map(({ rank, row: u }) => (
+          <DataRow
+            key={u.user_id}
+            interactive={linkToProfiles}
+            onClick={() => onOpen(u.user_id)}
+            title={!u.inGuild ? 'On another Pulse server — opens their global profile' : undefined}
+          >
                 <td className="px-4 py-3" data-label="" style={RANK_CELL_STYLE}><RankBadge rank={rank} /></td>
                 <td className="px-4 py-3" data-label="">
                   <div className="flex items-center gap-3">
@@ -317,13 +225,10 @@ function RichestTable({
                 </td>
                 <td className="px-4 py-3 font-mono text-xs text-muted-foreground" data-label="Earned all-time">{formatCoins(u.lifetime_earned)}</td>
                 <td className="px-4 py-3 font-mono text-sm font-bold text-foreground" data-label="Balance">{formatCoins(u.balance)}</td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-      <Pagination {...pager} />
-    </div>
+          </DataRow>
+        ))}
+      </tbody>
+    </DataTable>
   )
 }
 
@@ -357,30 +262,22 @@ function InviteBoardTable({
   pager: Pager
 } & SortProps) {
   return (
-    <div className="rounded-xl border overflow-x-auto" style={{ borderColor: 'var(--line-strong)' }}>
-      <table className="w-full min-w-[760px] text-sm table-stack">
-        <thead>
-          <tr className="border-b" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
-            <RankHeader sort={sort} onSort={onSort} />
-            <Header label="Member" columnKey="name" sort={sort} onSort={onSort} />
-            {INVITE_COLS.map((c) => (
-              <Header key={c.key} label={c.label} columnKey={c.key} sort={sort} onSort={onSort} />
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(({ rank, row: r }) => {
-            const interactive = linkToProfiles && r.inGuild
-            return (
-              <tr
-                key={r.userId}
-                onClick={interactive ? () => onOpen(r.userId) : undefined}
-                title={!r.inGuild ? 'This inviter has left the server' : undefined}
-                className={`border-b transition-colors${interactive ? ' cursor-pointer' : ''}`}
-                style={{ borderColor: 'var(--line-strong)', background: 'color-mix(in srgb, var(--panel) 50%, transparent)' }}
-                onMouseEnter={interactive ? (ev) => { ev.currentTarget.style.background = 'var(--bg-2)' } : undefined}
-                onMouseLeave={interactive ? (ev) => { ev.currentTarget.style.background = 'color-mix(in srgb, var(--panel) 50%, transparent)' } : undefined}
-              >
+    <DataTable minWidth={760} pager={pager}>
+      <DataTableHead>
+        <RankHeader sort={sort} onSort={onSort} />
+        <SortHeader label="Member" columnKey="name" sort={sort} onSort={onSort} />
+        {INVITE_COLS.map((c) => (
+          <SortHeader key={c.key} label={c.label} columnKey={c.key} sort={sort} onSort={onSort} />
+        ))}
+      </DataTableHead>
+      <tbody>
+        {rows.map(({ rank, row: r }) => (
+          <DataRow
+            key={r.userId}
+            interactive={linkToProfiles && r.inGuild}
+            onClick={() => onOpen(r.userId)}
+            title={!r.inGuild ? 'This inviter has left the server' : undefined}
+          >
                 <td className="px-4 py-3" data-label="" style={RANK_CELL_STYLE}><RankBadge rank={rank} /></td>
                 <td className="px-4 py-3" data-label="">
                   <div className="flex items-center gap-3">
@@ -396,13 +293,10 @@ function InviteBoardTable({
                 <td className="px-4 py-3 font-mono text-xs text-muted-foreground" data-label="Retained">{r.retained.toLocaleString()}</td>
                 <td className="px-4 py-3 font-mono text-xs" data-label="Fake" style={{ color: r.fake > 0 ? '#f87171' : 'var(--text-3)' }}>{r.fake.toLocaleString()}</td>
                 <td className="px-4 py-3 font-mono text-xs text-muted-foreground" data-label="Bonus">{r.bonus > 0 ? r.bonus.toLocaleString() : '—'}</td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-      <Pagination {...pager} />
-    </div>
+          </DataRow>
+        ))}
+      </tbody>
+    </DataTable>
   )
 }
 
@@ -458,30 +352,22 @@ function GamingBoardTable({
   pager: Pager
 } & SortProps) {
   return (
-    <div className="rounded-xl border overflow-x-auto" style={{ borderColor: 'var(--line-strong)' }}>
-      <table className="w-full min-w-[960px] text-sm table-stack">
-        <thead>
-          <tr className="border-b" style={{ background: 'var(--panel)', borderColor: 'var(--line-strong)' }}>
-            <RankHeader sort={sort} onSort={onSort} />
-            <Header label="Member" columnKey="name" sort={sort} onSort={onSort} />
-            {GAMING_COLS.map((c) => (
-              <Header key={c.key} label={c.label} columnKey={c.key} sort={sort} onSort={onSort} />
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(({ rank, row: e }) => {
-            const interactive = linkToProfiles && e.inGuild && !anonymised
-            return (
-              <tr
-                key={e.userId}
-                onClick={interactive ? () => onOpen(e.userId) : undefined}
-                title={!anonymised && !e.inGuild ? 'This member has left the server' : undefined}
-                className={`border-b transition-colors${interactive ? ' cursor-pointer' : ''}`}
-                style={{ borderColor: 'var(--line-strong)', background: 'color-mix(in srgb, var(--panel) 50%, transparent)' }}
-                onMouseEnter={interactive ? (ev) => { ev.currentTarget.style.background = 'var(--bg-2)' } : undefined}
-                onMouseLeave={interactive ? (ev) => { ev.currentTarget.style.background = 'color-mix(in srgb, var(--panel) 50%, transparent)' } : undefined}
-              >
+    <DataTable minWidth={960} pager={pager}>
+      <DataTableHead>
+        <RankHeader sort={sort} onSort={onSort} />
+        <SortHeader label="Member" columnKey="name" sort={sort} onSort={onSort} />
+        {GAMING_COLS.map((c) => (
+          <SortHeader key={c.key} label={c.label} columnKey={c.key} sort={sort} onSort={onSort} />
+        ))}
+      </DataTableHead>
+      <tbody>
+        {rows.map(({ rank, row: e }) => (
+          <DataRow
+            key={e.userId}
+            interactive={linkToProfiles && e.inGuild && !anonymised}
+            onClick={() => onOpen(e.userId)}
+            title={!anonymised && !e.inGuild ? 'This member has left the server' : undefined}
+          >
                 <td className="px-4 py-3" data-label="" style={RANK_CELL_STYLE}><RankBadge rank={rank} /></td>
                 <td className="px-4 py-3" data-label="">
                   <div className="flex items-center gap-3">
@@ -511,13 +397,10 @@ function GamingBoardTable({
                 <td className={metricCellClass(sort.key === 'longestSession')} data-label="Longest">{formatPlaytime(e.longestSeconds)}</td>
                 <td className={metricCellClass(sort.key === 'variety')} data-label="Games">{e.games.toLocaleString()}</td>
                 <td className="px-4 py-3 text-xs text-subtle" data-label="Last played">{playedAgo(e.lastPlayedAt)}</td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-      <Pagination {...pager} />
-    </div>
+          </DataRow>
+        ))}
+      </tbody>
+    </DataTable>
   )
 }
 
@@ -540,7 +423,7 @@ export function MembersLeaderboard({ guildId, linkToProfiles = true, profileBase
   }, [board, window])
 
   function handleSort(key: string) {
-    setSort((prev) => nextBoardSort(prev, key))
+    setSort((prev) => nextRankedSort(prev, key))
     setPage(1)
   }
 

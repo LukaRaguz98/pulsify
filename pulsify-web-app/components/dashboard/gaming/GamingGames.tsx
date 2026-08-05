@@ -7,15 +7,26 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { TableSkeleton } from '@/components/ui/table-skeleton'
 import { useDialogDismiss } from '@/components/ui/use-dialog-dismiss'
 import { BarList, LiveDot, StatTile, TrendBadge, relativeTime } from '@/components/dashboard/gaming/gaming-style'
+import { RankBadge } from '@/components/dashboard/RankBadge'
 import {
-  GAME_SORTS,
-  GAME_SORT_LABELS,
+  DataRow,
+  DataTable,
+  DataTableHead,
+  RankHeader,
+  SortHeader,
+  RANK_CELL_STYLE,
+  RANK_SORT,
+  nextRankedSort,
+  rankAndSort,
+  type SortState,
+} from '@/components/ui/data-table'
+import {
   displayName,
   formatDuration,
   sortGames,
   type DailyPoint,
-  type GameSort,
   type GameStat,
+  type GameTrend,
 } from '@/lib/gaming'
 import type { Timeframe } from '@/lib/analytics'
 import type { GamingPayload } from '@/components/dashboard/gaming/GamingContent'
@@ -29,6 +40,22 @@ import type { GamingPayload } from '@/components/dashboard/gaming/GamingContent'
  * Only the detail panel fetches, because per-game history is the one thing not
  * in the shared payload.
  */
+/** Column → value, for the header sort. Trend reads the ratio behind the badge
+ *  so "which games are moving" is one click, not a separate view. */
+function gameValues(
+  trendByKey: Map<string, GameTrend>,
+): Record<string, (g: GameStat) => number | string> {
+  return {
+    name: (g) => g.gameName,
+    playtime: (g) => g.totalSeconds,
+    players: (g) => g.uniquePlayers,
+    sessions: (g) => g.totalSessions,
+    avgSession: (g) => g.avgSessionSeconds,
+    lastPlayed: (g) => (g.lastSeenAt ? Date.parse(g.lastSeenAt) : 0),
+    trend: (g) => trendByKey.get(g.gameKey)?.changeRatio ?? 0,
+  }
+}
+
 export function GamingGames({
   data,
   loading,
@@ -40,8 +67,13 @@ export function GamingGames({
   guildId: string
   tz: string
 }) {
-  const [sort, setSort] = useState<GameSort>('playtime')
+  // The table sorts by header click, exactly like the leaderboards: the list
+  // arrives ranked by playtime (that ranking IS the "#" column) and any other
+  // column re-orders it in the browser.
+  const [sort, setSort] = useState<SortState>(RANK_SORT)
   const [query, setQuery] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
   const [selected, setSelected] = useState<GameStat | null>(null)
 
   const trendByKey = useMemo(
@@ -55,8 +87,18 @@ export function GamingGames({
     const filtered = q
       ? data.games.filter((g) => g.gameName.toLowerCase().includes(q))
       : data.games
-    return sortGames(filtered, sort)
-  }, [data, sort, query])
+    const values = gameValues(trendByKey)
+    return rankAndSort(sortGames(filtered, 'playtime'), sort, values)
+  }, [data, sort, query, trendByKey])
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize))
+  const safePage = Math.min(Math.max(1, page), totalPages)
+  const paged = rows.slice((safePage - 1) * pageSize, safePage * pageSize)
+
+  function handleSort(key: string) {
+    setSort((prev) => nextRankedSort(prev, key))
+    setPage(1)
+  }
 
   if (loading && !data) return <TableSkeleton rows={8} />
   if (!data) return null
@@ -107,43 +149,29 @@ export function GamingGames({
         title="All games"
         description="Every game tracked in this window. Select one for its full breakdown."
         action={
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
-              <Search
-                size={13}
-                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"
-                style={{ color: 'var(--text-3)' }}
-              />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search games"
-                aria-label="Search games"
-                className="rounded-lg border py-1.5 pl-7 pr-2.5 text-xs"
-                style={{
-                  borderColor: 'var(--line-strong)',
-                  background: 'var(--bg-2)',
-                  color: 'var(--text)',
-                }}
-              />
-            </div>
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value as GameSort)}
-              aria-label="Sort games"
-              className="rounded-lg border px-2.5 py-1.5 text-xs font-medium"
+          // No sort dropdown: the column headers sort the table, the same way
+          // they do on every other ranked table in the dashboard.
+          <div className="relative">
+            <Search
+              size={13}
+              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"
+              style={{ color: 'var(--text-3)' }}
+            />
+            <input
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value)
+                setPage(1)
+              }}
+              placeholder="Search games"
+              aria-label="Search games"
+              className="rounded-lg border py-1.5 pl-7 pr-2.5 text-xs"
               style={{
                 borderColor: 'var(--line-strong)',
                 background: 'var(--bg-2)',
                 color: 'var(--text)',
               }}
-            >
-              {GAME_SORTS.map((s) => (
-                <option key={s} value={s}>
-                  {GAME_SORT_LABELS[s]}
-                </option>
-              ))}
-            </select>
+            />
           </div>
         }
       >
@@ -155,64 +183,71 @@ export function GamingGames({
             variant="muted"
           />
         ) : (
-          <div
-            className="overflow-x-auto rounded-xl border"
-            style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}
+          <DataTable
+            minWidth={860}
+            pager={{
+              page: safePage,
+              pageSize,
+              total: rows.length,
+              onPageChange: setPage,
+              onPageSizeChange: (size) => {
+                setPageSize(size)
+                setPage(1)
+              },
+            }}
           >
-            <table className="w-full min-w-[720px] text-sm">
-              <thead>
-                <tr
-                  className="text-left text-[10px] font-semibold uppercase tracking-widest"
-                  style={{ color: 'var(--text-3)' }}
-                >
-                  <th className="px-4 py-3">Game</th>
-                  <th className="px-4 py-3">Playtime</th>
-                  <th className="px-4 py-3">Players</th>
-                  <th className="px-4 py-3">Sessions</th>
-                  <th className="px-4 py-3">Avg session</th>
-                  <th className="px-4 py-3">Trend</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((g) => {
-                  const trend = trendByKey.get(g.gameKey)
-                  return (
-                    <tr
-                      key={g.gameKey}
-                      onClick={() => setSelected(g)}
-                      className="cursor-pointer border-t transition-colors hover:bg-[var(--bg-2)]"
-                      style={{ borderColor: 'var(--line)' }}
-                    >
-                      <td className="px-4 py-3" data-label="Game">
-                        <div className="flex items-center gap-2">
-                          {g.currentlyPlaying > 0 && <LiveDot />}
-                          <span className="font-medium text-foreground">{g.gameName}</span>
-                        </div>
-                        <span className="text-xs" style={{ color: 'var(--text-3)' }}>
-                          last played {relativeTime(g.lastSeenAt)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-foreground" data-label="Playtime">
-                        {formatDuration(g.totalSeconds)}
-                      </td>
-                      <td className="px-4 py-3" style={{ color: 'var(--text-2)' }} data-label="Players">
-                        {g.uniquePlayers}
-                      </td>
-                      <td className="px-4 py-3" style={{ color: 'var(--text-2)' }} data-label="Sessions">
-                        {g.totalSessions}
-                      </td>
-                      <td className="px-4 py-3" style={{ color: 'var(--text-2)' }} data-label="Avg session">
-                        {formatDuration(g.avgSessionSeconds)}
-                      </td>
-                      <td className="px-4 py-3" data-label="Trend">
-                        {trend ? <TrendBadge trend={trend} /> : null}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+            <DataTableHead>
+              <RankHeader sort={sort} onSort={handleSort} />
+              <SortHeader label="Game" columnKey="name" sort={sort} onSort={handleSort} />
+              <SortHeader label="Playtime" columnKey="playtime" sort={sort} onSort={handleSort} />
+              <SortHeader label="Players" columnKey="players" sort={sort} onSort={handleSort} />
+              <SortHeader label="Sessions" columnKey="sessions" sort={sort} onSort={handleSort} />
+              <SortHeader label="Avg session" columnKey="avgSession" sort={sort} onSort={handleSort} />
+              <SortHeader label="Last played" columnKey="lastPlayed" sort={sort} onSort={handleSort} />
+              <SortHeader label="Trend" columnKey="trend" sort={sort} onSort={handleSort} />
+            </DataTableHead>
+            <tbody>
+              {paged.map(({ rank, row: g }) => {
+                const trend = trendByKey.get(g.gameKey)
+                return (
+                  <DataRow key={g.gameKey} interactive onClick={() => setSelected(g)}>
+                    <td className="px-4 py-3" data-label="" style={RANK_CELL_STYLE}>
+                      <RankBadge rank={rank} />
+                    </td>
+                    <td className="px-4 py-3" data-label="">
+                      <div className="flex items-center gap-2">
+                        {g.currentlyPlaying > 0 && <LiveDot />}
+                        <p className="truncate font-medium text-foreground">{g.gameName}</p>
+                      </div>
+                      {g.currentlyPlaying > 0 && (
+                        <p className="mt-0.5 truncate text-xs text-subtle">
+                          {g.currentlyPlaying} playing now
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-sm font-bold text-foreground" data-label="Playtime">
+                      {formatDuration(g.totalSeconds)}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-foreground" data-label="Players">
+                      {g.uniquePlayers.toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground" data-label="Sessions">
+                      {g.totalSessions.toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground" data-label="Avg session">
+                      {formatDuration(g.avgSessionSeconds)}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-subtle" data-label="Last played">
+                      {relativeTime(g.lastSeenAt)}
+                    </td>
+                    <td className="px-4 py-3" data-label="Trend">
+                      {trend ? <TrendBadge trend={trend} /> : <span className="text-xs text-subtle">—</span>}
+                    </td>
+                  </DataRow>
+                )
+              })}
+            </tbody>
+          </DataTable>
         )}
       </CategorySection>
 

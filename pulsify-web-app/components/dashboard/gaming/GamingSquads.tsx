@@ -6,6 +6,19 @@ import { CategorySection } from '@/components/ui/category-section'
 import { EmptyState } from '@/components/ui/empty-state'
 import { TableSkeleton } from '@/components/ui/table-skeleton'
 import { relativeTime } from '@/components/dashboard/gaming/gaming-style'
+import { RankBadge } from '@/components/dashboard/RankBadge'
+import {
+  DataRow,
+  DataTable,
+  DataTableHead,
+  RankHeader,
+  SortHeader,
+  RANK_CELL_STYLE,
+  RANK_SORT,
+  nextRankedSort,
+  rankAndSort,
+  type SortState,
+} from '@/components/ui/data-table'
 import { UpgradePrompt } from '@/components/billing/UpgradePrompt'
 import { displayName, formatDuration, type CoplayPair, type Squad } from '@/lib/gaming'
 import type { Plan } from '@/lib/billing'
@@ -25,6 +38,15 @@ import type { Timeframe } from '@/lib/analytics'
  */
 
 const THRESHOLDS = [5, 15, 30, 60] as const
+
+/** Column → value for the closest-pairs table's header sort. */
+const PAIR_VALUES: Record<string, (p: CoplayPair) => number | string> = {
+  name: (p) => `${p.userAName ?? p.userA} & ${p.userBName ?? p.userB}`,
+  shared: (p) => p.overlapSeconds,
+  games: (p) => p.sharedGames,
+  sessions: (p) => p.sessionsTogether,
+  lastTogether: (p) => (p.lastTogetherAt ? Date.parse(p.lastTogetherAt) : 0),
+}
 
 type SquadsPayload = {
   enabled: boolean
@@ -49,6 +71,16 @@ export function GamingSquads({
   const [data, setData] = useState<SquadsPayload | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // The pairs table sorts by header click and pages, like every other ranked
+  // table; the API already returns the pairs ranked by shared time.
+  const [sort, setSort] = useState<SortState>(RANK_SORT)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
+
+  function handleSort(key: string) {
+    setSort((prev) => nextRankedSort(prev, key))
+    setPage(1)
+  }
 
   // setState only ever happens after an await — changing the threshold is an
   // event handler, and the effect body itself is asynchronous throughout.
@@ -102,6 +134,11 @@ export function GamingSquads({
 
   if (loading && !data) return <TableSkeleton rows={5} columns={3} />
   if (!data) return null
+
+  const pairRows = rankAndSort(data.pairs, sort, PAIR_VALUES)
+  const totalPages = Math.max(1, Math.ceil(pairRows.length / pageSize))
+  const safePage = Math.min(Math.max(1, page), totalPages)
+  const pagedPairs = pairRows.slice((safePage - 1) * pageSize, safePage * pageSize)
 
   return (
     <div className="space-y-6">
@@ -195,52 +232,58 @@ export function GamingSquads({
           title="Closest pairs"
           description="The individual pairings behind the squads, by shared playtime."
         >
-          <div
-            className="overflow-x-auto rounded-xl border"
-            style={{ borderColor: 'var(--line-strong)', background: 'var(--panel)' }}
+          <DataTable
+            minWidth={720}
+            pager={{
+              page: safePage,
+              pageSize,
+              total: pairRows.length,
+              onPageChange: setPage,
+              onPageSizeChange: (size) => {
+                setPageSize(size)
+                setPage(1)
+              },
+            }}
           >
-            <table className="w-full min-w-[560px] text-sm">
-              <thead>
-                <tr
-                  className="text-left text-[10px] font-semibold uppercase tracking-widest"
-                  style={{ color: 'var(--text-3)' }}
-                >
-                  <th className="px-4 py-3">Pair</th>
-                  <th className="px-4 py-3">Shared time</th>
-                  <th className="px-4 py-3">Games</th>
-                  <th className="px-4 py-3">Sessions</th>
-                  <th className="px-4 py-3">Last together</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.pairs.slice(0, 25).map((p, i) => (
-                  <tr
-                    key={`${p.userA}-${p.userB}`}
-                    className="border-t"
-                    style={{ borderColor: 'var(--line)' }}
-                  >
-                    <td className="px-4 py-3 font-medium text-foreground" data-label="Pair">
-                      {displayName({ userId: p.userA, userName: p.userAName }, data.anonymise, i * 2 + 1)}
+            <DataTableHead>
+              <RankHeader sort={sort} onSort={handleSort} />
+              <SortHeader label="Pair" columnKey="name" sort={sort} onSort={handleSort} />
+              <SortHeader label="Shared time" columnKey="shared" sort={sort} onSort={handleSort} />
+              <SortHeader label="Games" columnKey="games" sort={sort} onSort={handleSort} />
+              <SortHeader label="Sessions" columnKey="sessions" sort={sort} onSort={handleSort} />
+              <SortHeader label="Last together" columnKey="lastTogether" sort={sort} onSort={handleSort} />
+            </DataTableHead>
+            <tbody>
+              {pagedPairs.map(({ rank, row: p }) => (
+                <DataRow key={`${p.userA}-${p.userB}`}>
+                  <td className="px-4 py-3" data-label="" style={RANK_CELL_STYLE}>
+                    <RankBadge rank={rank} />
+                  </td>
+                  <td className="px-4 py-3" data-label="">
+                    {/* Anonymous labels are keyed off the rank, not the row's
+                        position, so they stay put when the table is re-sorted. */}
+                    <p className="truncate font-medium text-foreground">
+                      {displayName({ userId: p.userA, userName: p.userAName }, data.anonymise, rank * 2 - 1)}
                       {' & '}
-                      {displayName({ userId: p.userB, userName: p.userBName }, data.anonymise, i * 2 + 2)}
-                    </td>
-                    <td className="px-4 py-3 font-semibold text-foreground" data-label="Shared time">
-                      {formatDuration(p.overlapSeconds)}
-                    </td>
-                    <td className="px-4 py-3" style={{ color: 'var(--text-2)' }} data-label="Games">
-                      {p.sharedGames}
-                    </td>
-                    <td className="px-4 py-3" style={{ color: 'var(--text-2)' }} data-label="Sessions">
-                      {p.sessionsTogether}
-                    </td>
-                    <td className="px-4 py-3" style={{ color: 'var(--text-3)' }} data-label="Last together">
-                      {relativeTime(p.lastTogetherAt)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      {displayName({ userId: p.userB, userName: p.userBName }, data.anonymise, rank * 2)}
+                    </p>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-sm font-bold text-foreground" data-label="Shared time">
+                    {formatDuration(p.overlapSeconds)}
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs text-foreground" data-label="Games">
+                    {p.sharedGames.toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground" data-label="Sessions">
+                    {p.sessionsTogether.toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-subtle" data-label="Last together">
+                    {relativeTime(p.lastTogetherAt)}
+                  </td>
+                </DataRow>
+              ))}
+            </tbody>
+          </DataTable>
         </CategorySection>
       )}
     </div>

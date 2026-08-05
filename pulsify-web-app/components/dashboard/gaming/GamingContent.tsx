@@ -272,7 +272,13 @@ export function GamingContent({ guildId }: { guildId: string }) {
       {!error && (
         <>
           {tab === 'overview' && (
-            <GamingOverview data={data} loading={loading} guildId={guildId} tz={tz} />
+            <GamingOverview
+              data={data}
+              loading={loading}
+              guildId={guildId}
+              tz={tz}
+              onOpenTab={selectTab}
+            />
           )}
           {tab === 'games' && <GamingGames data={data} loading={loading} guildId={guildId} tz={tz} />}
           {tab === 'live' && <GamingLive guildId={guildId} />}

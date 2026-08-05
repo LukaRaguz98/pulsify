@@ -6,7 +6,8 @@ import { CategorySection } from '@/components/ui/category-section'
 import { EmptyState } from '@/components/ui/empty-state'
 import { TableSkeleton } from '@/components/ui/table-skeleton'
 import { UpgradePrompt } from '@/components/billing/UpgradePrompt'
-import { StatTile, TrendBadge, heatColor, hourLabel } from '@/components/dashboard/gaming/gaming-style'
+import { TrendBadge, heatColor, hourLabel } from '@/components/dashboard/gaming/gaming-style'
+import { StatsCard } from '@/components/dashboard/StatsCard'
 import {
   WEEKDAY_LABELS,
   averageConcurrent,
@@ -79,40 +80,47 @@ export function GamingTrends({
         title="When this server plays"
         description={`Peaks over ${data.window.periodLabel}, in ${data.window.timezone}.`}
       >
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <StatTile
-            icon={<Clock size={14} />}
+        {/* Page-level headline numbers use the shared analytics card, like every
+            other Analytics view; the module's compact StatTile stays for the
+            dense in-drawer contexts (a game's breakdown, a player's profile). */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatsCard
+            icon={<Clock size={16} />}
+            accent="var(--p-1)"
             label="Peak hour"
             value={data.peaks.peakHour == null ? '—' : hourLabel(data.peaks.peakHour)}
-            hint={
+            sub={
               data.peaks.peakHour == null
-                ? undefined
+                ? 'No activity yet'
                 : `${formatHours(data.peaks.peakHourSeconds)} played`
             }
           />
-          <StatTile
-            icon={<CalendarDays size={14} />}
+          <StatsCard
+            icon={<CalendarDays size={16} />}
+            accent="var(--cyan)"
             label="Busiest weekday"
             value={
               data.peaks.busiestWeekday == null ? '—' : WEEKDAY_LABELS[data.peaks.busiestWeekday]
             }
-            hint={
+            sub={
               data.peaks.busiestWeekday == null
-                ? undefined
+                ? 'No activity yet'
                 : `${formatHours(data.peaks.busiestWeekdaySeconds)} played`
             }
           />
-          <StatTile
-            icon={<Flame size={14} />}
+          <StatsCard
+            icon={<Flame size={16} />}
+            accent="var(--amber)"
             label="Weekend share"
             value={`${Math.round(data.peaks.weekendShare * 100)}%`}
-            hint="of all playtime"
+            sub="Of all playtime"
           />
-          <StatTile
-            icon={<Users size={14} />}
+          <StatsCard
+            icon={<Users size={16} />}
+            accent="var(--green)"
             label="Average concurrent"
             value={concurrent.toFixed(2)}
-            hint="players, averaged over the window"
+            sub="Players, averaged over the window"
           />
         </div>
       </CategorySection>
@@ -186,30 +194,34 @@ export function GamingTrends({
         title="Community insights"
         description="What the numbers say about how this server plays together."
       >
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <StatTile
-            icon={<Users size={14} />}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatsCard
+            icon={<Users size={16} />}
+            accent="var(--p-1)"
             label="Games per member"
             value={data.insights.avgGamesPerMember.toFixed(1)}
-            hint="on average"
+            sub="On average"
           />
-          <StatTile
-            icon={<Clock size={14} />}
+          <StatsCard
+            icon={<Clock size={16} />}
+            accent="var(--cyan)"
             label="Daily playtime"
             value={formatDuration(data.insights.avgDailySeconds)}
-            hint="on days with activity"
+            sub="On days with activity"
           />
-          <StatTile
-            icon={<Flame size={14} />}
+          <StatsCard
+            icon={<Flame size={16} />}
+            accent="var(--amber)"
             label="Game diversity"
             value={`${Math.round(data.insights.gameDiversity * 100)}%`}
-            hint="0% = one game, 100% = evenly spread"
+            sub="0% = one game, 100% = evenly spread"
           />
-          <StatTile
-            icon={<Users size={14} />}
+          <StatsCard
+            icon={<Users size={16} />}
+            accent="var(--green)"
             label="Returning players"
-            value={String(data.insights.returningPlayers)}
-            hint={`${data.insights.newlyActivePlayers} newly active`}
+            value={data.insights.returningPlayers}
+            sub={`${data.insights.newlyActivePlayers} newly active`}
           />
         </div>
 
