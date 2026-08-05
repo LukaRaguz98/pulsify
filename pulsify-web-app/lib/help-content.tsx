@@ -323,7 +323,7 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
     plan: 'free',
     body: (
       <>
-        <p>Browse your member directory and the XP leaderboard, inspect individual profiles, and manage roles.</p>
+        <p>Browse your member directory and every leaderboard — level &amp; XP, global reputation, most active, richest, top inviters and gaming — inspect individual profiles, and manage roles.</p>
         <p><strong>Tip:</strong> Sort by activity or level to find rising community members worth recognising.</p>
       </>
     ),
@@ -585,7 +585,7 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
     plan: 'free',
     body: (
       <>
-        <p>What your server plays, measured from Discord presence: play sessions with a real start, end and duration, aggregated into games, players, leaderboards, trends and squads.</p>
+        <p>What your server plays, measured from Discord presence: play sessions with a real start, end and duration, aggregated into games, trends and squads. The player ranking lives with every other board under Members › Leaderboard.</p>
         <p><strong>When to use:</strong> Reach for it when you want to know what your community is actually into — which games to build events around, who your most active players are, and when the server is busiest.</p>
         <p><strong>Heads up:</strong> Pulse can only see members whose Discord activity status is visible. Anyone who hides their activity, or opts out with <code>/gaming opt-out</code>, is never recorded at all.</p>
       </>

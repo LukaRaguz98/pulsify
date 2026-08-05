@@ -111,7 +111,10 @@ function describeTransaction(t) {
   };
   if (t.kind === "transfer_in") return `Transfer from ${t.counterparty_name ?? "a member"}`;
   if (t.kind === "transfer_out") return `Transfer to ${t.counterparty_name ?? "a member"}`;
-  const base = reasonLabels[t.reason] ?? "Balance change";
+  let base = reasonLabels[t.reason] ?? "Balance change";
+  // Activity earning is one row per day, not per award, so say how many awards
+  // the line stands for — otherwise a day's total reads like a single payout.
+  if (t.rollup_count > 1) base = `${base} (${t.rollup_count}x)`;
   return t.guild_name ? `${base} — ${t.guild_name}` : base;
 }
 
@@ -120,22 +123,43 @@ function describeTransaction(t) {
 function createEconomy(client, supabase) {
   // ── Coin mutation (atomic RPC) ─────────────────────────────────────────────
 
+  /**
+   * Change a balance atomically and write the ledger row.
+   *
+   * `opts.rollup` picks the DAILY variant: high-frequency earning (a coin per
+   * message, a coin per voice tick) tops up one row per member/server/source/
+   * day instead of appending a row per award — the ledger stays readable and
+   * the table stops growing by tens of thousands of rows a month. The balance
+   * maths is identical either way; only the write-down differs, so callers can
+   * flip it without thinking about wallets. Notes/actors aren't carried on a
+   * rolled-up row (they describe one event, and this row describes a day).
+   */
   async function adjust(userId, userName, amount, kind, reason, opts = {}) {
     if (!Number.isFinite(amount) || amount === 0) return null;
     try {
       const delta = Math.round(amount);
-      const { data, error } = await supabase.rpc("economy_adjust", {
-        p_user_id: userId,
-        p_user_name: userName ?? null,
-        p_amount: delta,
-        p_kind: kind,
-        p_reason: reason,
-        p_note: opts.note ?? null,
-        p_guild_id: opts.guildId ?? null,
-        p_guild_name: opts.guildName ?? null,
-        p_actor_id: opts.actorId ?? null,
-        p_actor_name: opts.actorName ?? null,
-      });
+      const { data, error } = opts.rollup
+        ? await supabase.rpc("economy_adjust_daily", {
+            p_user_id: userId,
+            p_user_name: userName ?? null,
+            p_amount: delta,
+            p_kind: kind,
+            p_reason: reason,
+            p_guild_id: opts.guildId ?? null,
+            p_guild_name: opts.guildName ?? null,
+          })
+        : await supabase.rpc("economy_adjust", {
+            p_user_id: userId,
+            p_user_name: userName ?? null,
+            p_amount: delta,
+            p_kind: kind,
+            p_reason: reason,
+            p_note: opts.note ?? null,
+            p_guild_id: opts.guildId ?? null,
+            p_guild_name: opts.guildName ?? null,
+            p_actor_id: opts.actorId ?? null,
+            p_actor_name: opts.actorName ?? null,
+          });
       if (error) {
         console.warn("[Pulse] economy_adjust failed:", error.message);
         return null;
@@ -303,7 +327,7 @@ function createEconomy(client, supabase) {
         .maybeSingle(),
       supabase
         .from("economy_transactions")
-        .select("kind, reason, note, amount, guild_name, counterparty_name, created_at")
+        .select("kind, reason, note, amount, guild_name, counterparty_name, created_at, rollup_count")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(5),

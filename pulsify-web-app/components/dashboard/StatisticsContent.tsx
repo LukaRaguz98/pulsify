@@ -26,6 +26,7 @@ import { StatsCard } from '@/components/dashboard/StatsCard'
 import { TimeframeFilter } from '@/components/dashboard/TimeframeFilter'
 import { RefreshButton } from '@/components/dashboard/RefreshButton'
 import { RankedList } from '@/components/dashboard/RankedList'
+import { LeaderboardLink } from '@/components/dashboard/LeaderboardLink'
 import { ChartCard } from '@/components/dashboard/charts/ChartCard'
 import { ToggleableChart } from '@/components/dashboard/charts/ToggleableChart'
 import { useAnalytics } from '@/lib/use-analytics'
@@ -324,6 +325,7 @@ export function StatisticsContent({ guildId, guildName }: Props) {
               icon={<BarChart3 size={14} />}
               title="Leaderboards"
               description="The most active channels and members in your server."
+              action={<LeaderboardLink guildId={guildId} board="active" label="Activity leaderboard" />}
             >
               <div className="grid gap-5 lg:grid-cols-2">
                 <ChartCard

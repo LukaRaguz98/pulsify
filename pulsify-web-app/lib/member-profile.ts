@@ -203,6 +203,18 @@ export type LeaderboardEntry = {
 
 export type LeaderboardKey = 'level' | 'xp' | 'reputation' | 'active'
 
+/** The boards the leaderboard UI can show — the data boards plus the two
+ *  consolidated ones ("Richest" from Economy, "Top inviters" from Invites).
+ *  Lives here rather than in the client component so server components can
+ *  validate a `?board=` deep link without importing a client module. */
+export const BOARD_IDS = ['level', 'reputation', 'active', 'richest', 'invites', 'gaming'] as const
+
+export type BoardId = (typeof BOARD_IDS)[number]
+
+export function isBoardId(v: string | null | undefined): v is BoardId {
+  return BOARD_IDS.includes(v as BoardId)
+}
+
 /** A "Richest" board row — a global wallet plus a resolved avatar URL. The
  *  holder may live on a different Pulse server: `avatar` is their guild-member
  *  avatar when they're a member here, otherwise their global Discord avatar (or
@@ -210,11 +222,62 @@ export type LeaderboardKey = 'level' | 'xp' | 'reputation' | 'active'
  *  this guild — they have no profile here, so the row isn't clickable. */
 export type RichestEntry = EconomyUser & { avatar: string; inGuild: boolean }
 
+/** An "Invites" board row — referral ranking moved here from the Invites view
+ *  so every leaderboard lives in one place (same reasoning as "Richest").
+ *  `inGuild` is false for inviters who have since left: we only know them by the
+ *  name stored on the join, and they have no profile here. */
+export type InviteBoardEntry = {
+  userId: string
+  name: string
+  avatar: string
+  inGuild: boolean
+  /** valid + bonus − fake, the ranking metric. */
+  score: number
+  valid: number
+  retained: number
+  fake: number
+  bonus: number
+  /** retained / valid, 0-100. */
+  retentionRate: number
+}
+
+/** A "Gaming" board row — play activity ranked from the same per-member
+ *  aggregate the Gaming module uses, moved here so every leaderboard lives in
+ *  one place. Every metric the board can rank by travels with the row, so
+ *  switching the ranking metric is a client-side sort, not another query. */
+export type GamingBoardEntry = {
+  userId: string
+  name: string
+  avatar: string
+  inGuild: boolean
+  playSeconds: number
+  sessions: number
+  avgSessionSeconds: number
+  longestSeconds: number
+  games: number
+  favouriteGame: string | null
+  currentlyPlaying: boolean
+  lastPlayedAt: string | null
+}
+
 export type LeaderboardResponse = {
   boards: Record<LeaderboardKey, LeaderboardEntry[]>
   /** Top global wallets by Pulse Coin balance — the "Richest" board, moved
    *  here from the Economy view so all leaderboards live in one place. */
   richest: RichestEntry[]
+  /** Top inviters by score for the selected timeframe — the "Invites" board,
+   *  moved here from Engagement › Invites. */
+  inviteBoard: InviteBoardEntry[]
+  /** Whether invite tracking is switched on, so the empty board can say why. */
+  invitesEnabled: boolean
+  /** Top players by gaming activity — the "Gaming" board, moved here from
+   *  Analytics › Gaming › Players. Empty unless `gamingVisible`. */
+  gamingBoard: GamingBoardEntry[]
+  /** Gaming exposes per-member activity, so the board is admin-only and needs
+   *  the module switched on — the UI hides the whole board when this is false. */
+  gamingVisible: boolean
+  /** The guild's "anonymise statistics" setting: rows show a rank, not a name. */
+  gamingAnonymised: boolean
   /** Members grouped into level brackets, for the distribution chart. */
   distribution: { label: string; count: number }[]
   totals: { tracked: number; totalXp: number; avgLevel: number; topLevel: number }

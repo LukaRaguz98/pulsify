@@ -11,16 +11,15 @@ import {
   Settings,
   TrendingUp,
   Trophy,
-  Users,
 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
 import { TimeframeFilter } from '@/components/dashboard/TimeframeFilter'
 import { RefreshButton } from '@/components/dashboard/RefreshButton'
+import { LeaderboardLink } from '@/components/dashboard/LeaderboardLink'
 import { TabButton } from '@/components/dashboard/gaming/gaming-style'
 import { GamingOverview } from '@/components/dashboard/gaming/GamingOverview'
 import { GamingGames } from '@/components/dashboard/gaming/GamingGames'
-import { GamingPlayers } from '@/components/dashboard/gaming/GamingPlayers'
 import { GamingLive } from '@/components/dashboard/gaming/GamingLive'
 import { GamingTrends } from '@/components/dashboard/gaming/GamingTrends'
 import { GamingSquads } from '@/components/dashboard/gaming/GamingSquads'
@@ -47,10 +46,12 @@ import type {
  * module's expensive query.
  */
 
+// No "Players" tab: it was a ranking, and every ranking now lives on the
+// Leaderboards page (Members › Leaderboard → "Gaming"). The per-member gaming
+// profile it used to open survives on the overview's "Top players" widget.
 const TABS = [
   { key: 'overview', label: 'Overview', icon: <BarChart3 size={15} /> },
   { key: 'games', label: 'Games', icon: <Gamepad2 size={15} /> },
-  { key: 'players', label: 'Players', icon: <Users size={15} /> },
   { key: 'live', label: 'Live', icon: <Activity size={15} /> },
   { key: 'trends', label: 'Trends', icon: <TrendingUp size={15} /> },
   { key: 'squads', label: 'Squads', icon: <Trophy size={15} /> },
@@ -185,6 +186,7 @@ export function GamingContent({ guildId }: { guildId: string }) {
             <TimeframeFilter value={timeframe} onChange={setTimeframe} disabled={loading} />
             <RefreshButton onClick={reload} refreshing={loading} />
             <ExportMenu guildId={guildId} timeframe={timeframe} tz={tz} />
+            <LeaderboardLink guildId={guildId} board="gaming" label="Gaming leaderboard" />
             <Link
               href={settingsHref}
               className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors"
@@ -269,11 +271,10 @@ export function GamingContent({ guildId }: { guildId: string }) {
 
       {!error && (
         <>
-          {tab === 'overview' && <GamingOverview data={data} loading={loading} guildId={guildId} />}
-          {tab === 'games' && <GamingGames data={data} loading={loading} guildId={guildId} tz={tz} />}
-          {tab === 'players' && (
-            <GamingPlayers data={data} loading={loading} guildId={guildId} tz={tz} />
+          {tab === 'overview' && (
+            <GamingOverview data={data} loading={loading} guildId={guildId} tz={tz} />
           )}
+          {tab === 'games' && <GamingGames data={data} loading={loading} guildId={guildId} tz={tz} />}
           {tab === 'live' && <GamingLive guildId={guildId} />}
           {tab === 'trends' && <GamingTrends data={data} loading={loading} />}
           {tab === 'squads' && (

@@ -78,6 +78,21 @@ export const TRANSACTION_KIND_META: Record<TransactionKind, { label: string; col
   admin_remove: { label: 'Admin removal', color: 'var(--red)' },
 }
 
+/**
+ * The high-frequency earning reasons — one award per message, per voice tick,
+ * per command, per reaction received. These are the rows the ledger hides by
+ * default and the ones the bot writes as a single rolled-up row per day
+ * (supabase/migrations/20260701_economy_activity_rollup.sql). `activity` is the
+ * pre-PULSIFY-47 catch-all, kept so old rows filter the same way.
+ */
+export const ACTIVITY_REASONS = [
+  'activity',
+  'activity_message',
+  'activity_voice',
+  'activity_command',
+  'activity_reaction',
+] as const
+
 export const TRANSACTION_REASON_LABELS: Record<string, string> = {
   activity: 'Server activity',
   activity_message: 'Chatting',
@@ -132,6 +147,15 @@ export type EconomyTransaction = {
   actor_id: string | null
   actor_name: string | null
   created_at: string
+  /** Set on ROLLED-UP rows: the UTC day this row aggregates. High-frequency
+   *  earning (message / voice / command / reaction) writes one row per member,
+   *  per server, per source, per day instead of one per award — see
+   *  supabase/migrations/20260701_economy_activity_rollup.sql. Null on the
+   *  one-off event rows everything else writes. */
+  rollup_day: string | null
+  /** How many awards are folded into a rolled-up row (null when it's a one-off).
+   *  `amount` is their sum and `balance_after` is the balance after the latest. */
+  rollup_count: number | null
 }
 
 function num(v: unknown): number {

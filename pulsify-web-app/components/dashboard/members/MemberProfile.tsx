@@ -32,6 +32,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/ui/page-header'
 import { CategorySection } from '@/components/ui/category-section'
+import { LeaderboardLink } from '@/components/dashboard/LeaderboardLink'
 import { StatsCard } from '@/components/dashboard/StatsCard'
 import { ChartCard } from '@/components/dashboard/charts/ChartCard'
 import { ToggleableChart } from '@/components/dashboard/charts/ToggleableChart'
@@ -443,7 +444,12 @@ export function MemberProfile({ guildId, userId, viewerRole = 'admin', backHref,
 
         {/* Progression — level + XP earned from activity (members only) */}
         {isMember && (
-        <CategorySection icon={<Sparkles size={14} />} title="Progression" description="Level and XP earned from this member's activity in the server.">
+        <CategorySection
+          icon={<Sparkles size={14} />}
+          title="Progression"
+          description="Level and XP earned from this member's activity in the server."
+          action={<LeaderboardLink guildId={guildId} board="level" label={isSelf ? 'See where you rank' : 'Level leaderboard'} />}
+        >
           <ChartCard title="Level & XP" subtitle="Earned from messages, voice, commands, giveaways and events" icon={<Sparkles size={15} />}>
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
               <div className="flex items-center gap-4">

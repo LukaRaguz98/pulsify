@@ -64,7 +64,7 @@ export async function GET(
     (() => {
       let q = supabase
         .from('economy_transactions')
-        .select('id, user_id, user_name, guild_id, guild_name, amount, balance_after, kind, reason, note, counterparty_id, counterparty_name, actor_id, actor_name, created_at')
+        .select('id, user_id, user_name, guild_id, guild_name, amount, balance_after, kind, reason, note, counterparty_id, counterparty_name, actor_id, actor_name, created_at, rollup_day, rollup_count')
         .order('created_at', { ascending: false })
         .limit(WINDOW_ROW_LIMIT)
       if (since) q = q.gte('created_at', since)

@@ -40,6 +40,17 @@ function timeAgo(iso: string): string {
   return new Date(iso).toLocaleDateString()
 }
 
+/**
+ * High-frequency earning is written as ONE row per member / server / source /
+ * day, so the row says how many awards it stands for — otherwise "+142 coins"
+ * next to "Messages sent" reads like a single suspicious payout.
+ */
+function rollupLabel(t: EconomyTransaction): string | null {
+  const n = t.rollup_count ?? 0
+  if (!t.rollup_day || n < 1) return null
+  return `${n.toLocaleString()} award${n === 1 ? '' : 's'} that day`
+}
+
 function describeRow(t: EconomyTransaction): string {
   if (t.kind === 'transfer_in') return `Transfer from ${t.counterparty_name ?? 'a member'}`
   if (t.kind === 'transfer_out') return `Transfer to ${t.counterparty_name ?? 'a member'}`
@@ -57,8 +68,9 @@ function describeRow(t: EconomyTransaction): string {
 export function EconomyTransactions({ guildId }: Props) {
   const [scope, setScope] = useState<Scope>('guild')
   const [kind, setKind] = useState('')
-  // Per-message / per-voice-minute earnings are hidden by default — they bury
-  // the meaningful rows (rewards, spends, transfers, level-ups, admin actions).
+  // Activity earning is hidden by default — even rolled up to one row per
+  // member/source/day it outnumbers the rows people come here for (rewards,
+  // spends, transfers, level-ups, admin actions).
   const [includeActivity, setIncludeActivity] = useState(false)
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -226,7 +238,9 @@ export function EconomyTransactions({ guildId }: Props) {
                       <span className="ml-2 font-normal text-subtle">{describeRow(t)}</span>
                     </p>
                     <p className="truncate text-xs text-subtle">
-                      {[t.guild_name, t.note, timeAgo(t.created_at)].filter(Boolean).join(' · ')}
+                      {[t.guild_name, rollupLabel(t), t.note, timeAgo(t.created_at)]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">

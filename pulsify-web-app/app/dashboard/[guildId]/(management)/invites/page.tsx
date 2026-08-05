@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
-import { fetchGuild, fetchGuildRoles } from '@/lib/discord'
+import { fetchGuild, fetchGuildMembers } from '@/lib/discord'
 import { InvitesContent } from '@/components/dashboard/invites/InvitesContent'
 import {
   normaliseInviteSettings,
@@ -16,18 +16,15 @@ export default async function InvitesPage({ params }: { params: Promise<{ guildI
   } = await supabase.auth.getUser()
   if (!user) redirect('/')
 
-  const [guild, roles, settingsRow, memberRows, adjustmentRows] = await Promise.all([
+  const [guild, guildMembers, settingsRow, memberRows, adjustmentRows] = await Promise.all([
     fetchGuild(guildId),
-    fetchGuildRoles(guildId),
+    // Only for avatars — so the invited-members table shows the same faces as
+    // the Members directory. Anyone missing falls back to a default avatar.
+    fetchGuildMembers(guildId, 1000),
     supabase.from('invite_settings').select('*').eq('guild_id', guildId).maybeSingle(),
     supabase.from('invited_members').select('*').eq('guild_id', guildId).order('joined_at', { ascending: false }).limit(2000),
     supabase.from('invite_adjustments').select('*').eq('guild_id', guildId).order('created_at', { ascending: false }).limit(500),
   ])
-
-  const assignableRoles = roles
-    .filter((r) => r.id !== guildId && !r.managed)
-    .sort((a, b) => b.position - a.position)
-    .map((r) => ({ id: r.id, name: r.name, color: r.color }))
 
   const config = normaliseInviteSettings(settingsRow.data as { enabled?: boolean; settings?: unknown } | null)
   const members: InvitedMember[] = (memberRows.data ?? []).map((m) => normaliseMemberRow(m as Record<string, unknown>))
@@ -46,6 +43,19 @@ export default async function InvitesPage({ params }: { params: Promise<{ guildI
     created_at: String(a.created_at),
   }))
 
+  // Keep the avatar payload tight: only users the tables actually render, and
+  // only when Discord gave us a real hash (no hash → default avatar anyway).
+  const referenced = new Set<string>()
+  for (const m of members) {
+    referenced.add(m.user_id)
+    if (m.inviter_id) referenced.add(m.inviter_id)
+  }
+  const avatars: Record<string, string> = {}
+  for (const gm of guildMembers) {
+    const id = gm.user?.id
+    if (id && gm.user.avatar && referenced.has(id)) avatars[id] = gm.user.avatar
+  }
+
   return (
     <InvitesContent
       guildId={guildId}
@@ -53,7 +63,7 @@ export default async function InvitesPage({ params }: { params: Promise<{ guildI
       config={config}
       members={members}
       adjustments={adjustments}
-      roles={assignableRoles}
+      avatars={avatars}
     />
   )
 }

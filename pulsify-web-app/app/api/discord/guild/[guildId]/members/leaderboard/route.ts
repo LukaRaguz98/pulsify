@@ -6,8 +6,25 @@ import { computeReputation, daysSince } from '@/lib/reputation'
 import { normaliseLevelingSettings, levelForXp } from '@/lib/leveling'
 import { normaliseEconomyUser } from '@/lib/economy'
 import {
+  aggregateInviters,
+  buildLeaderboard,
+  bonusByUser,
+  type InviteAggInput,
+  type InviteAdjustment,
+} from '@/lib/invites'
+import {
+  applySettingsRetention,
+  fetchPlayers,
+  gamingWindow,
+  getGamingSettings,
+} from '@/lib/gaming-query'
+import { isTimeframe } from '@/lib/analytics'
+import type { PlayerStat } from '@/lib/gaming'
+import {
   EMPTY_ACTIVITY,
   type MemberActivityStats,
+  type GamingBoardEntry,
+  type InviteBoardEntry,
   type LeaderboardEntry,
   type LeaderboardKey,
   type LeaderboardResponse,
@@ -58,8 +75,17 @@ export async function GET(
   const window = url.searchParams.get('window') ?? '30d'
   const since = windowToSince(window)
 
-  const [members, levelsRes, settingsRes, statsAllRes, statsWindowRes, richestRes] =
-    await Promise.all([
+  const [
+    members,
+    levelsRes,
+    settingsRes,
+    statsAllRes,
+    statsWindowRes,
+    richestRes,
+    invitedRes,
+    inviteAdjRes,
+    inviteSettingsRes,
+  ] = await Promise.all([
       fetchGuildMembers(guildId, 1000),
       supabase.from('member_levels').select('user_id, xp, level').eq('guild_id', guildId),
       supabase.from('leveling_settings').select('enabled, settings').eq('guild_id', guildId).maybeSingle(),
@@ -71,6 +97,17 @@ export async function GET(
       // "Richest" board — GLOBAL wallet ranking by balance (window-independent),
       // consolidated here from the Economy view.
       supabase.from('economy_users').select('*').order('balance', { ascending: false }).limit(RICHEST_SIZE),
+      // "Invites" board — referral ranking, moved here from Engagement › Invites
+      // so every leaderboard lives on this page. Narrow selects: only the fields
+      // aggregateInviters / bonusByUser actually read.
+      supabase
+        .from('invited_members')
+        .select('inviter_id, inviter_name, joined_at, status, left_at, is_bonus')
+        .eq('guild_id', guildId)
+        .order('joined_at', { ascending: false })
+        .limit(5000),
+      supabase.from('invite_adjustments').select('user_id, kind, amount').eq('guild_id', guildId).limit(1000),
+      supabase.from('invite_settings').select('enabled').eq('guild_id', guildId).maybeSingle(),
     ])
 
   // GLOBAL reputation for everyone on the board (PULSIFY-45): one batched RPC
@@ -197,9 +234,103 @@ export async function GET(
     }
   })
 
+  // "Invites" board — aggregate the attributed joins for the SAME timeframe the
+  // rest of the page uses, then resolve each inviter to a guild member so the
+  // rows carry a real name + avatar (inviters who have left keep the name stored
+  // on the join and a default avatar, like out-of-guild wallet holders).
+  const inviteAgg = aggregateInviters((invitedRes.data ?? []) as unknown as InviteAggInput[], since)
+  const inviteRanked = buildLeaderboard(inviteAgg, {
+    bonusByUser: bonusByUser(
+      (inviteAdjRes.data ?? []) as unknown as Pick<InviteAdjustment, 'user_id' | 'kind' | 'amount'>[],
+    ),
+    // Bonus credits are lifetime adjustments, so only the all-time board folds them in.
+    includeBonus: since == null,
+  })
+  const inviteBoard: InviteBoardEntry[] = inviteRanked.slice(0, BOARD_SIZE).map((r) => {
+    const m = memberById.get(r.inviter_id)
+    return {
+      userId: r.inviter_id,
+      name: m
+        ? (m.nick ?? m.user.global_name ?? m.user.username)
+        : (r.inviter_name ?? `User ${r.inviter_id.slice(0, 8)}`),
+      avatar: m ? avatarUrl(m.user.id, m.user.avatar) : defaultAvatarUrl(r.inviter_id),
+      inGuild: Boolean(m),
+      score: r.score,
+      valid: r.valid,
+      retained: r.retained,
+      fake: r.fake,
+      bonus: r.bonus,
+      retentionRate: r.retentionRate,
+    }
+  })
+
+  // "Gaming" board — play activity, moved here from Analytics › Gaming ›
+  // Players. Gaming exposes per-member activity, so unlike the other boards it
+  // is ADMIN-ONLY: members (and operators previewing Member View) never receive
+  // the rows, and the UI drops the pill entirely. The window is the same
+  // selector, clamped by the plan's and the guild's own retention exactly as the
+  // Gaming module clamps it.
+  const canSeeGaming = auth.access.effectiveRole === 'admin' && auth.access.role === 'admin'
+  const gamingSettings = canSeeGaming ? await getGamingSettings(supabase, guildId) : null
+  let gamingPlayers: PlayerStat[] = []
+  if (gamingSettings?.enabled) {
+    const gWindow = applySettingsRetention(
+      await gamingWindow(guildId, isTimeframe(window) ? window : '30d'),
+      gamingSettings,
+    )
+    const playersRes = await fetchPlayers(supabase, guildId, gWindow.since)
+    if (!('error' in playersRes)) gamingPlayers = playersRes.players
+  }
+
+  // With "anonymise statistics" on, identity is stripped from the ROWS before
+  // they leave the server — printing a rank over a real user id would make the
+  // anonymity a CSS effect. The stats themselves still travel.
+  const gamingAnonymised = Boolean(gamingSettings?.anonymizeStats)
+  const gamingBoard: GamingBoardEntry[] = [...gamingPlayers]
+    .sort((a, b) => b.totalSeconds - a.totalSeconds)
+    .slice(0, BOARD_SIZE)
+    .map((p, i) => {
+      if (gamingAnonymised) {
+        return {
+          userId: `anon-${i + 1}`,
+          name: '',
+          avatar: '',
+          inGuild: false,
+          playSeconds: p.totalSeconds,
+          sessions: p.totalSessions,
+          avgSessionSeconds: p.avgSessionSeconds,
+          longestSeconds: p.longestSeconds,
+          games: p.uniqueGames,
+          favouriteGame: null,
+          currentlyPlaying: p.currentlyPlaying,
+          lastPlayedAt: p.lastSessionAt,
+        }
+      }
+      const m = memberById.get(p.userId)
+      return {
+        userId: p.userId,
+        name: m ? (m.nick ?? m.user.global_name ?? m.user.username) : (p.userName ?? `User ${p.userId.slice(0, 8)}`),
+        avatar: m ? avatarUrl(m.user.id, m.user.avatar) : defaultAvatarUrl(p.userId),
+        inGuild: Boolean(m),
+        playSeconds: p.totalSeconds,
+        sessions: p.totalSessions,
+        avgSessionSeconds: p.avgSessionSeconds,
+        longestSeconds: p.longestSeconds,
+        games: p.uniqueGames,
+        favouriteGame: p.favouriteGame,
+        currentlyPlaying: p.currentlyPlaying,
+        lastPlayedAt: p.lastSessionAt,
+      }
+    })
+
   const response: LeaderboardResponse = {
     boards,
     richest,
+    inviteBoard,
+    invitesEnabled: Boolean((inviteSettingsRes.data as { enabled?: boolean } | null)?.enabled),
+    gamingBoard,
+    gamingVisible: canSeeGaming && Boolean(gamingSettings?.enabled),
+    gamingAnonymised,
     distribution,
     totals: { tracked, totalXp, avgLevel, topLevel },
     window,

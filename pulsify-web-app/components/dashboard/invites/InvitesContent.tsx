@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { CategorySection } from '@/components/ui/category-section'
 import { EmptyState } from '@/components/ui/empty-state'
 import { RefreshButton } from '@/components/dashboard/RefreshButton'
+import { LeaderboardLink } from '@/components/dashboard/LeaderboardLink'
 import { createClient as createSupabase } from '@/lib/supabase'
 import {
   computeInviteStats,
@@ -22,12 +23,9 @@ import {
   type InviteAdjustment,
   type InvitedMember,
 } from '@/lib/invites'
-import { STATUS_COLOR } from './icons'
-import { InviteLeaderboard } from './InviteLeaderboard'
+import { STATUS_COLOR, type AvatarMap } from './icons'
 import { InviteMembers } from './InviteMembers'
 import { InviteAdmin } from './InviteAdmin'
-
-export type Role = { id: string; name: string; color: number }
 
 type Props = {
   guildId: string
@@ -35,25 +33,27 @@ type Props = {
   config: InviteConfig
   members: InvitedMember[]
   adjustments: InviteAdjustment[]
-  roles: Role[]
+  /** Discord avatar hashes for the users the tables render, keyed by user id. */
+  avatars: AvatarMap
 }
 
-type Tab = 'overview' | 'leaderboard' | 'members'
+// The full inviter ranking lives on the Leaderboards page with every other
+// board (same move the "Richest" board made out of Economy); this view keeps a
+// top-five summary that links there.
+type Tab = 'overview' | 'members'
 export type Feedback = { kind: 'success' | 'error'; msg: string }
 
 const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
   { key: 'overview', label: 'Overview', icon: <TrendingUp size={15} /> },
-  { key: 'leaderboard', label: 'Leaderboard', icon: <Trophy size={15} /> },
   { key: 'members', label: 'Invited members', icon: <Users2 size={15} /> },
 ]
 
-export function InvitesContent({ guildId, guildName, config, members, adjustments, roles }: Props) {
+export function InvitesContent({ guildId, guildName, config, members, adjustments, avatars }: Props) {
   const router = useRouter()
   const [tab, setTab] = useState<Tab>('overview')
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [pending, startTransition] = useTransition()
 
-  const roleNames = useMemo(() => new Map(roles.map((r) => [r.id, r.name])), [roles])
   const stats = useMemo(() => computeInviteStats(members, adjustments), [members, adjustments])
   const settingsHref = `/dashboard/${guildId}/invite-settings`
 
@@ -127,6 +127,7 @@ export function InvitesContent({ guildId, guildName, config, members, adjustment
               {config.enabled ? 'Tracking on' : 'Tracking off'}
             </span>
             <RefreshButton onClick={refresh} refreshing={pending} />
+            <LeaderboardLink guildId={guildId} board="invites" label="Inviter leaderboard" />
             <Link
               href={settingsHref}
               className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors"
@@ -220,6 +221,13 @@ export function InvitesContent({ guildId, guildName, config, members, adjustment
                     ))}
                   </ol>
                 )}
+                <LeaderboardLink
+                  guildId={guildId}
+                  board="invites"
+                  variant="inline"
+                  label="Full board in Leaderboards"
+                  className="mt-4"
+                />
               </div>
             </div>
           </CategorySection>
@@ -249,16 +257,10 @@ export function InvitesContent({ guildId, guildName, config, members, adjustment
         </div>
       )}
 
-      {tab === 'leaderboard' && (
-        <CategorySection icon={<Trophy size={14} />} title="Invite leaderboard" description="Rank inviters by score for any time range, and open a profile for the details.">
-          <InviteLeaderboard members={members} adjustments={adjustments} roleNames={roleNames} />
-        </CategorySection>
-      )}
-
       {tab === 'members' && (
         <div className="space-y-8">
           <CategorySection icon={<Users2 size={14} />} title="Invited members" description="Every attributed join, with the status and admin actions.">
-            <InviteMembers guildId={guildId} members={members} setFeedback={setFeedback} onDone={refresh} />
+            <InviteMembers guildId={guildId} members={members} avatars={avatars} setFeedback={setFeedback} onDone={refresh} />
           </CategorySection>
           <InviteAdmin guildId={guildId} adjustments={adjustments} setFeedback={setFeedback} onDone={refresh} />
         </div>

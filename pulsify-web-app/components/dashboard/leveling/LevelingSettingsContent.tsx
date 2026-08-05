@@ -23,6 +23,7 @@ import {
 import { PageHeader } from '@/components/ui/page-header'
 import { CategorySection } from '@/components/ui/category-section'
 import { SaveBar } from '@/components/ui/save-bar'
+import { LeaderboardLink } from '@/components/dashboard/LeaderboardLink'
 import {
   xpForLevel,
   renderLevelupMessage,
@@ -128,14 +129,17 @@ export function LevelingSettingsContent({ guildId, guildName, initialConfig, cha
           </>
         }
         action={
-          <Link
-            href={`/dashboard/${guildId}/members`}
-            className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors"
-            style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
-          >
-            <ArrowLeft size={12} />
-            Back to Members
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <LeaderboardLink guildId={guildId} board="level" label="Level leaderboard" />
+            <Link
+              href={`/dashboard/${guildId}/members`}
+              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors"
+              style={{ borderColor: 'var(--line-strong)', color: 'var(--text-2)' }}
+            >
+              <ArrowLeft size={12} />
+              Back to Members
+            </Link>
+          </div>
         }
       />
 

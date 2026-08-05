@@ -523,10 +523,15 @@ function createEconomyRewards(client, supabase, economy) {
       const meta = sourceMeta(category, key);
       const kind = category === "activity" ? "earn" : "reward";
       const userName = target.name ?? member?.displayName ?? target.displayName ?? null;
+      // Rate-limited sources fire constantly (per message, per voice tick), so
+      // their ledger rows are rolled up per day rather than written per award —
+      // see supabase/migrations/20260701_economy_activity_rollup.sql. Everything
+      // else is a discrete event worth its own row.
       const newBalance = await economy.adjust(target.id, userName, amount, kind, meta ? meta.reason : key, {
         guildId: guild.id,
         guildName: guild.name,
         note: opts.note ?? null,
+        rollup: !!meta?.rateLimited,
       });
       if (newBalance === null) return 0;
 

@@ -24,6 +24,7 @@ import { ChartCard } from '@/components/dashboard/charts/ChartCard'
 import { TrendChart } from '@/components/dashboard/charts/TrendChart'
 import { RankedList } from '@/components/dashboard/RankedList'
 import { RefreshButton } from '@/components/dashboard/RefreshButton'
+import { LeaderboardLink } from '@/components/dashboard/LeaderboardLink'
 import { TimeframeFilter } from '@/components/dashboard/TimeframeFilter'
 import { formatBucketLabel, timeframePeriodLabel, type Timeframe } from '@/lib/analytics'
 import { useEconomy } from '@/lib/use-economy'
@@ -74,6 +75,7 @@ export function EconomyContent({ guildId, guildName, isOperator = false }: Props
               <SlidersHorizontal size={14} /> Earnings settings
             </Link>
           )}
+          <LeaderboardLink guildId={guildId} board="richest" label="Richest leaderboard" size="md" />
           <TimeframeFilter value={timeframe} onChange={setTimeframe} disabled={loading} />
           <RefreshButton onClick={refresh} refreshing={refreshing} />
         </div>
@@ -201,6 +203,15 @@ export function EconomyContent({ guildId, guildName, isOperator = false }: Props
               valueFormatter={(v) => `${formatCoins(v)} coins`}
               barColor="var(--green)"
               emptyText="No coins earned in this window yet."
+            />
+            {/* Earned-in-this-window is not the same ranking as balance held —
+                the standing wealth board lives with every other leaderboard. */}
+            <LeaderboardLink
+              guildId={guildId}
+              board="richest"
+              variant="inline"
+              label="Ranked by balance in Leaderboards"
+              className="mt-4"
             />
           </ChartCard>
         </CategorySection>

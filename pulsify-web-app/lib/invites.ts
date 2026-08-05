@@ -545,13 +545,17 @@ export function periodSince(period: InvitePeriod, now = new Date()): string | nu
   return new Date(now.getTime() - ms).toISOString()
 }
 
+/** The only fields the aggregation reads — so callers that don't need a whole
+ *  row (e.g. the leaderboard API's narrow select) can pass a subset. */
+export type InviteAggInput = Pick<InvitedMember, 'inviter_id' | 'inviter_name' | 'joined_at' | 'status' | 'left_at' | 'is_bonus'>
+
 /**
  * Aggregate loaded invited_members into per-inviter rows (the same shape the
  * get_invite_leaderboard RPC returns), optionally windowed by join date. Lets
  * the dashboard recompute daily/weekly/monthly boards client-side from the rows
  * it already loaded, instead of a round trip per period switch.
  */
-export function aggregateInviters(members: InvitedMember[], sinceIso: string | null): LeaderboardAggRow[] {
+export function aggregateInviters(members: InviteAggInput[], sinceIso: string | null): LeaderboardAggRow[] {
   const since = sinceIso ? new Date(sinceIso).getTime() : null
   const map = new Map<string, LeaderboardAggRow>()
   for (const m of members) {
@@ -670,7 +674,7 @@ export function buildLeaderboard(
 }
 
 /** Sum bonus credits per inviter from the adjustments log. */
-export function bonusByUser(adjustments: InviteAdjustment[]): Map<string, number> {
+export function bonusByUser(adjustments: Pick<InviteAdjustment, 'user_id' | 'kind' | 'amount'>[]): Map<string, number> {
   const map = new Map<string, number>()
   for (const a of adjustments) {
     if (a.kind !== 'bonus' || !a.user_id) continue

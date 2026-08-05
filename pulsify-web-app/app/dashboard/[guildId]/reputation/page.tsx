@@ -6,6 +6,7 @@ import { formatDuration } from '@/lib/analytics'
 import { PageHeader } from '@/components/ui/page-header'
 import { CategorySection } from '@/components/ui/category-section'
 import { ReputationPanel } from '@/components/dashboard/members/ReputationPanel'
+import { LeaderboardLink } from '@/components/dashboard/LeaderboardLink'
 
 /**
  * Member-facing Reputation page: the viewer's own GLOBAL 0–100 trust score
@@ -37,6 +38,7 @@ export default async function MemberReputationPage({
         title="Reputation"
         helpId="reputation"
         description="Your global trust score — earned across every server running Pulse"
+        action={<LeaderboardLink guildId={guildId} board="reputation" label="Reputation leaderboard" />}
       />
 
       <div className="space-y-8">

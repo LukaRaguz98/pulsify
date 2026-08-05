@@ -34,12 +34,15 @@ import { CategorySection } from '@/components/ui/category-section'
 import { EmptyState } from '@/components/ui/empty-state'
 import { TableSkeleton } from '@/components/ui/table-skeleton'
 import { BarList, LiveDot, StatTile, TrendBadge } from '@/components/dashboard/gaming/gaming-style'
+import { GamingPlayerProfile } from '@/components/dashboard/gaming/GamingPlayerProfile'
+import { LeaderboardLink } from '@/components/dashboard/LeaderboardLink'
 import {
   WEEKDAY_LABELS,
   displayName,
   formatDuration,
   formatHours,
   sortGames,
+  type PlayerStat,
 } from '@/lib/gaming'
 import type { GamingPayload } from '@/components/dashboard/gaming/GamingContent'
 
@@ -113,12 +116,17 @@ export function GamingOverview({
   data,
   loading,
   guildId,
+  tz,
 }: {
   data: GamingPayload | null
   loading: boolean
   guildId: string
+  tz: string
 }) {
   const stored = useStoredOrder(guildId)
+  // The per-member profile, opened from the "Top players" widget — the ranking
+  // itself lives on the Leaderboards page now.
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayerStat | null>(null)
   // Drag results live in local state so the grid reorders instantly; the store
   // read above is only the starting point.
   const [dragged, setDragged] = useState<WidgetKey[] | null>(null)
@@ -217,22 +225,37 @@ export function GamingOverview({
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {order.map((key) => (
                 <SortableWidget key={key} id={key}>
-                  {renderWidget(key, {
-                    overview,
-                    games,
-                    players,
-                    trends,
-                    insights,
-                    peaks,
-                    daily,
-                    anonymise,
-                  })}
+                  {renderWidget(
+                    key,
+                    {
+                      overview,
+                      games,
+                      players,
+                      trends,
+                      insights,
+                      peaks,
+                      daily,
+                      anonymise,
+                    },
+                    guildId,
+                    anonymise ? undefined : setSelectedPlayer,
+                  )}
                 </SortableWidget>
               ))}
             </div>
           </SortableContext>
         </DndContext>
       </CategorySection>
+
+      {selectedPlayer && (
+        <GamingPlayerProfile
+          guildId={guildId}
+          tz={tz}
+          timeframe={data.window.timeframe}
+          player={selectedPlayer}
+          onClose={() => setSelectedPlayer(null)}
+        />
+      )}
     </div>
   )
 }
@@ -278,7 +301,12 @@ type WidgetData = Pick<
   'overview' | 'games' | 'players' | 'trends' | 'insights' | 'peaks' | 'daily' | 'anonymise'
 >
 
-function renderWidget(key: WidgetKey, d: WidgetData) {
+function renderWidget(
+  key: WidgetKey,
+  d: WidgetData,
+  guildId: string,
+  onSelectPlayer?: (player: PlayerStat) => void,
+) {
   switch (key) {
     case 'currently-playing':
       return (
@@ -332,7 +360,17 @@ function renderWidget(key: WidgetKey, d: WidgetData) {
                 value: p.totalSeconds,
                 display: formatDuration(p.totalSeconds),
                 sub: d.anonymise ? undefined : (p.favouriteGame ?? undefined),
+                onClick: onSelectPlayer ? () => onSelectPlayer(p) : undefined,
               }))}
+          />
+          {/* The full ranking moved to the Leaderboards page, where every board
+              lives; this widget stays as the summary + profile entry point. */}
+          <LeaderboardLink
+            guildId={guildId}
+            board="gaming"
+            variant="inline"
+            label="Full board in Leaderboards"
+            className="mt-4"
           />
         </Widget>
       )
